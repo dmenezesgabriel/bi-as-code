@@ -12,27 +12,30 @@ import { NotFoundPage } from "./not-found-page";
 import { PageError } from "./page-error";
 import type { ManifestPageEntry } from "./types";
 import type { BiacConfig } from "virtual:biac-config";
+import type { NavTree } from "virtual:biac-pages";
 
 /**
  * Builds the SPA router from the page manifest: one code-based route per
  * manifest entry whose loader lazily imports the compiled page module, a
  * shared not-found page for unmatched paths, and an in-page error boundary
  * for modules that fail to load or render. `site` carries `biac.config.ts`
- * into chrome consumers — the title becomes the document-title fallback.
+ * into chrome consumers — the title becomes the document-title fallback and
+ * `nav.sidebar` gates the sidebar; `navTree` feeds the sidebar nav.
  *
  * @example
  * // src/web/src/router.tsx
- * import { pages } from "virtual:biac-pages";
+ * import { pages, navTree } from "virtual:biac-pages";
  * import { config } from "virtual:biac-config";
- * export const router = buildPageRouter(pages, config);
+ * export const router = buildPageRouter(pages, config, navTree);
  */
 export function buildPageRouter(
   pages: ManifestPageEntry[],
   site: BiacConfig,
+  navTree: NavTree,
   history?: RouterHistory,
 ) {
   const rootRoute = createRootRoute({
-    component: AppShell,
+    component: () => <AppShell tree={navTree} site={site} />,
     notFoundComponent: NotFoundPage,
   });
   const routeTree = rootRoute.addChildren(

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
+import type { NavTree } from "virtual:biac-pages";
 import { buildPageRouter } from "./page-router";
 import type { CompiledPageModule, ManifestPageEntry } from "./types";
 
@@ -50,10 +51,26 @@ const site = {
   nav: { sidebar: true },
 };
 
-function renderRouter(entries: ManifestPageEntry[], initialPath: string) {
+const navTree: NavTree = {
+  rootPages: [{ name: "Home", href: "/" }],
+  directories: [
+    {
+      id: "nested",
+      name: "Nested",
+      pages: [{ name: "Nested", href: "/nested" }],
+    },
+  ],
+};
+
+function renderRouter(
+  entries: ManifestPageEntry[],
+  initialPath: string,
+  tree: NavTree = navTree,
+) {
   const router = buildPageRouter(
     entries,
     site,
+    tree,
     createMemoryHistory({ initialEntries: [initialPath] }),
   );
   render(<RouterProvider router={router} />);
@@ -101,6 +118,16 @@ describe("buildPageRouter", () => {
 
     expect(await screen.findByText("body")).toBeInTheDocument();
     expect(document.title).toBe("ACME Site");
+  });
+
+  it("renders the sidebar nav from the tree passed to the router", async () => {
+    renderRouter(pages, "/");
+
+    const nav = await screen.findByRole("navigation", {
+      name: "Site navigation",
+    });
+    expect(nav).toHaveTextContent("Nested");
+    expect(nav).toContainElement(screen.getByRole("link", { name: "Home" }));
   });
 
   it("renders an in-page error when a page module fails to load", async () => {
