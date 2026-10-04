@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import type { AnchorHTMLAttributes } from "react";
+import { useState, type AnchorHTMLAttributes } from "react";
+import { NavToc } from "../chrome/nav-toc";
 import { HighlightedPre } from "./highlighted-pre";
 import type { CompiledPageModule, MdxComponentMap } from "./types";
 import { useDocumentTitle } from "./use-document-title";
@@ -29,6 +30,8 @@ function MarkdownLink({
 /**
  * Renders one compiled page module: the resolved title is applied to the
  * document and the MDX component renders with the shared component map.
+ * Unless front-matter `table_of_contents: false`, a right-rail ToC built
+ * from the article's h2/h3 headings rides along on `xl` viewports.
  *
  * @example
  * const mod = await entry.load();
@@ -42,10 +45,19 @@ export function MarkdownPage({
   siteTitle: string;
 }) {
   useDocumentTitle(page.title, siteTitle);
+  const [article, setArticle] = useState<HTMLElement | null>(null);
   const Content = page.default;
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <Content components={mdxComponents} />
-    </main>
+    <div className="mx-auto flex max-w-6xl gap-8 px-6 py-10">
+      <main
+        ref={setArticle}
+        className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20"
+      >
+        <Content components={mdxComponents} />
+      </main>
+      {page.frontmatter.table_of_contents !== false && article && (
+        <NavToc article={article} />
+      )}
+    </div>
   );
 }

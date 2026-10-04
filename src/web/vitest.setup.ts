@@ -31,6 +31,21 @@ if (typeof window !== "undefined") {
     };
   }
 
+  if (!window.IntersectionObserver) {
+    window.IntersectionObserver = class {
+      readonly root = null;
+      readonly rootMargin = "0px";
+      readonly scrollMargin = "0px";
+      readonly thresholds = [0];
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    };
+  }
+
   // jsdom defines getContext but reports "Not implemented" through its
   // virtual console on every call — output no test reporter intercepts.
   // Returning null is what the HTML specification requires of a context

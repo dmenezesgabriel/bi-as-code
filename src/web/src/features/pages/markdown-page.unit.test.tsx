@@ -93,4 +93,47 @@ describe("MarkdownPage", () => {
     await screen.findByRole("main");
     expect(document.title).toBe("ACME Analytics");
   });
+
+  it("renders an on-this-page toc for the page's h2/h3 headings", async () => {
+    renderPage(
+      page({
+        default: () => (
+          <>
+            <h1>Title</h1>
+            <h2>Section A</h2>
+            <h2>Section B</h2>
+          </>
+        ),
+      }),
+    );
+
+    await screen.findByRole("navigation", { name: "On this page" });
+    expect(screen.getByRole("link", { name: "Section A" })).toHaveAttribute(
+      "href",
+      "#section-a",
+    );
+    expect(screen.getByRole("link", { name: "Section B" })).toHaveAttribute(
+      "href",
+      "#section-b",
+    );
+  });
+
+  it("hides the toc when front-matter sets table_of_contents: false", async () => {
+    renderPage(
+      page({
+        frontmatter: { table_of_contents: false },
+        default: () => (
+          <>
+            <h2>Section A</h2>
+            <h2>Section B</h2>
+          </>
+        ),
+      }),
+    );
+
+    await screen.findByRole("main");
+    expect(
+      screen.queryByRole("navigation", { name: "On this page" }),
+    ).toBeNull();
+  });
 });
