@@ -1,0 +1,42 @@
+import type { ComponentType, ElementType } from "react";
+
+/**
+ * The contract of `virtual:biac-pages` and of each compiled page module,
+ * mirrored web-side: the module ids are virtual, so there is no importable
+ * source of truth for these shapes.
+ */
+export interface ManifestPageEntry {
+  /** URL path the page serves — "/" for pages/index.md. */
+  route: string;
+  /** Page file relative to the project root, e.g. "pages/nested/page.md". */
+  file: string;
+  /** True when the route came from the index convention. */
+  isIndex: boolean;
+  /** Lazily imports the compiled page module — invoked on route match. */
+  load: () => Promise<CompiledPageModule>;
+}
+
+/**
+ * One compiled markdown page: `default` is the MDX component (it takes a
+ * `components` prop for element overrides); `title` is the resolved page
+ * title (front-matter `title`, else the first h1, else null); `sqlBlocks`
+ * are the named ```sql fences extracted for the query registry.
+ */
+export interface CompiledPageModule {
+  default: ComponentType<MdxPageProps>;
+  frontmatter: Record<string, unknown>;
+  title: string | null;
+  sqlBlocks: SqlBlock[];
+}
+
+export interface SqlBlock {
+  name: string;
+  sql: string;
+}
+
+export interface MdxPageProps {
+  components?: MdxComponentMap;
+}
+
+/** MDX element overrides — tag name → component or intrinsic element. */
+export type MdxComponentMap = Record<string, ElementType>;

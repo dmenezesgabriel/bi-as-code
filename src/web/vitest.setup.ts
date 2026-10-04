@@ -1,4 +1,11 @@
 import "@testing-library/jest-dom/vitest";
+import { afterEach } from "vitest";
+import { cleanup } from "@testing-library/react";
+
+// Vitest runs with globals disabled, so Testing Library's auto-cleanup
+// (which hooks a global afterEach) never registers — renders would
+// accumulate in document.body across tests.
+afterEach(cleanup);
 
 // jsdom lacks layout APIs several rendering paths expect (matchMedia,
 // ResizeObserver); polyfilled here for web-unit tests running in jsdom.
@@ -30,4 +37,8 @@ if (typeof window !== "undefined") {
   // type the canvas cannot provide, and what canvas renderers fall back
   // from.
   window.HTMLCanvasElement.prototype.getContext = (): null => null;
+
+  // The router scrolls on navigation; jsdom only prints "Not implemented"
+  // warnings. Stub it like the layout APIs above.
+  window.scrollTo = () => undefined;
 }
