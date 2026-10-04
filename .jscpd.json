@@ -1,0 +1,7 @@
+{
+  "path": ["src", "test"],
+  "ignore": ["**/node_modules/**", "**/fixtures/**"],
+  "threshold": 1,
+  "_comment": "The gate runs this config with --silent (see the jscpd script in package.json), which suppresses the clone listing below. Silencing does not disable the gate: the threshold reporter is registered whenever `threshold` is set, independently of `reporters` and of --silent, and it fails the run with the measured percentage. `pnpm jscpd:report` runs the same config without --silent to print where the clones are.",
+  "reporters": ["console"]
+}

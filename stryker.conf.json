@@ -1,0 +1,38 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": [
+    "Mutation gate. `mutate` is scoped to src production files; the web UI and test files are never mutated. `ignorePatterns` keeps research_repos out of the sandbox copy.",
+    "Exclusion rule: a module whose body is a real I/O boundary is excluded, and every decision it used to hold is extracted into a pure module that stays mutated. An exclusion without one is a coverage gap in disguise. Each entry names that pairing as it lands.",
+    "src/cli/main.ts - process entry: error mapping, exit codes and serve wiring; covered by the integration and e2e tiers."
+  ],
+  "packageManager": "pnpm",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "vitest.stryker.config.ts"
+  },
+  "mutate": [
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/web/**",
+    "!src/cli/main.ts"
+  ],
+  "ignorePatterns": [
+    "research_repos",
+    "pages",
+    "dist",
+    "coverage",
+    "test",
+    "bin",
+    "docs"
+  ],
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text", "progress"],
+  "allowConsoleColors": false,
+  "clearTextReporter": {
+    "allowColor": false,
+    "reportTests": false,
+    "skipFull": true
+  }
+}

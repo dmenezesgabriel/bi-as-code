@@ -1,0 +1,8 @@
+research_repos/
+node_modules/
+dist/
+coverage/
+*.log
+test-results/
+storybook-static/
+.stryker-tmp/

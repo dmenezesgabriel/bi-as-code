@@ -1,0 +1,37 @@
+packages:
+  - "src/web"
+# GHSA-ph9p-34f9-6g65: tmp <0.2.6 path traversal (transitive via @stryker-mutator/core)
+overrides:
+  tmp: ">=0.2.6"
+  # GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g: qs DoS
+  # (transitive via @stryker-mutator/core>typed-rest-client, dev-only)
+  qs: ">=6.16.0"
+  # GHSA-w5hq-g745-h8pq: uuid <11.1.1 partial buffer write in v3/v5/v6
+  # (transitive via @cucumber/cucumber>@cucumber/messages, dev-only).
+  # ^-bounded: a bare >= floor resolves cross-major (uuid 14).
+  uuid: "^11.1.1"
+  # GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p, GHSA-q2hr-2g5m-vwhr:
+  # brace-expansion DoS — one floor per declared spec (minimatch 3/9/10)
+  "brace-expansion@^1.1.7": "^1.1.21"
+  "brace-expansion@^2.0.2": "^2.1.7"
+  "brace-expansion@^5.0.8": "^5.0.12"
+# msw's postinstall only re-runs `msw init` when package.json declares a
+# workerDirectory (verified against config/scripts/postinstall.js in the
+# tarball) — dev-only, and we invoke it explicitly. Everything else stays
+# blocked: install scripts are the primary supply-chain vector.
+# GHSA-vfj7-8cjw-p6xm (braces <=3.0.3 stack-exhaustion DoS via
+# commitizen>findup-sync>micromatch) is ACCEPTED, not fixed: no patched
+# release exists, the dep is dev-only, and commitizen never globs
+# attacker-controlled input. Remove when a fix ships.
+allowBuilds:
+  "@tailwindcss/oxide": true
+  esbuild: true
+minimumReleaseAge: 1440
+trustPolicy: no-downgrade
+# semver@6.3.1 (2023-07-10) is the official ReDoS security backport for the
+# 6.x line — published 3 days after 7.5.4 introduced provenance attestation,
+# so `no-downgrade` flags it as missing trust evidence. The exemption is
+# pinned to that exact version: every other semver release still faces the
+# full trust check.
+trustPolicyExclude:
+  - semver@6.3.1

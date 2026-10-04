@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "ignorePatterns": [
+    "test/fixtures/**",
+    "dist/**",
+    "coverage/**",
+    "research_repos/**",
+    "src/web/public/mockServiceWorker.js",
+    "pages/**",
+    "docs/**"
+  ],
+  "ignoreDependencies": [
+    "@tailwindcss/vite",
+    "tailwindcss",
+    "@vitejs/plugin-react",
+    "husky",
+    "msw"
+  ]
+}

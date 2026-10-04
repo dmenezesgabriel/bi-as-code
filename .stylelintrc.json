@@ -1,0 +1,26 @@
+{
+  "extends": "stylelint-config-standard",
+  "allowEmptyInput": true,
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "theme",
+          "apply",
+          "utility",
+          "variant",
+          "custom-variant"
+        ]
+      }
+    ],
+    "import-notation": "string",
+    "color-hex-length": null,
+    "custom-property-pattern": [
+      "^[a-z][a-z0-9]*(-[a-z0-9]+)*(--[a-z0-9]+(-[a-z0-9]+)*)?$",
+      {
+        "message": "Expected kebab-case, optionally with Tailwind's --modifier suffix (e.g. --text-body--line-height)"
+      }
+    ]
+  }
+}

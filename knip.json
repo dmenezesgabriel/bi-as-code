@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "ignore": [
+    "test/fixtures/**",
+    "vitest.stryker.config.ts",
+    "test/e2e-browser/global-setup.ts",
+    "src/cli/main.ts",
+    "src/web/src/components/index.ts",
+    "src/web/src/features/index.ts",
+    "src/web/src/lib/index.ts",
+    // Vitest `setupFiles` entry — knip does not descend into the `projects`
+    // array in vitest.config.ts, so the reference is invisible to it.
+    "src/web/vitest.setup.ts"
+  ],
+  "ignoreDependencies": [
+    "minimal",
+    "@tailwindcss/vite",
+    "tailwindcss",
+    "@vitejs/plugin-react",
+    "msw",
+    // Imported only by src/web/vitest.setup.ts (ignored above).
+    "@testing-library/jest-dom"
+  ]
+}
