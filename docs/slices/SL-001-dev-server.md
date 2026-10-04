@@ -108,7 +108,7 @@ Where the references disagree, and what that forces us to decide:
 ## Open decisions
 
 - **Compile-error surface for a page that parses but fails at runtime** (e.g. MDX expression referencing an undefined identifier): vite overlay vs in-page error component — decide while building the page renderer; both are cheap, pick whichever reads better in the demo.
-- **`handleHotUpdate` semantics for add/remove/rename of `.md` files** — whether invalidating `virtual:biac-pages` alone suffices or routes need explicit rebuild signalling in the SPA. Settle in the plugin task; document the answer here.
+- **`handleHotUpdate` semantics for add/remove/rename of `.md` files** — settled in T3: vite 8's `hotUpdate` hook reports `type: "create"|"update"|"delete"` and gives `this.environment.moduleGraph`. Edits invalidate the page module; creates/deletes invalidate `virtual:biac-pages`. Either way the update has no accepting HMR boundary upstream, so vite sends `full-reload` and the SPA rebuilds its routes from the fresh manifest — no explicit rebuild signalling needed. Verified over real HTTP: adding/removing a page file regenerated the manifest on next request.
 
 ## Surface
 
@@ -126,7 +126,7 @@ Dependencies to install at task time (exact pins, `minimumReleaseAge` already en
 
 - [x] T1 — `discover-pages`: glob `pages/**/*.{md,mdx}` under a project root → sorted `PageManifestEntry[]` (`route`, `file`, `isIndex`). Cases: nested dirs, `index.md` → dir route, non-markdown ignored, empty/missing `pages/` → empty manifest.
 - [x] T2 — `compile-page`: one `.md` → MDX-compiled module source + `{frontmatter, title, sqlBlocks[]}`. Cases: front-matter title vs first-h1 fallback, ` ```sql name ` extraction (name required; unnamed sql fence stays a plain fence), gfm constructs, invalid YAML fails loudly.
-- [ ] T3 — `pages-plugin`: vite plugin wiring T1+T2 — `.md` → module, `virtual:biac-pages` manifest module, `configureServer` adds `pages/` to the watcher, `handleHotUpdate` covers edit/add/remove/rename. Integration test over a fixture dir with a real vite server.
+- [x] T3 — `pages-plugin`: vite plugin wiring T1+T2 — `.md` → module, `virtual:biac-pages` manifest module, `configureServer` adds `pages/` to the watcher, `handleHotUpdate` covers edit/add/remove/rename. Integration test over a fixture dir with a real vite server.
 - [ ] T4 — `biac dev`: `src/cli/commands/dev.ts` boots `vite.createServer` (web config + plugin, project root arg, port flag, SIGINT/SIGTERM shutdown); `main.ts` routes to it. e2e (vitest e2e project): spawn → GET `/` 200 → GET page module → kill.
 - [ ] T5 — routes + page renderer: `router.tsx` builds routes from `virtual:biac-pages` (lazy), `features/pages/` renders the MDX component, applies front-matter (`document.title`), `notFoundComponent` for unknown slugs. web-unit tests.
 - [ ] T6 — shiki fences: `features/pages/` code component highlights fenced blocks (incl. extracted sql fences rendered as code). web-unit test asserting token markup.
