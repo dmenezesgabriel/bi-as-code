@@ -4,5 +4,6 @@ dist/
 coverage/
 *.log
 test-results/
+.playwright-cli/
 storybook-static/
 .stryker-tmp/

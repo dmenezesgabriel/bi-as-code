@@ -32,7 +32,7 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 
 - Before writing code, read how the reference repos named in the PRD solve the task, and take the best of them. Aim for the highest fidelity the references allow. Act on what you measured and read, never on assumption.
 - Test-driven development on application source code, strictly: RED → GREEN → REFACTOR.
-- Every new or refactored piece of application code gets unit tests, integration tests, e2e tests and a manual check in a real browser (headless playwright) before you move on. Browser e2e may seed data through fixture files, but never the capability under test; that must be driven through the UI.
+- Every new or refactored piece of application code gets unit tests, integration tests, e2e tests and a `playwright-cli` check in the real running app before you move on. Browser e2e may seed data through fixture files, but never the capability under test; that must be driven through the UI.
 - Test the program's source code and its integrations with its production dependencies. Don't test devDependencies or conventions (e.g. whether `.gitignore` ignores `*.png`).
 - No workarounds, no band-aids, no over-engineering, no dead code. Refactor carefully when the code needs it.
 - A defect you introduce is yours to fix before you stop, whether or not it was planned.
@@ -40,15 +40,17 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 - Use web search and `curl` when the references and official docs are not enough to settle a fact.
 - Install only safe, official, well-maintained packages; guard against supply-chain attacks (`save-exact`, `minimumReleaseAge`, `trustPolicy`; install scripts stay blocked except an allowlist documented in `pnpm-workspace.yaml`). Reference repos are read-only: never install, import, link or vendor them.
 
-## 5. Validate like a human would
+## 5. Validate like a human would — `playwright-cli`, every session, no exceptions
 
-- Screenshot every step that changes the screen with Playwright, and read the screenshots. Screenshots are for your analysis only; never commit them. Keep them in your scratchpad.
-- Measure; don't eyeball. For any layout or interaction you touch, record numbers before and after: rows visible, target sizes, `aria-*` state, console errors, query latency for interactions (cross-filter re-query time).
-- The browser is a person's desktop too: verify with headless Playwright sessions only, never `BROWSER=` opens.
+- Every session ends with a `playwright-cli` pass over the real running app (`bin/biac dev`). The session that wrote the code runs it itself — this pass is not optional and not delegated. Use a named session (`-s=<name>`).
+- Headless is `playwright-cli`'s default: never pass `--headed`, never `BROWSER=` opens. The browser is a person's desktop too.
+- Interact with the page, don't just look at it: `goto` every changed route, `snapshot` for element refs, `click`/`fill`/`resize` the states you touched, `eval` for attribute and state assertions (`href`, `aria-*`, element counts).
+- `screenshot` every step that changes the screen, and read the screenshots. Screenshots are for your analysis only; never commit them. The session writes a `.playwright-cli/` artifact directory — close the browser (`close`) and delete the directory when the pass ends.
+- Measure; don't eyeball. For any layout or interaction you touch, record numbers before and after: rows visible, target sizes, `aria-*` state, `console` output (must stay clean — a tracked Known-debt entry like the `/favicon.ico` 404 is named, not hidden), query latency for interactions (cross-filter re-query time).
 
 ## 6. Close the step
 
-- Run the full gate and put the results in the **commit body**, never in a doc: typecheck, lint, lint:style, format:check, knip, dep:cruise, jscpd, unit, web-unit, integration, e2e, cucumber, e2e-browser, plus the manual check.
+- Run the full gate and put the results in the **commit body**, never in a doc: typecheck, lint, lint:style, format:check, knip, dep:cruise, jscpd, unit, web-unit, integration, e2e, cucumber, e2e-browser, plus the `playwright-cli` pass from §5.
 - Commit each step or subtask with a conventional commit.
 - Update the PRD's checkbox and the backlog ledger by **editing** them: one line per slice, no appended corrections, no dated blocks.
 - When a `GAP-NNN` is closed and re-measured, mark it closed in `docs/research/usability-audit.md`.

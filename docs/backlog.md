@@ -33,6 +33,7 @@ Id prefixes: `ADR-NNNN` decision · `SL-NNN` slice · `GAP-NNN` usability gap ·
 - A **slice** is one user-visible capability, crossing engine → client → UI. A slice is never cut horizontally; too large is fixed by narrowing the capability.
 - A slice is `shipped` only after **a human has run its demo** in the real app. Otherwise it is `partial`, and its row names the missing entry point.
 - **Passing gates do not make a slice usable.** A demo records its before and after measurements for anything it touches on screen.
+- **Every session ends with a `playwright-cli` pass** over the running app — navigate the changed screens, snapshot, screenshot and read them, interact with the page, measure, keep `console` clean. Not optional, not delegated; details in `prompt-execution.md` §5.
 - **Finish what we started.** No milestone opens while an earlier one has an `open` or `partial` slice.
 - Gate results go in the **commit body**, never here. A row gets one line.
 - Correct this file by **editing** it. Git holds the history. No dated correction blocks.

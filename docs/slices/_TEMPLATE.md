@@ -87,7 +87,7 @@ Anything the slice must settle that the references disagree on or none of them a
 
 ## Tasks
 
-One TDD unit each, one conventional commit each. Small enough that a unit takes well under an hour; if it does not, decompose further.
+One TDD unit each, one conventional commit each. Small enough that a unit takes well under an hour; if it does not, decompose further. A task that changes a screen names what to navigate and measure — the executing session closes it with a `playwright-cli` pass (`prompt-execution.md` §5).
 
 - [ ] T1 —
 - [ ] T2 —

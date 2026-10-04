@@ -30,6 +30,10 @@ A slice is one user-visible capability crossing engine → client → UI, closed
 - **Let the gates be quiet.** They print their summary on a pass and everything on a failure; don't pipe them through `head`, which truncates failures too. `pnpm jscpd:report` locates the clones a failed `pnpm jscpd` only counted, and `--coverage.reporter=text` names the file behind a coverage total. `pnpm -s <script>` drops pnpm's two-line banner, so the whole gate chains into one call.
 - **Write docs to be grepped.** Don't hard-wrap paragraphs; one fact per table row; stable ids (`ADR-NNNN`, `SL-NNN`, `GAP-NNN`); file names in full.
 
+## Manual check — strict
+
+Every session ends with a `playwright-cli` pass over the real running app (`bin/biac dev`): headless (the default — never `--headed`), named session (`-s=<name>`); `goto`/`snapshot`/`click`/`resize` the screens the change touched, `screenshot` each screen change and read it, `eval` for `aria-*`/href/count assertions, `console` stays clean. Screenshots and the `.playwright-cli/` directory are scratch — `close` the session and delete it; never commit them. Full rule: `prompt-execution.md` §5.
+
 ## Code style
 
 - Functions: 4-20 lines. Split if longer.
