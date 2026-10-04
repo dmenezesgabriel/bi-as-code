@@ -8,9 +8,15 @@ Commands:
   preview   Serve a built site locally
 `;
 
-export function main(args: string[]): void {
-  const [command] = args;
-  if (command === "dev" || command === "build" || command === "preview") {
+export async function main(args: string[]): Promise<void> {
+  const [command, ...rest] = args;
+  if (command === "dev") {
+    // Lazy import: keeps `biac --help` free of vite's startup cost.
+    const { dev } = await import("./commands/dev.js");
+    await dev(rest);
+    return;
+  }
+  if (command === "build" || command === "preview") {
     console.error(`biac ${command}: not implemented yet (see docs/backlog.md)`);
     process.exit(1);
   }

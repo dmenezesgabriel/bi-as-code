@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 // biac CLI launcher — the product binary.
 // Node 24 type-stripping does not resolve NodeNext-style `.js` → `.ts`
-// specifiers, so this shim executes the compiled dist — `pnpm build:cli`
+// specifiers, so this shim runs the compiled dist — `pnpm build:cli`
 // is mandatory before `biac` can run.
-import "../dist/cli/main.js";
+import { main } from "../dist/cli/main.js";
+
+try {
+  await main(process.argv.slice(2));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
