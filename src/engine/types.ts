@@ -29,6 +29,29 @@ export interface PageFrontmatter {
 }
 
 /**
+ * The project-level theme default declared in `biac.config.ts`: a fixed mode
+ * or `"system"` to follow `prefers-color-scheme` until the user toggles.
+ */
+export type BiacTheme = "light" | "dark" | "system";
+
+/** Chrome/navigation settings from `biac.config.ts`'s optional `nav` block. */
+export interface BiacNavConfig {
+  /** False removes the sidebar entirely — content spans the viewport. */
+  sidebar: boolean;
+}
+
+/**
+ * Resolved `biac.config.ts`: every field is concrete after loading — the
+ * loader substitutes defaults for anything the project omits.
+ */
+export interface BiacConfig {
+  /** Site name: sidebar header and the document-title fallback. */
+  title: string;
+  theme: BiacTheme;
+  nav: BiacNavConfig;
+}
+
+/**
  * The compiled form of one page: `code` is an ESM module whose default export
  * is the MDX component and whose `frontmatter`/`title`/`sqlBlocks` named
  * exports mirror the returned fields. `title` is the front-matter title, the

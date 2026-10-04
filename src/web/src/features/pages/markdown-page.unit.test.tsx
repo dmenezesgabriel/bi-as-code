@@ -9,9 +9,9 @@ import {
 import { MarkdownPage } from "./markdown-page";
 import type { CompiledPageModule } from "./types";
 
-function renderPage(page: CompiledPageModule) {
+function renderPage(page: CompiledPageModule, siteTitle = "biac") {
   const rootRoute = createRootRoute({
-    component: () => <MarkdownPage page={page} />,
+    component: () => <MarkdownPage page={page} siteTitle={siteTitle} />,
   });
   const router = createRouter({
     routeTree: rootRoute,
@@ -87,10 +87,10 @@ describe("MarkdownPage", () => {
     expect(document.title).toBe("Quarterly results");
   });
 
-  it("falls back to the app title when the page has no title", async () => {
-    renderPage(page({ title: null }));
+  it("falls back to the site title when the page has no title", async () => {
+    renderPage(page({ title: null }), "ACME Analytics");
 
     await screen.findByRole("main");
-    expect(document.title).toBe("biac");
+    expect(document.title).toBe("ACME Analytics");
   });
 });

@@ -44,9 +44,16 @@ const pages: ManifestPageEntry[] = [
   pageEntry("/nested", async () => textPage("nested body", "Nested")),
 ];
 
+const site = {
+  title: "ACME Site",
+  theme: "system" as const,
+  nav: { sidebar: true },
+};
+
 function renderRouter(entries: ManifestPageEntry[], initialPath: string) {
   const router = buildPageRouter(
     entries,
+    site,
     createMemoryHistory({ initialEntries: [initialPath] }),
   );
   render(<RouterProvider router={router} />);
@@ -84,6 +91,16 @@ describe("buildPageRouter", () => {
       await screen.findByRole("heading", { name: "Page not found" }),
     ).toBeInTheDocument();
     expect(document.title).toBe("Page not found");
+  });
+
+  it("uses the configured site title for an untitled page", async () => {
+    const withUntitled = [
+      pageEntry("/untitled", async () => textPage("body", null)),
+    ];
+    renderRouter(withUntitled, "/untitled");
+
+    expect(await screen.findByText("body")).toBeInTheDocument();
+    expect(document.title).toBe("ACME Site");
   });
 
   it("renders an in-page error when a page module fails to load", async () => {

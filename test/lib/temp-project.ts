@@ -1,0 +1,37 @@
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+
+const created: string[] = [];
+
+/**
+ * Creates a temp project root tracked for {@link cleanupProjects} — suites
+ * call cleanup in `afterEach` so fixture dirs are removed even on failure.
+ *
+ * @example
+ * const root = makeProject("biac-pages-");
+ * writeProjectFile(root, "pages/index.md", "# Hi\n");
+ */
+export function makeTempProject(prefix = "biac-site-"): string {
+  const root = mkdtempSync(join(tmpdir(), prefix));
+  created.push(root);
+  return root;
+}
+
+/** Writes `content` to `relativePath` under `root`, creating parent dirs. */
+export function writeProjectFile(
+  root: string,
+  relativePath: string,
+  content: string,
+): void {
+  const file = join(root, relativePath);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, content);
+}
+
+/** Removes every root made by {@link makeTempProject} since the last cleanup. */
+export function cleanupProjects(): void {
+  while (created.length > 0) {
+    rmSync(created.pop()!, { recursive: true, force: true });
+  }
+}

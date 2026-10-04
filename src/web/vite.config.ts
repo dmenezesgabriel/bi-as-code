@@ -12,7 +12,7 @@ export default defineConfig({
   // repo (untracked foreign checkouts included) the app root. Pin the root
   // to the SPA dir.
   root: __dirname,
-  plugins: [react(), tailwindcss(), emptyPagesFallback()],
+  plugins: [react(), tailwindcss(), emptyProjectFallback()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -29,25 +29,30 @@ export default defineConfig({
 });
 
 /**
- * `virtual:biac-pages` is served by the engine's `biac:pages` plugin, which
- * `biac dev` registers inline with the project dir. Bare vite invocations
- * (`pnpm dev`, `vite build`, storybook) register no pages plugin — this
- * fallback resolves the import to an empty manifest so the SPA still
- * bundles and serves, with every URL landing on the not-found page.
+ * `virtual:biac-pages` and `virtual:biac-config` are served by the engine's
+ * `biac:pages` plugin, which `biac dev` registers inline with the project
+ * dir. Bare vite invocations (`pnpm dev`, `vite build`, storybook) register
+ * no pages plugin — this fallback resolves both imports to defaults (empty
+ * manifest, stock config) so the SPA still bundles and serves, with every
+ * URL landing on the not-found page.
  */
-function emptyPagesFallback(): Plugin {
+function emptyProjectFallback(): Plugin {
   let armed = true;
   return {
-    name: "biac:empty-pages-fallback",
+    name: "biac:empty-project-fallback",
     configResolved(config) {
       armed = !config.plugins.some((plugin) => plugin.name === "biac:pages");
     },
     resolveId(id) {
-      if (armed && id === "virtual:biac-pages") return "\0biac:empty-pages";
+      if (!armed) return;
+      if (id === "virtual:biac-pages") return "\0biac:empty-pages";
+      if (id === "virtual:biac-config") return "\0biac:empty-config";
     },
     load(id) {
-      if (armed && id === "\0biac:empty-pages") {
-        return "export const pages = [];\n";
+      if (!armed) return;
+      if (id === "\0biac:empty-pages") return "export const pages = [];\n";
+      if (id === "\0biac:empty-config") {
+        return 'export const config = {"title":"biac","theme":"system","nav":{"sidebar":true}};\n';
       }
     },
   };

@@ -32,10 +32,16 @@ function MarkdownLink({
  *
  * @example
  * const mod = await entry.load();
- * return <MarkdownPage page={mod} />;
+ * return <MarkdownPage page={mod} siteTitle={config.title} />;
  */
-export function MarkdownPage({ page }: { page: CompiledPageModule }) {
-  useDocumentTitle(page.title);
+export function MarkdownPage({
+  page,
+  siteTitle,
+}: {
+  page: CompiledPageModule;
+  siteTitle: string;
+}) {
+  useDocumentTitle(page.title, siteTitle);
   const Content = page.default;
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">

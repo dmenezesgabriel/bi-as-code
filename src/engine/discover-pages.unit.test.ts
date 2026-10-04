@@ -1,25 +1,27 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  cleanupProjects,
+  makeTempProject,
+  writeProjectFile,
+} from "../../test/lib/temp-project.js";
 import { discoverPages } from "./discover-pages.js";
 
 let projectRoot: string | undefined;
 
 afterEach(() => {
-  if (projectRoot) rmSync(projectRoot, { recursive: true, force: true });
+  cleanupProjects();
   projectRoot = undefined;
 });
 
 function makeProject(): string {
-  projectRoot = mkdtempSync(join(tmpdir(), "biac-pages-"));
+  projectRoot = makeTempProject("biac-pages-");
   return projectRoot;
 }
 
 function writeFile(projectRoot: string, relativePath: string): void {
-  const file = join(projectRoot, relativePath);
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, "# Page\n");
+  writeProjectFile(projectRoot, relativePath, "# Page\n");
 }
 
 describe("missing or empty pages directory", () => {

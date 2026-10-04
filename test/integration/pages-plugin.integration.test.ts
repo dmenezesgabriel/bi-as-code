@@ -1,14 +1,18 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { createServer, type ViteDevServer } from "vite";
+import { rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { ViteDevServer } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pagesPlugin } from "@/engine/pages-plugin.js";
+import { makePagesServer, waitForWatch } from "../lib/pages-vite-server.js";
+import {
+  cleanupProjects,
+  makeTempProject,
+  writeProjectFile,
+} from "../lib/temp-project.js";
 
-const webRoot = fileURLToPath(new URL("../../src/web", import.meta.url));
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = "\0virtual:biac-pages";
+const VIRTUAL_CONFIG_ID = "virtual:biac-config";
+const RESOLVED_CONFIG_ID = "\0virtual:biac-config";
 
 let projectRoot: string | undefined;
 let server: ViteDevServer | undefined;
@@ -16,61 +20,35 @@ let server: ViteDevServer | undefined;
 afterEach(async () => {
   await server?.close();
   server = undefined;
-  if (projectRoot) rmSync(projectRoot, { recursive: true, force: true });
-  projectRoot = undefined;
+  cleanupProjects();
 });
 
 function makeProject(): string {
-  projectRoot = mkdtempSync(join(tmpdir(), "biac-site-"));
+  projectRoot = makeTempProject();
   return projectRoot;
 }
 
-function writePage(relativePath: string, content: string): void {
-  const file = join(projectRoot!, relativePath);
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, content);
+function writeFile(relativePath: string, content: string): void {
+  writeProjectFile(projectRoot!, relativePath, content);
 }
 
-/**
- * Real vite dev server with `src/web` as root, matching `biac dev`: pages
- * live outside the vite root, so every request goes through `/@fs/` and the
- * plugin's `server.fs.allow` grant.
- */
 async function makeServer(root: string): Promise<ViteDevServer> {
-  server = await createServer({
-    root: webRoot,
-    configFile: false,
-    logLevel: "error",
-    plugins: [pagesPlugin(root)],
-    server: { middlewareMode: true },
-  });
+  server = await makePagesServer(root);
   return server;
-}
-
-/**
- * Polls until chokidar has finished scanning `pagesDir` — its `getWatched()`
- * entry only lists files once that directory's readdir completed, so a write
- * afterwards is guaranteed to arrive as a real event (vite's watcher runs
- * `ignoreInitial`, which swallows files discovered mid-scan). Unlike `ready`,
- * this cannot race: a `ready` listener attached after `createServer` can miss
- * a scan that finished during server setup.
- */
-async function waitForWatch(
-  dev: ViteDevServer,
-  pagesDir: string,
-  fileName: string,
-): Promise<void> {
-  await vi.waitFor(
-    () => {
-      expect(dev.watcher.getWatched()[pagesDir]).toContain(fileName);
-    },
-    { timeout: 10000 },
-  );
 }
 
 async function loadManifest(dev: ViteDevServer): Promise<string> {
   const result = await dev.transformRequest(VIRTUAL_MANIFEST_ID);
   return result?.code ?? "";
+}
+
+async function loadConfigModule(dev: ViteDevServer): Promise<string> {
+  const result = await dev.transformRequest(VIRTUAL_CONFIG_ID);
+  return result?.code ?? "";
+}
+
+function configModule(dev: ViteDevServer) {
+  return dev.environments.client.moduleGraph.getModuleById(RESOLVED_CONFIG_ID);
 }
 
 function manifestModule(dev: ViteDevServer) {
@@ -86,7 +64,7 @@ function pageModule(dev: ViteDevServer, file: string) {
 describe("page transform", () => {
   it("compiles a page under pages/ into a module on request", async () => {
     const root = makeProject();
-    writePage(
+    writeFile(
       "pages/index.md",
       "---\ntitle: Home\n---\n# Hi\n\n```sql orders\nselect 1\n```\n",
     );
@@ -103,7 +81,7 @@ describe("page transform", () => {
 
   it("leaves markdown outside pages/ untransformed", async () => {
     const root = makeProject();
-    writePage("notes.md", "# Not a page\n");
+    writeFile("notes.md", "# Not a page\n");
     const dev = await makeServer(root);
 
     const result = await dev.transformRequest(`/@fs${join(root, "notes.md")}`);
@@ -113,7 +91,7 @@ describe("page transform", () => {
 
   it("surfaces compile errors instead of serving a broken page", async () => {
     const root = makeProject();
-    writePage("pages/index.md", "---\ntitle: [unclosed\n---\n");
+    writeFile("pages/index.md", "---\ntitle: [unclosed\n---\n");
     const dev = await makeServer(root);
 
     await expect(
@@ -125,8 +103,8 @@ describe("page transform", () => {
 describe("virtual:biac-pages", () => {
   it("exposes manifest entries with a lazy loader per page", async () => {
     const root = makeProject();
-    writePage("pages/index.md", "---\ntitle: Home\n---\n# Hi\n");
-    writePage("pages/nested/page.md", "# Nested\n");
+    writeFile("pages/index.md", "---\ntitle: Home\n---\n# Hi\n");
+    writeFile("pages/nested/page.md", "# Nested\n");
     const dev = await makeServer(root);
 
     const code = await loadManifest(dev);
@@ -151,14 +129,14 @@ describe("virtual:biac-pages", () => {
 describe("file watching", () => {
   it("invalidates the manifest when a page is added", async () => {
     const root = makeProject();
-    writePage("pages/index.md", "# Hi\n");
+    writeFile("pages/index.md", "# Hi\n");
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "index.md");
     await loadManifest(dev);
     const manifest = manifestModule(dev);
     const timestamp = manifest!.lastInvalidationTimestamp;
 
-    writePage("pages/new.md", "# New\n");
+    writeFile("pages/new.md", "# New\n");
 
     await vi.waitFor(
       () => {
@@ -172,7 +150,7 @@ describe("file watching", () => {
   it("invalidates the manifest when a page is removed", async () => {
     const root = makeProject();
     const file = join(root, "pages/gone.md");
-    writePage("pages/gone.md", "# Gone\n");
+    writeFile("pages/gone.md", "# Gone\n");
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "gone.md");
     await loadManifest(dev);
@@ -193,14 +171,14 @@ describe("file watching", () => {
   it("invalidates the page module when a page is edited", async () => {
     const root = makeProject();
     const pagePath = join(root, "pages/index.md");
-    writePage("pages/index.md", "# Old heading\n");
+    writeFile("pages/index.md", "# Old heading\n");
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "index.md");
     await dev.transformRequest(`/@fs${pagePath}`);
     const page = pageModule(dev, pagePath);
     const timestamp = page!.lastInvalidationTimestamp;
 
-    writePage("pages/index.md", "# New heading\n");
+    writeFile("pages/index.md", "# New heading\n");
 
     await vi.waitFor(
       () => {
@@ -210,5 +188,54 @@ describe("file watching", () => {
     );
     const result = await dev.transformRequest(`/@fs${pagePath}`);
     expect(result?.code).toContain("New heading");
+  });
+});
+
+describe("virtual:biac-config", () => {
+  it("serves the project's declared title, theme and nav", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { title: "ACME", theme: "dark", nav: { sidebar: false } };\n',
+    );
+    const dev = await makeServer(root);
+
+    const code = await loadConfigModule(dev);
+
+    expect(code).toContain('"ACME"');
+    expect(code).toContain('"dark"');
+    expect(code).toContain('"sidebar":false');
+  });
+
+  it("serves defaults when biac.config.ts is absent", async () => {
+    const root = makeProject();
+    const dev = await makeServer(root);
+
+    const code = await loadConfigModule(dev);
+
+    expect(code).toContain('"biac"');
+    expect(code).toContain('"system"');
+    expect(code).toContain('"sidebar":true');
+  });
+
+  it("invalidates the config module when biac.config.ts is edited", async () => {
+    const root = makeProject();
+    const configPath = join(root, "biac.config.ts");
+    writeFile("biac.config.ts", 'export default { title: "ACME" };\n');
+    const dev = await makeServer(root);
+    await waitForWatch(dev, root, "biac.config.ts");
+    await loadConfigModule(dev);
+    const config = configModule(dev);
+    const timestamp = config!.lastInvalidationTimestamp;
+
+    writeFileSync(configPath, 'export default { title: "Umbrella" };\n');
+
+    await vi.waitFor(
+      () => {
+        expect(config!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
+      },
+      { timeout: 10000 },
+    );
+    expect(await loadConfigModule(dev)).toContain('"Umbrella"');
   });
 });

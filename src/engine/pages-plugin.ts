@@ -1,12 +1,16 @@
 import { join, resolve, sep } from "node:path";
 import type { Plugin } from "vite";
+import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { discoverPages } from "./discover-pages.js";
-import type { PageManifestEntry } from "./types.js";
+import type { BiacConfig, PageManifestEntry } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = `\0${VIRTUAL_MANIFEST_ID}`;
 const VIRTUAL_PAGE_PREFIX = "virtual:biac-page/";
+const VIRTUAL_CONFIG_ID = "virtual:biac-config";
+const RESOLVED_CONFIG_ID = `\0${VIRTUAL_CONFIG_ID}`;
+const CONFIG_FILE = "biac.config.ts";
 
 /**
  * Vite plugin that puts `pages/**\/*.{md,mdx}` inside the module graph: every
@@ -27,6 +31,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const root = resolve(projectRoot);
   const pagesDir = join(root, "pages");
   const pagesDirPosix = toPosix(pagesDir);
+  const configFile = join(root, CONFIG_FILE);
 
   return {
     name: "biac:pages",
@@ -48,12 +53,16 @@ export function pagesPlugin(projectRoot: string): Plugin {
     },
     resolveId(id) {
       if (id === VIRTUAL_MANIFEST_ID) return RESOLVED_MANIFEST_ID;
+      if (id === VIRTUAL_CONFIG_ID) return RESOLVED_CONFIG_ID;
       if (!id.startsWith(VIRTUAL_PAGE_PREFIX)) return;
       const file = join(root, id.slice(VIRTUAL_PAGE_PREFIX.length));
       if (!toPosix(file).startsWith(`${pagesDirPosix}/`)) return null;
       return file;
     },
-    load(id) {
+    async load(id) {
+      if (id === RESOLVED_CONFIG_ID) {
+        return configModuleSource(await loadBiacConfig(root));
+      }
       if (id !== RESOLVED_MANIFEST_ID) return;
       return manifestModuleSource(discoverPages(root));
     },
@@ -65,8 +74,16 @@ export function pagesPlugin(projectRoot: string): Plugin {
     },
     configureServer(server) {
       server.watcher.add(pagesDir);
+      server.watcher.add(configFile);
     },
     hotUpdate({ type, file, modules }) {
+      if (file === configFile) {
+        const graph = this.environment.moduleGraph;
+        const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
+        if (!configModule) return;
+        graph.invalidateModule(configModule);
+        return [...modules, configModule];
+      }
       if (!isPageFile(file, pagesDirPosix)) return;
       // Edits need nothing extra: the invalidated page module has no HMR
       // boundary upstream, so default propagation already ends in a reload.
@@ -78,6 +95,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
       return [...modules, manifest];
     },
   };
+}
+
+function configModuleSource(config: BiacConfig): string {
+  return `export const config = ${JSON.stringify(config)};\n`;
 }
 
 function manifestModuleSource(entries: PageManifestEntry[]): string {
