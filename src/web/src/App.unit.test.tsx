@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -84,6 +84,21 @@ describe("AppShell", () => {
     expect(screen.getByText("Nested")).toBeInTheDocument();
   });
 
+  it("renders route-derived breadcrumbs in the header", async () => {
+    await renderShell("/nested/page");
+
+    const nav = screen.getByRole("navigation", { name: "breadcrumb" });
+    expect(within(nav).getByRole("link", { name: "Home" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    expect(within(nav).getByText("Nested")).toBeInTheDocument();
+    expect(within(nav).getByText("Region detail")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
   it("omits the sidebar and its toggle when nav.sidebar is false", async () => {
     await renderShell("/", { ...site, nav: { sidebar: false } });
 
@@ -93,6 +108,9 @@ describe("AppShell", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Toggle sidebar" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "breadcrumb" }),
     ).not.toBeInTheDocument();
   });
 
@@ -142,7 +160,7 @@ describe("AppShell", () => {
       await renderShell("/");
 
       fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }));
-      fireEvent.click(screen.getByRole("link", { name: "Home" }));
+      fireEvent.click(within(sidebar()).getByRole("link", { name: "Home" }));
 
       expect(sidebar()).toHaveClass("-translate-x-full");
     });

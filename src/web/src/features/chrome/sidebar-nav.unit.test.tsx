@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
+import { fireEvent, screen } from "@testing-library/react";
 import type { NavTree } from "virtual:biac-pages";
+import { renderWithRouter } from "./router-harness";
 import { SidebarNav } from "./sidebar-nav";
 
 const tree: NavTree = {
@@ -32,26 +26,11 @@ const tree: NavTree = {
 const paths = ["/", "/about", "/nested/page", "/guides/intro"];
 
 async function renderNav(initialPath: string, onNavigate = vi.fn()) {
-  const rootRoute = createRootRoute({
-    component: () => (
-      <SidebarNav tree={tree} siteTitle="ACME" onNavigate={onNavigate} />
-    ),
-  });
-  const routes = paths.map((path) =>
-    createRoute({
-      getParentRoute: () => rootRoute,
-      path,
-      component: () => null,
-    }),
+  await renderWithRouter(
+    <SidebarNav tree={tree} siteTitle="ACME" onNavigate={onNavigate} />,
+    paths,
+    initialPath,
   );
-  const router = createRouter({
-    routeTree: rootRoute.addChildren(routes),
-    history: createMemoryHistory({ initialEntries: [initialPath] }),
-  });
-  render(<RouterProvider router={router} />);
-  // The router resolves the initial match asynchronously — wait for the
-  // nav landmark so each test body can assert synchronously.
-  await screen.findByRole("navigation", { name: "Site navigation" });
   return onNavigate;
 }
 

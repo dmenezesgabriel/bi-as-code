@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import type { NavTree } from "virtual:biac-pages";
 import { buildPageRouter } from "./page-router";
@@ -127,7 +127,9 @@ describe("buildPageRouter", () => {
       name: "Site navigation",
     });
     expect(nav).toHaveTextContent("Nested");
-    expect(nav).toContainElement(screen.getByRole("link", { name: "Home" }));
+    // The header breadcrumbs also render a "Home" link — scope to the
+    // sidebar landmark so the assertion names the nav tree's link.
+    within(nav).getByRole("link", { name: "Home" });
   });
 
   it("renders an in-page error when a page module fails to load", async () => {

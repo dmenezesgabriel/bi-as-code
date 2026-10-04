@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
+import { Breadcrumbs } from "./features/chrome/breadcrumbs";
 import { SidebarNav } from "./features/chrome/sidebar-nav";
 import {
   readDesktopOpen,
@@ -14,12 +15,12 @@ const MOBILE_QUERY = "(max-width: 1023px)";
 
 /**
  * The app chrome wrapping every route: a fixed sidebar nav, a slim header
- * carrying the toggle, and the routed page. Sidebar visibility is
- * breakpoint-aware — below `lg` the sidebar is an overlay drawer whose
- * open state is ephemeral (a link click, backdrop tap or Escape dismisses
- * it); at `lg` and above it sits beside the content, and only an explicit
- * toggle — persisted to sessionStorage — hides it there. `nav.sidebar:
- * false` in `biac.config.ts` removes the chrome entirely.
+ * carrying the toggle and breadcrumbs, and the routed page. Sidebar
+ * visibility is breakpoint-aware — below `lg` the sidebar is an overlay
+ * drawer whose open state is ephemeral (a link click, backdrop tap or
+ * Escape dismisses it); at `lg` and above it sits beside the content, and
+ * only an explicit toggle — persisted to sessionStorage — hides it there.
+ * `nav.sidebar: false` in `biac.config.ts` removes the chrome entirely.
  */
 export function AppShell({ tree, site }: { tree: NavTree; site: BiacConfig }) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
@@ -92,6 +93,7 @@ export function AppShell({ tree, site }: { tree: NavTree; site: BiacConfig }) {
           >
             <span aria-hidden>☰</span>
           </button>
+          <Breadcrumbs tree={tree} />
         </header>
         <Outlet />
       </div>
