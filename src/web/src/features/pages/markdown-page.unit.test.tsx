@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -59,6 +59,25 @@ describe("MarkdownPage", () => {
     expect(
       await screen.findByRole("link", { name: "external" }),
     ).toHaveAttribute("href", "https://example.com");
+  });
+
+  it("highlights fenced code through the pre component in the map", async () => {
+    renderPage(
+      page({
+        default: ({ components }) => {
+          const Pre = components?.pre ?? "pre";
+          return (
+            <Pre>
+              <code className="language-sql">select 1</code>
+            </Pre>
+          );
+        },
+      }),
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector("pre.shiki")).not.toBeNull();
+    });
   });
 
   it("sets document.title to the page title", async () => {

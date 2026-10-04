@@ -1,16 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import type { AnchorHTMLAttributes } from "react";
+import { HighlightedPre } from "./highlighted-pre";
 import type { CompiledPageModule, MdxComponentMap } from "./types";
 import { useDocumentTitle } from "./use-document-title";
 
 /**
- * MDX element overrides. `a` is the only override so far: absolute-path
- * links go through the client router so page-to-page navigation never
- * reloads the SPA. Fences stay default — syntax highlighting is a separate
- * concern. Kept unexported so the map doesn't trip the Fast Refresh rule
- * that files exporting components export only components.
+ * MDX element overrides. `a` routes absolute-path links through the client
+ * router so page-to-page navigation never reloads the SPA; `pre` hands
+ * fenced code blocks to shiki. Kept unexported so the map doesn't trip the
+ * Fast Refresh rule that files exporting components export only
+ * components.
  */
-const mdxComponents: MdxComponentMap = { a: MarkdownLink };
+const mdxComponents: MdxComponentMap = {
+  a: MarkdownLink,
+  pre: HighlightedPre,
+};
 
 function MarkdownLink({
   href = "",

@@ -129,7 +129,7 @@ Dependencies to install at task time (exact pins, `minimumReleaseAge` already en
 - [x] T3 — `pages-plugin`: vite plugin wiring T1+T2 — `.md` → module, `virtual:biac-pages` manifest module, `configureServer` adds `pages/` to the watcher, `handleHotUpdate` covers edit/add/remove/rename. Integration test over a fixture dir with a real vite server.
 - [x] T4 — `biac dev`: `src/cli/commands/dev.ts` boots `vite.createServer` (web config + plugin, project root arg, port flag, SIGINT/SIGTERM shutdown); `main.ts` routes to it. e2e (vitest e2e project): spawn → GET `/` 200 → GET page module → kill.
 - [x] T5 — routes + page renderer: `router.tsx` builds routes from `virtual:biac-pages` (lazy), `features/pages/` renders the MDX component, applies front-matter (`document.title`), `notFoundComponent` for unknown slugs. web-unit tests.
-- [ ] T6 — shiki fences: `features/pages/` code component highlights fenced blocks (incl. extracted sql fences rendered as code). web-unit test asserting token markup.
+- [x] T6 — shiki fences: `features/pages/` code component highlights fenced blocks (incl. extracted sql fences rendered as code). web-unit test asserting token markup.
 - [ ] T7 — `pages/` example project + cucumber feature + e2e-browser spec (render, nav, hot reload, 404) + headless playwright screenshot pass on every demo step + backlog/PRD bookkeeping.
 
 ## Out of scope
