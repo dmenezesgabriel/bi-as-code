@@ -1,20 +1,6 @@
-import type { Page } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "./dev-server.fixture.js";
-
-/**
- * Console errors and page errors fail every test — a clean console is part
- * of "renders correctly", not an optional extra.
- */
-function collectConsoleErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
-  });
-  page.on("pageerror", (error) => errors.push(String(error)));
-  return errors;
-}
+import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 test("renders the index page: title, prose, gfm table, highlighted sql fence", async ({
   page,
@@ -24,9 +10,12 @@ test("renders the index page: title, prose, gfm table, highlighted sql fence", a
   await page.goto(biacDev.url);
 
   await expect(page).toHaveTitle("Orders overview");
+  // First paint on a fresh dev server can outlast the 10s expect default —
+  // dep re-optimization runs while the suite's parallel servers share one
+  // .vite cache.
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
   await expect(
     page.getByText("Weekly order volume across regions."),
   ).toBeVisible();
@@ -73,7 +62,7 @@ test("updates on page edit and serves a page added while running", async ({
   await page.goto(biacDev.url);
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
 
   const indexFile = join(biacDev.projectDir, "pages/index.md");
   const original = readFileSync(indexFile, "utf8");
@@ -112,7 +101,7 @@ test("renders a styled 404 for an unknown route", async ({ page, biacDev }) => {
 
   await expect(
     page.getByRole("heading", { name: "Page not found" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 20_000 });
   await expect(page).toHaveTitle("Page not found");
 
   await page.getByRole("link", { name: "Back to index" }).click();

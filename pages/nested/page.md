@@ -1,5 +1,6 @@
 ---
 title: Region detail
+sidebar_position: 1
 ---
 
 # Region detail

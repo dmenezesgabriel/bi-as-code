@@ -1,4 +1,4 @@
-import { test as base } from "@playwright/test";
+import { test as base, type Page } from "@playwright/test";
 import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,8 +10,22 @@ const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 export interface BiacDev {
   /** Base URL of the spawned dev server, e.g. "http://localhost:51234/". */
   url: string;
-  /** Temp project dir holding a copy of the shipped `pages/` example. */
+  /** Temp project dir holding a copy of the shipped example project. */
   projectDir: string;
+}
+
+/**
+ * Console errors and page errors fail every test — a clean console is part
+ * of "renders correctly", not an optional extra. Wire this before the first
+ * `page.goto` and assert it empties by the end of the test.
+ */
+export function collectConsoleErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("pageerror", (error) => errors.push(String(error)));
+  return errors;
 }
 
 /**
@@ -28,6 +42,10 @@ export const test = base.extend<{ biacDev: BiacDev }>({
     cpSync(join(repoRoot, "pages"), join(projectDir, "pages"), {
       recursive: true,
     });
+    cpSync(
+      join(repoRoot, "biac.config.ts"),
+      join(projectDir, "biac.config.ts"),
+    );
     const server = await startDevServer(projectDir);
     await use({ url: server.url, projectDir });
     server.kill();

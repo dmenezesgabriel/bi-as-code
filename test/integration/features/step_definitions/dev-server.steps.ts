@@ -10,6 +10,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { After, BeforeAll, Given, Then, When } from "@cucumber/cucumber";
+// .ts specifier, not .js — Node's type stripping resolves the real file.
+import { eventually, getOk } from "../../../lib/http.ts";
 
 const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 // Joined onto `base`, which already ends in "/" — a leading slash here
@@ -41,39 +43,6 @@ After(async () => {
   projectRoot = undefined;
   base = undefined;
 });
-
-/**
- * Retries `check` until it passes or the deadline lapses — file-watch events
- * and server startup are timing-sensitive, and sleeping a fixed delay is how
- * flaky tests are born.
- */
-async function eventually(
-  check: () => Promise<boolean>,
-  timeoutMs = 15_000,
-): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  let lastError: unknown;
-  while (Date.now() < deadline) {
-    try {
-      if (await check()) return;
-    } catch (error) {
-      lastError = error;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 150));
-  }
-  throw lastError instanceof Error
-    ? lastError
-    : new Error(`timed out after ${timeoutMs}ms waiting for condition`);
-}
-
-/** GETs `url` and returns its body text; a non-200 response fails loudly. */
-async function getOk(url: string): Promise<string> {
-  const res = await fetch(url);
-  if (res.status !== 200) {
-    throw new Error(`GET ${url} → ${res.status}, expected 200`);
-  }
-  return res.text();
-}
 
 /**
  * Finds an OS-assigned free port by listening on 0, then releases it. A

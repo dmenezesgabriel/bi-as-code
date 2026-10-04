@@ -1,6 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    // Only legal under noEmit — turned off here so the emitted CLI/engine
+    // keep the NodeNext .js specifier convention the flag bypasses.
+    "allowImportingTsExtensions": false,
     "noEmit": false,
     "outDir": "dist",
     "rootDir": "src",

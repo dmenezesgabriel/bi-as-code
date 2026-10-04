@@ -2,6 +2,9 @@
   "$schema": "./node_modules/knip/schema.json",
   "ignoreExportsUsedInFile": true,
   "ignore": [
+    // Loaded at runtime by the engine's loadBiacConfig via vite's
+    // loadConfigFromFile — never statically imported, so knip can't see it.
+    "biac.config.ts",
     "test/fixtures/**",
     "vitest.stryker.config.ts",
     "test/e2e-browser/global-setup.ts",

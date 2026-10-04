@@ -13,6 +13,11 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
+    // Cucumber-js loads step files through Node's native type stripping —
+    // no .js→.ts specifier remap — so step files import shared helpers with
+    // their real .ts extension. Emitted configs (tsconfig.build.json) keep
+    // the NodeNext .js convention and forbid this flag.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "skipLibCheck": true,
     "useDefineForClassFields": true,
