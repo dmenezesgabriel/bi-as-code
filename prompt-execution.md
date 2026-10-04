@@ -1,0 +1,65 @@
+# Execution session
+
+You are starting a clean session with no memory of earlier ones. The repo's docs and git history are your memory. Follow these steps in order.
+
+## 1. Orient — grep first, read only what you need
+
+- Run `git log --oneline -15` and `git status --short`. Uncommitted or untracked work from an earlier session means that session stopped partway through. Understand it before starting anything new.
+- Open `docs/backlog.md`. Its "Finding things" table lists the greps. Find the next slice with `grep -n "\*\*open ← next" docs/backlog.md`.
+- If the next row is a research session (a docs-only `R<n>` milestone row), there is no PRD: its scope is its row in that milestone's ledger doc, and its output goes into `docs/research/`. It changes no `src/` file. Every number carries its command, every `research_repos/` path is checked with `test -e`, and every external claim carries a URL fetched in that session. The gate for a research session is `pnpm exec prettier --check` on the touched docs, and `git status --short -- src/` must be empty.
+- Read that slice's PRD in `docs/slices/SL-NNN-*.md`. Find its first unchecked task with `grep -n "\[ \]" docs/slices/SL-NNN-*.md`.
+- For the gaps the slice closes, grep them in the audit: `grep -n "GAP-001" docs/research/usability-audit.md`.
+- For a decision, grep the ADR id (`grep -rn "ADR-0001" docs/`) and read only that ADR.
+- Follow `AGENTS.md`, token-efficiency section included. Do the searches yourself; spawn agents or workflows only if I ask.
+
+## 2. Scope — one task per session
+
+- Do **one task** (`T<n>`) of the slice, then stop. I open a new session for the next one. If a task is still too big, split it in the PRD first, then do the first piece.
+- A slice is one user-visible capability crossing engine → client → UI, closed by a demo a human runs in the real app. Never cut it horizontally: a page pipeline with no route that serves it is not shipped. If it is too big, narrow the capability (one widget, one clause type, no options); never cut the stack.
+- Finish what was started. Don't open a new slice while the current one is `open` or `partial`.
+
+## 3. If the slice has no PRD, write it first
+
+Copy `docs/slices/_TEMPLATE.md`. A PRD exists so whoever builds the slice never guesses and never assumes. It is not ready without these three sections:
+
+- **Who else implements this:** a row for each of the 4 feature references in `research_repos/` — `evidence`, `framework`, `mosaic`, `streamlit` — including those that lack the feature. Start from `docs/research/feature-census.md`, then verify by reading code. A capability most of them have is probably worth building. One none of them have is an invention and must be justified.
+- **Implementation inventory:** for every repo that has the feature, the actual files to open, grouped by concern (data model, pipeline, client, UI entry point, state persistence, empty/error/loading states, accessibility, edge cases). List paths, not summaries, so the builder reads every candidate implementation and chooses what suits us. Where two repos disagree, name the disagreement: it is the decision the slice must make.
+- **Gap analysis:** our code against those references for the same feature, file against file. Say plainly whether ours is absent, unreachable, partial or complete.
+
+Verify every path on disk in the session that writes the PRD. Symbol greps only find candidates; open the files before counting them. Cite paths and symbols. Add a `~N` line hint only if you checked it today. Tag each gap the slice closes with its `GAP-NNN`. Write the PRD to be grepped: no hard-wrapped paragraphs, one fact per table row, file names in full.
+
+## 4. Build — strict TDD, evidence over assumption
+
+- Before writing code, read how the reference repos named in the PRD solve the task, and take the best of them. Aim for the highest fidelity the references allow. Act on what you measured and read, never on assumption.
+- Test-driven development on application source code, strictly: RED → GREEN → REFACTOR.
+- Every new or refactored piece of application code gets unit tests, integration tests, e2e tests and a manual check in a real browser (headless playwright) before you move on. Browser e2e may seed data through fixture files, but never the capability under test; that must be driven through the UI.
+- Test the program's source code and its integrations with its production dependencies. Don't test devDependencies or conventions (e.g. whether `.gitignore` ignores `*.png`).
+- No workarounds, no band-aids, no over-engineering, no dead code. Refactor carefully when the code needs it.
+- A defect you introduce is yours to fix before you stop, whether or not it was planned.
+- Code must be easy to read. Favour clarity and discoverability, use idiomatic names, and use the domain's ubiquitous language correctly.
+- Use web search and `curl` when the references and official docs are not enough to settle a fact.
+- Install only safe, official, well-maintained packages; guard against supply-chain attacks (`save-exact`, `minimumReleaseAge`, `trustPolicy`; install scripts stay blocked except an allowlist documented in `pnpm-workspace.yaml`). Reference repos are read-only: never install, import, link or vendor them.
+
+## 5. Validate like a human would
+
+- Screenshot every step that changes the screen with Playwright, and read the screenshots. Screenshots are for your analysis only; never commit them. Keep them in your scratchpad.
+- Measure; don't eyeball. For any layout or interaction you touch, record numbers before and after: rows visible, target sizes, `aria-*` state, console errors, query latency for interactions (cross-filter re-query time).
+- The browser is a person's desktop too: verify with headless Playwright sessions only, never `BROWSER=` opens.
+
+## 6. Close the step
+
+- Run the full gate and put the results in the **commit body**, never in a doc: typecheck, lint, lint:style, format:check, knip, dep:cruise, jscpd, unit, web-unit, integration, e2e, cucumber, e2e-browser, plus the manual check.
+- Commit each step or subtask with a conventional commit.
+- Update the PRD's checkbox and the backlog ledger by **editing** them: one line per slice, no appended corrections, no dated blocks.
+- When a `GAP-NNN` is closed and re-measured, mark it closed in `docs/research/usability-audit.md`.
+- When the slice ships (its demo run by a human), delete its PRD. Anything worth keeping becomes an ADR or a code comment first. Code comments state their fact so it stands alone. They may cite an ADR or a real source of truth, never `research_repos/`, a slice or task id, or a planning doc.
+- Stop, and tell me what shipped, what you measured, and what the next task is.
+
+## Reference repositories — `research_repos/`, 4 feature references, read-only and untracked
+
+| Repo        | What it is for us                                                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `evidence`  | BI-as-code product: ` ```sql name ` inline queries, `{% tag %}`/`data="name"`/`filters=[...]`/`{{param}}` UX, Filter model + URL persistence, ~75 widget tags, ECharts usage |
+| `framework` | Markdown pages + client-side DuckDB-WASM SQL blocks (`id=`/`display` directives), `sql:` front-matter, Inputs, file-based routing, static builds, data loaders               |
+| `mosaic`    | Cross-filter architecture: `Coordinator`, `Selection`/`SelectionClause`, `wasmConnector`, `makeClient`, spec YAML — we port the semantics, never install it                  |
+| `streamlit` | Widget UX catalog: `lib/streamlit/elements/widgets/` — behavior/empty-state/a11y reference for inputs                                                                        |
