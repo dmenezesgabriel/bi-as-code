@@ -3,6 +3,7 @@ import type { Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { discoverPages } from "./discover-pages.js";
+import { buildNavTree } from "./nav-tree.js";
 import type { BiacConfig, PageManifestEntry } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
@@ -76,7 +77,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
       server.watcher.add(pagesDir);
       server.watcher.add(configFile);
     },
-    hotUpdate({ type, file, modules }) {
+    hotUpdate({ file, modules }) {
       if (file === configFile) {
         const graph = this.environment.moduleGraph;
         const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
@@ -85,9 +86,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
         return [...modules, configModule];
       }
       if (!isPageFile(file, pagesDirPosix)) return;
-      // Edits need nothing extra: the invalidated page module has no HMR
-      // boundary upstream, so default propagation already ends in a reload.
-      if (type === "update") return;
+      // Every page change — edits included, since front-matter feeds the
+      // manifest's nav fields — invalidates the manifest. Neither the page
+      // nor the manifest module has an accepting importer upstream, so
+      // propagation dead-ends into a full reload and the route tree rebuilds.
       const graph = this.environment.moduleGraph;
       const manifest = graph.getModuleById(RESOLVED_MANIFEST_ID);
       if (!manifest) return;
@@ -102,15 +104,26 @@ function configModuleSource(config: BiacConfig): string {
 }
 
 function manifestModuleSource(entries: PageManifestEntry[]): string {
-  const rows = entries.map(
-    (entry) =>
-      `  { route: ${JSON.stringify(entry.route)}, file: ${JSON.stringify(
-        entry.file,
-      )}, isIndex: ${entry.isIndex}, load: () => import(${JSON.stringify(
-        VIRTUAL_PAGE_PREFIX + entry.file,
-      )}) }`,
-  );
-  return `export const pages = [\n${rows.join(",\n")}\n];\n`;
+  const rows = entries.map((entry) => {
+    const nav = [
+      entry.title === undefined
+        ? null
+        : `title: ${JSON.stringify(entry.title)}`,
+      entry.sidebarPosition === undefined
+        ? null
+        : `sidebarPosition: ${JSON.stringify(entry.sidebarPosition)}`,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    return `  { route: ${JSON.stringify(entry.route)}, file: ${JSON.stringify(
+      entry.file,
+    )}, isIndex: ${entry.isIndex}${nav ? `, ${nav}` : ""}, load: () => import(${JSON.stringify(
+      VIRTUAL_PAGE_PREFIX + entry.file,
+    )}) }`;
+  });
+  return `export const pages = [\n${rows.join(",\n")}\n];\nexport const navTree = ${JSON.stringify(
+    buildNavTree(entries),
+  )};\n`;
 }
 
 const VITE_INTERNAL_QUERY_PARAMS = new Set(["import", "t", "v"]);

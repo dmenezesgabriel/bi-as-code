@@ -111,6 +111,72 @@ describe("filtering", () => {
   });
 });
 
+describe("front-matter", () => {
+  it("reads title and sidebar_position into the manifest entry", () => {
+    const root = makeProject();
+    writeProjectFile(
+      root,
+      "pages/report.md",
+      "---\ntitle: Sales Report\nsidebar_position: 2\n---\n# Report\n",
+    );
+
+    expect(discoverPages(root)).toEqual([
+      {
+        route: "/report",
+        file: "pages/report.md",
+        isIndex: false,
+        title: "Sales Report",
+        sidebarPosition: 2,
+      },
+    ]);
+  });
+
+  it("leaves nav fields absent on pages without front-matter", () => {
+    const root = makeProject();
+    writeFile(root, "pages/plain.md");
+
+    const [entry] = discoverPages(root);
+    expect(entry!.title).toBeUndefined();
+    expect(entry!.sidebarPosition).toBeUndefined();
+  });
+
+  it("coerces a non-string title the way the page compiler does", () => {
+    const root = makeProject();
+    writeProjectFile(root, "pages/year.md", "---\ntitle: 2024\n---\n# Year\n");
+
+    expect(discoverPages(root)[0]!.title).toBe("2024");
+  });
+
+  it("drops a non-number sidebar_position", () => {
+    const root = makeProject();
+    writeProjectFile(
+      root,
+      "pages/a.md",
+      "---\nsidebar_position: soon\n---\n# A\n",
+    );
+
+    expect(discoverPages(root)[0]!.sidebarPosition).toBeUndefined();
+  });
+
+  it("throws naming the file when front-matter is not a mapping", () => {
+    const root = makeProject();
+    writeProjectFile(root, "pages/bad.md", "---\n- a\n- b\n---\n# Bad\n");
+
+    expect(() => discoverPages(root)).toThrow(
+      /Invalid front-matter in pages\/bad\.md.*YAML mapping.*array/,
+    );
+  });
+
+  it("throws naming the file when front-matter is malformed yaml", () => {
+    const root = makeProject();
+    writeProjectFile(root, "pages/bad.md", "---\ntitle: [unclosed\n---\n");
+
+    expect(() => discoverPages(root)).toThrow(
+      /Invalid front-matter in pages\/bad\.md/,
+    );
+  });
+});
+
 describe("manifest shape", () => {
   it("sorts entries by route with the root page first", () => {
     const root = makeProject();

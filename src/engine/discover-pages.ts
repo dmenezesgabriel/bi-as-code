@@ -1,7 +1,8 @@
 import { existsSync, globSync } from "node:fs";
 import { join, sep } from "node:path";
 import { basename, dirname } from "node:path/posix";
-import type { PageManifestEntry } from "./types.js";
+import { readPageFrontmatter } from "./page-frontmatter.js";
+import type { PageFrontmatter, PageManifestEntry } from "./types.js";
 
 /**
  * Maps every `.md`/`.mdx` file under `pages/` in a project root to a route
@@ -24,7 +25,20 @@ export function discoverPages(projectRoot: string): PageManifestEntry[] {
 
   const byRoute = new Map<string, PageManifestEntry>();
   for (const file of files) {
-    const entry = toEntry(file.split(sep).join("/"));
+    const relativeFile = file.split(sep).join("/");
+    // A page deleted between the glob and the read (common mid-edit) is
+    // skipped — the remove event invalidates the manifest for the next load.
+    let frontmatter: PageFrontmatter;
+    try {
+      frontmatter = readPageFrontmatter(
+        join(pagesDir, relativeFile),
+        `pages/${relativeFile}`,
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw error;
+    }
+    const entry = toEntry(relativeFile, frontmatter);
     const existing = byRoute.get(entry.route);
     if (existing) {
       throw new Error(
@@ -41,13 +55,37 @@ function compareRoutes(a: PageManifestEntry, b: PageManifestEntry): number {
   return a.route < b.route ? -1 : 1;
 }
 
-function toEntry(relativeFile: string): PageManifestEntry {
+function toEntry(
+  relativeFile: string,
+  frontmatter: PageFrontmatter,
+): PageManifestEntry {
   const stem = relativeFile.replace(/\.(md|mdx)$/, "");
   const file = `pages/${relativeFile}`;
   if (basename(stem) !== "index") {
-    return { route: `/${stem}`, file, isIndex: false };
+    return {
+      route: `/${stem}`,
+      file,
+      isIndex: false,
+      ...navFields(frontmatter),
+    };
   }
   const dir = dirname(stem);
   const route = dir === "." ? "/" : `/${dir}`;
-  return { route, file, isIndex: true };
+  return { route, file, isIndex: true, ...navFields(frontmatter) };
+}
+
+/**
+ * The front-matter fields nav cares about. `title` coerces like the page
+ * compiler's title resolution (a numeric title renders as text); a
+ * non-number `sidebar_position` is dropped rather than breaking the nav.
+ */
+function navFields(
+  frontmatter: PageFrontmatter,
+): Pick<PageManifestEntry, "title" | "sidebarPosition"> {
+  const fields: Pick<PageManifestEntry, "title" | "sidebarPosition"> = {};
+  if (frontmatter.title != null) fields.title = String(frontmatter.title);
+  if (typeof frontmatter.sidebar_position === "number") {
+    fields.sidebarPosition = frontmatter.sidebar_position;
+  }
+  return fields;
 }

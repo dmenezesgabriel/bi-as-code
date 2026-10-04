@@ -6,6 +6,7 @@ import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { matter } from "vfile-matter";
+import { pageFrontmatter } from "./page-frontmatter.js";
 import type { CompiledPage, PageFrontmatter, SqlBlock } from "./types.js";
 
 interface PageMetadata {
@@ -74,18 +75,6 @@ const remarkPageMetadata: Plugin<[PageMetadata], Root> =
       if (text) metadata.firstHeading = text;
     });
   };
-
-function pageFrontmatter(file: VFile): PageFrontmatter {
-  const parsed: unknown = file.data.matter;
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(
-      `Invalid front-matter in ${file.path}: expected a YAML mapping, got ${
-        Array.isArray(parsed) ? "an array" : typeof parsed
-      }`,
-    );
-  }
-  return parsed as PageFrontmatter;
-}
 
 function resolveTitle(
   frontmatter: PageFrontmatter,

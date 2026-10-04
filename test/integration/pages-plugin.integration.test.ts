@@ -61,6 +61,21 @@ function pageModule(dev: ViteDevServer, file: string) {
   return dev.environments.client.moduleGraph.getModuleById(file);
 }
 
+/** Asserts `act()` (a filesystem mutation) bumps the module's invalidation timestamp. */
+async function expectInvalidated(
+  module: { lastInvalidationTimestamp: number } | undefined,
+  act: () => void,
+): Promise<void> {
+  const timestamp = module!.lastInvalidationTimestamp;
+  act();
+  await vi.waitFor(
+    () => {
+      expect(module!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
+    },
+    { timeout: 10000 },
+  );
+}
+
 describe("page transform", () => {
   it("compiles a page under pages/ into a module on request", async () => {
     const root = makeProject();
@@ -123,6 +138,30 @@ describe("virtual:biac-pages", () => {
     const code = await loadManifest(dev);
 
     expect(code).not.toContain("/@fs");
+    expect(code).toContain(
+      'export const navTree = {"rootPages":[],"directories":[]};',
+    );
+  });
+
+  it("carries front-matter nav fields on entries and exports the nav tree", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "---\ntitle: Home\n---\n# Hi\n");
+    writeFile("pages/nested/b.md", "---\nsidebar_position: 2\n---\n# B\n");
+    writeFile(
+      "pages/nested/a.md",
+      "---\ntitle: Aye\nsidebar_position: 1\n---\n# A\n",
+    );
+    const dev = await makeServer(root);
+
+    const code = await loadManifest(dev);
+
+    expect(code).toContain('title: "Home"');
+    expect(code).toContain('title: "Aye"');
+    expect(code).toContain("sidebarPosition: 2");
+    expect(code).toContain('"rootPages":[{"name":"Home","href":"/"}]');
+    expect(code).toContain(
+      '"directories":[{"id":"nested","name":"Nested","pages":[{"name":"Aye","href":"/nested/a"},{"name":"B","href":"/nested/b"}]}]',
+    );
   });
 });
 
@@ -133,17 +172,11 @@ describe("file watching", () => {
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "index.md");
     await loadManifest(dev);
-    const manifest = manifestModule(dev);
-    const timestamp = manifest!.lastInvalidationTimestamp;
 
-    writeFile("pages/new.md", "# New\n");
-
-    await vi.waitFor(
-      () => {
-        expect(manifest!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
-      },
-      { timeout: 10000 },
+    await expectInvalidated(manifestModule(dev), () =>
+      writeFile("pages/new.md", "# New\n"),
     );
+
     expect(await loadManifest(dev)).toContain('route: "/new"');
   });
 
@@ -154,17 +187,9 @@ describe("file watching", () => {
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "gone.md");
     await loadManifest(dev);
-    const manifest = manifestModule(dev);
-    const timestamp = manifest!.lastInvalidationTimestamp;
 
-    rmSync(file);
+    await expectInvalidated(manifestModule(dev), () => rmSync(file));
 
-    await vi.waitFor(
-      () => {
-        expect(manifest!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
-      },
-      { timeout: 10000 },
-    );
     expect(await loadManifest(dev)).not.toContain("/@fs");
   });
 
@@ -175,19 +200,28 @@ describe("file watching", () => {
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "index.md");
     await dev.transformRequest(`/@fs${pagePath}`);
-    const page = pageModule(dev, pagePath);
-    const timestamp = page!.lastInvalidationTimestamp;
 
-    writeFile("pages/index.md", "# New heading\n");
-
-    await vi.waitFor(
-      () => {
-        expect(page!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
-      },
-      { timeout: 10000 },
+    await expectInvalidated(pageModule(dev, pagePath), () =>
+      writeFile("pages/index.md", "# New heading\n"),
     );
+
     const result = await dev.transformRequest(`/@fs${pagePath}`);
     expect(result?.code).toContain("New heading");
+  });
+
+  it("invalidates the manifest when a page's front-matter is edited", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "---\ntitle: Old\n---\n# Hi\n");
+    const dev = await makeServer(root);
+    await waitForWatch(dev, join(root, "pages"), "index.md");
+    await loadManifest(dev);
+
+    await expectInvalidated(manifestModule(dev), () =>
+      writeFile("pages/index.md", "---\ntitle: New\n---\n# Hi\n"),
+    );
+
+    expect(await loadManifest(dev)).toContain('title: "New"');
+    expect(await loadManifest(dev)).toContain('"name":"New"');
   });
 });
 
@@ -225,17 +259,11 @@ describe("virtual:biac-config", () => {
     const dev = await makeServer(root);
     await waitForWatch(dev, root, "biac.config.ts");
     await loadConfigModule(dev);
-    const config = configModule(dev);
-    const timestamp = config!.lastInvalidationTimestamp;
 
-    writeFileSync(configPath, 'export default { title: "Umbrella" };\n');
-
-    await vi.waitFor(
-      () => {
-        expect(config!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
-      },
-      { timeout: 10000 },
+    await expectInvalidated(configModule(dev), () =>
+      writeFileSync(configPath, 'export default { title: "Umbrella" };\n'),
     );
+
     expect(await loadConfigModule(dev)).toContain('"Umbrella"');
   });
 });

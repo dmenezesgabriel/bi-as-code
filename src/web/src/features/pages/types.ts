@@ -12,6 +12,10 @@ export interface ManifestPageEntry {
   file: string;
   /** True when the route came from the index convention. */
   isIndex: boolean;
+  /** Front-matter `title`, when the page declares one. */
+  title?: string;
+  /** Front-matter `sidebar_position`, when the page declares a number. */
+  sidebarPosition?: number;
   /** Lazily imports the compiled page module — invoked on route match. */
   load: () => Promise<CompiledPageModule>;
 }

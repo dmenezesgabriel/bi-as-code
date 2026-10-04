@@ -9,6 +9,36 @@ export interface PageManifestEntry {
   file: string;
   /** True when the route came from the index convention (file named index.md or index.mdx). */
   isIndex: boolean;
+  /** Front-matter `title`; absent when the page declares none. */
+  title?: string;
+  /** Front-matter `sidebar_position`; absent when omitted or not a number. */
+  sidebarPosition?: number;
+}
+
+/** One page link inside the sidebar nav tree. */
+export interface NavPage {
+  /** Display label: front-matter title, "Home", or the deslugified file name. */
+  name: string;
+  /** Route the link navigates to. */
+  href: string;
+}
+
+/** A collapsible sidebar group holding every page under one first path segment. */
+export interface NavDirectory {
+  /** The first path segment, e.g. "nested" for pages/nested/*. */
+  id: string;
+  /** Deslugified segment, e.g. "Nested" / "User Guides". */
+  name: string;
+  pages: NavPage[];
+}
+
+/**
+ * The two-level sidebar tree derived from the page manifest: root pages plus
+ * one directory per first path segment. Rendered by the SPA's sidebar nav.
+ */
+export interface NavTree {
+  rootPages: NavPage[];
+  directories: NavDirectory[];
 }
 
 /**
