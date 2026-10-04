@@ -23,9 +23,13 @@ describe("HighlightedPre", () => {
     await waitFor(() => {
       expect(container.querySelector("pre.shiki")).not.toBeNull();
     });
-    expect(
-      container.querySelector('pre.shiki span[style*="color"]'),
-    ).not.toBeNull();
+    // Dual-theme output: the light value is a literal `color`, the dark
+    // one a --shiki-dark custom property that styles.css applies under
+    // .dark.
+    const token = container.querySelector('pre.shiki span[style*="--shiki-"]');
+    expect(token).not.toBeNull();
+    expect(token?.getAttribute("style")).toContain("color:");
+    expect(token?.getAttribute("style")).toContain("--shiki-dark");
     expect(container.querySelector("pre.shiki")).toHaveTextContent("select 1");
   });
 

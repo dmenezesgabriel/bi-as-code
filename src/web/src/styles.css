@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+/* Class-strategy dark mode: `useTheme` toggles `.dark` on <html>, and the
+   inline script in index.html sets it before first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Shiki dual-theme fences: codeToHtml emits the light theme as a literal
+   color plus a --shiki-dark (and --shiki-dark-bg) custom property per
+   token; under .dark the dark values take over. !important beats the
+   inline style shiki leaves on each span. */
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}

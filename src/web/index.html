@@ -3,6 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // Applies the theme before first paint so the page never renders a
+      // frame in the wrong mode. __BIAC_THEME__ is injected by the pages
+      // plugin's transformIndexHtml; it is absent under bare vite, where
+      // the fallback config is "system" anyway. Mirrors resolveTheme() in
+      // src/features/chrome/theme.ts — stored choice, then config default,
+      // then prefers-color-scheme.
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem("biac.theme");
+        } catch (e) {}
+        var mode =
+          stored === "dark" || stored === "light"
+            ? stored
+            : window.__BIAC_THEME__ || "system";
+        var dark =
+          mode === "dark" ||
+          (mode === "system" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
     <title>biac</title>
   </head>
   <body>

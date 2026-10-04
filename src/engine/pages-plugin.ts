@@ -73,6 +73,21 @@ export function pagesPlugin(projectRoot: string): Plugin {
       const page = await compilePage(code, file);
       return { code: page.code, map: null };
     },
+    // The inline theme script in index.html runs before any module loads,
+    // so the `virtual:biac-config` default reaches it as a plain global.
+    // head-prepend guarantees the value exists before that script runs;
+    // without it a `theme: "dark"` project would paint one light frame on
+    // every load.
+    async transformIndexHtml() {
+      const { theme } = await loadBiacConfig(root);
+      return [
+        {
+          tag: "script",
+          children: `globalThis.__BIAC_THEME__=${JSON.stringify(theme)};`,
+          injectTo: "head-prepend" as const,
+        },
+      ];
+    },
     configureServer(server) {
       server.watcher.add(pagesDir);
       server.watcher.add(configFile);

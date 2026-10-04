@@ -44,7 +44,7 @@ export function SidebarNav({
       <Link
         to="/"
         onClick={onNavigate}
-        className="block px-4 py-3 text-base font-bold text-neutral-900"
+        className="block px-4 py-3 text-base font-bold text-neutral-900 dark:text-neutral-100"
       >
         {siteTitle}
       </Link>
@@ -62,11 +62,11 @@ export function SidebarNav({
                   event.preventDefault();
                   toggleDir(dir);
                 }}
-                className="cursor-pointer select-none rounded px-2 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+                className="cursor-pointer select-none rounded px-2 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
               >
                 {dir.name}
               </summary>
-              <ul className="my-1 ml-2 border-l border-neutral-200 pl-2">
+              <ul className="my-1 ml-2 border-l border-neutral-200 pl-2 dark:border-neutral-800">
                 {dir.pages.map((page) => (
                   <li key={page.href}>
                     <NavLink
@@ -103,8 +103,8 @@ function NavLink({
       className={cn(
         "block rounded px-2 py-1.5 text-sm",
         active
-          ? "bg-neutral-200/60 font-medium text-neutral-900"
-          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
+          ? "bg-neutral-200/60 font-medium text-neutral-900 dark:bg-neutral-700/60 dark:text-neutral-100"
+          : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100",
       )}
     >
       {page.name}

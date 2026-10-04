@@ -106,4 +106,3 @@ Tracked, not fixed silently. Each is closed by a slice, not by a drive-by edit.
 | -------------------------------------------------------------------------------------------------- | ----------------------------- | ---------------------------------------- |
 | GHSA-vfj7-8cjw-p6xm (braces ≤3.0.3, via commitizen) accepted — no patched release exists, dev-only | `pnpm-workspace.yaml` comment | First upstream release with a fix        |
 | `MDX` expression refs (`data={orders}`) unsupported — v1 is string refs only (`data="name"`)       | page pipeline                 | Recma scope-injection slice, if demanded |
-| `/favicon.ico` 404s in a real browser's console on `biac dev` — no icon is shipped                 | `src/web/index.html`          | SL-002 page chrome                       |

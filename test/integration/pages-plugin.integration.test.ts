@@ -266,4 +266,32 @@ describe("virtual:biac-config", () => {
 
     expect(await loadConfigModule(dev)).toContain('"Umbrella"');
   });
+
+  it("injects the configured theme into index.html ahead of the inline script that reads it", async () => {
+    const root = makeProject();
+    writeFile("biac.config.ts", 'export default { theme: "dark" };\n');
+    const dev = await makeServer(root);
+
+    const html = await dev.transformIndexHtml(
+      "/",
+      "<html><head><script>var t = window.__BIAC_THEME__;</script></head><body></body></html>",
+    );
+
+    expect(html).toContain('__BIAC_THEME__="dark"');
+    expect(html.indexOf('__BIAC_THEME__="dark"')).toBeLessThan(
+      html.indexOf("window.__BIAC_THEME__"),
+    );
+  });
+
+  it("injects system into index.html when biac.config.ts is absent", async () => {
+    const root = makeProject();
+    const dev = await makeServer(root);
+
+    const html = await dev.transformIndexHtml(
+      "/",
+      "<html><head></head><body></body></html>",
+    );
+
+    expect(html).toContain('__BIAC_THEME__="system"');
+  });
 });

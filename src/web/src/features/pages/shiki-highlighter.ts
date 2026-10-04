@@ -5,7 +5,10 @@ import {
   type BundledLanguage,
 } from "shiki";
 
-const THEME = "github-light";
+// Dual themes: shiki emits the light color literally plus a --shiki-dark
+// custom property per token; styles.css applies it under .dark, so
+// highlighted code follows the resolved theme without re-running shiki.
+const THEMES = { light: "github-light", dark: "github-dark" } as const;
 
 let highlighterPromise: ReturnType<typeof createHighlighter> | null = null;
 const failedLanguages = new Set<string>();
@@ -20,7 +23,7 @@ const failedLanguages = new Set<string>();
  */
 function getHighlighter(): ReturnType<typeof createHighlighter> {
   highlighterPromise ??= createHighlighter({
-    themes: [THEME],
+    themes: [THEMES.light, THEMES.dark],
     langs: ["sql"],
     engine: createJavaScriptRegexEngine({ forgiving: true }),
   });
@@ -35,7 +38,7 @@ function getHighlighter(): ReturnType<typeof createHighlighter> {
  *
  * @example
  * const html = await highlightFence("sql", "select 1");
- * // html → '<pre class="shiki github-light" ...>…</pre>' or null
+ * // html → '<pre class="shiki shiki-themes github-light github-dark" …' or null
  */
 export async function highlightFence(
   lang: string,
@@ -50,7 +53,7 @@ export async function highlightFence(
     if (!highlighter.getLoadedLanguages().includes(bundled)) {
       await highlighter.loadLanguage(bundled);
     }
-    return highlighter.codeToHtml(code, { lang: bundled, theme: THEME });
+    return highlighter.codeToHtml(code, { lang: bundled, themes: THEMES });
   } catch {
     failedLanguages.add(lang);
     return null;

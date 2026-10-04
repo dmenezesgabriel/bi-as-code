@@ -94,15 +94,18 @@ export function NavToc({ article }: { article: HTMLElement }) {
   return (
     <aside className="sticky top-16 hidden max-h-[calc(100vh-4rem)] w-56 shrink-0 self-start overflow-y-auto xl:block">
       <nav aria-label={TOC_LABEL}>
-        <p className="pb-2 text-xs font-medium tracking-wide text-neutral-500">
+        <p className="pb-2 text-xs font-medium tracking-wide text-neutral-500 dark:text-neutral-400">
           {TOC_LABEL}
         </p>
-        <ul ref={listRef} className="relative border-l border-neutral-200">
+        <ul
+          ref={listRef}
+          className="relative border-l border-neutral-200 dark:border-neutral-800"
+        >
           {bar && (
             <div
               aria-hidden
               data-testid="toc-highlight"
-              className="absolute -left-px w-0.5 bg-neutral-700 transition-[top,height] duration-150"
+              className="absolute -left-px w-0.5 bg-neutral-700 transition-[top,height] duration-150 dark:bg-neutral-400"
               style={{ top: bar.top, height: bar.height }}
             />
           )}
@@ -117,8 +120,8 @@ export function NavToc({ article }: { article: HTMLElement }) {
                 className={cn(
                   "block px-3 py-1 text-sm",
                   heading.id === activeId
-                    ? "font-medium text-neutral-900"
-                    : "text-neutral-500 hover:text-neutral-900",
+                    ? "font-medium text-neutral-900 dark:text-neutral-100"
+                    : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100",
                 )}
               >
                 {heading.text}

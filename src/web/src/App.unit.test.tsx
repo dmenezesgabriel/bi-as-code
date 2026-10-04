@@ -61,10 +61,13 @@ function sidebar(): HTMLElement {
 
 beforeEach(() => {
   window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  document.documentElement.classList.remove("dark");
+  document.documentElement.style.colorScheme = "";
 });
 
 describe("AppShell", () => {
@@ -111,6 +114,38 @@ describe("AppShell", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "breadcrumb" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders a theme toggle in the header that flips and persists dark mode", async () => {
+    await renderShell("/");
+
+    const toggle = screen.getByRole("button", { name: "Switch to dark mode" });
+    fireEvent.click(toggle);
+
+    expect(document.documentElement).toHaveClass("dark");
+    expect(window.localStorage.getItem("biac.theme")).toBe("dark");
+    expect(
+      screen.getByRole("button", { name: "Switch to light mode" }),
+    ).toBeInTheDocument();
+  });
+
+  it("applies a persisted dark choice on mount", async () => {
+    window.localStorage.setItem("biac.theme", "dark");
+
+    await renderShell("/");
+
+    expect(document.documentElement).toHaveClass("dark");
+  });
+
+  it("still applies the theme when nav.sidebar is false and no toggle renders", async () => {
+    window.localStorage.setItem("biac.theme", "dark");
+
+    await renderShell("/", { ...site, nav: { sidebar: false } });
+
+    expect(document.documentElement).toHaveClass("dark");
+    expect(
+      screen.queryByRole("button", { name: /Switch to (dark|light) mode/ }),
     ).not.toBeInTheDocument();
   });
 
