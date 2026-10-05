@@ -39,6 +39,15 @@ export function projectSparklinePoints(
 }
 
 /**
+ * The svg's accessible name when `label` is unset: `"revenue by week"` when
+ * both axes are authored, else the query name — it at least identifies the
+ * series.
+ */
+export function sparklineLabel(data: string, x?: string, y?: string): string {
+  return x !== undefined && y !== undefined ? `${y} by ${x}` : data;
+}
+
+/**
  * The y domain: data min/max plus a 1% pad — data-anchored, never
  * zero-anchored, because a KPI sparkline's job is showing movement and a
  * far-from-zero series on a 0 anchor flattens to a line (the same call

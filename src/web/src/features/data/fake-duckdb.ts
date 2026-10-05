@@ -14,6 +14,8 @@ export class FakeDuckDb implements DuckDbService {
   rows: Row[] = [{ n: 1 }];
   registerCause: Error | null = null;
   failWhen: ((sql: string) => string | null) | null = null;
+  /** Per-query row override — widgets binding two names seed each by sql. */
+  rowsWhen: ((sql: string) => Row[] | null) | null = null;
 
   /** A fake whose queries all return `rows`. */
   static withRows(rows: Row[]): FakeDuckDb {
@@ -63,6 +65,6 @@ export class FakeDuckDb implements DuckDbService {
             cause: new Error(failure),
           }),
         )
-      : Effect.succeed(this.rows);
+      : Effect.succeed(this.rowsWhen?.(sql) ?? this.rows);
   };
 }

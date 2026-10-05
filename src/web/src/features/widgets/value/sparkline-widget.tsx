@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useQueryResults } from "../../pages/query-registry";
-import { projectSparklinePoints } from "./sparkline-points";
+import { projectSparklinePoints, sparklineLabel } from "./sparkline-points";
 import { SparklineDisplay } from "./sparkline";
 import { ValueResult } from "./states";
 import type { SparklineProps } from "./types";
@@ -36,13 +36,4 @@ export function Sparkline({
       )}
     </ValueResult>
   );
-}
-
-/**
- * The svg's accessible name when `label` is unset: `"revenue by week"` when
- * both axes are authored, else the query name — it at least identifies the
- * series.
- */
-function sparklineLabel(data: string, x?: string, y?: string): string {
-  return x !== undefined && y !== undefined ? `${y} by ${x}` : data;
 }

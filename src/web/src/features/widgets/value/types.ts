@@ -91,6 +91,44 @@ export interface DeltaProps {
 }
 
 /**
+ * Props of the `<BigValue>` MDX widget — a KPI headline composing the
+ * family's pieces: `data`/`column`/`row`/`fmt` bind and format the scalar
+ * exactly like `<Value>`; `delta` names a second column in the same row
+ * holding the signed comparison (the WoW/QoQ math lives in the fence),
+ * dressed by `deltaFmt`/`text`/`chip`/`downIsGood`/`showSymbol`/
+ * `symbolPosition`/`neutralRange`; `sparkline` names a second ```sql fence
+ * whose rows are the series, projected by `sparklineX`/`sparklineY` and
+ * drawn as `sparklineType` in `sparklineColor`. A missing cell renders `–`
+ * and hides the delta and sparkline — a param-driven empty result is not
+ * an author error.
+ */
+export interface BigValueProps {
+  readonly data: string;
+  readonly column?: string;
+  readonly row?: number;
+  readonly fmt?: string;
+  /** Title line; defaults to the resolved column key. */
+  readonly title?: string;
+  /** Column in the same row holding the signed delta. */
+  readonly delta?: string;
+  /** `formatValue` preset for the delta; defaults to `fmt`. */
+  readonly deltaFmt?: string;
+  /** Caption after the delta — "vs. prior week". */
+  readonly text?: string;
+  readonly chip?: boolean;
+  readonly downIsGood?: boolean;
+  readonly showSymbol?: boolean;
+  readonly symbolPosition?: "left" | "right";
+  readonly neutralRange?: NeutralRange;
+  /** Name of a second ```sql fence whose rows are the sparkline series. */
+  readonly sparkline?: string;
+  readonly sparklineType?: SparklineType;
+  readonly sparklineX?: string;
+  readonly sparklineY?: string;
+  readonly sparklineColor?: string;
+}
+
+/**
  * Props of the `<Sparkline>` MDX widget: `data` names a ```sql fence whose
  * rows are the series; `x`/`y` name the projection columns (defaults: y =
  * second column or first on single-column rows, x = first column that isn't
