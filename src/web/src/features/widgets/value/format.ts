@@ -124,7 +124,13 @@ function assertKnownCode(code: string): void {
   });
 }
 
-function coerceNumeric(value: unknown): number | bigint | null {
+/**
+ * The numeric cells `formatValue` and the sparkline's y projection both
+ * accept: numbers, bigints, and non-blank strings that parse to a finite
+ * number. Everything else — null, dates, blanks, booleans — is not a
+ * number.
+ */
+export function coerceNumeric(value: unknown): number | bigint | null {
   if (typeof value === "number" || typeof value === "bigint") return value;
   if (
     typeof value === "string" &&
