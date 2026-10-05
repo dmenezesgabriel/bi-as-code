@@ -8,7 +8,13 @@ import tailwindcss from "@tailwindcss/vite";
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(ts|tsx)"],
   staticDirs: ["../public"],
-  addons: [],
+  // The MCP server shares the dev server at /mcp on the storybook port.
+  addons: ["@storybook/addon-mcp"],
+  // The MCP docs toolset reads the components manifest — react-vite
+  // generates it (storybook.js.org/docs/ai/mcp/overview).
+  features: {
+    componentsManifest: true,
+  },
   framework: {
     name: "@storybook/react-vite",
     options: {},

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "biac-storybook": {
+      "url": "http://localhost:6175/mcp",
+      "transport": "http"
+    }
+  }
+}

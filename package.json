@@ -37,7 +37,7 @@
     "jscpd:report": "jscpd --config .jscpd.json",
     "fallow:health": "fallow health --css",
     "fallow:score": "fallow health --css --min-score 70",
-    "storybook": "storybook dev --config-dir src/web/.storybook --no-open",
+    "storybook": "storybook dev --config-dir src/web/.storybook --no-open --port 6175",
     "storybook:build": "storybook build --config-dir src/web/.storybook --output-dir dist/storybook",
     "prepare": "husky"
   },
