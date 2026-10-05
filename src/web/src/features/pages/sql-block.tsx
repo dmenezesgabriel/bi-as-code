@@ -1,6 +1,7 @@
 import { isValidElement, type HTMLAttributes, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import type { Row } from "../data/types";
+import { TableEmpty, TableError, TableLoading } from "../widgets/table/states";
 import { HighlightedPre } from "./highlighted-pre";
 import { useQueryResults } from "./query-registry";
 import type { QueryResult } from "./types";
@@ -45,35 +46,14 @@ function sqlFenceName(children: ReactNode): string | null {
 }
 
 function SqlResult({ name, result }: { name: string; result: QueryResult }) {
-  if (result.status === "loading") return <LoadingRows />;
+  if (result.status === "loading") return <TableLoading />;
   if (result.status === "error") {
-    return (
-      <p
-        role="alert"
-        className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
-      >
-        <code className="font-medium">{name}</code>: {result.message}
-      </p>
-    );
+    return <TableError name={name} message={result.message} />;
   }
   if (result.rows.length === 0) {
-    return <p className="py-2 text-sm text-neutral-500">0 rows</p>;
+    return <TableEmpty />;
   }
   return <ResultTable rows={result.rows} />;
-}
-
-function LoadingRows() {
-  return (
-    <div
-      role="status"
-      aria-label="Loading query result"
-      className="animate-pulse space-y-1.5 py-2"
-    >
-      <div className="h-4 rounded bg-neutral-200 dark:bg-neutral-700" />
-      <div className="h-4 w-5/6 rounded bg-neutral-200 dark:bg-neutral-700" />
-      <div className="h-4 w-4/6 rounded bg-neutral-200 dark:bg-neutral-700" />
-    </div>
-  );
 }
 
 function ResultTable({ rows }: { rows: readonly Row[] }) {
