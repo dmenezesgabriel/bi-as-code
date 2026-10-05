@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, userEvent } from "storybook/test";
 import { Effect } from "effect";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import type { Row } from "../data/types";
@@ -27,7 +27,7 @@ export default meta;
 type Story = StoryObj<typeof SqlBlockPre>;
 
 /** A named sql fence whose query succeeded — highlighted code on top, the
- * result table underneath. */
+ * sortable result table underneath. */
 export const Success: Story = {
   args: { children: sqlFence("orders") },
   decorators: [
@@ -48,6 +48,16 @@ export const Success: Story = {
     await expect(
       canvas.getByRole("cell", { name: "West" }),
     ).toBeInTheDocument();
+
+    // The fence result is the shared interactive table — headers sort.
+    const header = canvas.getByRole("columnheader", { name: /orders/ });
+    const sortButton = canvas.getByRole("button", { name: /orders/ });
+    await expect(header).toHaveAttribute("aria-sort", "none");
+    await userEvent.click(sortButton);
+    await expect(header).toHaveAttribute("aria-sort", "descending");
+    await userEvent.click(sortButton);
+    await expect(header).toHaveAttribute("aria-sort", "ascending");
+    await expect(canvas.getAllByRole("row")[1]).toHaveTextContent("North");
   },
 };
 

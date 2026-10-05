@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 import { DuckDb } from "../data/data-service";
@@ -71,6 +71,37 @@ describe("SqlBlockPre", () => {
     await waitFor(() =>
       expect(document.querySelector("pre.shiki")).not.toBeNull(),
     );
+  });
+
+  it("paginates the fence result through the shared table core", async () => {
+    const db = new FakeDuckDb();
+    db.rows = Array.from({ length: 12 }, (_, i) => ({ n: i + 1 }));
+    renderFence({ db });
+
+    expect(await screen.findByText("Page 1 of 2 · 12 rows")).toBeVisible();
+    expect(screen.getAllByRole("row")).toHaveLength(11);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByText("Page 2 of 2 · 12 rows")).toBeVisible();
+  });
+
+  it("sorts the fence result on header click without re-querying", async () => {
+    const db = new FakeDuckDb();
+    db.rows = [
+      { region: "West", orders: 140 },
+      { region: "North", orders: 120 },
+    ];
+    renderFence({ db });
+
+    const header = await screen.findByRole("columnheader", {
+      name: /orders/,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /orders/ }));
+
+    await waitFor(() =>
+      expect(header).toHaveAttribute("aria-sort", "descending"),
+    );
+    expect(db.queries).toHaveLength(1);
   });
 
   it("shows a 0-rows empty state when the query succeeds with no rows", async () => {
