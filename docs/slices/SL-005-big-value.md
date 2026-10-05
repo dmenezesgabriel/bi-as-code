@@ -129,7 +129,7 @@ No new dependencies.
 
 ## Tasks
 
-- [ ] T1 — `format.ts`: preset map + `formatValue(value, code)` over `Intl.NumberFormat`/`Intl.DateTimeFormat` — bare `num`/`usd`/`pct` auto-scale, explicit presets listed in the fmt trade-off row, `Date`→`date` and number/bigint→`num` defaults, unknown code throws a typed error the widgets render as `role=alert`. Unit tests.
+- [x] T1 — `format.ts`: preset map + `formatValue(value, code)` over `Intl.NumberFormat`/`Intl.DateTimeFormat` — bare `num`/`usd`/`pct` auto-scale, explicit presets listed in the fmt trade-off row, `Date`→`date` and number/bigint→`num` defaults, unknown code throws a typed error the widgets render as `role=alert`. Unit tests.
 - [ ] T2 — `delta-display.tsx` + `sparkline.tsx` presentational: SVG triangles + sign status + `neutralRange` + `downIsGood` + `chip`/`showSymbol`/`symbolPosition`/`showValue`; SVG line/area/bar sparkline with x/y column projection, single-point flat line, `role="img"`. Unit tests + colocated stories (ADR-0006; `get-storybook-story-instructions` first).
 - [ ] T3 — `states.tsx` + `value.tsx` + `delta.tsx` + `sparkline-widget.tsx`: `data`/`column`/`row` binding to `useQueryResults()`, the three error faces (unknown name / unknown column / unknown fmt), `–` empty; register `Value`, `Delta`, `Sparkline` in `mdxComponents`. Unit + jsdom tests + stories.
 - [ ] T4 — `big-value.tsx`: title/value/delta/sparkline composition, `sparkline` second-query lookup, `display:block` span tree; register `BigValue`. Unit + jsdom tests + stories for every state combination.
