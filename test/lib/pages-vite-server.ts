@@ -1,3 +1,5 @@
+import { createServer as createHttpServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 import { createServer, type ViteDevServer } from "vite";
 import { expect, vi } from "vitest";
@@ -18,6 +20,24 @@ export function makePagesServer(root: string): Promise<ViteDevServer> {
     plugins: [pagesPlugin(root)],
     server: { middlewareMode: true },
   });
+}
+
+/**
+ * Binds `dev.middlewares` to a real socket — `makePagesServer` runs
+ * middlewareMode (no listener), so middleware-level routes like `/data/`
+ * need this wrapper before `fetch` can reach them. Port 0 picks an
+ * OS-assigned port; the returned URL is the only honest way to learn it.
+ */
+export async function listenPagesServer(
+  dev: ViteDevServer,
+): Promise<{ url: string; close: () => Promise<void> }> {
+  const http: Server = createHttpServer(dev.middlewares);
+  await new Promise<void>((resolve) => http.listen(0, resolve));
+  const { port } = http.address() as AddressInfo;
+  return {
+    url: `http://localhost:${port}`,
+    close: () => new Promise<void>((done) => http.close(() => done())),
+  };
 }
 
 /**

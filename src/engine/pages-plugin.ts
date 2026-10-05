@@ -4,6 +4,7 @@ import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { discoverPages } from "./discover-pages.js";
 import { buildNavTree } from "./nav-tree.js";
+import { serveDataDir } from "./serve-data-dir.js";
 import type { BiacConfig, PageManifestEntry } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
@@ -32,6 +33,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const root = resolve(projectRoot);
   const pagesDir = join(root, "pages");
   const pagesDirPosix = toPosix(pagesDir);
+  const dataDir = join(root, "data");
   const configFile = join(root, CONFIG_FILE);
   // Page transforms consult the config's `sql:` map; `loadBiacConfig`
   // re-bundles the file through esbuild on every call, so the resolved
@@ -95,8 +97,12 @@ export function pagesPlugin(projectRoot: string): Plugin {
       ];
     },
     configureServer(server) {
+      // sql: sources resolve to /data/<path> — served from the real
+      // directory so dev and the copied dist/data/ stay identical.
+      server.middlewares.use("/data", serveDataDir(dataDir));
       server.watcher.add(pagesDir);
       server.watcher.add(configFile);
+      server.watcher.add(dataDir);
     },
     hotUpdate({ file, modules }) {
       if (file === configFile) {

@@ -22,7 +22,7 @@ export function makeTempProject(prefix = "biac-site-"): string {
 export function writeProjectFile(
   root: string,
   relativePath: string,
-  content: string,
+  content: string | Buffer,
 ): void {
   const file = join(root, relativePath);
   mkdirSync(dirname(file), { recursive: true });
