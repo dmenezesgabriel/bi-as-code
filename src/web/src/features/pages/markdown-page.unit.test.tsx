@@ -182,6 +182,25 @@ describe("MarkdownPage", () => {
     expect(screen.getByRole("cell", { name: "1" })).toBeInTheDocument();
   });
 
+  it("renders a Table widget through the component map, bound by name", async () => {
+    const db = new FakeDuckDb();
+    db.rows = [{ region: "West", orders: 140 }];
+    renderPage(
+      page({
+        sqlBlocks: [{ name: "q", sql: "select * from orders" }],
+        default: ({ components }) => {
+          const TableWidget = components?.Table;
+          return TableWidget ? <TableWidget data="q" /> : <p>Table missing</p>;
+        },
+      }),
+      "biac",
+      db,
+    );
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
+  });
+
   it("hides the toc when front-matter sets table_of_contents: false", async () => {
     renderPage(
       page({

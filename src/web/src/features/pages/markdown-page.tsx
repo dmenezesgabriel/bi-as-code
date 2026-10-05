@@ -1,6 +1,7 @@
 import { Link, useSearch } from "@tanstack/react-router";
 import { useState, type AnchorHTMLAttributes } from "react";
 import { NavToc } from "../chrome/nav-toc";
+import { Table } from "../widgets/table/table";
 import { QueryRegistryProvider } from "./query-registry";
 import { SqlBlockPre } from "./sql-block";
 import type { CompiledPageModule, MdxComponentMap } from "./types";
@@ -10,12 +11,14 @@ import { useDocumentTitle } from "./use-document-title";
  * MDX element overrides. `a` routes absolute-path links through the client
  * router so page-to-page navigation never reloads the SPA; `pre` hands
  * fenced code blocks to shiki and pairs named sql fences with their query
- * results. Kept unexported so the map doesn't trip the Fast Refresh rule
- * that files exporting components export only components.
+ * results; `Table` resolves `data` against that same registry. Kept
+ * unexported so the map doesn't trip the Fast Refresh rule that files
+ * exporting components export only components.
  */
 const mdxComponents: MdxComponentMap = {
   a: MarkdownLink,
   pre: SqlBlockPre,
+  Table,
 };
 
 function MarkdownLink({
