@@ -157,6 +157,31 @@ describe("MarkdownPage", () => {
     expect(db.queries.map((q) => q.sql)).toEqual(["select * from orders"]);
   });
 
+  it("renders a named sql fence's result table through the pre map", async () => {
+    const db = new FakeDuckDb();
+    db.rows = [{ n: 1 }];
+    renderPage(
+      page({
+        sqlBlocks: [{ name: "q", sql: "select * from orders" }],
+        default: ({ components }) => {
+          const Pre = components?.pre ?? "pre";
+          return (
+            <Pre>
+              <code className="language-sql" {...{ meta: "q" }}>
+                select * from orders
+              </code>
+            </Pre>
+          );
+        },
+      }),
+      "biac",
+      db,
+    );
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "1" })).toBeInTheDocument();
+  });
+
   it("hides the toc when front-matter sets table_of_contents: false", async () => {
     renderPage(
       page({

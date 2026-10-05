@@ -143,6 +143,18 @@ describe("sql blocks", () => {
       /Duplicate sql block name "orders" at pages\/dup\.md:5/,
     );
   });
+
+  it("carries a named fence's name onto the rendered code element", async () => {
+    const page = await compile("```sql orders\nselect 1\n```\n");
+
+    expect(page.code).toContain('meta: "orders"');
+  });
+
+  it("emits no meta prop for an unnamed sql fence", async () => {
+    const page = await compile("```sql\nselect 1\n```\n");
+
+    expect(page.code).not.toContain("meta:");
+  });
 });
 
 describe("sql front-matter", () => {

@@ -82,6 +82,13 @@ const remarkPageMetadata: Plugin<[PageMetadata], Root> =
         );
       }
       metadata.sqlBlocks.push({ name, sql: node.value });
+      // The block name must reach the rendered page: MDX drops mdast `meta`,
+      // so it rides hast `hProperties` into a `meta` prop on the <code>
+      // element for the web's `pre` override to read.
+      node.data = {
+        ...node.data,
+        hProperties: { ...node.data?.hProperties, meta: name },
+      };
     });
     visit(tree, "heading", (node: Heading) => {
       if (node.depth !== 1 || metadata.firstHeading !== null) return;
