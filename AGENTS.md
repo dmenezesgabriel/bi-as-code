@@ -79,6 +79,7 @@ Every session ends with a `playwright-cli` pass over the real running app (`bin/
 - `pages/` — the example project served to users (`.md` pages + `data/` files).
 - `test/` — `integration/` (+ `features/` cucumber), `e2e/`, `e2e-browser/`, `lib/` shared helpers.
 - Prefer small focused modules over god files; package by component, flat.
+- Every UI component ships a colocated `<name>.stories.tsx` — the browser-true validation surface ([ADR-0006](docs/adr/0006-component-stories-are-the-ui-validation-surface.md)). Provider needs go through `src/web/.storybook/decorators.tsx`; Storybook binds port 6175 (never 6006) and its MCP server (`biac-storybook`, `.devin/mcp_config.json`) is the planning/validation entry point. `test/e2e-browser/storybook-stories.spec.ts` sweeps every story for console errors.
 - Ports are interfaces in the component's `types.ts` (a `Context.Tag` under
   Effect) and exist only where a real boundary is crossed — an interface with
   no implementation and no consumer is deleted, not kept as scaffolding.

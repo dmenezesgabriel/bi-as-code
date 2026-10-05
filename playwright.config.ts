@@ -5,10 +5,28 @@ import { defineConfig, devices } from "@playwright/test";
 // own `biac dev` over a temp copy of the shipped `pages/` example on an
 // ephemeral port (see dev-server.fixture.ts), so tests never share state
 // and hot-reload mutations stay disposable.
+//
+// Storybook deliberately binds 6175, not the 6006 default — other projects
+// on this machine run their own instances there, and one storybook serving
+// another project's stories would pass a sweep against the wrong build.
+const storybookPort = Number(process.env.BIAC_STORYBOOK_PORT ?? 6175);
+
 export default defineConfig({
   testDir: "./test/e2e-browser",
   outputDir: "./test/e2e-browser/test-results",
   globalSetup: "./test/e2e-browser/global-setup.ts",
+  webServer: [
+    {
+      // storybook-stories.spec.ts sweeps every story against one shared
+      // instance — stories are read-only, so workers cannot race it. A
+      // developer's already-running Storybook is reused when present.
+      // `--ci` keeps the daemon from opening a browser on this desktop.
+      command: `pnpm storybook --ci --port ${storybookPort}`,
+      url: `http://localhost:${storybookPort}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
   timeout: 60_000,
   expect: { timeout: 10_000 },
   forbidOnly: !!process.env.CI,

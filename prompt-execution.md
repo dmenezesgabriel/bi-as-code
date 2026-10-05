@@ -39,6 +39,7 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 - Code must be easy to read. Favour clarity and discoverability, use idiomatic names, and use the domain's ubiquitous language correctly.
 - Use web search and `curl` when the references and official docs are not enough to settle a fact.
 - Install only safe, official, well-maintained packages; guard against supply-chain attacks (`save-exact`, `minimumReleaseAge`, `trustPolicy`; install scripts stay blocked except an allowlist documented in `pnpm-workspace.yaml`). Reference repos are read-only: never install, import, link or vendor them.
+- A new or changed UI component gets a colocated `<name>.stories.tsx` beside its `<name>.tsx` — every meaningful state, `storybook/test` play functions for interactions, provider needs via `src/web/.storybook/decorators.tsx`, never a real backend (`FakeDuckDb`). Details: [ADR-0006](docs/adr/0006-component-stories-are-the-ui-validation-surface.md).
 
 ## 5. Validate like a human would — `playwright-cli`, every session, no exceptions
 
@@ -47,6 +48,13 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 - Interact with the page, don't just look at it: `goto` every changed route, `snapshot` for element refs, `click`/`fill`/`resize` the states you touched, `eval` for attribute and state assertions (`href`, `aria-*`, element counts).
 - `screenshot` every step that changes the screen, and read the screenshots. Screenshots are for your analysis only; never commit them. The session writes a `.playwright-cli/` artifact directory — close the browser (`close`) and delete the directory when the pass ends.
 - Measure; don't eyeball. For any layout or interaction you touch, record numbers before and after: rows visible, target sizes, `aria-*` state, `console` output (must stay clean — a tracked Known-debt entry like the `/favicon.ico` 404 is named, not hidden), query latency for interactions (cross-filter re-query time).
+
+### Storybook — planning and validation for UI work
+
+- Storybook binds **port 6175, never 6006** — other projects' instances live there and a sweep against the wrong build passes on foreign stories. `pnpm storybook` already bakes the port in; overrides go through `BIAC_STORYBOOK_PORT` (dev server) and `BIAC_STORYBOOK_URL` (the sweep spec).
+- Plan with the MCP server (`biac-storybook`, configured in `.devin/mcp_config.json`, serving `http://localhost:6175/mcp`): call `get-storybook-story-instructions` before writing or editing stories — its output is authoritative for imports, story shape and play conventions — and `docs-list`/`docs-show` for what the catalog already covers.
+- Validate with `stories-changed` + `stories-preview` after any UI-visible change, and include the returned preview URLs in your final message. `stories-find-by-component` maps a component file to the stories that exercise it.
+- The gate is `test/e2e-browser/storybook-stories.spec.ts`: playwright's `webServer` starts Storybook, the spec walks every story id in `/index.json`, waits for each render's terminal phase on `window.__STORYBOOK_PREVIEW__.storyRenders` (so play failures count), and fails on any unexpected console error. Expected error-state noise goes in `INTENTIONAL_ERROR_STATE_STORIES`, framework noise in `KNOWN_NOISE` — each entry with a dated comment naming what fires it.
 
 ## 6. Close the step
 
