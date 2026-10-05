@@ -20,7 +20,9 @@ test("renders the index page: title, prose, gfm table, highlighted sql fence", a
     page.getByText("Weekly order volume across regions."),
   ).toBeVisible();
 
-  const table = page.getByRole("table");
+  // index.md carries a static gfm table and — once its ` ```sql orders `
+  // block resolves — a live result table beside it; the static one is first.
+  const table = page.getByRole("table").first();
   await expect(table.getByRole("row")).toHaveCount(4);
   await expect(table).toContainText("West");
 

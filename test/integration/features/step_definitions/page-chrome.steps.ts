@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { After, BeforeAll, Given, Then, When } from "@cucumber/cucumber";
 // .ts specifiers, not .js — Node's type stripping resolves the real files.
 import {
@@ -11,8 +10,8 @@ import {
   type DevServer,
 } from "../../../lib/dev-server.ts";
 import { eventually, getOk } from "../../../lib/http.ts";
+import { copyShippedProject } from "../../../lib/shipped-project.ts";
 
-const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 // Same @id/ rule as dev-server.steps.ts — join onto a base ending in "/".
 const MANIFEST_URL = "@id/virtual:biac-pages";
 const CONFIG_URL = "@id/virtual:biac-config";
@@ -33,10 +32,7 @@ After(async () => {
 
 Given("the shipped example project", () => {
   projectRoot = mkdtempSync(join(tmpdir(), "biac-chrome-"));
-  cpSync(join(repoRoot, "pages"), join(projectRoot, "pages"), {
-    recursive: true,
-  });
-  cpSync(join(repoRoot, "biac.config.ts"), join(projectRoot, "biac.config.ts"));
+  copyShippedProject(projectRoot);
 });
 
 When("biac dev serves it", async () => {

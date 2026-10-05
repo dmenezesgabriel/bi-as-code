@@ -27,9 +27,14 @@ export async function eventually(
 
 /** GETs `url` and returns its body text; a non-200 response fails loudly. */
 export async function getOk(url: string): Promise<string> {
+  return (await getOkResponse(url)).text();
+}
+
+/** GETs `url` and returns the Response for header/body assertions. */
+export async function getOkResponse(url: string): Promise<Response> {
   const res = await fetch(url);
   if (res.status !== 200) {
     throw new Error(`GET ${url} → ${res.status}, expected 200`);
   }
-  return res.text();
+  return res;
 }

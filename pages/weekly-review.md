@@ -1,5 +1,7 @@
 ---
 title: Weekly review
+sql:
+  orders: data/orders.parquet
 ---
 
 # Weekly review
@@ -10,13 +12,13 @@ the [orders overview](/).
 
 ## Overview
 
-Order volume closed the week at 355 orders, up 6% against the trailing
-four-week average. Revenue followed the same shape — growth concentrated
+Order volume closed the quarter at 355 orders, up 18% on the final week
+against the trailing four-week average. Revenue followed the same shape — growth concentrated
 in the West region, where a single wholesale account contributed nearly a
 third of the lift. No channel or region contracted; the question is
 whether the West lift repeats or mean-reverts.
 
-Average order value held flat at roughly $39, so the week's gain is
+Average order value held flat at roughly $42, so the week's gain is
 volume-led rather than price-led. Volume-led growth is the healthier
 kind, but it also means the trend is sensitive to churn in a small number
 of active accounts — the regional split below shows how concentrated the
@@ -31,9 +33,24 @@ with the other two regions.
 
 | Region | Orders | Revenue | WoW change |
 | ------ | -----: | ------: | ---------: |
-| West   |    140 |  $6,100 |       +14% |
-| North  |    120 |  $4,800 |        +3% |
+| West   |    140 |  $6,100 |       +16% |
+| North  |    120 |  $4,800 |         0% |
 | South  |     95 |  $3,700 |         0% |
+
+```sql orders
+select region, count(*) as orders, sum(amount) as revenue
+from orders
+where {{params.region}} is null or region = {{params.region}}
+group by region
+order by revenue desc
+```
+
+```sql region_share
+select region, orders,
+  round(orders * 100.0 / sum(orders) over (), 1) as pct_of_total
+from {{orders}}
+order by orders desc
+```
 
 The concentration risk is real: the top five accounts drove 38% of weekly
 revenue, all of them in the West and North. A quiet week for even one of
@@ -49,7 +66,7 @@ gradual account expansion rather than a promotion or seasonality effect.
 select week, region, count(*) as orders
 from orders
 group by week, region
-order by week
+order by week, region
 ```
 
 Returns and cancellations stayed inside their normal band — nothing in

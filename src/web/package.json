@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:data": "node scripts/generate-data.mjs"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",

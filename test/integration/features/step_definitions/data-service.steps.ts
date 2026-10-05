@@ -1,0 +1,103 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { After, BeforeAll, Given, Then, When } from "@cucumber/cucumber";
+// .ts specifiers, not .js — Node's type stripping resolves the real files.
+import {
+  buildCli,
+  startDevServer,
+  type DevServer,
+} from "../../../lib/dev-server.ts";
+import { getOk, getOkResponse } from "../../../lib/http.ts";
+import { copyShippedProject } from "../../../lib/shipped-project.ts";
+
+// Joined onto `base`, which already ends in "/" — see dev-server.steps.ts.
+const CONFIG_URL = "@id/virtual:biac-config";
+
+let projectRoot: string | undefined;
+let server: DevServer | undefined;
+
+BeforeAll(() => {
+  buildCli();
+});
+
+After(async () => {
+  server?.kill();
+  if (projectRoot) rmSync(projectRoot, { recursive: true, force: true });
+  server = undefined;
+  projectRoot = undefined;
+});
+
+Given("the shipped project with its data files", () => {
+  projectRoot = mkdtempSync(join(tmpdir(), "biac-data-"));
+  copyShippedProject(projectRoot);
+});
+
+When("biac dev serves the project", async () => {
+  assert.ok(projectRoot, "project must exist before starting the server");
+  server = await startDevServer(projectRoot);
+});
+
+/** Compiled page module through vite's /@fs/ transform — the `?import`
+ * marks it a JS module request, same as the manifest's lazy import(). */
+function pageModule(file: string): Promise<string> {
+  assert.ok(server && projectRoot, "server must be running");
+  return getOk(`${server.url}@fs${projectRoot}/pages/${file}?import`);
+}
+
+Then("the orders parquet serves with parquet magic bytes", async () => {
+  assert.ok(server, "server must be running");
+  const res = await getOkResponse(`${server.url}data/orders.parquet`);
+  assert.equal(res.headers.get("content-type"), "application/octet-stream");
+  const bytes = Buffer.from(await res.arrayBuffer());
+  assert.equal(bytes.subarray(0, 4).toString(), "PAR1");
+  assert.equal(bytes.subarray(-4).toString(), "PAR1");
+});
+
+Then("the channels csv serves with the csv content type", async () => {
+  assert.ok(server, "server must be running");
+  const res = await getOkResponse(`${server.url}data/channels.csv`);
+  assert.equal(res.headers.get("content-type"), "text/csv");
+  assert.match(await res.text(), /^channel,share,orders\nDirect,46,163/);
+});
+
+Then(
+  "the index page module declares its orders table and named block",
+  async () => {
+    const code = await pageModule("index.md");
+    assert.match(
+      code,
+      /export const sqlTables = \{"orders":"data\/orders\.parquet"\}/,
+    );
+    assert.match(code, /export const sqlBlocks = \[\{"name":"orders"/);
+    assert.match(code, /\{\{params\.region\}\}/);
+  },
+);
+
+Then(
+  "the weekly-review module exports orders, region_share and weekly_trend",
+  async () => {
+    const code = await pageModule("weekly-review.md");
+    for (const name of ["orders", "region_share", "weekly_trend"]) {
+      assert.match(code, new RegExp(`\\{"name":"${name}"`));
+    }
+  },
+);
+
+Then("the config module declares the channels table", async () => {
+  assert.ok(server, "server must be running");
+  const code = await getOk(`${server.url}${CONFIG_URL}`);
+  assert.match(code, /"sqlTables":\{"channels":"data\/channels\.csv"\}/);
+});
+
+Then("the allocation module has channel_mix and no sql tables", async () => {
+  const code = await pageModule("nested/allocation.md");
+  assert.match(code, /\{"name":"channel_mix"/);
+  assert.match(code, /export const sqlTables = \{\}/);
+});
+
+Then("the data server stops on SIGINT", async () => {
+  assert.ok(server, "server must be running");
+  assert.equal(await server.stop(), 0);
+});

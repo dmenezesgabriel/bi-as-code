@@ -1,11 +1,9 @@
 import { test as base, type Page } from "@playwright/test";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { startDevServer } from "../lib/dev-server.js";
-
-const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
+import { copyShippedProject } from "../lib/shipped-project.js";
 
 export interface BiacDev {
   /** Base URL of the spawned dev server, e.g. "http://localhost:51234/". */
@@ -39,13 +37,7 @@ export const test = base.extend<{ biacDev: BiacDev }>({
   // the unused binding.
   biacDev: async ({ page: _page }, use) => {
     const projectDir = mkdtempSync(join(tmpdir(), "biac-browser-"));
-    cpSync(join(repoRoot, "pages"), join(projectDir, "pages"), {
-      recursive: true,
-    });
-    cpSync(
-      join(repoRoot, "biac.config.ts"),
-      join(projectDir, "biac.config.ts"),
-    );
+    copyShippedProject(projectDir);
     const server = await startDevServer(projectDir);
     await use({ url: server.url, projectDir });
     server.kill();

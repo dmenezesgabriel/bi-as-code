@@ -14,5 +14,11 @@ the file name and the document title to the first heading.
 | Marketplace |   32% |    113 |
 | Partner     |   22% |     79 |
 
+```sql channel_mix
+select channel, share, orders
+from channels
+order by orders desc
+```
+
 Channel mix is stable week over week; marketplace volume peaks on
 weekends. [Back to the region detail](/nested/page).

@@ -1,5 +1,7 @@
 ---
 title: Orders overview
+sql:
+  orders: data/orders.parquet
 ---
 
 # Orders overview
@@ -17,6 +19,7 @@ page's widgets; for a per-region breakdown see the
 ```sql orders
 select region, count(*) as orders, sum(amount) as revenue
 from orders
+where {{params.region}} is null or region = {{params.region}}
 group by region
 order by revenue desc
 ```
