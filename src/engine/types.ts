@@ -59,6 +59,13 @@ export interface PageFrontmatter {
 }
 
 /**
+ * The page's `sql:` front-matter after validation: table name → `data/`
+ * path relative to the project root. The client registers each entry as a
+ * duckdb table when the page mounts.
+ */
+export type SqlTableMap = Record<string, string>;
+
+/**
  * The project-level theme default declared in `biac.config.ts`: a fixed mode
  * or `"system"` to follow `prefers-color-scheme` until the user toggles.
  */
@@ -83,8 +90,8 @@ export interface BiacConfig {
 
 /**
  * The compiled form of one page: `code` is an ESM module whose default export
- * is the MDX component and whose `frontmatter`/`title`/`sqlBlocks` named
- * exports mirror the returned fields. `title` is the front-matter title, the
+ * is the MDX component and whose `frontmatter`/`title`/`sqlBlocks`/`sqlTables`
+ * named exports mirror the returned fields. `title` is the front-matter title, the
  * first non-empty h1 otherwise, and null when the page is untitled.
  */
 export interface CompiledPage {
@@ -93,4 +100,6 @@ export interface CompiledPage {
   frontmatter: PageFrontmatter;
   title: string | null;
   sqlBlocks: SqlBlock[];
+  /** Validated `sql:` front-matter — table name → `data/` file path. */
+  sqlTables: SqlTableMap;
 }

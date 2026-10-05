@@ -26,6 +26,7 @@ function page(partial: Partial<CompiledPageModule>): CompiledPageModule {
     frontmatter: {},
     title: null,
     sqlBlocks: [],
+    sqlTables: {},
     ...partial,
   };
 }

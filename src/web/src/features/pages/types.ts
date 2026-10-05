@@ -24,19 +24,24 @@ export interface ManifestPageEntry {
  * One compiled markdown page: `default` is the MDX component (it takes a
  * `components` prop for element overrides); `title` is the resolved page
  * title (front-matter `title`, else the first h1, else null); `sqlBlocks`
- * are the named ```sql fences extracted for the query registry.
+ * are the named ```sql fences extracted for the query registry; `sqlTables`
+ * is the page's validated `sql:` front-matter (table name → `data/` path).
  */
 export interface CompiledPageModule {
   default: ComponentType<MdxPageProps>;
   frontmatter: Record<string, unknown>;
   title: string | null;
   sqlBlocks: SqlBlock[];
+  sqlTables: SqlTableMap;
 }
 
 export interface SqlBlock {
   name: string;
   sql: string;
 }
+
+/** Table name → `data/` file path relative to the project root. */
+export type SqlTableMap = Record<string, string>;
 
 export interface MdxPageProps {
   components?: MdxComponentMap;

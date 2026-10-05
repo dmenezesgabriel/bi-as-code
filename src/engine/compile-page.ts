@@ -7,6 +7,7 @@ import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { matter } from "vfile-matter";
 import { pageFrontmatter } from "./page-frontmatter.js";
+import { sqlTableMap } from "./sql-frontmatter.js";
 import type { CompiledPage, PageFrontmatter, SqlBlock } from "./types.js";
 
 interface PageMetadata {
@@ -52,6 +53,7 @@ export async function compilePage(
     frontmatter,
     title: resolveTitle(frontmatter, metadata.firstHeading),
     sqlBlocks: metadata.sqlBlocks,
+    sqlTables: sqlTableMap(frontmatter, filePath),
   };
   return { code: `${compiled}\n${metadataExports(page)}\n`, ...page };
 }
@@ -90,5 +92,6 @@ function metadataExports(page: Omit<CompiledPage, "code">): string {
     `export const frontmatter = ${JSON.stringify(page.frontmatter)};`,
     `export const title = ${JSON.stringify(page.title)};`,
     `export const sqlBlocks = ${JSON.stringify(page.sqlBlocks)};`,
+    `export const sqlTables = ${JSON.stringify(page.sqlTables)};`,
   ].join("\n");
 }

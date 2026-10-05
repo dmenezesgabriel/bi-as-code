@@ -23,6 +23,7 @@ function textPage(text: string, title: string | null): CompiledPageModule {
     frontmatter: {},
     title,
     sqlBlocks: [],
+    sqlTables: {},
   };
 }
 
@@ -38,6 +39,7 @@ const homePage: CompiledPageModule = {
   frontmatter: { title: "Home" },
   title: "Home",
   sqlBlocks: [],
+  sqlTables: {},
 };
 
 const pages: ManifestPageEntry[] = [

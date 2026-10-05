@@ -24,6 +24,7 @@ async function importCompiledModule(code: string): Promise<{
   frontmatter: unknown;
   title: unknown;
   sqlBlocks: unknown;
+  sqlTables: unknown;
 }> {
   const tmpParent = join(
     dirname(fileURLToPath(import.meta.url)),
@@ -144,6 +145,37 @@ describe("sql blocks", () => {
   });
 });
 
+describe("sql front-matter", () => {
+  it("extracts the sql: key into sqlTables", async () => {
+    const page = await compile(
+      "---\nsql:\n  orders: data/orders.csv\n---\n# Body\n",
+    );
+
+    expect(page.sqlTables).toEqual({ orders: "data/orders.csv" });
+  });
+
+  it("yields an empty map when the page declares no sql key", async () => {
+    const page = await compile("# Body\n");
+
+    expect(page.sqlTables).toEqual({});
+  });
+
+  it("rejects a sql key that is not a name → path mapping", async () => {
+    await expect(
+      compile("---\nsql:\n  - data/orders.csv\n---\n# Body\n"),
+    ).rejects.toThrow(/sql: expected a mapping/);
+  });
+
+  it("rejects a source outside data/ naming the page file", async () => {
+    await expect(
+      compile(
+        "---\nsql:\n  orders: pages/orders.csv\n---\n# Body\n",
+        "pages/a.md",
+      ),
+    ).rejects.toThrow(/pages\/a\.md/);
+  });
+});
+
 describe("module source", () => {
   it("exports frontmatter, title and sqlBlocks alongside the default component", async () => {
     const page = await compile(
@@ -160,6 +192,16 @@ describe("module source", () => {
     );
   });
 
+  it("exports sqlTables alongside sqlBlocks", async () => {
+    const page = await compile(
+      "---\nsql:\n  orders: data/orders.csv\n---\n# Body\n\n```sql orders\nselect 1\n```\n",
+    );
+
+    expect(page.code).toContain(
+      'export const sqlTables = {"orders":"data/orders.csv"};',
+    );
+  });
+
   it("produces a module that imports and exposes the same metadata", async () => {
     const page = await compile(
       "---\ntitle: Report\n---\n# Body\n\n```sql orders\nselect 1\n```\n",
@@ -171,6 +213,7 @@ describe("module source", () => {
     expect(mod.frontmatter).toEqual(page.frontmatter);
     expect(mod.title).toBe(page.title);
     expect(mod.sqlBlocks).toEqual(page.sqlBlocks);
+    expect(mod.sqlTables).toEqual(page.sqlTables);
   });
 });
 
