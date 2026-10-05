@@ -12,6 +12,11 @@ export interface BiacDev {
   projectDir: string;
 }
 
+/** Live result tables render inside `div.overflow-x-auto`; static gfm tables don't. */
+export function resultTables(page: Page) {
+  return page.locator("div.overflow-x-auto table");
+}
+
 /**
  * Console errors and page errors fail every test — a clean console is part
  * of "renders correctly", not an optional extra. Wire this before the first

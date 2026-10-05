@@ -23,3 +23,5 @@ where {{params.region}} is null or region = {{params.region}}
 group by region
 order by revenue desc
 ```
+
+<Table data="orders" />

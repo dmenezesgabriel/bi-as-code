@@ -1,12 +1,11 @@
-import type { Page } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
-
-/** Live result tables render inside `div.overflow-x-auto`; static gfm tables don't. */
-function resultTables(page: Page) {
-  return page.locator("div.overflow-x-auto table");
-}
+import {
+  collectConsoleErrors,
+  expect,
+  resultTables,
+  test,
+} from "./dev-server.fixture.js";
 
 test("index page runs the named sql block and renders its live result", async ({
   page,
@@ -97,7 +96,10 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   await expect(results.nth(2).getByRole("row")).toHaveCount(11, {
     timeout: 30_000,
   });
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toBeVisible();
+  // The caption appears twice: the fence's own result and the
+  // `<Table data="weekly_trend" />` widget in Quarter detail — both render
+  // the same core, so both paginate.
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
   // orders (region rollup) and region_share ({{orders}} + pct_of_total).
   await expect(results.nth(0).getByRole("row")).toHaveCount(4);
   await expect(results.nth(1).getByRole("row")).toHaveCount(4);
@@ -178,12 +180,14 @@ test("a missing sql: source shows an inline error, not a page crash", async ({
   );
   await page.goto(biacDev.url);
 
-  const alert = page.getByRole("alert");
-  await expect(alert).toBeVisible({ timeout: 30_000 });
-  await expect(alert).toContainText("orders");
-  await expect(alert).toContainText("data/missing.parquet");
-  // The failed registration lands inline and quiet — no console errors, no
-  // unhandled rejections, the rest of the page still renders.
+  // The failed registration lands inline in both call sites that render
+  // the `orders` result — the fence's own table and the `<Table>` widget —
+  // and quiet: no console errors, no unhandled rejections, the rest of the
+  // page still renders.
+  const alerts = page.getByRole("alert");
+  await expect(alerts).toHaveCount(2, { timeout: 30_000 });
+  await expect(alerts.first()).toContainText("orders");
+  await expect(alerts.first()).toContainText("data/missing.parquet");
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
   ).toBeVisible();

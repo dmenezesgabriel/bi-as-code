@@ -1,6 +1,6 @@
 # SL-004 — `<Table>` widget: sort, pagination, loading/error/empty
 
-Milestone: Phase 1 — A usable BI-as-code product · State: open · Depends on: SL-003 · Closes: —
+Milestone: Phase 1 — A usable BI-as-code product · State: partial · Depends on: SL-003 · Closes: —
 
 ## Outcome
 
@@ -127,7 +127,7 @@ No new dependencies.
 - [x] T1 — `sort-rows.ts` + `data-table.tsx` + `states.tsx`: type-aware comparator (number/bigint numeric, `Date` temporal, else string; nulls last both directions), 3-state sort cycle none→desc→asc→none (`aria-sort` on `th`, `<button>` header), pager with first/prev/next/last + "Page i of n · N rows" hidden at ≤1 page, page index clamped when `rows` shrinks; loading/error/empty extracted from `sql-block.tsx` verbatim. Web-unit tests.
 - [x] T2 — `table.tsx`: `data` → `useQueryResults()[name]`; unknown name → inline `role=alert` naming it; `pageSize` prop default 10; register `Table` in `mdxComponents`. Web-unit + jsdom tests.
 - [x] T3 — `sql-block.tsx` `SqlResult` renders through the shared core; unnamed sql/other languages unchanged. Web-unit + jsdom render.
-- [ ] T4 — example project + demo: `<Table>` usages on `pages/weekly-review.md` + `pages/index.md`; e2e-browser spec (sort cycle, pager navigation, `?region=Atlantis` empty state, unknown-name error, console clean); headless playwright pass with measurements (DOM row count per page, sort interaction latency, no re-query on sort — query count stays constant); backlog/PRD bookkeeping.
+- [x] T4 — example project + demo: `<Table>` usages on `pages/weekly-review.md` + `pages/index.md`; e2e-browser spec (sort cycle, pager navigation, `?region=Atlantis` empty state, unknown-name error, console clean); headless playwright pass with measurements (DOM row count per page, sort interaction latency, no re-query on sort — query count stays constant); backlog/PRD bookkeeping.
 
 ## Out of scope
 

@@ -80,6 +80,8 @@ the first six weeks before the West overtook it. The South has been
 flat-to-slightly-down all quarter, which makes this week's zero-change
 reading part of a pattern rather than noise.
 
+<Table data="weekly_trend" />
+
 ## Takeaways
 
 - West growth is volume-led and concentrated — watch the top five
