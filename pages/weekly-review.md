@@ -12,6 +12,12 @@ the [orders overview](/).
 
 ## Overview
 
+<BigValue data="kpi" column="revenue" title="Quarter revenue" fmt="usd" delta="wow_pct" deltaFmt="pct1" text="last week vs. prior" sparkline="weekly_revenue" />
+
+Quarter revenue closed at <Value data="kpi" column="revenue" fmt="usd" />,
+up <Delta data="kpi" column="wow_pct" fmt="pct1" text="WoW" /> on the prior
+week.
+
 Order volume closed the quarter at 355 orders, up 18% on the final week
 against the trailing four-week average. Revenue followed the same shape — growth concentrated
 in the West region, where a single wholesale account contributed nearly a
@@ -23,6 +29,17 @@ volume-led rather than price-led. Volume-led growth is the healthier
 kind, but it also means the trend is sensitive to churn in a small number
 of active accounts — the regional split below shows how concentrated the
 week was.
+
+```sql kpi
+select
+  sum(amount) as revenue,
+  count(*) as orders,
+  sum(case when week = (select max(week) from orders) then amount end)
+    / nullif(sum(case when week = (select max(week) from orders) - 1 then amount end), 0)
+    - 1 as wow_pct
+from orders
+where {{params.region}} is null or region = {{params.region}}
+```
 
 ## Regional split
 
@@ -68,6 +85,17 @@ from orders
 group by week, region
 order by week, region
 ```
+
+```sql weekly_revenue
+select week, sum(amount) as revenue
+from orders
+where {{params.region}} is null or region = {{params.region}}
+group by week
+order by week
+```
+
+Weekly revenue as a line <Sparkline data="weekly_revenue" /> and as
+bars <Sparkline data="weekly_revenue" type="bar" />.
 
 Returns and cancellations stayed inside their normal band — nothing in
 the trend suggests the growth is being bought at the cost of order

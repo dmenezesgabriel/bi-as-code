@@ -32,6 +32,30 @@ export function collectConsoleErrors(page: Page): string[] {
 }
 
 /**
+ * Wraps the prototype the duckdb-wasm worker is later constructed against —
+ * every query is a worker post, so a client-side interaction that re-queries
+ * leaks through `workerPosts`. Call before the first `page.goto`.
+ */
+export async function instrumentWorkerPosts(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const counter = window as unknown as { __workerPosts: number };
+    counter.__workerPosts = 0;
+    const original = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (this: Worker, ...args: unknown[]) {
+      counter.__workerPosts++;
+      return original.apply(this, args as [unknown]);
+    };
+  });
+}
+
+/** Counts messages posted to the duckdb worker — every query is a post. */
+export function workerPosts(page: Page): Promise<number> {
+  return page.evaluate(
+    () => (window as unknown as { __workerPosts: number }).__workerPosts,
+  );
+}
+
+/**
  * Test-scoped server: each test gets its own `biac dev` over a fresh copy of
  * the shipped `pages/` example, so the suite exercises what users clone and
  * hot-reload mutations never touch the repo (or leak between tests).

@@ -4,8 +4,10 @@ import { join } from "node:path";
 import {
   collectConsoleErrors,
   expect,
+  instrumentWorkerPosts,
   resultTables,
   test,
+  workerPosts,
 } from "./dev-server.fixture.js";
 
 /**
@@ -23,26 +25,10 @@ function firstRowCells(table: Locator) {
   return table.locator("tbody tr").first().locator("td").allTextContents();
 }
 
-/** Counts messages posted to the duckdb worker — every query is a post. */
-async function workerPosts(page: Page): Promise<number> {
-  return page.evaluate(
-    () => (window as unknown as { __workerPosts: number }).__workerPosts,
-  );
-}
-
 test.beforeEach(async ({ page }) => {
-  // Wrap the prototype the duckdb-wasm worker is later constructed against:
-  // sort and pagination are client-side transforms, so every worker post
+  // Sort and pagination are client-side transforms — every worker post
   // after first render would mean a re-query leaked in.
-  await page.addInitScript(() => {
-    const counter = window as unknown as { __workerPosts: number };
-    counter.__workerPosts = 0;
-    const original = Worker.prototype.postMessage;
-    Worker.prototype.postMessage = function (this: Worker, ...args: unknown[]) {
-      counter.__workerPosts++;
-      return original.apply(this, args as [unknown]);
-    };
-  });
+  await instrumentWorkerPosts(page);
 });
 
 test("weekly-review's <Table> sorts client-side through the 3-state cycle", async ({

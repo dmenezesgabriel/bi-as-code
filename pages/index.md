@@ -16,6 +16,9 @@ page's widgets; for a per-region breakdown see the
 | South  |     95 |  $3,700 |
 | West   |    140 |  $6,100 |
 
+The West leads on revenue at <Value data="orders" column="revenue" fmt="usd0" />
+this quarter.
+
 ```sql orders
 select region, count(*) as orders, sum(amount) as revenue
 from orders

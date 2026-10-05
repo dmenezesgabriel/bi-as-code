@@ -1,6 +1,6 @@
 # SL-005 — `<BigValue>`/`<Value>`: fmt, delta, sparkline
 
-Milestone: Phase 1 — A usable BI-as-code product · State: open · Depends on: SL-004 · Closes: —
+Milestone: Phase 1 — A usable BI-as-code product · State: partial · Depends on: SL-004 · Closes: —
 
 ## Outcome
 
@@ -133,7 +133,7 @@ No new dependencies.
 - [x] T2 — `delta-display.tsx` + `sparkline.tsx` presentational: SVG triangles + sign status + `neutralRange` + `downIsGood` + `chip`/`showSymbol`/`symbolPosition`/`showValue`; SVG line/area/bar sparkline with x/y column projection, single-point flat line, `role="img"`. Unit tests + colocated stories (ADR-0006; `get-storybook-story-instructions` first).
 - [x] T3 — `states.tsx` + `value.tsx` + `delta.tsx` + `sparkline-widget.tsx`: `data`/`column`/`row` binding to `useQueryResults()`, the three error faces (unknown name / unknown column / unknown fmt), `–` empty; register `Value`, `Delta`, `Sparkline` in `mdxComponents`. Unit + jsdom tests + stories.
 - [x] T4 — `big-value.tsx`: title/value/delta/sparkline composition, `sparkline` second-query lookup, `display:block` span tree; register `BigValue`. Unit + jsdom tests + stories for every state combination.
-- [ ] T5 — example project + demo: `kpi` + `weekly_revenue` fences and all four tags on `pages/weekly-review.md` (one `<Value>` on `pages/index.md`); `test/e2e-browser/value-widgets.spec.ts`; headless playwright pass with measurements (formatted strings vs SQL-truth, delta color/arrow state, sparkline point count, `?region=Atlantis` `–`, console clean); backlog/PRD bookkeeping.
+- [x] T5 — example project + demo: `kpi` + `weekly_revenue` fences and all four tags on `pages/weekly-review.md` (one `<Value>` on `pages/index.md`); `test/e2e-browser/value-widgets.spec.ts`; headless playwright pass with measurements (formatted strings vs SQL-truth, delta color/arrow state, sparkline point count, `?region=Atlantis` `–`, console clean); backlog/PRD bookkeeping.
 
 ## Out of scope
 
