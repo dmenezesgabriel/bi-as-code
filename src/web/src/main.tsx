@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
+import { DuckDbLive } from "./features/data/duckdb-live";
+import { DataRuntimeProvider } from "./features/data/runtime";
 import { router } from "./router.js";
 import "./styles.css";
 
@@ -13,6 +15,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <DataRuntimeProvider layer={DuckDbLive}>
+      <RouterProvider router={router} />
+    </DataRuntimeProvider>
   </StrictMode>,
 );
