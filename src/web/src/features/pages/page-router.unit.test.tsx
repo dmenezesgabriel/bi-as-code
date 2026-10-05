@@ -51,6 +51,7 @@ const site = {
   title: "ACME Site",
   theme: "system" as const,
   nav: { sidebar: true },
+  sqlTables: {},
 };
 
 const navTree: NavTree = {

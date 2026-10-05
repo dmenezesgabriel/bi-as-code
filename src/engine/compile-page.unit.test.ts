@@ -174,6 +174,28 @@ describe("sql front-matter", () => {
       ),
     ).rejects.toThrow(/pages\/a\.md/);
   });
+
+  it("rejects a table name already declared by biac.config.ts", async () => {
+    await expect(
+      compilePage(
+        "---\nsql:\n  orders: data/orders.csv\n---\n# Body\n",
+        "pages/a.md",
+        { orders: "data/shared.parquet" },
+      ),
+    ).rejects.toThrow(
+      /Invalid front-matter in pages\/a\.md — sql\.orders:.*biac\.config\.ts/,
+    );
+  });
+
+  it("compiles cleanly when page and config table names are disjoint", async () => {
+    const page = await compilePage(
+      "---\nsql:\n  orders: data/orders.csv\n---\n# Body\n",
+      "pages/a.md",
+      { other: "data/other.csv" },
+    );
+
+    expect(page.sqlTables).toEqual({ orders: "data/orders.csv" });
+  });
 });
 
 describe("module source", () => {

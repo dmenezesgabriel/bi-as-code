@@ -113,6 +113,44 @@ describe("page transform", () => {
       dev.transformRequest(`/@fs${join(root, "pages/index.md")}`),
     ).rejects.toThrow();
   });
+
+  it("rejects a page whose sql: table name collides with biac.config.ts", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { sql: { orders: "data/orders.csv" } };\n',
+    );
+    writeFile(
+      "pages/index.md",
+      "---\nsql:\n  orders: data/other.csv\n---\n# Hi\n",
+    );
+    const dev = await makeServer(root);
+
+    await expect(
+      dev.transformRequest(`/@fs${join(root, "pages/index.md")}`),
+    ).rejects.toThrow(/pages\/index\.md.*sql\.orders.*biac\.config\.ts/);
+  });
+
+  it("re-checks a page against a config edit so a new collision surfaces", async () => {
+    const root = makeProject();
+    writeFile("biac.config.ts", "export default {};\n");
+    writeFile("pages/index.md", "---\nsql:\n  orders: data/a.csv\n---\n# Hi\n");
+    const dev = await makeServer(root);
+    const pagePath = join(root, "pages/index.md");
+    await waitForWatch(dev, root, "biac.config.ts");
+    await dev.transformRequest(`/@fs${pagePath}`);
+
+    await expectInvalidated(pageModule(dev, pagePath), () =>
+      writeFileSync(
+        join(root, "biac.config.ts"),
+        'export default { sql: { orders: "data/b.csv" } };\n',
+      ),
+    );
+
+    await expect(dev.transformRequest(`/@fs${pagePath}`)).rejects.toThrow(
+      /biac\.config\.ts/,
+    );
+  });
 });
 
 describe("virtual:biac-pages", () => {
@@ -241,6 +279,19 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"sidebar":false');
   });
 
+  it("serves project sql tables declared in biac.config.ts", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { sql: { orders: "data/orders.csv" } };\n',
+    );
+    const dev = await makeServer(root);
+
+    const code = await loadConfigModule(dev);
+
+    expect(code).toContain('"sqlTables":{"orders":"data/orders.csv"}');
+  });
+
   it("serves defaults when biac.config.ts is absent", async () => {
     const root = makeProject();
     const dev = await makeServer(root);
@@ -250,6 +301,7 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"biac"');
     expect(code).toContain('"system"');
     expect(code).toContain('"sidebar":true');
+    expect(code).toContain('"sqlTables":{}');
   });
 
   it("invalidates the config module when biac.config.ts is edited", async () => {

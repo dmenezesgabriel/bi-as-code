@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfigFromFile } from "vite";
+import { sqlTableMap } from "./sql-frontmatter.js";
 import type { BiacConfig } from "./types.js";
 
 const CONFIG_FILE = "biac.config.ts";
@@ -9,6 +10,7 @@ const DEFAULTS: BiacConfig = {
   title: "biac",
   theme: "system",
   nav: { sidebar: true },
+  sqlTables: {},
 };
 
 /**
@@ -57,7 +59,7 @@ async function loadConfigFile(
     ) {
       throw invalid(
         "default export",
-        "an object with optional fields { title, theme, nav }",
+        "an object with optional fields { title, theme, nav, sql }",
         "<non-object>",
       );
     }
@@ -69,7 +71,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
   if (!isRecord(raw)) {
     throw invalid(
       "default export",
-      "an object with optional fields { title, theme, nav }",
+      "an object with optional fields { title, theme, nav, sql }",
       raw,
     );
   }
@@ -77,6 +79,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
     title: readTitle(raw),
     theme: readTheme(raw),
     nav: { sidebar: readSidebar(raw) },
+    sqlTables: sqlTableMap(raw.sql, CONFIG_FILE),
   };
 }
 

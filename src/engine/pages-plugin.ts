@@ -33,6 +33,11 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const pagesDir = join(root, "pages");
   const pagesDirPosix = toPosix(pagesDir);
   const configFile = join(root, CONFIG_FILE);
+  // Page transforms consult the config's `sql:` map; `loadBiacConfig`
+  // re-bundles the file through esbuild on every call, so the resolved
+  // config is memoized and dropped when the watcher reports an edit.
+  let configPromise: Promise<BiacConfig> | undefined;
+  const getConfig = () => (configPromise ??= loadBiacConfig(root));
 
   return {
     name: "biac:pages",
@@ -62,7 +67,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
     },
     async load(id) {
       if (id === RESOLVED_CONFIG_ID) {
-        return configModuleSource(await loadBiacConfig(root));
+        return configModuleSource(await getConfig());
       }
       if (id !== RESOLVED_MANIFEST_ID) return;
       return manifestModuleSource(discoverPages(root));
@@ -70,7 +75,8 @@ export function pagesPlugin(projectRoot: string): Plugin {
     async transform(code, id) {
       if (!isPageFile(id, pagesDirPosix)) return;
       const file = `pages/${toPosix(id).slice(pagesDirPosix.length + 1)}`;
-      const page = await compilePage(code, file);
+      const { sqlTables } = await getConfig();
+      const page = await compilePage(code, file, sqlTables);
       return { code: page.code, map: null };
     },
     // The inline theme script in index.html runs before any module loads,
@@ -79,7 +85,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
     // without it a `theme: "dark"` project would paint one light frame on
     // every load.
     async transformIndexHtml() {
-      const { theme } = await loadBiacConfig(root);
+      const { theme } = await getConfig();
       return [
         {
           tag: "script",
@@ -94,11 +100,23 @@ export function pagesPlugin(projectRoot: string): Plugin {
     },
     hotUpdate({ file, modules }) {
       if (file === configFile) {
+        configPromise = undefined;
         const graph = this.environment.moduleGraph;
+        // `sql:` collisions are checked when a page compiles — a config edit
+        // can create or clear one without touching the page file, so cached
+        // page transforms must re-run against the new config.
+        const stalePages = [...graph.idToModuleMap.values()].filter(
+          (mod) => mod.id && isPageFile(mod.id, pagesDirPosix),
+        );
         const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
-        if (!configModule) return;
-        graph.invalidateModule(configModule);
-        return [...modules, configModule];
+        for (const mod of [configModule, ...stalePages]) {
+          if (mod) graph.invalidateModule(mod);
+        }
+        return [
+          ...modules,
+          ...(configModule ? [configModule] : []),
+          ...stalePages,
+        ];
       }
       if (!isPageFile(file, pagesDirPosix)) return;
       // Every page change — edits included, since front-matter feeds the

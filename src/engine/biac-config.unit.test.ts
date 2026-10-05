@@ -30,6 +30,7 @@ describe("missing or empty config", () => {
       title: "biac",
       theme: "system",
       nav: { sidebar: true },
+      sqlTables: {},
     });
   });
 
@@ -41,6 +42,7 @@ describe("missing or empty config", () => {
       title: "biac",
       theme: "system",
       nav: { sidebar: true },
+      sqlTables: {},
     });
   });
 });
@@ -81,6 +83,19 @@ describe("field handling", () => {
       title: "ACME",
       theme: "system",
       nav: { sidebar: true },
+      sqlTables: {},
+    });
+  });
+
+  it("reads project sql tables", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default { sql: { orders: "data/orders.parquet" } };\n',
+    );
+
+    await expect(loadBiacConfig(root)).resolves.toMatchObject({
+      sqlTables: { orders: "data/orders.parquet" },
     });
   });
 });
@@ -128,6 +143,45 @@ describe("validation", () => {
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
       /sidebar.*expected.*boolean.*got.*yes/i,
+    );
+  });
+
+  it("throws naming the value and expected shape for a non-mapping sql", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { sql: "data/orders.csv" };\n');
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      /biac\.config\.ts.*sql.*expected a mapping.*got "data\/orders\.csv"/i,
+    );
+  });
+
+  it("throws for a sql source that is not a string path", async () => {
+    const root = makeProject();
+    writeConfig(root, "export default { sql: { orders: 42 } };\n");
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      /sql\.orders: expected a string path.*got 42/,
+    );
+  });
+
+  it("throws for a sql source outside data/", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default { sql: { orders: "pages/orders.csv" } };\n',
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      /sql\.orders: expected a "data\/…" path/,
+    );
+  });
+
+  it("throws for an empty sql table name", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { sql: { "": "data/orders.csv" } };\n');
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      /sql: expected a non-empty table name.*got ""/,
     );
   });
 });

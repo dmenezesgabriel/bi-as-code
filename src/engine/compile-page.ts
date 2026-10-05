@@ -7,8 +7,13 @@ import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { matter } from "vfile-matter";
 import { pageFrontmatter } from "./page-frontmatter.js";
-import { sqlTableMap } from "./sql-frontmatter.js";
-import type { CompiledPage, PageFrontmatter, SqlBlock } from "./types.js";
+import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
+import type {
+  CompiledPage,
+  PageFrontmatter,
+  SqlBlock,
+  SqlTableMap,
+} from "./types.js";
 
 interface PageMetadata {
   /** Page path, for error messages that need to name their file. */
@@ -27,6 +32,9 @@ interface PageMetadata {
  * §4). Named ` ```sql ` fences are collected into `sqlBlocks` but left in the
  * AST — they still render as code.
  *
+ * `configTables` carries `biac.config.ts`'s project-wide `sql:` map — a
+ * page name colliding with it is a compile error naming both sources.
+ *
  * @example
  * const page = await compilePage("---\ntitle: T\n---\n```sql q\nselect 1\n```\n", "pages/a.md");
  * // page.title → "T"; page.sqlBlocks → [{name: "q", sql: "select 1"}]
@@ -34,6 +42,7 @@ interface PageMetadata {
 export async function compilePage(
   markdown: string,
   filePath: string,
+  configTables: SqlTableMap = {},
 ): Promise<CompiledPage> {
   const file = new VFile({ path: filePath, value: markdown });
   matter(file, { strip: true });
@@ -49,11 +58,14 @@ export async function compilePage(
     remarkPlugins: [remarkGfm, [remarkPageMetadata, metadata]],
   });
 
+  const location = `front-matter in ${filePath}`;
+  const sqlTables = sqlTableMap(frontmatter.sql, location);
+  assertNoSqlTableCollision(sqlTables, configTables, location);
   const page = {
     frontmatter,
     title: resolveTitle(frontmatter, metadata.firstHeading),
     sqlBlocks: metadata.sqlBlocks,
-    sqlTables: sqlTableMap(frontmatter, filePath),
+    sqlTables,
   };
   return { code: `${compiled}\n${metadataExports(page)}\n`, ...page };
 }

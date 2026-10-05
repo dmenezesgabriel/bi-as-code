@@ -1,27 +1,25 @@
 import { normalize } from "node:path/posix";
-import type { PageFrontmatter, SqlTableMap } from "./types.js";
+import type { SqlTableMap } from "./types.js";
 
 /**
- * The `sql:` front-matter key declares which `data/` files a page queries:
- * `sql: {orders: data/orders.parquet}` registers table `orders` from
- * `<project>/data/orders.parquet`. Sources are restricted to the project's
- * `data/` directory so the dev URL (`/data/…`) and the copied `dist/data/`
- * from `biac build` resolve identically. Only formats duckdb reads natively
- * are accepted; anything else is an author error worth failing loudly on.
+ * A `sql:` map declares which `data/` files a page or `biac.config.ts`
+ * queries: `sql: {orders: data/orders.parquet}` registers table `orders`
+ * from `<project>/data/orders.parquet`. Sources are restricted to the
+ * project's `data/` directory so the dev URL (`/data/…`) and the copied
+ * `dist/data/` from `biac build` resolve identically. Only formats duckdb
+ * reads natively are accepted; anything else is an author error worth
+ * failing loudly on. `location` labels where the map was declared so the
+ * error names its source ("front-matter in pages/a.md", "biac.config.ts").
  *
  * @example
- * sqlTableMap({ sql: { orders: "./data/orders.csv" } }, "pages/a.md");
+ * sqlTableMap({ orders: "./data/orders.csv" }, "front-matter in pages/a.md");
  * // → { orders: "data/orders.csv" }
  */
-export function sqlTableMap(
-  frontmatter: PageFrontmatter,
-  displayPath: string,
-): SqlTableMap {
-  const spec = frontmatter.sql;
+export function sqlTableMap(spec: unknown, location: string): SqlTableMap {
   if (spec === undefined) return {};
   if (!isRecord(spec)) {
     throw invalidSql(
-      displayPath,
+      location,
       "sql",
       'a mapping of table name → "data/…" file path',
       spec,
@@ -30,19 +28,41 @@ export function sqlTableMap(
   const tables: SqlTableMap = {};
   for (const [name, source] of Object.entries(spec)) {
     if (!name) {
-      throw invalidSql(displayPath, "sql", "a non-empty table name", name);
+      throw invalidSql(location, "sql", "a non-empty table name", name);
     }
     if (typeof source !== "string") {
-      throw invalidSql(displayPath, `sql.${name}`, "a string path", source);
+      throw invalidSql(location, `sql.${name}`, "a string path", source);
     }
-    tables[name] = normalizeSource(source, displayPath, name);
+    tables[name] = normalizeSource(source, location, name);
   }
   return tables;
 }
 
+/**
+ * Page `sql:` names and `biac.config.ts` `sql:` names share one table
+ * registry — a page re-declaring a config name is an author error, not an
+ * override, so compilation fails naming both sources.
+ */
+export function assertNoSqlTableCollision(
+  pageTables: SqlTableMap,
+  configTables: SqlTableMap,
+  location: string,
+): void {
+  for (const name of Object.keys(pageTables)) {
+    const configSource = configTables[name];
+    if (configSource === undefined) continue;
+    throw invalidSql(
+      location,
+      `sql.${name}`,
+      `a name not already declared by biac.config.ts (${JSON.stringify(configSource)})`,
+      pageTables[name],
+    );
+  }
+}
+
 function normalizeSource(
   source: string,
-  displayPath: string,
+  location: string,
   name: string,
 ): string {
   const normalized = normalize(source);
@@ -51,7 +71,7 @@ function normalizeSource(
     !/\.(csv|json|arrow|parquet)$/i.test(normalized)
   ) {
     throw invalidSql(
-      displayPath,
+      location,
       `sql.${name}`,
       'a "data/…" path ending .csv, .json, .arrow or .parquet',
       source,
@@ -65,12 +85,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function invalidSql(
-  displayPath: string,
+  location: string,
   field: string,
   expected: string,
   value: unknown,
 ): Error {
   return new Error(
-    `Invalid front-matter in ${displayPath} — ${field}: expected ${expected}, got ${JSON.stringify(value)}`,
+    `Invalid ${location} — ${field}: expected ${expected}, got ${JSON.stringify(value)}`,
   );
 }

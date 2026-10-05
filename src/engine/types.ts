@@ -86,6 +86,8 @@ export interface BiacConfig {
   title: string;
   theme: BiacTheme;
   nav: BiacNavConfig;
+  /** Project-wide `sql:` tables — name → `data/` file path; merged with each page's own `sql:` map in the client registry. */
+  sqlTables: SqlTableMap;
 }
 
 /**

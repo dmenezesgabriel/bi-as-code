@@ -27,6 +27,7 @@ const site: BiacConfig = {
   title: "ACME Site",
   theme: "system",
   nav: { sidebar: true },
+  sqlTables: {},
 };
 
 async function renderShell(
