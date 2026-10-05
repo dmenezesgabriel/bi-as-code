@@ -6,10 +6,19 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { Layer } from "effect";
+import { DuckDb, type DuckDbService } from "../data/data-service";
+import { FakeDuckDb } from "../data/fake-duckdb";
+import { DataRuntimeProvider } from "../data/runtime";
 import { MarkdownPage } from "./markdown-page";
+import { useQueryResults } from "./query-registry";
 import type { CompiledPageModule } from "./types";
 
-function renderPage(page: CompiledPageModule, siteTitle = "biac") {
+function renderPage(
+  page: CompiledPageModule,
+  siteTitle = "biac",
+  db?: DuckDbService,
+) {
   const rootRoute = createRootRoute({
     component: () => <MarkdownPage page={page} siteTitle={siteTitle} />,
   });
@@ -17,7 +26,16 @@ function renderPage(page: CompiledPageModule, siteTitle = "biac") {
     routeTree: rootRoute,
     history: createMemoryHistory(),
   });
-  render(<RouterProvider router={router} />);
+  const app = <RouterProvider router={router} />;
+  render(
+    db ? (
+      <DataRuntimeProvider layer={Layer.succeed(DuckDb, db)}>
+        {app}
+      </DataRuntimeProvider>
+    ) : (
+      app
+    ),
+  );
 }
 
 function page(partial: Partial<CompiledPageModule>): CompiledPageModule {
@@ -117,6 +135,26 @@ describe("MarkdownPage", () => {
       "href",
       "#section-b",
     );
+  });
+
+  it("runs a page's named sql blocks through the query registry", async () => {
+    const db = new FakeDuckDb();
+    renderPage(
+      page({
+        sqlBlocks: [{ name: "orders", sql: "select * from orders" }],
+        default: function Probe() {
+          const results = useQueryResults();
+          return <p data-testid="status">{results.orders?.status ?? "none"}</p>;
+        },
+      }),
+      "biac",
+      db,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("success"),
+    );
+    expect(db.queries.map((q) => q.sql)).toEqual(["select * from orders"]);
   });
 
   it("hides the toc when front-matter sets table_of_contents: false", async () => {

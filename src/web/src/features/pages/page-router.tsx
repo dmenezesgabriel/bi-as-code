@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   createRootRoute,
   createRoute,
@@ -60,8 +61,17 @@ function pageRoute(
     component: function PageRoute() {
       // The loader resolves to the compiled page module, so named exports
       // (title, sqlBlocks) reach the renderer alongside the MDX component.
+      const mod = route.useLoaderData();
+      // Config-level tables merge under the page's own — a name collision
+      // between the two is already a compile error, so spread order is safe.
+      // Memoized: the registry effect keys on this object, and an unstable
+      // identity would re-run every query on any re-render.
+      const sqlTables = useMemo(
+        () => ({ ...site.sqlTables, ...mod.sqlTables }),
+        [site.sqlTables, mod.sqlTables],
+      );
       return (
-        <MarkdownPage page={route.useLoaderData()} siteTitle={site.title} />
+        <MarkdownPage page={{ ...mod, sqlTables }} siteTitle={site.title} />
       );
     },
   });

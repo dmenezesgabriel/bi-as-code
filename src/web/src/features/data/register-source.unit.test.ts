@@ -40,7 +40,7 @@ describe("registerSource", () => {
         },
       ]);
       expect(connection.queries).toEqual([
-        `CREATE TABLE "orders" AS FROM 'data/orders.${ext}'`,
+        `CREATE OR REPLACE TABLE "orders" AS FROM 'data/orders.${ext}'`,
       ]);
       expect(connection.inserted).toEqual([]);
     },
@@ -87,7 +87,7 @@ describe("registerSource", () => {
     await registerSource(files, connection, 'we"ird', "data/it'x.csv");
 
     expect(connection.queries).toEqual([
-      `CREATE TABLE "we""ird" AS FROM 'data/it''x.csv'`,
+      `CREATE OR REPLACE TABLE "we""ird" AS FROM 'data/it''x.csv'`,
     ]);
   });
 });

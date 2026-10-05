@@ -34,7 +34,8 @@ export interface RegistrationConnection {
  * against `/data/`); arrow has no lazy reader so the file is fetched whole
  * and its IPC stream inserted. `.csv/.json/.parquet` materialize as TABLE —
  * a missing file then fails registration naming the source, and cross-filter
- * re-queries never re-scan HTTP.
+ * re-queries never re-scan HTTP. `OR REPLACE` keeps registration idempotent:
+ * project-wide tables re-register on every page mount.
  */
 export async function registerSource(
   files: FileRegistry,
@@ -59,7 +60,7 @@ export async function registerSource(
   // Engine-side validation already restricted sources to
   // .csv/.json/.parquet — duckdb picks the reader from the extension.
   await connection.query(
-    `CREATE TABLE ${identifier(name)} AS FROM ${stringLiteral(source)}`,
+    `CREATE OR REPLACE TABLE ${identifier(name)} AS FROM ${stringLiteral(source)}`,
   );
 }
 

@@ -1,4 +1,5 @@
 import type { ComponentType, ElementType } from "react";
+import type { Row } from "../data/types";
 
 /**
  * The contract of `virtual:biac-pages` and of each compiled page module,
@@ -39,6 +40,17 @@ export interface SqlBlock {
   name: string;
   sql: string;
 }
+
+/**
+ * Per-named-query state exposed by `QueryRegistryProvider`; a block name
+ * present in the map means the page registered a ` ```sql ` fence under it.
+ * `message` is display-ready (a `DataError`'s `operation (detail): cause`
+ * or an interpolation error naming the offending token).
+ */
+export type QueryResult =
+  | { readonly status: "loading" }
+  | { readonly status: "error"; readonly message: string }
+  | { readonly status: "success"; readonly rows: Row[] };
 
 /** Table name → `data/` file path relative to the project root. */
 export type SqlTableMap = Record<string, string>;

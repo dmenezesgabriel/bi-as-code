@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
+import { Layer } from "effect";
 import type { NavTree } from "virtual:biac-pages";
+import type { BiacConfig } from "virtual:biac-config";
+import { DuckDb, type DuckDbService } from "../data/data-service";
+import { FakeDuckDb } from "../data/fake-duckdb";
+import { DataRuntimeProvider } from "../data/runtime";
 import { buildPageRouter } from "./page-router";
 import type { CompiledPageModule, ManifestPageEntry } from "./types";
 
@@ -47,7 +58,7 @@ const pages: ManifestPageEntry[] = [
   pageEntry("/nested", async () => textPage("nested body", "Nested")),
 ];
 
-const site = {
+const site: BiacConfig = {
   title: "ACME Site",
   theme: "system" as const,
   nav: { sidebar: true },
@@ -69,14 +80,25 @@ function renderRouter(
   entries: ManifestPageEntry[],
   initialPath: string,
   tree: NavTree = navTree,
+  siteConfig: BiacConfig = site,
+  db?: DuckDbService,
 ) {
   const router = buildPageRouter(
     entries,
-    site,
+    siteConfig,
     tree,
     createMemoryHistory({ initialEntries: [initialPath] }),
   );
-  render(<RouterProvider router={router} />);
+  const app = <RouterProvider router={router} />;
+  render(
+    db ? (
+      <DataRuntimeProvider layer={Layer.succeed(DuckDb, db)}>
+        {app}
+      </DataRuntimeProvider>
+    ) : (
+      app
+    ),
+  );
   return router;
 }
 
@@ -133,6 +155,30 @@ describe("buildPageRouter", () => {
     // The header breadcrumbs also render a "Home" link — scope to the
     // sidebar landmark so the assertion names the nav tree's link.
     within(nav).getByRole("link", { name: "Home" });
+  });
+
+  it("registers the config's project-wide sql tables on the page's registry", async () => {
+    const db = new FakeDuckDb();
+    const sqlPage: CompiledPageModule = {
+      default: () => <p>sql page</p>,
+      frontmatter: {},
+      title: "Sql",
+      sqlBlocks: [{ name: "q", sql: "select * from shared" }],
+      sqlTables: { local: "data/local.csv" },
+    };
+    renderRouter(
+      [pageEntry("/sql", async () => sqlPage)],
+      "/sql",
+      navTree,
+      { ...site, sqlTables: { shared: "data/shared.parquet" } },
+      db,
+    );
+
+    await waitFor(() => expect(db.queries.length).toBeGreaterThan(0));
+    expect(db.registered).toEqual([
+      { name: "shared", source: "data/shared.parquet" },
+      { name: "local", source: "data/local.csv" },
+    ]);
   });
 
   it("renders an in-page error when a page module fails to load", async () => {

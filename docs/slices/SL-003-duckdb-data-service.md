@@ -108,9 +108,9 @@ A page author declares data files once — `sql:` front-matter per page or `biac
 
 ## Open decisions
 
-- **Absent `{{params.name}}` behavior** — empty string vs literal-`NULL` vs error. Recommend: missing param → SQL `NULL` bound arg (predictable, still type-checks in comparisons); settle in T5 with a test.
-- **Numeric/typed params** — `{{params.limit}}` bound as string vs parsed number. Recommend: bind the raw string; authors `CAST` explicitly (duckdb coerces `= '5'` comparisons anyway). Confirm in T5.
-- **Whether unnamed ` ```sql ` blocks execute** — recommendation: no (code-only, no registry entry); a block must be named to run. Cheap to revisit.
+- **Absent `{{params.name}}` behavior** — settled in T5: missing param binds SQL `NULL` as the prepared-statement arg (predictable; `WHERE r = NULL` yields 0 rows — authors wanting "unfiltered baseline" write `{{params.x}} is null or …`).
+- **Numeric/typed params** — settled in T5: binds the TanStack-parsed search value, not a raw string (`?limit=5` arrives as number `5` because the router's `parseSearch` JSON-parses values). No author `CAST` needed for numerics.
+- **Whether unnamed ` ```sql ` blocks execute** — settled in T5: no. `sqlBlocks` only contains named fences (compile-page skips empty `meta`), so unnamed sql never enters the registry.
 
 ## Surface
 
@@ -130,7 +130,7 @@ Dependencies to install at task time (exact pins, `save-exact`, `minimumReleaseA
 - [x] T2 — config `sql:` → project tables: `biac-config.ts` accepts `sql: {name: data/…}` with the same validation; `BiacConfig.sqlTables`; `virtual:biac-config` carries it; page-declared name colliding with config → compile error naming both sources. Unit + integration (config through `makePagesServer`) tests.
 - [x] T3 — `/data/` serving: `pages-plugin` `configureServer` mounts `<root>/data/` at `/data/` (traversal outside the dir → 404/403; missing file → 404). Integration test via `makePagesServer` + `test/lib/http.ts`.
 - [x] T4 — `features/data/` engine layer: `DuckDb` Context.Tag port (`registerTable(name, source)` + `query(sql, params?) → Effect<Table>` with interruption → `connection.cancel`-equivalent), `Layer.scoped` acquiring `AsyncDuckDB` (bundle select + worker + `instantiate`, `castTimestampToDate`/`castBigIntToDouble` defaults), `register-source.ts` dispatch (csv/json/parquet via `registerFileURL`+`FROM`, arrow via fetch+`insertArrowFromIPCStream`), `to-rows.ts`, `runtime.ts` React bridge. Deps land here. Web-unit tests with a fake `DuckDb` layer (no wasm in jsdom); dep-cruiser wrap honored.
-- [ ] T5 — registry + interpolation: `query-registry.tsx` page-scoped provider seeded from `page.sqlBlocks` + `sqlTables` (config ∪ page), registers tables once per page mount (idempotent per source-set), executes named queries; `interpolate.ts` resolves `{{params.x}}` → bound arg + `{{name}}` → `(sql)` with cycle guard. Web-unit tests.
+- [x] T5 — registry + interpolation: `query-registry.tsx` page-scoped provider seeded from `page.sqlBlocks` + `sqlTables` (config ∪ page), registers tables once per page mount (idempotent per source-set), executes named queries; `interpolate.ts` resolves `{{params.x}}` → bound arg + `{{name}}` → `(sql)` with cycle guard. Web-unit tests.
 - [ ] T6 — sql fence display: `sql-block.tsx` `pre`-map component for `language-sql` named blocks → highlighted code + result table (loading skeleton, error inline naming the source, empty "0 rows" state); unnamed sql stays code-only. Web-unit tests + jsdom render.
 - [ ] T7 — example project + demo: `pages/data/` fixtures (csv hand-written; parquet generated — mechanism decided in-task), `sql:` front-matter wired into `pages/index.md` (+`weekly-review.md`, `?region=` demo param), e2e-browser spec + cucumber feature for the demo path, headless playwright pass with measurements (wasm payload size from network tab, first-query latency, rows rendered, console clean), backlog/PRD bookkeeping.
 

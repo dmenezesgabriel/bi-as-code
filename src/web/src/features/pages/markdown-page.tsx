@@ -1,7 +1,8 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { useState, type AnchorHTMLAttributes } from "react";
 import { NavToc } from "../chrome/nav-toc";
 import { HighlightedPre } from "./highlighted-pre";
+import { QueryRegistryProvider } from "./query-registry";
 import type { CompiledPageModule, MdxComponentMap } from "./types";
 import { useDocumentTitle } from "./use-document-title";
 
@@ -46,6 +47,7 @@ export function MarkdownPage({
 }) {
   useDocumentTitle(page.title, siteTitle);
   const [article, setArticle] = useState<HTMLElement | null>(null);
+  const params = useSearch({ strict: false });
   const Content = page.default;
   return (
     <div className="mx-auto flex max-w-6xl gap-8 px-6 py-10">
@@ -53,7 +55,19 @@ export function MarkdownPage({
         ref={setArticle}
         className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20"
       >
-        <Content components={mdxComponents} />
+        {/* A page with no named ```sql blocks mounts no registry, so it never
+            downloads the wasm bundle. */}
+        {page.sqlBlocks.length > 0 ? (
+          <QueryRegistryProvider
+            sqlBlocks={page.sqlBlocks}
+            sqlTables={page.sqlTables}
+            params={params}
+          >
+            <Content components={mdxComponents} />
+          </QueryRegistryProvider>
+        ) : (
+          <Content components={mdxComponents} />
+        )}
       </main>
       {page.frontmatter.table_of_contents !== false && article && (
         <NavToc article={article} />
