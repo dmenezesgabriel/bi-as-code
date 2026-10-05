@@ -52,3 +52,55 @@ export interface SparklinePoint {
 
 /** The sparkline's mark — a stroked path, a filled path, or bars. */
 export type SparklineType = "line" | "area" | "bar";
+
+/**
+ * Props of the `<Value>` MDX widget: `data` is the name a named ```sql
+ * fence on the same page registered; `column` picks the cell out of the
+ * selected row (default: the row's first key — the aggregation SQL lives in
+ * the fence, this names a result column, not an expression); `row` selects
+ * the row index (default 0).
+ */
+export interface ValueProps {
+  readonly data: string;
+  readonly column?: string;
+  readonly row?: number;
+  readonly fmt?: string;
+  /** CSS color for the formatted value. */
+  readonly color?: string;
+  /** Render negative numbers in the negative color, wins over `color`. */
+  readonly redNegatives?: boolean;
+}
+
+/**
+ * Props of the `<Delta>` MDX widget: `data`/`column`/`row` bind the signed
+ * delta cell exactly like `<Value>`; the remaining props pass through to
+ * `DeltaDisplay` unchanged.
+ */
+export interface DeltaProps {
+  readonly data: string;
+  readonly column?: string;
+  readonly row?: number;
+  readonly fmt?: string;
+  readonly text?: string;
+  readonly chip?: boolean;
+  readonly downIsGood?: boolean;
+  readonly showValue?: boolean;
+  readonly showSymbol?: boolean;
+  readonly symbolPosition?: "left" | "right";
+  readonly neutralRange?: NeutralRange;
+}
+
+/**
+ * Props of the `<Sparkline>` MDX widget: `data` names a ```sql fence whose
+ * rows are the series; `x`/`y` name the projection columns (defaults: y =
+ * second column or first on single-column rows, x = first column that isn't
+ * y, else row position); `label` is the svg's `aria-label`.
+ */
+export interface SparklineProps {
+  readonly data: string;
+  readonly x?: string;
+  readonly y?: string;
+  readonly type?: SparklineType;
+  readonly color?: string;
+  readonly label?: string;
+}

@@ -201,6 +201,36 @@ describe("MarkdownPage", () => {
     expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
   });
 
+  it("renders the value widgets through the component map, bound by name", async () => {
+    const db = new FakeDuckDb();
+    db.rows = [{ revenue: 1234567, wow_pct: 0.052 }];
+    renderPage(
+      page({
+        sqlBlocks: [{ name: "q", sql: "select * from orders" }],
+        default: ({ components }) => {
+          const ValueWidget = components?.Value;
+          const DeltaWidget = components?.Delta;
+          const SparklineWidget = components?.Sparkline;
+          return ValueWidget && DeltaWidget && SparklineWidget ? (
+            <>
+              <ValueWidget data="q" column="revenue" fmt="usd" />
+              <DeltaWidget data="q" column="wow_pct" fmt="pct1" />
+              <SparklineWidget data="q" y="revenue" />
+            </>
+          ) : (
+            <p>widget missing</p>
+          );
+        },
+      }),
+      "biac",
+      db,
+    );
+
+    expect(await screen.findByText("$1.2M")).toBeInTheDocument();
+    expect(screen.getByText("+5.2%")).toBeInTheDocument();
+    expect(screen.getByRole("img")).toBeInTheDocument();
+  });
+
   it("hides the toc when front-matter sets table_of_contents: false", async () => {
     renderPage(
       page({

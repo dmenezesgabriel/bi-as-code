@@ -15,6 +15,27 @@ export class FakeDuckDb implements DuckDbService {
   registerCause: Error | null = null;
   failWhen: ((sql: string) => string | null) | null = null;
 
+  /** A fake whose queries all return `rows`. */
+  static withRows(rows: Row[]): FakeDuckDb {
+    const db = new FakeDuckDb();
+    db.rows = rows;
+    return db;
+  }
+
+  /** A fake whose queries never resolve — for the loading state. */
+  static pending(): FakeDuckDb {
+    const db = new FakeDuckDb();
+    db.queryRows = () => Effect.promise(() => new Promise<Row[]>(() => {}));
+    return db;
+  }
+
+  /** A fake whose queries all fail with `message` — for the error state. */
+  static failing(message: string): FakeDuckDb {
+    const db = new FakeDuckDb();
+    db.failWhen = () => message;
+    return db;
+  }
+
   registerTable: DuckDbService["registerTable"] = (name, source) => {
     this.registered.push({ name, source });
     return this.registerCause

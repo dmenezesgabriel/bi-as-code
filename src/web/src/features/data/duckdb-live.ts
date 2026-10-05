@@ -25,7 +25,14 @@ const acquireDuckDb = Effect.acquireRelease(
       );
       await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
       await db.open({
-        query: { castTimestampToDate: true, castBigIntToDouble: true },
+        query: {
+          castTimestampToDate: true,
+          castBigIntToDouble: true,
+          // sum() and decimal literals land as Arrow Decimal128 bignums;
+          // without this every aggregated KPI column is an object to the
+          // widgets — the same JS-native contract the two casts above set.
+          castDecimalToDouble: true,
+        },
       });
       return db;
     },
