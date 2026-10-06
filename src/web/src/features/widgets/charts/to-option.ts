@@ -15,7 +15,7 @@ import type {
  * field subset we read, declared so the formatter stays typed against the
  * engine's loose callback signature.
  */
-interface TooltipParam {
+export interface TooltipParam {
   readonly seriesName?: string;
   readonly marker?: string;
   readonly value?: unknown;
@@ -50,11 +50,7 @@ export function toChartOption(
     xAxis: xAxisOption(model, props),
     yAxis: yAxisOption(props, percentage),
     series: series.map((s) => seriesOption(s, type, props)),
-    ...(legend ? { legend: { top: props.title ? 30 : 0 } } : {}),
-    ...(props.title !== undefined
-      ? { title: { text: props.title, top: 0 } }
-      : {}),
-    ...(props.color !== undefined ? { color: [props.color] } : {}),
+    ...chartChromeOption(props, legend),
     tooltip: {
       trigger: "axis",
       formatter: (params: TooltipParam | readonly TooltipParam[]) =>
@@ -74,25 +70,62 @@ export function toChartOption(
  * inside an echarts render callback.
  */
 function assertFormats(model: SeriesModel, props: SeriesChartProps): void {
-  if (props.xFmt !== undefined) formatValue(xSample(model), props.xFmt);
-  if (props.yFmt !== undefined) formatValue(ySample(model.series), props.yFmt);
-  if (props.labelsFmt !== undefined)
-    formatValue(ySample(model.series), props.labelsFmt);
+  probeFormat(props.xFmt, xSample(model));
+  probeFormat(props.yFmt, cellSample(model.series, 1));
+  probeFormat(props.labelsFmt, cellSample(model.series, 1));
 }
 
-function xSample(model: SeriesModel): unknown {
-  const first = model.xDomain.find((v) => v !== undefined && v !== null);
-  if (first !== undefined) return first;
-  return model.xType === "time" ? new Date(0) : 0;
+/**
+ * Probes one fmt prop against a representative cell — skips the probe when
+ * the prop is unset, so every fmt stays opt-in.
+ */
+export function probeFormat(fmt: string | undefined, sample: unknown): void {
+  if (fmt !== undefined) formatValue(sample, fmt);
 }
 
-function ySample(series: readonly ChartSeries[]): unknown {
+/**
+ * The optional chrome every chart-family option shares: legend (gated on
+ * `legend`), `title`, and a single-color palette — spread into the option
+ * literal after `series`.
+ */
+export function chartChromeOption(
+  props: SeriesChartProps,
+  legend: boolean,
+): Record<string, unknown> {
+  return {
+    ...(legend ? { legend: { top: props.title ? 30 : 0 } } : {}),
+    ...(props.title !== undefined
+      ? { title: { text: props.title, top: 0 } }
+      : {}),
+    ...(props.color !== undefined ? { color: [props.color] } : {}),
+  };
+}
+
+/**
+ * The first non-null value at `index` across every series' points — the
+ * cell a fmt prop gets probed against (y at 1, scatter size at 2). Falls
+ * back to `0` so a probe still exercises the code when every cell is null.
+ */
+export function cellSample(
+  series: readonly { readonly data: readonly (readonly unknown[])[] }[],
+  index: number,
+): unknown {
   for (const s of series) {
-    for (const [, y] of s.data) {
-      if (y !== null) return y;
+    for (const point of s.data) {
+      const value = point[index];
+      if (value !== null && value !== undefined) return value;
     }
   }
   return 0;
+}
+
+export function xSample(model: {
+  readonly xDomain: readonly unknown[];
+  readonly xType: XAxisKind;
+}): unknown {
+  const first = model.xDomain.find((v) => v !== undefined && v !== null);
+  if (first !== undefined) return first;
+  return model.xType === "time" ? new Date(0) : 0;
 }
 
 /**
@@ -100,7 +133,7 @@ function ySample(series: readonly ChartSeries[]): unknown {
  * code, so a throw here means a mixed-type cell — degrade to the raw string
  * rather than breaking the chart mid-render.
  */
-function safeFormat(value: unknown, code?: string): string {
+export function safeFormat(value: unknown, code?: string): string {
   try {
     return formatValue(value, code);
   } catch {
@@ -109,7 +142,7 @@ function safeFormat(value: unknown, code?: string): string {
 }
 
 /** Legend sits under the title when both are on; the grid pays for both. */
-function gridOption(
+export function gridOption(
   props: SeriesChartProps,
   legend: boolean,
 ): Record<string, unknown> {
@@ -128,8 +161,8 @@ function gridOption(
   };
 }
 
-function xAxisOption(
-  model: SeriesModel,
+export function xAxisOption(
+  model: { readonly xDomain: readonly unknown[]; readonly xType: XAxisKind },
   props: SeriesChartProps,
 ): Record<string, unknown> {
   const formatter = xTickFormatter(model.xType, props.xFmt);
@@ -164,7 +197,7 @@ function xTickFormatter(
   return (v) => safeFormat(v, xFmt);
 }
 
-function yAxisOption(
+export function yAxisOption(
   props: SeriesChartProps,
   percentage: boolean,
 ): Record<string, unknown> {
@@ -240,8 +273,8 @@ function lineOption(labeled: boolean): Record<string, unknown> {
   };
 }
 
-function labelOption(
-  type: SeriesChartType,
+export function labelOption(
+  type: SeriesChartType | "scatter",
   props: SeriesChartProps,
 ): Record<string, unknown> {
   const fmt =
@@ -256,7 +289,10 @@ function labelOption(
   };
 }
 
-function labelPosition(type: SeriesChartType, stacked?: StackedMode): string {
+function labelPosition(
+  type: SeriesChartType | "scatter",
+  stacked?: StackedMode,
+): string {
   // A stacked bar's top edge belongs to the whole stack — a segment value
   // there misleads, so labels go inside the band.
   if (type === "bar") return stacked ? "inside" : "top";
@@ -298,7 +334,10 @@ function pointTuple(param: TooltipParam): readonly unknown[] {
   return [param.axisValue, v];
 }
 
-function describeChart(type: SeriesChartType, props: SeriesChartProps): string {
+export function describeChart(
+  type: SeriesChartType | "scatter",
+  props: SeriesChartProps,
+): string {
   if (props.title !== undefined) return props.title;
   const ys = Array.isArray(props.y) ? props.y.join(", ") : props.y;
   const split = props.series === undefined ? "" : `, split by ${props.series}`;
@@ -307,7 +346,7 @@ function describeChart(type: SeriesChartType, props: SeriesChartProps): string {
 
 // Series names and x values are data — they land in the tooltip HTML, so
 // they must not arrive with markup intact.
-function escapeHtml(input: unknown): string {
+export function escapeHtml(input: unknown): string {
   if (input === null || input === undefined) return "";
   return String(input)
     .replaceAll("&", "&amp;")

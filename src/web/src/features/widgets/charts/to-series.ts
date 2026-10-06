@@ -3,6 +3,7 @@ import { coerceNumeric } from "../value/format";
 import { ColumnError } from "../value/types";
 import type {
   ChartSeries,
+  ScatterSpec,
   SeriesChartType,
   SeriesModel,
   SeriesSpec,
@@ -32,33 +33,57 @@ export function toSeries(
   spec: SeriesSpec,
   type: SeriesChartType,
 ): SeriesModel {
-  const ys = typeof spec.y === "string" ? [spec.y] : spec.y;
-  if (rows.length === 0) {
+  const resolved = resolveSeriesSpec(rows, spec, type);
+  if (resolved === undefined) {
     return { xDomain: [], xType: "category", series: [] };
   }
-  assertColumns(rows[0] ?? {}, spec.x, ys, spec.series);
-  const xType = inferXType(
-    rows.map((row) => row[spec.x]),
-    type,
+  const { domain, groups } = collectPoints(
+    rows,
+    spec,
+    resolved.ys,
+    resolved.xType,
   );
-  const { domain, groups } = collectPoints(rows, spec, ys, xType);
   return {
     xDomain: [...domain.values()],
-    xType,
-    series: buildSeries(ys, spec, domain, groups),
+    xType: resolved.xType,
+    series: buildSeries(resolved.ys, spec, domain, groups),
+  };
+}
+
+/**
+ * The spec preamble every rows→model transform shares: normalize `y` to a
+ * column list, bail on empty input (`undefined` — the caller emits its own
+ * empty model), throw `ColumnError` on a column miss, and infer the x-axis
+ * kind from cell values. `spec` is the scatter spec's superset — `size` is
+ * optional, so the series spec passes clean.
+ */
+export function resolveSeriesSpec(
+  rows: readonly Row[],
+  spec: ScatterSpec,
+  type: SeriesChartType | "scatter",
+): { ys: readonly string[]; xType: XAxisKind } | undefined {
+  const ys = typeof spec.y === "string" ? [spec.y] : spec.y;
+  if (rows.length === 0) return undefined;
+  assertColumns(rows[0] ?? {}, spec.x, ys, spec.series, spec.size);
+  return {
+    ys,
+    xType: inferXType(
+      rows.map((row) => row[spec.x]),
+      type,
+    ),
   };
 }
 
 /**
  * The x-axis kind the cell values call for: `Date` → `time`; `number`/
  * `bigint` → `category` on a bar chart (discrete positions) and `value` on
- * line/area (a continuous axis); anything else → `category`. The first
- * non-null cell decides — mixed-type columns are a data smell, not a shape
- * we arbitrate.
+ * line/area/scatter (a continuous axis); anything else → `category`. The
+ * first non-null cell decides — mixed-type columns are a data smell, not a
+ * shape we arbitrate.
  */
 export function inferXType(
   xValues: readonly unknown[],
-  type: SeriesChartType,
+  type: SeriesChartType | "scatter",
 ): XAxisKind {
   const first = xValues.find((v) => v !== null && v !== undefined);
   if (first instanceof Date) return "time";
@@ -68,15 +93,22 @@ export function inferXType(
   return "category";
 }
 
-/** First missing column name wins — `x`, then `y` entries, then `series`. */
-function assertColumns(
+/**
+ * First missing column name wins — `x`, then `y` entries, then `series`,
+ * then `size`. Shared with the scatter transform, which binds one extra
+ * column.
+ */
+export function assertColumns(
   row: Row,
   x: string,
   ys: readonly string[],
   series?: string,
+  size?: string,
 ): void {
   const keys = new Set(Object.keys(row));
-  const named = series === undefined ? [x, ...ys] : [x, ...ys, series];
+  const named = [x, ...ys];
+  if (series !== undefined) named.push(series);
+  if (size !== undefined) named.push(size);
   for (const name of named) {
     if (!keys.has(name)) {
       throw new ColumnError({ column: name, available: [...keys] });
@@ -124,7 +156,7 @@ function collectX(
  * evidence's `formatXValue` guards against). Value/time axes keep the raw
  * cell.
  */
-function normalizeX(value: unknown, xType: XAxisKind): unknown {
+export function normalizeX(value: unknown, xType: XAxisKind): unknown {
   if (xType !== "category") return value;
   return typeof value === "number" || typeof value === "bigint"
     ? String(value)
@@ -151,7 +183,7 @@ function addPoint(
   byX.set(xKey, toY(value));
 }
 
-function toY(value: unknown): number | null {
+export function toY(value: unknown): number | null {
   const numeric = coerceNumeric(value);
   if (numeric === null) return null;
   const n = Number(numeric);
@@ -159,7 +191,7 @@ function toY(value: unknown): number | null {
 }
 
 /** The bucket a row's series cell lands in; null cells group as "Unknown". */
-function seriesKey(row: Row, column?: string): string {
+export function seriesKey(row: Row, column?: string): string {
   if (column === undefined) return "";
   const value = row[column];
   return value === null || value === undefined ? "Unknown" : String(value);
@@ -192,7 +224,7 @@ function buildSeries(
   return series;
 }
 
-function seriesName(
+export function seriesName(
   sKey: string,
   y: string,
   series: string | undefined,

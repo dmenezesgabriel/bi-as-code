@@ -122,3 +122,53 @@ export interface SeriesChartProps {
 export interface SeriesChartWidgetProps extends SeriesChartProps {
   readonly type: SeriesChartType;
 }
+
+/**
+ * One plotted scatter point: `[x, y, size?]` — sparse (no domain padding:
+ * scatter has no shared-x alignment to maintain); `null` y is an undrawn
+ * point, `null` size draws at zero size (evidence's semantics).
+ */
+export type ScatterPoint = readonly [
+  x: unknown,
+  y: number | null,
+  size?: number | null,
+];
+
+/**
+ * One named scatter series of sparse points. `y` records the source column
+ * — the tooltip labels its y row by it (with a `series` split the display
+ * `name` reads "<series> - <y>", which can't be parsed back reliably).
+ */
+export interface ScatterSeries {
+  readonly name: string;
+  readonly y: string;
+  readonly data: readonly ScatterPoint[];
+}
+
+/**
+ * The sparse scatter model: `xDomain` still feeds a `category` axis (the
+ * rare string-x case); on `value`/`time` axes the tuples carry everything.
+ */
+export interface ScatterModel {
+  readonly xDomain: readonly unknown[];
+  readonly xType: XAxisKind;
+  readonly series: readonly ScatterSeries[];
+}
+
+/** The column bindings a scatter chart resolves against result rows. */
+export interface ScatterSpec {
+  readonly x: string;
+  readonly y: string | readonly string[];
+  readonly series?: string;
+  readonly size?: string;
+}
+
+/**
+ * The `<ScatterChart>` prop surface — the shared chart props minus `stacked`
+ * (points don't stack), plus `size` naming the column that scales each
+ * point and `sizeFmt` formatting it in the item tooltip.
+ */
+export interface ScatterChartProps extends Omit<SeriesChartProps, "stacked"> {
+  readonly size?: string;
+  readonly sizeFmt?: string;
+}

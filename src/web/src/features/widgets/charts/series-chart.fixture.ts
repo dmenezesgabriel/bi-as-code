@@ -1,7 +1,9 @@
-import { expect, waitFor } from "storybook/test";
+import type { ReactElement } from "react";
+import { expect, screen, waitFor } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import type { SqlBlock } from "../../pages/types";
+import { renderWithRegistry } from "../value/registry-harness";
 import type { EChartHostElement } from "./types";
 
 /**
@@ -35,25 +37,73 @@ export const TREND_ROWS: Row[] = [
   { week: 3, region: "South", orders: 100 },
 ];
 
+/** Scatter fixture: orders↔revenue correlation across two regions + a size column. */
+export const SCATTER_ROWS: Row[] = [
+  { week: 1, orders: 120, revenue: 4800, region: "North", accounts: 14 },
+  { week: 2, orders: 140, revenue: 5300, region: "North", accounts: 18 },
+  { week: 1, orders: 90, revenue: 3700, region: "South", accounts: 9 },
+  { week: 2, orders: 95, revenue: 3900, region: "South", accounts: 11 },
+];
+
 /** Every query on the fake returns `rows` — callers bind one fence at a time. */
 export function dbWith(rows: Row[]): FakeDuckDb {
   return FakeDuckDb.withRows(rows);
 }
 
-/** The host once the first paint of the applied option finishes. */
-export async function readyHost(root: ParentNode): Promise<EChartHostElement> {
-  const host = await waitFor(() => {
-    const el = root.querySelector<EChartHostElement>("[data-echarts-theme]");
-    expect(el).toHaveAttribute("data-echarts-ready");
-    return el;
-  });
+/**
+ * The host once the first paint of the applied option finishes. `finished`
+ * fires after echarts' entry animation completes — ~1.5s for a full option
+ * under jsdom — so unit tests pass a longer `timeout` than the 1s default.
+ */
+export async function readyHost(
+  root: ParentNode,
+  timeout?: number,
+): Promise<EChartHostElement> {
+  const host = await waitFor(
+    () => {
+      const el = root.querySelector<EChartHostElement>("[data-echarts-theme]");
+      expect(el).toHaveAttribute("data-echarts-ready");
+      return el;
+    },
+    { timeout },
+  );
   if (!host) throw new Error("chart host not rendered");
   return host;
 }
 
 /** The option the live echarts instance last applied, narrowed to `T`. */
-export async function appliedOption<T>(root: ParentNode): Promise<T> {
-  const option = (await readyHost(root)).echartsInstance?.getOption();
+export async function appliedOption<T>(
+  root: ParentNode,
+  timeout?: number,
+): Promise<T> {
+  const option = (await readyHost(root, timeout)).echartsInstance?.getOption();
   if (!option) throw new Error("no applied option on chart host");
   return option as unknown as T;
+}
+
+/**
+ * Renders `element` against a forever-pending `orders` fence and asserts the
+ * loading pulse holds the requested `height` and paints no chart host.
+ */
+export async function expectPendingPulse(
+  element: ReactElement,
+  height: number,
+): Promise<void> {
+  renderWithRegistry(element, {
+    db: FakeDuckDb.pending(),
+    blocks: [ORDERS_REGIONAL],
+  });
+  const status = await screen.findByRole("status");
+  expect(status).toHaveStyle({ height: `${height}px` });
+  expect(document.querySelector("[data-echarts-theme]")).toBeNull();
+}
+
+/** Renders `element` against an empty result and asserts the "0 rows" face. */
+export async function expectEmptyFace(element: ReactElement): Promise<void> {
+  renderWithRegistry(element, {
+    db: dbWith([]),
+    blocks: [ORDERS_REGIONAL],
+  });
+  expect(await screen.findByText("0 rows")).toBeInTheDocument();
+  expect(document.querySelector("[data-echarts-theme]")).toBeNull();
 }
