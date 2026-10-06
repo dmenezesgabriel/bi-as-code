@@ -2,6 +2,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -61,4 +62,9 @@ export function ChevronRightIcon(props: LucideProps) {
 /** Double chevron pointing right — jump to the last page. */
 export function ChevronsRightIcon(props: LucideProps) {
   return <ChevronsRight aria-hidden size={14} {...props} />;
+}
+
+/** Single chevron pointing down — a disclosure trigger's open state. */
+export function ChevronDownIcon(props: LucideProps) {
+  return <ChevronDown aria-hidden size={16} {...props} />;
 }

@@ -275,13 +275,18 @@ describe("MarkdownPage", () => {
           const CalloutWidget = components?.Callout;
           const NoteWidget = components?.Note;
           const LineBreakWidget = components?.LineBreak;
-          return CalloutWidget && NoteWidget && LineBreakWidget ? (
+          const DetailsWidget = components?.Details;
+          return CalloutWidget &&
+            NoteWidget &&
+            LineBreakWidget &&
+            DetailsWidget ? (
             <>
               <CalloutWidget type="warning" title="Concentration risk">
                 watch the West
               </CalloutWidget>
               <NoteWidget>source: warehouse</NoteWidget>
               <LineBreakWidget lines={2} />
+              <DetailsWidget title="Metric definitions">defs</DetailsWidget>
             </>
           ) : (
             <p>widget missing</p>
@@ -294,6 +299,9 @@ describe("MarkdownPage", () => {
     expect(note).toHaveTextContent("watch the West");
     expect(screen.getByText("source: warehouse")).toBeInTheDocument();
     expect(document.querySelectorAll("br")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Metric definitions" }),
+    ).toHaveAttribute("aria-expanded", "false");
   });
 
   it("hides the toc when front-matter sets table_of_contents: false", async () => {

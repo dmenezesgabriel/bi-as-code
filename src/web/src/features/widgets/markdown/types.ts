@@ -28,3 +28,16 @@ export interface NoteProps {
 export interface LineBreakProps {
   readonly lines?: number;
 }
+
+/**
+ * Props of the `<Details>` MDX widget — `title` (required) labels the
+ * disclosure trigger; `open` starts the panel expanded; `openMobile`
+ * overrides `open` on mobile viewports, resolved once at mount so a later
+ * breakpoint crossing never overrides the reader's own toggle.
+ */
+export interface DetailsProps {
+  readonly title: string;
+  readonly open?: boolean;
+  readonly openMobile?: boolean;
+  readonly children?: ReactNode;
+}
