@@ -98,3 +98,29 @@ export interface AccordionItemProps {
   readonly open?: boolean;
   readonly children?: ReactNode;
 }
+
+/** The four vertical alignments a `<Row>` accepts. */
+export type RowAlign = "top" | "center" | "bottom" | "stretch";
+
+/**
+ * Props of the `<Row>` MDX widget — a wrapping horizontal layout whose
+ * children share the line equally: `align` picks the vertical alignment
+ * (default `stretch`).
+ */
+export interface RowProps {
+  readonly align?: RowAlign;
+  readonly children?: ReactNode;
+}
+
+/** The four horizontal alignments a `<Stack>` accepts. */
+export type StackAlign = "left" | "center" | "right" | "stretch";
+
+/**
+ * Props of the `<Stack>` MDX widget — a vertical layout for its children:
+ * `align` picks the horizontal alignment (default `stretch`); non-stretch
+ * values shrink-wrap children so the alignment is visible.
+ */
+export interface StackProps {
+  readonly align?: StackAlign;
+  readonly children?: ReactNode;
+}

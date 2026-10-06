@@ -13,6 +13,8 @@ import { Callout } from "../widgets/markdown/callout";
 import { Details } from "../widgets/markdown/details";
 import { LineBreak } from "../widgets/markdown/line-break";
 import { Note } from "../widgets/markdown/note";
+import { Row } from "../widgets/markdown/row";
+import { Stack } from "../widgets/markdown/stack";
 import { Tab, Tabs } from "../widgets/markdown/tabs";
 import { BigValue } from "../widgets/value/big-value";
 import { Delta } from "../widgets/value/delta";
@@ -31,7 +33,7 @@ import { useDocumentTitle } from "./use-document-title";
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
  * `Heatmap`) resolve `data` against that same registry; the markdown
  * widgets (`Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Tab`,
- * `Accordion`, `AccordionItem`) render prose chrome.
+ * `Accordion`, `AccordionItem`, `Row`, `Stack`) render prose chrome.
  * Kept unexported so the map doesn't trip the Fast Refresh rule
  * that files exporting components export only components.
  */
@@ -57,6 +59,8 @@ const mdxComponents: MdxComponentMap = {
   Tab,
   Accordion,
   AccordionItem,
+  Row,
+  Stack,
 };
 
 function MarkdownLink({
