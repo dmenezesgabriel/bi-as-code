@@ -103,10 +103,10 @@ A page author writes `<LineChart data="weekly_trend" x="week" y="orders" series=
 
 ## Open decisions
 
-- **jsdom seam for widget tests** — canvas `getContext` returns null in `vitest.setup.ts`; T1 spikes `renderer:"svg"` under jsdom. If svg init fails, `EChart` accepts an injected `init` and widget tests exercise `to-option` + states through a stub at our own module boundary (`charts/echart`), never `echarts` itself.
+- **jsdom seam for widget tests** — RESOLVED in T1: `echarts.init(el, null, {renderer:"svg"})` renders real svg under jsdom (`getContext` stub returns null; canvas is out). Tests and stories pass `renderer="svg"`; no injected init needed — the fallback remains available if a later need (e.g. canvas-only assertions) demands it.
 - **X-axis type inference** — we carry no `columns[].jsType` (unlike evidence's `xColumnType`); infer from cell values: `Date`→`time`, `number`→`category` for bar / `value` for line+area, `string`→`category`. Settle in T2 with unit tests — including bigint cells (DuckDB `count(*)` returns bigint).
 - **`labels` position/format defaults** — evidence's `data_labels` object (position/fmt/size/distance/rotate/color/show_overlap) vs flat `labels`+`labelsFmt`; settle in T3 — lean flat props, position per chart type (`top` bar / `top` line default).
-- **Theme context shape** — provider placement (`App.tsx` shell root) and whether `nav.sidebar:false` projects still get it (they must — same early-return constraint as `useTheme`'s own applyTheme call).
+- **Theme context shape** — RESOLVED in T1: `ThemeModeProvider`/`useThemeMode` live in `src/web/src/features/chrome/theme-mode.tsx`; `App.tsx` wraps **both** render branches, so `nav.sidebar:false` projects carry the mode too.
 
 ## Surface
 
@@ -122,7 +122,7 @@ Dependency: `echarts@6.1.0` added to `src/web/package.json` (`save-exact`; publi
 
 ## Tasks
 
-- [ ] T1 — `echarts@6.1.0` + `features/widgets/charts/` wrapper: `echart.tsx` (modular `echarts/core` registration, `init(el, theme, {renderer})`, `setOption` on option/theme change with `notMerge` on type swap, `ResizeObserver`→resize, dispose on unmount, `data-echarts-ready`, `node.echartsInstance` test hook), `theme.ts` (biac light/dark `registerTheme` objects), `App.tsx` `ThemeMode` context. jsdom svg-init spike decides the test seam. Unit tests + a static-option story.
+- [x] T1 — `echarts@6.1.0` + `features/widgets/charts/` wrapper: `echart.tsx` (modular `echarts/core` registration, `init(el, theme, {renderer})`, `setOption` on option/theme change with `notMerge` on type swap, `ResizeObserver`→resize, dispose on unmount, `data-echarts-ready`, `node.echartsInstance` test hook), `theme.ts` (biac light/dark `registerTheme` objects), `App.tsx` `ThemeMode` context. jsdom svg-init spike decides the test seam. Unit tests + a static-option story.
 - [ ] T2 — `to-series.ts` + `stack.ts`: rows + `{x, y|string[], series}` → ordered x domain (first-appearance order) + per-series `[x,y]` tuples; `ColumnError` on missing `x`/`y`/`series`; x-type inference per the open decision; `"100%"` normalization keeping raw values for tooltips. Unit tests.
 - [ ] T3 — `types.ts` + `to-option.ts` + `states.tsx`: full `EChartsOption` assembly (grid, category/time/value x, y w/ `yFmt` ticks, axis tooltip + `xFmt`/`yFmt` value format, legend when >1 series, `labels`/`labelsFmt`, `seriesColors`, `title`/`xTitle`/`yTitle`, aria description, `height`) + chart-height loading/error/empty states. Unit tests.
 - [ ] T4 — `series-chart.tsx` + `bar-chart.tsx`/`line-chart.tsx`/`area-chart.tsx`: `data` binding via `useQueryResults`, per-type defaults, register `BarChart`/`LineChart`/`AreaChart` in `mdxComponents`. Unit + jsdom tests + colocated stories for every state (call `get-storybook-story-instructions` first, per ADR-0006).
