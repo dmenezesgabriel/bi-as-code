@@ -13,6 +13,8 @@ import type { FakeDuckDb } from "../src/features/data/fake-duckdb";
 import { DataRuntimeProvider } from "../src/features/data/runtime";
 import { QueryRegistryProvider } from "../src/features/pages/query-registry";
 import type { SqlBlock } from "../src/features/pages/types";
+import { ThemeModeProvider } from "../src/features/chrome/theme-mode";
+import type { ThemeMode } from "../src/features/chrome/theme";
 
 /**
  * Mounts the story under an in-memory TanStack router with one stub route
@@ -92,5 +94,21 @@ export function withQueryData(
         <Story />
       </QueryRegistryProvider>
     </DataRuntimeProvider>
+  );
+}
+
+/**
+ * Feeds the resolved light/dark mode to canvas-rendered widgets (echarts)
+ * that read `useThemeMode` — the storybook analogue of the provider
+ * `AppShell` mounts in the real app.
+ *
+ * @example
+ * decorators: [withThemeMode("dark")]
+ */
+export function withThemeMode(mode: ThemeMode): Decorator {
+  return (Story) => (
+    <ThemeModeProvider mode={mode}>
+      <Story />
+    </ThemeModeProvider>
   );
 }
