@@ -172,3 +172,57 @@ export interface ScatterChartProps extends Omit<SeriesChartProps, "stacked"> {
   readonly size?: string;
   readonly sizeFmt?: string;
 }
+
+/**
+ * One dense histogram bin: a half-open `[start, end)` edge pair — except
+ * the last, which closes on both ends so the column max lands inside it
+ * (evidence's floor-based index overflows the max into a `binCount + 1`th
+ * sliver; clamping keeps exactly `binCount` bins on the axis).
+ */
+export interface HistogramBin {
+  readonly start: number;
+  readonly end: number;
+}
+
+/** One named series' per-bin counts, aligned to `HistogramModel.bins`. */
+export interface HistogramSeries {
+  readonly name: string;
+  readonly counts: readonly number[];
+}
+
+/**
+ * The binned model: `bins` is the dense domain from min to max — interior
+ * empties exist as zero-count slots so every series' `counts` aligns by
+ * index — and `series` holds one entry per `series` value in
+ * first-appearance order (`"Frequency"` when unbound).
+ */
+export interface HistogramModel {
+  readonly bins: readonly HistogramBin[];
+  readonly series: readonly HistogramSeries[];
+}
+
+/** The column bindings a histogram resolves against result rows. */
+export interface HistogramSpec {
+  readonly value: string;
+  readonly series?: string;
+  readonly binCount?: number;
+  readonly binWidth?: number;
+}
+
+/**
+ * The `<Histogram>` prop surface — the shared chart props minus `x`/`y`
+ * (the binned `value` column stands in for both) and `stacked` (histogram
+ * series always stack), plus `binCount`/`binWidth` steering the binning
+ * (`binWidth` wins when both are set) and `valueFmt` formatting the bin
+ * edges. `yFmt`/`labelsFmt` format the counts; `xTitle`/`yTitle` name the
+ * axes (`yTitle` defaults to `"Frequency"`).
+ */
+export interface HistogramChartProps extends Omit<
+  SeriesChartProps,
+  "x" | "y" | "xFmt" | "stacked"
+> {
+  readonly value: string;
+  readonly binCount?: number;
+  readonly binWidth?: number;
+  readonly valueFmt?: string;
+}

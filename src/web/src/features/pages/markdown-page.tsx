@@ -5,6 +5,7 @@ import { Table } from "../widgets/table/table";
 import { AreaChart } from "../widgets/charts/area-chart";
 import { BarChart } from "../widgets/charts/bar-chart";
 import { LineChart } from "../widgets/charts/line-chart";
+import { Histogram } from "../widgets/charts/histogram-chart";
 import { ScatterChart } from "../widgets/charts/scatter-chart";
 import { BigValue } from "../widgets/value/big-value";
 import { Delta } from "../widgets/value/delta";
@@ -20,7 +21,7 @@ import { useDocumentTitle } from "./use-document-title";
  * router so page-to-page navigation never reloads the SPA; `pre` hands
  * fenced code blocks to shiki and pairs named sql fences with their query
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
- * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`) resolve `data`
+ * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`) resolve `data`
  * against that same
  * registry. Kept unexported so the map doesn't trip the Fast Refresh rule
  * that files exporting components export only components.
@@ -37,6 +38,7 @@ const mdxComponents: MdxComponentMap = {
   LineChart,
   AreaChart,
   ScatterChart,
+  Histogram,
 };
 
 function MarkdownLink({

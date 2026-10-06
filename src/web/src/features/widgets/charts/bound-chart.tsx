@@ -10,6 +10,11 @@ interface BoundChartProps<M> {
   height?: number;
   renderer?: ChartRenderer;
   model: (rows: readonly Row[]) => M;
+  /**
+   * When the projected model carries nothing to draw — e.g. a histogram of
+   * an all-non-numeric column — show the empty face rather than bare axes.
+   */
+  isEmpty?: (model: M) => boolean;
   option: (model: M) => ChartOption;
 }
 
@@ -29,9 +34,11 @@ export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
     <ChartResult name={props.data} result={result} height={height}>
       {(rows) => {
         if (rows.length === 0) return <ChartEmpty height={height} />;
+        const model = props.model(rows);
+        if (props.isEmpty?.(model)) return <ChartEmpty height={height} />;
         return (
           <EChart
-            option={props.option(props.model(rows))}
+            option={props.option(model)}
             height={height}
             renderer={props.renderer}
           />

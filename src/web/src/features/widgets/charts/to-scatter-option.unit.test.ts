@@ -1,23 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { FormatError } from "../value/types";
-import { SCATTER_ROWS } from "./series-chart.fixture";
+import {
+  SCATTER_ROWS,
+  ariaDescription,
+  tooltipFormatter,
+} from "./series-chart.fixture";
 import { toScatterOption } from "./to-scatter-option";
 import { toScatterSeries } from "./to-scatter-series";
 
 const PROPS = { data: "q", x: "orders", y: "revenue" } as const;
-
-interface TooltipParam {
-  seriesName?: string;
-  marker?: string;
-  value?: unknown;
-}
-
-function formatterOf(option: unknown) {
-  const fmt = (option as { tooltip?: { formatter?: unknown } }).tooltip
-    ?.formatter;
-  if (typeof fmt !== "function") throw new Error("no tooltip formatter");
-  return fmt as (param: TooltipParam) => string;
-}
 
 describe("toScatterOption", () => {
   it("emits scatter series over a value x-axis", () => {
@@ -98,7 +89,7 @@ describe("toScatterOption", () => {
       { ...PROPS, size: "accounts" },
     );
     expect((option.tooltip as { trigger?: string }).trigger).toBe("item");
-    const html = formatterOf(option)({
+    const html = tooltipFormatter(option)({
       seriesName: "North",
       marker: "●",
       value: [120, 4800, 14],
@@ -116,7 +107,7 @@ describe("toScatterOption", () => {
       x: "x",
       y: "y",
     });
-    const html = formatterOf(option)({
+    const html = tooltipFormatter(option)({
       seriesName: "y",
       value: ["<b>x</b>", 1],
     });
@@ -173,18 +164,21 @@ describe("toScatterOption", () => {
   });
 
   it("describes the chart in the aria label", () => {
-    const option = toScatterOption(
-      toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
-      PROPS,
-    );
-    const aria = option.aria as { label?: { description?: string } };
-    expect(aria.label?.description).toBe("scatter chart of revenue by orders");
-    const titled = toScatterOption(
-      toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
-      { ...PROPS, title: "Orders vs revenue" },
-    );
     expect(
-      (titled.aria as { label?: { description?: string } }).label?.description,
+      ariaDescription(
+        toScatterOption(
+          toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
+          PROPS,
+        ),
+      ),
+    ).toBe("scatter chart of revenue by orders");
+    expect(
+      ariaDescription(
+        toScatterOption(
+          toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
+          { ...PROPS, title: "Orders vs revenue" },
+        ),
+      ),
     ).toBe("Orders vs revenue");
   });
 

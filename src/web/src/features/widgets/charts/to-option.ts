@@ -3,6 +3,7 @@ import { toPercentageStack } from "./stack";
 import type {
   ChartOption,
   ChartSeries,
+  HistogramChartProps,
   SeriesChartProps,
   SeriesChartType,
   SeriesModel,
@@ -21,6 +22,7 @@ export interface TooltipParam {
   readonly value?: unknown;
   readonly data?: unknown;
   readonly axisValue?: unknown;
+  readonly dataIndex?: number;
 }
 
 /**
@@ -89,7 +91,7 @@ export function probeFormat(fmt: string | undefined, sample: unknown): void {
  * literal after `series`.
  */
 export function chartChromeOption(
-  props: SeriesChartProps,
+  props: { readonly title?: string; readonly color?: string },
   legend: boolean,
 ): Record<string, unknown> {
   return {
@@ -143,7 +145,7 @@ export function safeFormat(value: unknown, code?: string): string {
 
 /** Legend sits under the title when both are on; the grid pays for both. */
 export function gridOption(
-  props: SeriesChartProps,
+  props: { readonly title?: string },
   legend: boolean,
 ): Record<string, unknown> {
   let top = 8;
@@ -198,7 +200,7 @@ function xTickFormatter(
 }
 
 export function yAxisOption(
-  props: SeriesChartProps,
+  props: { readonly yTitle?: string; readonly yFmt?: string },
   percentage: boolean,
 ): Record<string, unknown> {
   // On a "100%" stack the axis is fractions — pin 0–1 and format ticks as
@@ -275,7 +277,11 @@ function lineOption(labeled: boolean): Record<string, unknown> {
 
 export function labelOption(
   type: SeriesChartType | "scatter",
-  props: SeriesChartProps,
+  props: {
+    readonly labelsFmt?: string;
+    readonly yFmt?: string;
+    readonly stacked?: StackedMode;
+  },
 ): Record<string, unknown> {
   const fmt =
     props.labelsFmt ?? (props.stacked === "100%" ? "pct0" : props.yFmt);
@@ -335,12 +341,15 @@ function pointTuple(param: TooltipParam): readonly unknown[] {
 }
 
 export function describeChart(
-  type: SeriesChartType | "scatter",
-  props: SeriesChartProps,
+  type: SeriesChartType | "scatter" | "histogram",
+  props: SeriesChartProps | HistogramChartProps,
 ): string {
   if (props.title !== undefined) return props.title;
-  const ys = Array.isArray(props.y) ? props.y.join(", ") : props.y;
   const split = props.series === undefined ? "" : `, split by ${props.series}`;
+  // A histogram binds `value`, not x/y — its description reads the column
+  // being distributed rather than an x-axis position.
+  if ("value" in props) return `histogram chart of ${props.value}${split}`;
+  const ys = Array.isArray(props.y) ? props.y.join(", ") : props.y;
   return `${type} chart of ${ys} by ${props.x}${split}`;
 }
 

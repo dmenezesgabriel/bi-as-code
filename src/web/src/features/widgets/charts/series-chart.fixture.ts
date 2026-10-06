@@ -4,6 +4,7 @@ import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
+import type { TooltipParam } from "./to-option";
 import type { EChartHostElement } from "./types";
 
 /**
@@ -45,6 +46,39 @@ export const SCATTER_ROWS: Row[] = [
   { week: 2, orders: 95, revenue: 3900, region: "South", accounts: 11 },
 ];
 
+export const ORDER_AMOUNTS: SqlBlock = {
+  name: "order_amounts",
+  sql: "select amount, region from orders",
+};
+
+/** Histogram fixture: 24 raw per-order amounts interleaved across two regions. */
+export const AMOUNT_ROWS: Row[] = [
+  { amount: 12, region: "North" },
+  { amount: 15, region: "South" },
+  { amount: 20, region: "North" },
+  { amount: 22, region: "South" },
+  { amount: 28, region: "North" },
+  { amount: 30, region: "South" },
+  { amount: 35, region: "North" },
+  { amount: 38, region: "South" },
+  { amount: 42, region: "North" },
+  { amount: 45, region: "South" },
+  { amount: 50, region: "North" },
+  { amount: 52, region: "South" },
+  { amount: 58, region: "North" },
+  { amount: 60, region: "South" },
+  { amount: 65, region: "North" },
+  { amount: 68, region: "South" },
+  { amount: 72, region: "North" },
+  { amount: 75, region: "South" },
+  { amount: 80, region: "North" },
+  { amount: 82, region: "South" },
+  { amount: 88, region: "North" },
+  { amount: 90, region: "South" },
+  { amount: 95, region: "North" },
+  { amount: 98, region: "South" },
+];
+
 /** Every query on the fake returns `rows` — callers bind one fence at a time. */
 export function dbWith(rows: Row[]): FakeDuckDb {
   return FakeDuckDb.withRows(rows);
@@ -79,6 +113,25 @@ export async function appliedOption<T>(
   const option = (await readyHost(root, timeout)).echartsInstance?.getOption();
   if (!option) throw new Error("no applied option on chart host");
   return option as unknown as T;
+}
+
+/**
+ * Extracts the tooltip formatter from an assembled chart option — option
+ * builders type it loosely, so tests narrow it to a callable here.
+ */
+export function tooltipFormatter(
+  option: unknown,
+): (params: TooltipParam | readonly TooltipParam[]) => string {
+  const fmt = (option as { tooltip?: { formatter?: unknown } }).tooltip
+    ?.formatter;
+  if (typeof fmt !== "function") throw new Error("no tooltip formatter");
+  return fmt as (params: TooltipParam | readonly TooltipParam[]) => string;
+}
+
+/** The aria description an assembled chart option carries, if any. */
+export function ariaDescription(option: unknown): string | undefined {
+  return (option as { aria?: { label?: { description?: string } } }).aria?.label
+    ?.description;
 }
 
 /**
