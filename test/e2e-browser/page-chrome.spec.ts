@@ -88,7 +88,7 @@ test("table of contents lists h2/h3 and tracks scroll position", async ({
 
   const toc = page.getByRole("navigation", { name: "On this page" });
   await expect(toc).toBeVisible({ timeout: 20_000 });
-  await expect(toc.getByRole("link")).toHaveCount(5);
+  await expect(toc.getByRole("link")).toHaveCount(7);
   await expect(toc.locator('[aria-current="location"]')).toHaveText("Overview");
 
   // The last section is tall enough for its heading to scroll above the

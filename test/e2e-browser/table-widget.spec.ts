@@ -38,8 +38,8 @@ test("weekly-review's <Table> sorts client-side through the 3-state cycle", asyn
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
 
-  // The widget is the last live table region — the three named fences'
-  // results render ahead of it in document order.
+  // The widget is the last live table region — the named fences' results
+  // render ahead of it in document order.
   const widget = tableRegions(page).last();
   const table = widget.locator("table");
   await expect(table.getByRole("row")).toHaveCount(11, { timeout: 30_000 });

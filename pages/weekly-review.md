@@ -75,6 +75,38 @@ The concentration risk is real: the top five accounts drove 38% of weekly
 revenue, all of them in the West and North. A quiet week for even one of
 them shows up directly in the trend lines below.
 
+## Order mix
+
+Orders and revenue track together across the quarter — the weeks each
+region booked more orders are the weeks it closed more revenue, and no
+region's week reads as an outlier against that line. The mix is volume,
+not a few oversized tickets carrying a region's number.
+
+```sql region_week
+select week, region, count(*) as orders, sum(amount) as revenue
+from orders
+where {{params.region}} is null or region = {{params.region}}
+group by week, region
+order by week, region
+```
+
+<ScatterChart data="region_week" x="orders" y="revenue" series="region" />
+
+## Order size
+
+Order amounts sit in a narrow band — the whole quarter's distribution
+fits inside a few dollars around $41, so the week's lift is a volume
+story rather than a ticket-size story. A wider spread would put the
+average-order-value read above in question; this shape doesn't.
+
+```sql order_amounts
+select amount
+from orders
+where {{params.region}} is null or region = {{params.region}}
+```
+
+<Histogram data="order_amounts" value="amount" />
+
 ## Trend lines
 
 Weekly volume has climbed in four of the last five weeks. The shape is a
@@ -97,6 +129,8 @@ order by week, region
   series="region"
   stacked="100%"
 />
+
+<Heatmap data="weekly_trend" x="week" y="region" value="orders" />
 
 ```sql weekly_revenue
 select week, sum(amount) as revenue

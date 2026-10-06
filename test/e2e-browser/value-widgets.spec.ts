@@ -56,9 +56,9 @@ test("weekly-review's <BigValue> renders title, $15k scalar, green delta, 13-poi
     /^M [\d.]+ [\d.]+( L [\d.]+ [\d.]+){12}$/,
   );
 
-  // Five named fences each render a result table; the <Table> widget in
-  // Quarter detail is the sixth live table.
-  await expect(resultTables(page)).toHaveCount(6);
+  // Seven named fences each render a result table; the <Table> widget in
+  // Quarter detail is the eighth live table.
+  await expect(resultTables(page)).toHaveCount(8);
 
   // Rendering is registry reads — nothing posts to the duckdb worker
   // after the results settle.

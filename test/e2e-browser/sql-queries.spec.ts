@@ -91,17 +91,18 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const results = resultTables(page);
-  // Live tables in document order: kpi, orders, region_share, weekly_trend
-  // (fence), weekly_revenue, then the <Table> widget in Quarter detail.
-  // The fence result renders the shared table core: 39 rows paginate at
-  // pageSize 10, so the DOM holds the first page plus the pager caption.
-  await expect(results.nth(3).getByRole("row")).toHaveCount(11, {
+  // Live tables in document order: kpi, orders, region_share, region_week,
+  // order_amounts, weekly_trend (fence), weekly_revenue, then the <Table>
+  // widget in Quarter detail. The fence result renders the shared table
+  // core: 39 rows paginate at pageSize 10, so the DOM holds the first
+  // page plus the pager caption.
+  await expect(results.nth(5).getByRole("row")).toHaveCount(11, {
     timeout: 30_000,
   });
-  // The caption appears twice: the fence's own result and the
-  // `<Table data="weekly_trend" />` widget in Quarter detail — both render
-  // the same core, so both paginate.
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
+  // The caption appears three times: the weekly_trend fence's own result,
+  // the `<Table data="weekly_trend" />` widget in Quarter detail, and the
+  // region_week fence — also 39 rows — all rendering the same core.
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(3);
   // orders (region rollup) and region_share ({{orders}} + pct_of_total).
   await expect(results.nth(1).getByRole("row")).toHaveCount(4);
   await expect(results.nth(2).getByRole("row")).toHaveCount(4);
@@ -118,7 +119,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   // Deterministic order by week, region — week 1 opens North/South/West.
   expect(
     await results
-      .nth(3)
+      .nth(5)
       .locator("tbody tr")
       .first()
       .locator("td")
