@@ -1,7 +1,7 @@
-import type { ReactElement, ReactNode } from "react";
-import { Children, isValidElement } from "react";
+import type { ReactElement } from "react";
 import { Tabs as TabsPrimitive } from "../../../components/tabs";
 import { cn } from "../../../lib/cn";
+import { collectItemChildren } from "./collect-children";
 import { WidgetError } from "./states";
 import type { TabProps, TabsProps, TabsVariant } from "./types";
 
@@ -60,23 +60,13 @@ function indicatorClasses(variant: TabsVariant): string {
   );
 }
 
-function isTabElement(child: ReactNode): child is ReactElement<TabProps> {
-  return isValidElement<TabProps>(child) && child.type === Tab;
-}
-
 /** Reads `<Tab>` elements out of the MDX children; returns an error
  * message for anything that breaks the children contract. */
-function collectTabs(children: ReactNode): ReactElement<TabProps>[] | string {
-  const elements = Children.toArray(children).filter(
-    (child) => typeof child !== "string" || child.trim() !== "",
-  );
-  if (elements.length === 0) return "requires at least one <Tab> child";
-  const tabs: ReactElement<TabProps>[] = [];
-  for (const child of elements) {
-    if (!isTabElement(child)) return "only accepts <Tab> children";
-    if (!child.props.title) return 'every <Tab> requires a "title" prop';
-    tabs.push(child);
-  }
+function collectTabs(
+  children: TabsProps["children"],
+): ReactElement<TabProps>[] | string {
+  const tabs = collectItemChildren<TabProps>(children, Tab, "Tab");
+  if (typeof tabs === "string") return tabs;
   if (tabs.filter((tab) => tab.props.default).length > 1) {
     return "only one <Tab> may set default";
   }

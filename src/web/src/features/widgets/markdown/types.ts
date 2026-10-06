@@ -69,3 +69,32 @@ export interface TabProps {
   readonly default?: boolean;
   readonly children?: ReactNode;
 }
+
+/** The three surface styles an `<Accordion>` accepts — `default` is bare,
+ * `well` a tinted inset surface, `card` a raised bordered surface. */
+export type AccordionVariant = "default" | "well" | "card";
+
+/**
+ * Props of the `<Accordion>` MDX widget: `variant` picks the surface
+ * style (default `default`); `single` limits expansion to one item at a
+ * time (default false — items open independently). Children must be
+ * `<AccordionItem>` elements — anything else renders an inline alert.
+ */
+export interface AccordionProps {
+  readonly variant?: AccordionVariant;
+  readonly single?: boolean;
+  readonly children?: ReactNode;
+}
+
+/**
+ * Props of the `<AccordionItem>` MDX widget — a data carrier `<Accordion>`
+ * reads via child inspection rather than rendering: `title` (required)
+ * labels the disclosure trigger, `open` starts the panel expanded (only
+ * the first `open` item wins under `single`), and `children` become the
+ * panel's content.
+ */
+export interface AccordionItemProps {
+  readonly title: string;
+  readonly open?: boolean;
+  readonly children?: ReactNode;
+}

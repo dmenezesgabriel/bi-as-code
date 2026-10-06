@@ -37,6 +37,17 @@ describe("collectTocHeadings", () => {
     expect(root.querySelector("h2")?.getAttribute("id")).toBe("hello-world");
   });
 
+  it("skips widget-chrome headings marked with data-slot", () => {
+    const root = article(
+      '<h2>Section</h2><h3 data-slot="accordion-header"><button>Item title</button></h3><h3>Sub</h3>',
+    );
+
+    const headings = collectTocHeadings(root);
+
+    expect(headings.map((h) => h.text)).toEqual(["Section", "Sub"]);
+    expect(root.querySelector("[data-slot]")?.getAttribute("id")).toBeNull();
+  });
+
   it("dedupes identical slugs with -1/-2 suffixes", () => {
     const root = article("<h2>Repeat</h2><h2>Repeat</h2><h2>Repeat</h2>");
 

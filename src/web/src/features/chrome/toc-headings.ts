@@ -30,7 +30,12 @@ export interface HeadingTop {
 export function collectTocHeadings(root: HTMLElement): TocHeading[] {
   const used = new Set<string>();
   const headings: TocHeading[] = [];
-  for (const element of root.querySelectorAll<HTMLElement>("h2, h3")) {
+  // `data-slot` headings are widget chrome (e.g. accordion item titles):
+  // they keep heading semantics for assistive tech but aren't document
+  // sections — the same exclusion Storybook's ToC applies via
+  // `ignoreSelector` to component containers.
+  const proseHeadings = "h2, h3:not([data-slot])";
+  for (const element of root.querySelectorAll<HTMLElement>(proseHeadings)) {
     const text = element.textContent?.trim() ?? "";
     if (!text) continue;
     let id = element.getAttribute("id");

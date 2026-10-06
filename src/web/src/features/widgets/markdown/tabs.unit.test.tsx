@@ -1,21 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { ReactElement, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { carrierChildrenEls } from "./carrier-children.fixture";
 import { Tab, Tabs } from "./tabs";
 import type { TabProps, TabsProps, TabsVariant } from "./types";
 
-// MDX emits multiple JSX children as a plain array — the tests build
-// children the same way, since `Children.toArray` doesn't traverse
-// fragments and a `<>` wrapper would trip the children contract.
-function tabEls(
+const tabEls = (
   specs: ReadonlyArray<readonly [string, string, Partial<TabProps>?]>,
-): ReactElement[] {
-  return specs.map(([title, content, extra]) => (
-    <Tab key={title} title={title} {...extra}>
-      {content}
-    </Tab>
-  ));
-}
+) => carrierChildrenEls(Tab, specs);
 
 const TWO_TABS = tabEls([
   ["Chart", "chart panel"],

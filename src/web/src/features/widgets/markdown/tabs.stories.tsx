@@ -1,19 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ReactElement } from "react";
 import { expect, userEvent, waitFor } from "storybook/test";
 import { EChart } from "../charts/echart";
+import { carrierChildrenEls } from "./carrier-children.fixture";
 import { Tab, Tabs } from "./tabs";
 import type { TabProps, TabsProps } from "./types";
 
-function tabEls(
+const tabEls = (
   specs: ReadonlyArray<readonly [string, string, Partial<TabProps>?]>,
-): ReactElement[] {
-  return specs.map(([title, content, extra]) => (
-    <Tab key={title} title={title} {...extra}>
-      {content}
-    </Tab>
-  ));
-}
+) => carrierChildrenEls(Tab, specs);
 
 const BAR_OPTION = {
   xAxis: { type: "category" as const, data: ["North", "South", "West"] },
