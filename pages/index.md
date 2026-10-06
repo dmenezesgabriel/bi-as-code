@@ -28,3 +28,5 @@ order by revenue desc
 ```
 
 <Table data="orders" />
+
+<BarChart data="orders" x="region" y="revenue" />

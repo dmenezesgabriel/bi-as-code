@@ -183,11 +183,11 @@ test("a missing sql: source shows an inline error, not a page crash", async ({
   await page.goto(biacDev.url);
 
   // The failed registration lands inline in every call site that renders
-  // the `orders` result — the fence's own table, the `<Table>` widget and
-  // the prose `<Value>` — and quiet: no console errors, no unhandled
-  // rejections, the rest of the page still renders.
+  // the `orders` result — the fence's own table, the `<Table>` widget, the
+  // prose `<Value>` and the `<BarChart>` — and quiet: no console errors,
+  // no unhandled rejections, the rest of the page still renders.
   const alerts = page.getByRole("alert");
-  await expect(alerts).toHaveCount(3, { timeout: 30_000 });
+  await expect(alerts).toHaveCount(4, { timeout: 30_000 });
   await expect(alerts.first()).toContainText("orders");
   await expect(alerts.first()).toContainText("data/missing.parquet");
   await expect(

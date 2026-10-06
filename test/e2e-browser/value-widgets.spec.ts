@@ -1,12 +1,11 @@
 import type { Page } from "@playwright/test";
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   collectConsoleErrors,
   expect,
   instrumentWorkerPosts,
   resultTables,
   test,
+  testBadRefs,
   workerPosts,
 } from "./dev-server.fixture.js";
 
@@ -162,30 +161,21 @@ const BAD_REFS = [
   },
 ] as const;
 
-for (const { name, from, to, want } of BAD_REFS) {
-  // Each `from` string's first occurrence sits on the <BigValue> tag — the
-  // prose <Value>/<Delta> keep their working refs, so exactly one widget
-  // alerts and the rest of the page stands.
-  test(`${name} renders an inline alert without breaking the page`, async ({
-    page,
-    biacDev,
-  }) => {
-    const errors = collectConsoleErrors(page);
-    const file = join(biacDev.projectDir, "pages/weekly-review.md");
-    writeFileSync(file, readFileSync(file, "utf8").replace(from, to));
-    await page.goto(`${biacDev.url}weekly-review`);
-
-    const alert = page.getByRole("alert");
-    await expect(alert).toHaveCount(1, { timeout: 30_000 });
-    for (const text of want) await expect(alert).toContainText(text);
+// Each `from` string's first occurrence sits on the <BigValue> tag — the
+// prose <Value>/<Delta> keep their working refs, so exactly one widget
+// alerts and the rest of the page stands.
+testBadRefs(
+  "weekly-review",
+  "pages/weekly-review.md",
+  BAD_REFS,
+  async (page) => {
     await expect(
       page.getByRole("heading", { name: "Weekly review" }),
     ).toBeVisible();
     const sentence = page.locator("p", {
       hasText: "Quarter revenue closed at",
     });
-    await expect(sentence).toContainText("$15k");
+    await expect(sentence).toContainText("$15k", { timeout: 30_000 });
     await expect(sentence).toContainText("+9.9%");
-    expect(errors).toEqual([]);
-  });
-}
+  },
+);

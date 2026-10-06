@@ -1,6 +1,6 @@
 # SL-006 — `<BarChart>`/`<LineChart>`/`<AreaChart>`: ECharts wrapper, series, stacking, labels
 
-Milestone: Phase 1 — A usable BI-as-code product · State: open · Depends on: SL-005 · Closes: —
+Milestone: Phase 1 — A usable BI-as-code product · State: partial · Depends on: SL-005 · Closes: —
 
 ## Outcome
 
@@ -126,7 +126,7 @@ Dependency: `echarts@6.1.0` added to `src/web/package.json` (`save-exact`; publi
 - [x] T2 — `to-series.ts` + `stack.ts`: rows + `{x, y|string[], series}` → ordered x domain (first-appearance order) + per-series `[x,y]` tuples; `ColumnError` on missing `x`/`y`/`series`; x-type inference per the open decision; `"100%"` normalization keeping raw values for tooltips. Unit tests.
 - [x] T3 — `types.ts` + `to-option.ts` + `states.tsx`: full `EChartsOption` assembly (grid, category/time/value x, y w/ `yFmt` ticks, axis tooltip + `xFmt`/`yFmt` value format, legend when >1 series, `labels`/`labelsFmt`, `seriesColors`, `title`/`xTitle`/`yTitle`, aria description, `height`) + chart-height loading/error/empty states. Unit tests.
 - [x] T4 — `series-chart.tsx` + `bar-chart.tsx`/`line-chart.tsx`/`area-chart.tsx`: `data` binding via `useQueryResults`, per-type defaults, register `BarChart`/`LineChart`/`AreaChart` in `mdxComponents`. Unit + jsdom tests + colocated stories for every state (call `get-storybook-story-instructions` first, per ADR-0006).
-- [ ] T5 — example project + demo: the three tags on `pages/weekly-review.md` (one on `pages/index.md`); `test/e2e-browser/charts.spec.ts` (canvas w/ nonzero size, `data-echarts-ready`, aria-label content, `?region=Atlantis` empty state, workerPosts stable, console clean); headless playwright-cli pass with measurements (canvas bbox, legend/tooltip DOM, theme-toggle repaint); backlog + PRD bookkeeping.
+- [x] T5 — example project + demo: the three tags on `pages/weekly-review.md` (one on `pages/index.md`); `test/e2e-browser/charts.spec.ts` (canvas w/ nonzero size, `data-echarts-ready`, aria-label content, `?region=Atlantis` empty state, workerPosts stable, console clean); headless playwright-cli pass with measurements (canvas bbox, legend/tooltip DOM, theme-toggle repaint); backlog + PRD bookkeeping.
 
 ## Out of scope
 

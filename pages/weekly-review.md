@@ -62,6 +62,8 @@ group by region
 order by revenue desc
 ```
 
+<BarChart data="orders" x="region" y="revenue" labels />
+
 ```sql region_share
 select region, orders,
   round(orders * 100.0 / sum(orders) over (), 1) as pct_of_total
@@ -85,6 +87,16 @@ from orders
 group by week, region
 order by week, region
 ```
+
+<LineChart data="weekly_trend" x="week" y="orders" series="region" />
+
+<AreaChart
+  data="weekly_trend"
+  x="week"
+  y="orders"
+  series="region"
+  stacked="100%"
+/>
 
 ```sql weekly_revenue
 select week, sum(amount) as revenue

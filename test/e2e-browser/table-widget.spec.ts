@@ -140,10 +140,10 @@ test("?region=Atlantis empties the index page's <Table> with its fence", async (
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}?region=Atlantis`);
 
-  // The param re-runs `orders` to zero rows: both the fence's inline
-  // result and the `<Table data="orders" />` render the shared empty
-  // state, and no live table remains on the page.
-  await expect(page.getByText("0 rows", { exact: true })).toHaveCount(2, {
+  // The param re-runs `orders` to zero rows: the fence's inline result,
+  // the `<Table data="orders" />` and the `<BarChart>`'s empty face each
+  // render the shared empty state, and no live table remains on the page.
+  await expect(page.getByText("0 rows", { exact: true })).toHaveCount(3, {
     timeout: 30_000,
   });
   await expect(resultTables(page)).toHaveCount(0);
@@ -176,6 +176,8 @@ test("a data name no sql fence declares renders an inline error", async ({
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
   ).toBeVisible();
-  await expect(resultTables(page).first().getByRole("row")).toHaveCount(4);
+  await expect(resultTables(page).first().getByRole("row")).toHaveCount(4, {
+    timeout: 30_000,
+  });
   expect(errors).toEqual([]);
 });

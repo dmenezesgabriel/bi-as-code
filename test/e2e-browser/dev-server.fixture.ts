@@ -1,5 +1,5 @@
-import { test as base, type Page } from "@playwright/test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { test as base, expect, type Page } from "@playwright/test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startDevServer } from "../lib/dev-server.js";
@@ -73,5 +73,48 @@ export const test = base.extend<{ biacDev: BiacDev }>({
     rmSync(projectDir, { recursive: true, force: true });
   },
 });
+
+/**
+ * One author-error mutation: `from` (first occurrence in the page file) is
+ * replaced by `to`, and the rendered page must show exactly one
+ * `role=alert` carrying every `want` fragment.
+ */
+export interface BadRefCase {
+  readonly name: string;
+  readonly from: string;
+  readonly to: string;
+  readonly want: readonly string[];
+}
+
+/**
+ * Parametrized bad-reference coverage for `data`/`column`/`x`/`y`/`series`/
+ * `fmt` typos: each case rewrites the page file on the test's temp project
+ * copy, navigates to `route`, and asserts the alert names the offender
+ * while `stands` proves the rest of the page still renders.
+ */
+export function testBadRefs(
+  route: string,
+  pageFile: string,
+  cases: readonly BadRefCase[],
+  stands: (page: Page) => Promise<void>,
+): void {
+  for (const { name, from, to, want } of cases) {
+    test(`${name} renders an inline alert without breaking the page`, async ({
+      page,
+      biacDev,
+    }) => {
+      const errors = collectConsoleErrors(page);
+      const file = join(biacDev.projectDir, pageFile);
+      writeFileSync(file, readFileSync(file, "utf8").replace(from, to));
+      await page.goto(`${biacDev.url}${route}`);
+
+      const alert = page.getByRole("alert");
+      await expect(alert).toHaveCount(1, { timeout: 30_000 });
+      for (const text of want) await expect(alert).toContainText(text);
+      await stands(page);
+      expect(errors).toEqual([]);
+    });
+  }
+}
 
 export { expect } from "@playwright/test";
