@@ -101,7 +101,11 @@ interface TooltipParam {
   seriesIndex?: number;
 }
 interface OptionProbe {
-  grid?: { top?: number; containLabel?: boolean };
+  grid?: {
+    top?: number;
+    outerBoundsMode?: string;
+    outerBoundsContain?: string;
+  };
   xAxis?: AxisProbe;
   yAxis?: AxisProbe;
   series?: SeriesProbe[];

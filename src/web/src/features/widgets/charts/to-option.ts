@@ -116,7 +116,16 @@ function gridOption(
   let top = 8;
   if (props.title !== undefined) top += 30;
   if (legend) top += 28;
-  return { top, left: 8, right: 16, bottom: 8, containLabel: true };
+  // `containLabel` is deprecated in echarts 6 — the pair below is its
+  // documented equivalent: axis labels stay inside the grid rect.
+  return {
+    top,
+    left: 8,
+    right: 16,
+    bottom: 8,
+    outerBoundsMode: "same",
+    outerBoundsContain: "axisLabel",
+  };
 }
 
 function xAxisOption(

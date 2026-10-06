@@ -231,6 +231,43 @@ describe("MarkdownPage", () => {
     expect(screen.getByRole("img")).toBeInTheDocument();
   });
 
+  it("renders chart widgets through the component map, bound by name", async () => {
+    const db = new FakeDuckDb();
+    db.rows = [{ region: "West", orders: 140 }];
+    renderPage(
+      page({
+        sqlBlocks: [{ name: "q", sql: "select * from orders" }],
+        default: ({ components }) => {
+          const BarChartWidget = components?.BarChart;
+          const LineChartWidget = components?.LineChart;
+          const AreaChartWidget = components?.AreaChart;
+          return BarChartWidget && LineChartWidget && AreaChartWidget ? (
+            <>
+              {/* jsdom has no canvas — the tags render through the svg seam. */}
+              <BarChartWidget data="q" x="region" y="orders" renderer="svg" />
+              <LineChartWidget data="q" x="region" y="orders" renderer="svg" />
+              <AreaChartWidget data="q" x="region" y="orders" renderer="svg" />
+            </>
+          ) : (
+            <p>widget missing</p>
+          );
+        },
+      }),
+      "biac",
+      db,
+    );
+
+    // The ready mark lands after echarts' entry animation — ~1.5s under
+    // jsdom — so this waits well past the 1s default.
+    await waitFor(
+      () =>
+        expect(document.querySelectorAll("[data-echarts-ready]")).toHaveLength(
+          3,
+        ),
+      { timeout: 4000 },
+    );
+  });
+
   it("hides the toc when front-matter sets table_of_contents: false", async () => {
     renderPage(
       page({

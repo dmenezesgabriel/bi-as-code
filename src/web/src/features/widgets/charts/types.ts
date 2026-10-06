@@ -92,6 +92,8 @@ export type StackedMode = boolean | "100%";
  * one palette, `seriesColors` overrides per series name. `legend` forces
  * the legend on or off — unset, it appears once the chart has more than
  * one series. `height` sizes the chart host and its state boxes in px.
+ * `renderer` selects the echarts backend — canvas in the app, `svg` under
+ * jsdom (no canvas 2d); tests and stories pass it explicitly.
  */
 export interface SeriesChartProps {
   readonly data: string;
@@ -110,4 +112,13 @@ export interface SeriesChartProps {
   readonly yTitle?: string;
   readonly legend?: boolean;
   readonly height?: number;
+  readonly renderer?: ChartRenderer;
+}
+
+/**
+ * `SeriesChart`'s own props — the shared tag surface plus the chart kind the
+ * `BarChart`/`LineChart`/`AreaChart` wrappers fix for their callers.
+ */
+export interface SeriesChartWidgetProps extends SeriesChartProps {
+  readonly type: SeriesChartType;
 }
