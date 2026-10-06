@@ -8,6 +8,9 @@ import { LineChart } from "../widgets/charts/line-chart";
 import { Heatmap } from "../widgets/charts/heatmap-chart";
 import { Histogram } from "../widgets/charts/histogram-chart";
 import { ScatterChart } from "../widgets/charts/scatter-chart";
+import { Callout } from "../widgets/markdown/callout";
+import { LineBreak } from "../widgets/markdown/line-break";
+import { Note } from "../widgets/markdown/note";
 import { BigValue } from "../widgets/value/big-value";
 import { Delta } from "../widgets/value/delta";
 import { Sparkline } from "../widgets/value/sparkline-widget";
@@ -23,8 +26,9 @@ import { useDocumentTitle } from "./use-document-title";
  * fenced code blocks to shiki and pairs named sql fences with their query
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
- * `Heatmap`) resolve `data` against that same
- * registry. Kept unexported so the map doesn't trip the Fast Refresh rule
+ * `Heatmap`) resolve `data` against that same registry; the markdown
+ * widgets (`Callout`, `Note`, `LineBreak`) render prose chrome.
+ * Kept unexported so the map doesn't trip the Fast Refresh rule
  * that files exporting components export only components.
  */
 const mdxComponents: MdxComponentMap = {
@@ -41,6 +45,9 @@ const mdxComponents: MdxComponentMap = {
   ScatterChart,
   Histogram,
   Heatmap,
+  Callout,
+  Note,
+  LineBreak,
 };
 
 function MarkdownLink({

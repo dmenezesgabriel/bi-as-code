@@ -268,6 +268,34 @@ describe("MarkdownPage", () => {
     );
   });
 
+  it("renders the markdown widgets through the component map", async () => {
+    renderPage(
+      page({
+        default: ({ components }) => {
+          const CalloutWidget = components?.Callout;
+          const NoteWidget = components?.Note;
+          const LineBreakWidget = components?.LineBreak;
+          return CalloutWidget && NoteWidget && LineBreakWidget ? (
+            <>
+              <CalloutWidget type="warning" title="Concentration risk">
+                watch the West
+              </CalloutWidget>
+              <NoteWidget>source: warehouse</NoteWidget>
+              <LineBreakWidget lines={2} />
+            </>
+          ) : (
+            <p>widget missing</p>
+          );
+        },
+      }),
+    );
+
+    const note = await screen.findByRole("note");
+    expect(note).toHaveTextContent("watch the West");
+    expect(screen.getByText("source: warehouse")).toBeInTheDocument();
+    expect(document.querySelectorAll("br")).toHaveLength(2);
+  });
+
   it("hides the toc when front-matter sets table_of_contents: false", async () => {
     renderPage(
       page({
