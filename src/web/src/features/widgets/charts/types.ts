@@ -226,3 +226,57 @@ export interface HistogramChartProps extends Omit<
   readonly binWidth?: number;
   readonly valueFmt?: string;
 }
+
+/**
+ * One heatmap cell: `[xIndex, yIndex, value]` — the indexes address the
+ * model's category domains, `value` feeds the `visualMap` scale. Only
+ * observed cells exist; an unobserved (x,y) pair leaves a blank cell.
+ */
+export type HeatmapCell = readonly [
+  xIndex: number,
+  yIndex: number,
+  value: number,
+];
+
+/**
+ * The heatmap model: `xDomain`/`yDomain` hold every distinct x/y cell in
+ * first-appearance order (SQL `order by` owns sorting) as the raw cell
+ * values — stringification happens only at axis-data assembly so `xFmt`/
+ * `yFmt` can still format `Date`s and numbers. `cells` is one `[xi,yi,v]`
+ * tuple per observed row, sorted by y index ascending; duplicate (x,y)
+ * pairs pass through (echarts last-wins — the fence's `group by` owns
+ * dedup). `min`/`max` span the observed values for `visualMap`.
+ */
+export interface HeatmapModel {
+  readonly xDomain: readonly unknown[];
+  readonly yDomain: readonly unknown[];
+  readonly cells: readonly HeatmapCell[];
+  readonly min: number;
+  readonly max: number;
+}
+
+/** The column bindings a heatmap resolves against result rows. */
+export interface HeatmapSpec {
+  readonly x: string;
+  readonly y: string;
+  readonly value: string;
+}
+
+/**
+ * The `<Heatmap>` prop surface — the shared chart props minus `series`/
+ * `stacked`/`color`/`seriesColors` (one heatmap series, no categorical
+ * palette; `legend` toggles the `visualMap` strip), plus `y` narrowed to a
+ * single category column, `value` naming the measured column, `valueFmt`
+ * formatting cells/`visualMap` ends and `colorScale` the `inRange` ramp —
+ * one color expands to `[surface, color]` per theme mode, two or more pass
+ * through verbatim. `xFmt`/`yFmt` format the category labels.
+ */
+export interface HeatmapChartProps extends Omit<
+  SeriesChartProps,
+  "y" | "series" | "stacked" | "color" | "seriesColors"
+> {
+  readonly y: string;
+  readonly value: string;
+  readonly valueFmt?: string;
+  readonly colorScale?: string | readonly string[];
+}

@@ -1,0 +1,207 @@
+import type { ThemeMode } from "../../chrome/theme";
+import {
+  chartChromeOption,
+  describeChart,
+  escapeHtml,
+  gridOption,
+  probeFormat,
+  safeFormat,
+  type TooltipParam,
+} from "./to-option";
+import { SERIES_COLORS, themeTokens } from "./theme";
+import type { ChartOption, HeatmapChartProps, HeatmapModel } from "./types";
+
+/**
+ * Assembles the `setOption` payload for a heatmap model: two category axes
+ * (x on top, y inverted — the matrix reads top-down like evidence's), one
+ * `heatmap` series of `[xi,yi,v]` cells, a continuous `visualMap` strip as
+ * the legend, and an item tooltip naming all three columns. `mode` resolves
+ * the `inRange` ramp and cell border — those colors must be baked into the
+ * option, not inherited from the registered theme.
+ *
+ * @example
+ * toHeatmapOption(toHeatmap(rows, { x: "week", y: "region", value: "orders" }), props, mode)
+ */
+export function toHeatmapOption(
+  model: HeatmapModel,
+  props: HeatmapChartProps,
+  mode: ThemeMode,
+): ChartOption {
+  assertFormats(model, props);
+  const legend = props.legend ?? true;
+  const tokens = themeTokens(mode);
+  const grid = gridOption(props, false) as { top: number; bottom: number };
+  return {
+    grid: {
+      ...grid,
+      // 'all' also contains the axis name — the top-positioned x axis'
+      // `xTitle` would overflow the plot edge under 'axisLabel' alone.
+      outerBoundsContain: "all",
+      // The visualMap strip (~10px bar + labels) lives under the plot.
+      bottom: legend ? 44 : grid.bottom,
+    },
+    xAxis: categoryAxis(model.xDomain, props.xFmt, props.xTitle, "top"),
+    yAxis: categoryAxis(
+      model.yDomain,
+      props.yFmt,
+      props.yTitle,
+      undefined,
+      true,
+    ),
+    series: [seriesOption(model, props, tokens.border)],
+    ...chartChromeOption(props, false),
+    tooltip: {
+      trigger: "item",
+      formatter: (param: TooltipParam) => tooltipHtml(param, model, props),
+    },
+    visualMap: {
+      show: legend,
+      min: model.min,
+      max: model.max,
+      calculable: false,
+      orient: "horizontal",
+      left: "center",
+      bottom: 0,
+      itemWidth: 10,
+      textStyle: { fontSize: 11, color: tokens.textMuted },
+      text: [
+        safeFormat(model.max, props.valueFmt),
+        safeFormat(model.min, props.valueFmt),
+      ],
+      formatter: (v: unknown) => safeFormat(v, props.valueFmt),
+      inRange: { color: colorRamp(props.colorScale, tokens.surface) },
+    },
+    aria: {
+      enabled: true,
+      label: { description: describeChart("heatmap", props) },
+    },
+    animation: false,
+  };
+}
+
+/**
+ * Validates every fmt prop against a representative cell — a bad code
+ * throws `FormatError` at option-build time, where the widget's state
+ * switch renders it as the chart's error face, instead of firing inside an
+ * echarts render callback.
+ */
+function assertFormats(model: HeatmapModel, props: HeatmapChartProps): void {
+  probeFormat(props.xFmt, model.xDomain[0] ?? 0);
+  probeFormat(props.yFmt, model.yDomain[0] ?? 0);
+  probeFormat(props.valueFmt, model.cells[0]?.[2] ?? 0);
+  probeFormat(props.labelsFmt, model.cells[0]?.[2] ?? 0);
+}
+
+/**
+ * One category axis of the heatmap grid: stringified labels (a numeric
+ * category must not reach ECharts as a number — it would read as an
+ * ordinal index, the same trap `normalizeX` guards), `xFmt`/`yFmt` applied
+ * to the raw cell at format time, no axis chrome, and the translucent
+ * `splitArea` banding evidence draws behind the cells.
+ */
+function categoryAxis(
+  domain: readonly unknown[],
+  fmt: string | undefined,
+  title: string | undefined,
+  position: "top" | undefined,
+  inverse = false,
+): Record<string, unknown> {
+  return {
+    type: "category",
+    data: domain.map((v) =>
+      fmt === undefined ? String(v) : safeFormat(v, fmt),
+    ),
+    ...(position !== undefined ? { position } : {}),
+    ...(inverse ? { inverse: true } : {}),
+    ...(title !== undefined
+      ? { name: title, nameLocation: "middle", nameGap: 30 }
+      : {}),
+    axisTick: { show: false },
+    axisLine: { show: false },
+    axisLabel: { interval: 0, hideOverlap: true },
+    splitArea: {
+      show: true,
+      areaStyle: {
+        color: ["rgba(250,250,250,0.1)", "rgba(200,200,200,0.1)"],
+      },
+    },
+  };
+}
+
+function seriesOption(
+  model: HeatmapModel,
+  props: HeatmapChartProps,
+  border: string,
+): Record<string, unknown> {
+  return {
+    name: props.value,
+    type: "heatmap",
+    // Copy cells — echarts may reorder/mutate series data; the model belongs
+    // to the caller.
+    data: model.cells.map((cell) => [...cell]),
+    ...(props.labels
+      ? {
+          label: {
+            show: true,
+            formatter: (p: { value?: unknown }) =>
+              safeFormat(cellValue(p.value), props.labelsFmt ?? props.valueFmt),
+          },
+          labelLayout: { hideOverlap: true },
+        }
+      : {}),
+    itemStyle: { borderWidth: 0.5, borderColor: border },
+  };
+}
+
+/**
+ * The `inRange` ramp: unset or empty → surface-to-first-accent (the "no
+ * data" end blends into the page); one color → `[surface, color]`, reading
+ * as a gradient anchored on the surface rather than a flat fill; two or
+ * more → verbatim. Evidence's `getBackgroundAdjustedColorScale` semantics,
+ * resolved against our mode tokens.
+ */
+function colorRamp(
+  scale: string | readonly string[] | undefined,
+  surface: string,
+): readonly string[] {
+  const colors = scale === undefined ? [] : [scale].flat();
+  if (colors.length === 0) return [surface, SERIES_COLORS[0]];
+  if (colors.length === 1) return [surface, colors[0]!];
+  return colors;
+}
+
+/**
+ * The item tooltip: one row per bound column — `x` and `y` resolve the
+ * raw domain cell (so `xFmt`/`yFmt` see the real value, not the
+ * stringified label), `value` formats through `valueFmt`. Every
+ * interpolated value is escaped — cells are data.
+ */
+function tooltipHtml(
+  param: TooltipParam,
+  model: HeatmapModel,
+  props: HeatmapChartProps,
+): string {
+  const cell = Array.isArray(param.value) ? param.value : [];
+  const xCell = model.xDomain[cell[0] as number];
+  const yCell = model.yDomain[cell[1] as number];
+  const lines = [
+    `${escapeHtml(props.x)}: ${escapeHtml(formatCell(xCell, props.xFmt))}`,
+    `${escapeHtml(props.y)}: ${escapeHtml(formatCell(yCell, props.yFmt))}`,
+    `${escapeHtml(props.value)}: ${escapeHtml(safeFormat(cell[2], props.valueFmt))}`,
+  ];
+  return lines.join("<br/>");
+}
+
+/** The raw number off a `[xi,yi,v]` tuple (cell labels' value slot). */
+function cellValue(value: unknown): unknown {
+  return Array.isArray(value) ? value[2] : value;
+}
+
+/**
+ * A domain cell formatted by its fmt prop — falls back to the raw string
+ * form when no fmt is set (a bare `num`-auto would paint `95` as `95.0`).
+ */
+function formatCell(value: unknown, fmt: string | undefined): string {
+  if (value === null || value === undefined) return "";
+  return fmt === undefined ? String(value) : safeFormat(value, fmt);
+}

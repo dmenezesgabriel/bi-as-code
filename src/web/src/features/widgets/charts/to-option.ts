@@ -3,6 +3,7 @@ import { toPercentageStack } from "./stack";
 import type {
   ChartOption,
   ChartSeries,
+  HeatmapChartProps,
   HistogramChartProps,
   SeriesChartProps,
   SeriesChartType,
@@ -341,13 +342,19 @@ function pointTuple(param: TooltipParam): readonly unknown[] {
 }
 
 export function describeChart(
-  type: SeriesChartType | "scatter" | "histogram",
-  props: SeriesChartProps | HistogramChartProps,
+  type: SeriesChartType | "scatter" | "histogram" | "heatmap",
+  props: SeriesChartProps | HistogramChartProps | HeatmapChartProps,
 ): string {
   if (props.title !== undefined) return props.title;
-  const split = props.series === undefined ? "" : `, split by ${props.series}`;
-  // A histogram binds `value`, not x/y — its description reads the column
-  // being distributed rather than an x-axis position.
+  const split =
+    "series" in props && props.series !== undefined
+      ? `, split by ${props.series}`
+      : "";
+  // A heatmap binds x/y/value — its description names all three columns; a
+  // histogram binds `value` alone (no x) and reads the distributed column.
+  if ("value" in props && "x" in props) {
+    return `heatmap chart of ${props.value} by ${props.x} and ${props.y}`;
+  }
   if ("value" in props) return `histogram chart of ${props.value}${split}`;
   const ys = Array.isArray(props.y) ? props.y.join(", ") : props.y;
   return `${type} chart of ${ys} by ${props.x}${split}`;

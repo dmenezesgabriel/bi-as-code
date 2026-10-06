@@ -13,8 +13,10 @@ export function themeName(mode: ThemeMode): string {
 /**
  * Categorical palette shared by both themes — mid-tones that stay legible
  * on white and near-black. Order matters: series pick colors by index.
+ * Exported for the heatmap's default `visualMap` ramp, which anchors on
+ * `SERIES_COLORS[0]`.
  */
-const SERIES_COLORS = [
+export const SERIES_COLORS = [
   "#2563eb", // blue-600
   "#059669", // emerald-600
   "#d97706", // amber-600
@@ -32,6 +34,10 @@ interface ModeTokens {
   readonly splitLine: string;
   readonly tooltipBg: string;
   readonly tooltipBorder: string;
+  /** The page surface behind the chart — the ramp's zero end. */
+  readonly surface: string;
+  /** The app's border tone (`border-neutral-200`/`dark:border-neutral-800`). */
+  readonly border: string;
 }
 
 const TOKENS: Record<ThemeMode, ModeTokens> = {
@@ -42,6 +48,8 @@ const TOKENS: Record<ThemeMode, ModeTokens> = {
     splitLine: "#e5e5e5", // neutral-200
     tooltipBg: "#ffffff",
     tooltipBorder: "#e5e5e5",
+    surface: "#ffffff", // App.tsx `bg-white`
+    border: "#e5e5e5", // neutral-200
   },
   dark: {
     text: "#f5f5f5", // neutral-100
@@ -50,8 +58,20 @@ const TOKENS: Record<ThemeMode, ModeTokens> = {
     splitLine: "#262626", // neutral-800
     tooltipBg: "#171717", // neutral-900
     tooltipBorder: "#404040", // neutral-700
+    surface: "#0a0a0a", // App.tsx `dark:bg-neutral-950`
+    border: "#262626", // neutral-800
   },
 };
+
+/**
+ * The per-mode color tokens an option builder needs when a color must be
+ * baked into the option itself rather than inherited from the registered
+ * theme — e.g. the heatmap's `visualMap.inRange` ramp, which anchors on the
+ * surface so a "no data" tint matches the page behind the canvas.
+ */
+export function themeTokens(mode: ThemeMode): ModeTokens {
+  return TOKENS[mode];
+}
 
 function buildTheme(t: ModeTokens): Record<string, unknown> {
   const axis = {
