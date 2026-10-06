@@ -98,9 +98,9 @@ Status vocabulary: `SL-NNN` backlog row · `later` deferred milestone · `—` n
 | ---------------------- | ------------------------------------------------ | -------------- |
 | `<Callout>`            | evidence `callout` · streamlit `alert`           | SL-008         |
 | `<Note>`               | evidence `note`                                  | SL-008         |
-| `<Commentary>`         | evidence `commentary`                            | SL-008         |
-| `<Info>`               | evidence `info`                                  | SL-008         |
-| `<Icon>`               | evidence `icon`                                  | SL-008         |
+| `<Commentary>`         | evidence `commentary`                            | later          |
+| `<Info>`               | evidence `info`                                  | later          |
+| `<Icon>`               | evidence `icon`                                  | later          |
 | `<Image>`              | evidence `image` · streamlit `image`             | later          |
 | `<Iframe>`             | evidence `iframe` · streamlit `iframe`           | later          |
 | `<Audio>`/media        | evidence `audio` · streamlit media               | later          |
