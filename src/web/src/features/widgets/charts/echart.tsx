@@ -43,7 +43,7 @@ const DEFAULT_HEIGHT = 300;
  * finished paint; the host exposes `echartsInstance` for tests.
  *
  * @example
- * <EChart option={toChartOption(rows, props)} height={320} />
+ * <EChart option={toChartOption(toSeries(rows, spec, "bar"), "bar", props)} height={320} />
  */
 export function EChart({
   option,

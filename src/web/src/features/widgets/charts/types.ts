@@ -73,3 +73,41 @@ export interface SeriesModel {
   readonly xType: XAxisKind;
   readonly series: readonly ChartSeries[];
 }
+
+/**
+ * The `stacked` prop value: `true` piles series on one stack; `"100%"`
+ * normalizes each x to a share of its total (the model arrives
+ * pre-normalized, raw values kept for tooltips); `false`/unset keeps the
+ * series side by side.
+ */
+export type StackedMode = boolean | "100%";
+
+/**
+ * The shared prop surface of `<BarChart>`/`<LineChart>`/`<AreaChart>`:
+ * `data` names a ```sql fence on the same page; `x`/`y`/`series` name result
+ * columns (the fence owns the SQL — these are never expressions); `y`
+ * accepts one column or an array, each array entry becoming a series.
+ * `xFmt`/`yFmt`/`labelsFmt` are `formatValue` preset codes applied to the
+ * axis ticks, tooltip and point labels; `color` repaints every series with
+ * one palette, `seriesColors` overrides per series name. `legend` forces
+ * the legend on or off — unset, it appears once the chart has more than
+ * one series. `height` sizes the chart host and its state boxes in px.
+ */
+export interface SeriesChartProps {
+  readonly data: string;
+  readonly x: string;
+  readonly y: string | readonly string[];
+  readonly series?: string;
+  readonly stacked?: StackedMode;
+  readonly labels?: boolean;
+  readonly labelsFmt?: string;
+  readonly color?: string;
+  readonly seriesColors?: Readonly<Record<string, string>>;
+  readonly xFmt?: string;
+  readonly yFmt?: string;
+  readonly title?: string;
+  readonly xTitle?: string;
+  readonly yTitle?: string;
+  readonly legend?: boolean;
+  readonly height?: number;
+}

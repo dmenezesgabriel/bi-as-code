@@ -1,0 +1,309 @@
+import { formatValue } from "../value/format";
+import { toPercentageStack } from "./stack";
+import type {
+  ChartOption,
+  ChartSeries,
+  SeriesChartProps,
+  SeriesChartType,
+  SeriesModel,
+  StackedMode,
+  XAxisKind,
+} from "./types";
+
+/**
+ * The echarts params one hovered point contributes to an axis tooltip: the
+ * field subset we read, declared so the formatter stays typed against the
+ * engine's loose callback signature.
+ */
+interface TooltipParam {
+  readonly seriesName?: string;
+  readonly marker?: string;
+  readonly value?: unknown;
+  readonly data?: unknown;
+  readonly axisValue?: unknown;
+}
+
+/**
+ * Assembles the full `setOption` payload for a series chart: typed axes,
+ * stacked/normalized series, axis tooltip, legend, title and the aria
+ * description. `props.stacked === "100%"` normalizes the model here —
+ * `toSeries` always emits raw values so tooltips keep the un-normalized
+ * number on the point's third slot.
+ *
+ * `x`/`y`/`series` in `props` feed only the generated aria description —
+ * the model already carries the resolved data.
+ *
+ * @example
+ * toChartOption(toSeries(rows, { x: "week", y: "orders" }, "line"), "line", props)
+ */
+export function toChartOption(
+  model: SeriesModel,
+  type: SeriesChartType,
+  props: SeriesChartProps,
+): ChartOption {
+  assertFormats(model, props);
+  const percentage = props.stacked === "100%";
+  const series = percentage ? toPercentageStack(model.series) : model.series;
+  const legend = props.legend ?? series.length > 1;
+  return {
+    grid: gridOption(props, legend),
+    xAxis: xAxisOption(model, props),
+    yAxis: yAxisOption(props, percentage),
+    series: series.map((s) => seriesOption(s, type, props)),
+    ...(legend ? { legend: { top: props.title ? 30 : 0 } } : {}),
+    ...(props.title !== undefined
+      ? { title: { text: props.title, top: 0 } }
+      : {}),
+    ...(props.color !== undefined ? { color: [props.color] } : {}),
+    tooltip: {
+      trigger: "axis",
+      formatter: (params: TooltipParam | readonly TooltipParam[]) =>
+        tooltipHtml(params, props, percentage),
+    },
+    aria: {
+      enabled: true,
+      label: { description: describeChart(type, props) },
+    },
+  };
+}
+
+/**
+ * Validates every fmt prop against a sample of the column it will format —
+ * a bad code throws `FormatError` at option-build time, where the widget's
+ * state switch renders it as the chart's error face, instead of firing
+ * inside an echarts render callback.
+ */
+function assertFormats(model: SeriesModel, props: SeriesChartProps): void {
+  if (props.xFmt !== undefined) formatValue(xSample(model), props.xFmt);
+  if (props.yFmt !== undefined) formatValue(ySample(model.series), props.yFmt);
+  if (props.labelsFmt !== undefined)
+    formatValue(ySample(model.series), props.labelsFmt);
+}
+
+function xSample(model: SeriesModel): unknown {
+  const first = model.xDomain.find((v) => v !== undefined && v !== null);
+  if (first !== undefined) return first;
+  return model.xType === "time" ? new Date(0) : 0;
+}
+
+function ySample(series: readonly ChartSeries[]): unknown {
+  for (const s of series) {
+    for (const [, y] of s.data) {
+      if (y !== null) return y;
+    }
+  }
+  return 0;
+}
+
+/**
+ * `formatValue` for render-callback sites: a probe already validated the
+ * code, so a throw here means a mixed-type cell — degrade to the raw string
+ * rather than breaking the chart mid-render.
+ */
+function safeFormat(value: unknown, code?: string): string {
+  try {
+    return formatValue(value, code);
+  } catch {
+    return String(value);
+  }
+}
+
+/** Legend sits under the title when both are on; the grid pays for both. */
+function gridOption(
+  props: SeriesChartProps,
+  legend: boolean,
+): Record<string, unknown> {
+  let top = 8;
+  if (props.title !== undefined) top += 30;
+  if (legend) top += 28;
+  return { top, left: 8, right: 16, bottom: 8, containLabel: true };
+}
+
+function xAxisOption(
+  model: SeriesModel,
+  props: SeriesChartProps,
+): Record<string, unknown> {
+  const formatter = xTickFormatter(model.xType, props.xFmt);
+  return {
+    type: model.xType,
+    ...(model.xType === "category" ? { data: [...model.xDomain] } : {}),
+    // Category bands pad by default; continuous axes pad 1%/2% so the first
+    // and last tick labels aren't clipped at the plot edge.
+    boundaryGap: model.xType === "category" ? true : ["1%", "2%"],
+    ...(props.xTitle !== undefined
+      ? { name: props.xTitle, nameLocation: "middle", nameGap: 30 }
+      : {}),
+    ...(formatter !== undefined ? { axisLabel: { formatter } } : {}),
+    animation: false,
+  };
+}
+
+/**
+ * The x-tick formatter per axis kind: a `time` axis keeps echarts' adaptive
+ * labels unless `xFmt` pins one (ticks arrive as epoch ms — re-wrapped as
+ * `Date` for `formatValue`); a `value` axis always gains the numeric default
+ * so raw magnitudes read `4M` not `4000000`; a `category` axis only formats
+ * when the author asked (its labels are already strings).
+ */
+function xTickFormatter(
+  xType: XAxisKind,
+  xFmt?: string,
+): ((value: unknown, index: number) => string) | undefined {
+  if (xType === "value") return (v) => safeFormat(v, xFmt);
+  if (xFmt === undefined) return undefined;
+  if (xType === "time") return (v) => safeFormat(new Date(Number(v)), xFmt);
+  return (v) => safeFormat(v, xFmt);
+}
+
+function yAxisOption(
+  props: SeriesChartProps,
+  percentage: boolean,
+): Record<string, unknown> {
+  // On a "100%" stack the axis is fractions — pin 0–1 and format ticks as
+  // percents; the author's yFmt still applies to the raw values shown in the
+  // tooltip and labels.
+  const sideTitle = percentage && props.yTitle !== undefined;
+  return {
+    type: "value",
+    animation: false,
+    ...(percentage ? { min: 0, max: 1 } : {}),
+    ...(props.yTitle !== undefined
+      ? {
+          name: props.yTitle,
+          // A 100% axis tops out with the "100%" label colliding with an
+          // end-anchored title — the side (rotated) title clears it.
+          nameLocation: sideTitle ? "middle" : "end",
+          ...(sideTitle ? { nameRotate: 90, nameGap: 50 } : {}),
+        }
+      : {}),
+    axisLabel: {
+      formatter: (v: unknown) =>
+        safeFormat(v, percentage ? "pct0" : props.yFmt),
+    },
+  };
+}
+
+function seriesOption(
+  series: ChartSeries,
+  type: SeriesChartType,
+  props: SeriesChartProps,
+): Record<string, unknown> {
+  const echartsType = type === "area" ? "line" : type;
+  const lineLike = echartsType === "line";
+  return {
+    name: series.name,
+    type: echartsType,
+    // Copy points — echarts may reorder/mutate series data; the model belongs
+    // to the caller.
+    data: series.data.map((point) => [...point]),
+    ...(props.stacked ? { stack: "total" } : {}),
+    ...(type === "area" ? { areaStyle: {} } : {}),
+    ...(type === "bar" ? { barMaxWidth: 60 } : {}),
+    ...(props.seriesColors?.[series.name] !== undefined
+      ? { color: props.seriesColors[series.name] }
+      : {}),
+    ...(lineLike ? lineOption(props.labels === true) : {}),
+    ...(props.labels ? labelOption(type, props) : {}),
+    emphasis: {
+      focus: "series",
+      blurScope: "coordinateSystem",
+      ...(lineLike
+        ? { lineStyle: { width: 3 }, itemStyle: { opacity: 1 } }
+        : {}),
+    },
+  };
+}
+
+/**
+ * Line/area defaults: markers exist for hover/tooltip but stay invisible to
+ * keep dense series readable. When `labels` is on, echarts ties point-label
+ * visibility to symbol opacity — so opacity comes back to 1 and the dot is
+ * hidden by a zero `symbolSize` instead.
+ */
+function lineOption(labeled: boolean): Record<string, unknown> {
+  return {
+    symbol: "circle",
+    symbolSize: labeled ? 0 : 9,
+    showSymbol: true,
+    triggerEvent: true,
+    lineStyle: { width: 1.75 },
+    itemStyle: { opacity: labeled ? 1 : 0 },
+  };
+}
+
+function labelOption(
+  type: SeriesChartType,
+  props: SeriesChartProps,
+): Record<string, unknown> {
+  const fmt =
+    props.labelsFmt ?? (props.stacked === "100%" ? "pct0" : props.yFmt);
+  return {
+    label: {
+      show: true,
+      position: labelPosition(type, props.stacked),
+      formatter: (p: { value?: unknown }) => safeFormat(yOf(p.value), fmt),
+    },
+    labelLayout: { hideOverlap: true },
+  };
+}
+
+function labelPosition(type: SeriesChartType, stacked?: StackedMode): string {
+  // A stacked bar's top edge belongs to the whole stack — a segment value
+  // there misleads, so labels go inside the band.
+  if (type === "bar") return stacked ? "inside" : "top";
+  return "top";
+}
+
+function yOf(value: unknown): unknown {
+  return Array.isArray(value) ? value[1] : value;
+}
+
+function tooltipHtml(
+  params: TooltipParam | readonly TooltipParam[],
+  props: SeriesChartProps,
+  percentage: boolean,
+): string {
+  const list = Array.isArray(params) ? params : [params];
+  const first = list[0];
+  if (first === undefined) return "";
+  const title = escapeHtml(safeFormat(pointTuple(first)[0], props.xFmt));
+  const rows = list.map((p) => {
+    const [, y, raw] = pointTuple(p);
+    const shown = safeFormat(raw ?? y, props.yFmt);
+    const text =
+      percentage && typeof y === "number"
+        ? `${safeFormat(y, "pct0")} (${shown})`
+        : shown;
+    return `${p.marker ?? ""} ${escapeHtml(p.seriesName)}: ${escapeHtml(text)}`;
+  });
+  return `${title}<br/>${rows.join("<br/>")}`;
+}
+
+/**
+ * The `[x, y, rawY?]` tuple behind a tooltip param. `param.value` carries it
+ * for array-typed series data; fall back to `data`, then to the axis pair.
+ */
+function pointTuple(param: TooltipParam): readonly unknown[] {
+  const v = param.value ?? param.data;
+  if (Array.isArray(v)) return v;
+  return [param.axisValue, v];
+}
+
+function describeChart(type: SeriesChartType, props: SeriesChartProps): string {
+  if (props.title !== undefined) return props.title;
+  const ys = Array.isArray(props.y) ? props.y.join(", ") : props.y;
+  const split = props.series === undefined ? "" : `, split by ${props.series}`;
+  return `${type} chart of ${ys} by ${props.x}${split}`;
+}
+
+// Series names and x values are data — they land in the tooltip HTML, so
+// they must not arrive with markup intact.
+function escapeHtml(input: unknown): string {
+  if (input === null || input === undefined) return "";
+  return String(input)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
