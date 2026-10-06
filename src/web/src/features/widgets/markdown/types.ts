@@ -41,3 +41,31 @@ export interface DetailsProps {
   readonly openMobile?: boolean;
   readonly children?: ReactNode;
 }
+
+/** The two list styles a `<Tabs>` accepts — `default` is an underline
+ * track, `well` a fitted pill track. */
+export type TabsVariant = "default" | "well";
+
+/**
+ * Props of the `<Tabs>` MDX widget: `variant` picks the list style
+ * (default `default`); `fullWidth` spreads the triggers across the
+ * container instead of packing them on the left. Children must be
+ * `<Tab>` elements — anything else renders an inline alert.
+ */
+export interface TabsProps {
+  readonly variant?: TabsVariant;
+  readonly fullWidth?: boolean;
+  readonly children?: ReactNode;
+}
+
+/**
+ * Props of the `<Tab>` MDX widget — a data carrier `<Tabs>` reads via
+ * child inspection rather than rendering: `title` (required) labels the
+ * trigger, `default` selects this panel on load (only one tab may set
+ * it), and `children` become the panel's content.
+ */
+export interface TabProps {
+  readonly title: string;
+  readonly default?: boolean;
+  readonly children?: ReactNode;
+}

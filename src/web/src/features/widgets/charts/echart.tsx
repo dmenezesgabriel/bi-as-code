@@ -1,4 +1,5 @@
 import * as echarts from "echarts/core";
+import type { EChartsType } from "echarts/core";
 import {
   BarChart,
   HeatmapChart,
@@ -18,8 +19,14 @@ import { CanvasRenderer, SVGRenderer } from "echarts/renderers";
 import { useEffect, useRef, type ReactElement } from "react";
 import { cn } from "../../../lib/cn";
 import { useThemeMode } from "../../chrome/theme-mode";
+import type { ThemeMode } from "../../chrome/theme";
 import { themeName } from "./theme";
-import type { ChartOption, EChartHostElement, EChartProps } from "./types";
+import type {
+  ChartOption,
+  ChartRenderer,
+  EChartHostElement,
+  EChartProps,
+} from "./types";
 
 // Modular registration — importing 'echarts/core' + the pieces we use keeps
 // the bundle to what cartesian charts need instead of the full engine.
@@ -47,16 +54,41 @@ echarts.use([
 export const DEFAULT_CHART_HEIGHT = 300;
 
 /**
+ * Mounts an echarts instance on a host that has a real box: the ready
+ * listener attaches before `setOption` because init's own empty paint can
+ * emit `finished` first, which would mark a host that carries no data.
+ *
+ * @example
+ * el.echartsInstance = mountChart(el, option, mode, "canvas");
+ */
+function mountChart(
+  el: EChartHostElement,
+  option: ChartOption,
+  mode: ThemeMode,
+  renderer: ChartRenderer,
+): EChartsType {
+  const instance = echarts.init(el, themeName(mode), { renderer });
+  instance.on("finished", () => el.setAttribute("data-echarts-ready", ""));
+  instance.setOption(option, { notMerge: true });
+  return instance;
+}
+
+/**
  * The echarts engine boundary: mounts an instance on a sized div, applies
  * `option` on every change (`notMerge` — the option is rebuilt wholesale so
  * a removed series never lingers), resizes with the container via
- * ResizeObserver, and disposes on unmount. A mode flip re-inits with the
- * other registered theme — `setTheme` swaps are subtler than a recreate and
- * theme toggles are rare user actions. `data-echarts-ready` marks the first
- * finished paint of the applied option — the option is `setOption`'d in the
- * same synchronous block as `init` because init's own empty paint can emit
- * `finished` first, which would mark a host that carries no data.
- * The host exposes `echartsInstance` for tests.
+ * ResizeObserver, and disposes on unmount. A host mounted inside a
+ * `display:none` subtree (an inactive tab panel, a `hidden=until-found`
+ * accordion body) has no box: init there warns and paints at 0×0, so init
+ * defers to the first ResizeObserver report of a real box. jsdom has no
+ * `checkVisibility`, so the deferral never engages under unit tests.
+ * A mode flip re-inits with the other registered theme — `setTheme` swaps
+ * are subtler than a recreate and theme toggles are rare user actions.
+ * `data-echarts-ready` marks the first finished paint of the applied
+ * option — the option is `setOption`'d in the same synchronous block as
+ * `init` because init's own empty paint can emit `finished` first, which
+ * would mark a host that carries no data. The host exposes
+ * `echartsInstance` for tests.
  *
  * @example
  * <EChart option={toChartOption(toSeries(rows, spec, "bar"), "bar", props)} height={320} />
@@ -83,22 +115,35 @@ export function EChart({
     const el = hostRef.current;
     if (!el) return;
     el.removeAttribute("data-echarts-ready");
-    const instance = echarts.init(el, themeName(mode), { renderer });
-    el.echartsInstance = instance;
-    const markReady = () => el.setAttribute("data-echarts-ready", "");
-    instance.on("finished", markReady);
-    appliedOption.current = optionRef.current;
-    instance.setOption(optionRef.current, { notMerge: true });
+    const init = () => {
+      el.echartsInstance = mountChart(el, optionRef.current, mode, renderer);
+      appliedOption.current = optionRef.current;
+    };
+    // display:none hosts (an inactive keepMounted tab panel, a
+    // hidden=until-found accordion body) have no box — echarts warns on a
+    // 0×0 init, so defer to the first nonzero ResizeObserver report.
+    // jsdom has no checkVisibility: the deferral can't engage, unit tests
+    // init eagerly.
+    const hidden =
+      typeof el.checkVisibility === "function" && !el.checkVisibility();
+    if (!hidden) init();
     const observer = new ResizeObserver(() => {
-      if (!instance.isDisposed()) instance.resize();
+      const chart = el.echartsInstance;
+      if (!chart) {
+        if (el.clientWidth > 0 && el.clientHeight > 0) init();
+        return;
+      }
+      if (!chart.isDisposed()) chart.resize();
     });
     observer.observe(el);
     return () => {
       observer.disconnect();
-      instance.off("finished", markReady);
+      const chart = el.echartsInstance;
+      if (!chart) return;
+      chart.off("finished");
       delete el.echartsInstance;
       el.removeAttribute("data-echarts-ready");
-      instance.dispose();
+      chart.dispose();
     };
   }, [mode, renderer]);
 

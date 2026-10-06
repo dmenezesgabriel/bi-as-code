@@ -12,6 +12,7 @@ import { Callout } from "../widgets/markdown/callout";
 import { Details } from "../widgets/markdown/details";
 import { LineBreak } from "../widgets/markdown/line-break";
 import { Note } from "../widgets/markdown/note";
+import { Tab, Tabs } from "../widgets/markdown/tabs";
 import { BigValue } from "../widgets/value/big-value";
 import { Delta } from "../widgets/value/delta";
 import { Sparkline } from "../widgets/value/sparkline-widget";
@@ -28,7 +29,8 @@ import { useDocumentTitle } from "./use-document-title";
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
  * `Heatmap`) resolve `data` against that same registry; the markdown
- * widgets (`Callout`, `Note`, `LineBreak`, `Details`) render prose chrome.
+ * widgets (`Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Tab`)
+ * render prose chrome.
  * Kept unexported so the map doesn't trip the Fast Refresh rule
  * that files exporting components export only components.
  */
@@ -50,6 +52,8 @@ const mdxComponents: MdxComponentMap = {
   Note,
   LineBreak,
   Details,
+  Tabs,
+  Tab,
 };
 
 function MarkdownLink({

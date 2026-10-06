@@ -1,8 +1,14 @@
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EChartsType } from "echarts/core";
 import { ThemeModeProvider } from "../../chrome/theme-mode";
 import { EChart } from "./echart";
+
+afterEach(() => {
+  delete (window.HTMLElement.prototype as { checkVisibility?: unknown })
+    .checkVisibility;
+  vi.unstubAllGlobals();
+});
 
 /** jsdom has no canvas — the svg renderer is the unit-test render path. */
 const OPTION = {
@@ -89,6 +95,44 @@ describe("<EChart>", () => {
       expect(instanceOf(el)).not.toBe(light);
       expect(light.isDisposed()).toBe(true);
     });
+  });
+
+  it("defers init until a hidden host reports a real box", async () => {
+    // jsdom has no layout or checkVisibility: stub both — the element
+    // reports hidden at mount (like an inactive keepMounted tab panel),
+    // then the ResizeObserver callback announces a real box on reveal.
+    const roCallbacks: ResizeObserverCallback[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: ResizeObserverCallback) {
+          roCallbacks.push(cb);
+        }
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    );
+    (
+      window.HTMLElement.prototype as { checkVisibility?: () => boolean }
+    ).checkVisibility = () => false;
+
+    const { container } = render(<EChart option={OPTION} renderer="svg" />);
+    const el = host(container);
+    expect(el.querySelector("svg")).toBeNull();
+
+    Object.defineProperty(el, "clientWidth", {
+      value: 640,
+      configurable: true,
+    });
+    Object.defineProperty(el, "clientHeight", {
+      value: 260,
+      configurable: true,
+    });
+    roCallbacks.forEach((cb) => cb([], {} as ResizeObserver));
+
+    await waitFor(() => instanceOf(el));
+    expect(el.querySelector("svg")).not.toBeNull();
   });
 
   it("forwards echarts aria label config onto the host", async () => {
