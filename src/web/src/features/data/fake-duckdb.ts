@@ -16,6 +16,15 @@ export class FakeDuckDb implements DuckDbService {
   failWhen: ((sql: string) => string | null) | null = null;
   /** Per-query row override — widgets binding two names seed each by sql. */
   rowsWhen: ((sql: string) => Row[] | null) | null = null;
+  /**
+   * Per-query hold — a promise returned here delivers that query's rows only
+   * when the test resolves it, so a caller's cancel-on-change path can be
+   * observed (keyed on params too: a wrapped query's sql is identical across
+   * filter values).
+   */
+  holdWhen:
+    | ((sql: string, params: readonly unknown[]) => Promise<Row[]> | null)
+    | null = null;
 
   /** A fake whose queries all return `rows`. */
   static withRows(rows: Row[]): FakeDuckDb {
@@ -57,14 +66,18 @@ export class FakeDuckDb implements DuckDbService {
   queryRows: DuckDbService["queryRows"] = (sql, params = []) => {
     this.queries.push({ sql, params });
     const failure = this.failWhen?.(sql);
-    return failure
-      ? Effect.fail(
-          new DataError({
-            operation: "query",
-            detail: sql,
-            cause: new Error(failure),
-          }),
-        )
+    if (failure) {
+      return Effect.fail(
+        new DataError({
+          operation: "query",
+          detail: sql,
+          cause: new Error(failure),
+        }),
+      );
+    }
+    const held = this.holdWhen?.(sql, params);
+    return held
+      ? Effect.promise(() => held)
       : Effect.succeed(this.rowsWhen?.(sql) ?? this.rows);
   };
 }

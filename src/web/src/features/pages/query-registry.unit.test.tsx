@@ -5,7 +5,12 @@ import { Layer } from "effect";
 import { DuckDb } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
-import { QueryRegistryProvider, useQueryResults } from "./query-registry";
+import {
+  QueryRegistryProvider,
+  useQueryResults,
+  useQuerySource,
+  type QuerySource,
+} from "./query-registry";
 import type { QueryResult, SqlBlock, SqlTableMap } from "./types";
 
 type Results = Readonly<Record<string, QueryResult>>;
@@ -201,5 +206,38 @@ describe("QueryRegistryProvider", () => {
       resultsRef.current.q?.status === "error" && resultsRef.current.q.message,
     ).toContain("nope");
     expect(db.queries).toEqual([]);
+  });
+
+  it("exposes each block's interpolated sql and the registration gate", async () => {
+    const sources: QuerySource[] = [];
+    function SourceProbe() {
+      const source = useQuerySource();
+      useEffect(() => {
+        sources.push(source);
+      }, [source]);
+      return null;
+    }
+    render(
+      <DataRuntimeProvider layer={Layer.succeed(DuckDb, new FakeDuckDb())}>
+        <QueryRegistryProvider
+          sqlBlocks={[
+            { name: "q", sql: "select * from orders where r = {{params.r}}" },
+          ]}
+          sqlTables={{}}
+          params={{ r: "West" }}
+        >
+          <SourceProbe />
+        </QueryRegistryProvider>
+      </DataRuntimeProvider>,
+    );
+
+    await waitFor(() =>
+      expect(sources.some((s) => s.registered !== null)).toBe(true),
+    );
+    const source = sources.at(-1);
+    expect(source?.interpolated.q?.sql).toBe(
+      "select * from orders where r = ?",
+    );
+    expect(source?.interpolated.q?.params).toEqual(["West"]);
   });
 });

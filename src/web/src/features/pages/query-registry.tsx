@@ -2,14 +2,16 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { Cause, Effect, Exit } from "effect";
+import { Effect, Exit } from "effect";
 import { DuckDb } from "../data/data-service";
-import { useDataRuntime, type DataRuntime } from "../data/runtime";
-import { interpolateQuery } from "./interpolate";
+import { useDataRuntime } from "../data/runtime";
+import { interpolateQuery, type InterpolatedQuery } from "./interpolate";
+import { runBlock } from "./run-block";
 import type { QueryResult, SqlBlock, SqlTableMap } from "./types";
 
 /**
@@ -31,10 +33,32 @@ export function useQueryResults(): Readonly<Record<string, QueryResult>> {
 }
 
 /**
+ * What a filtered consumer needs to run its own variant of a block: the
+ * block's interpolated SQL + params, and the page's table-registration gate
+ * (a filtered query waits for the same registration the registry runs on).
+ * `registered` is null until the provider's first effect has created it.
+ */
+export interface QuerySource {
+  readonly interpolated: Readonly<Record<string, InterpolatedQuery>>;
+  readonly registered: Promise<Exit.Exit<void, unknown>> | null;
+}
+
+const QuerySourceContext = createContext<QuerySource>({
+  interpolated: {},
+  registered: null,
+});
+
+/** The page's interpolated blocks + registration gate; the default outside a provider has neither. */
+export function useQuerySource(): QuerySource {
+  return useContext(QuerySourceContext);
+}
+
+/**
  * Page-scoped query registry: on mount it registers `sqlTables` (config ∪
- * page, merged upstream) against the app's DuckDB service, then runs every
- * named ` ```sql ` block through `interpolateQuery` + the `DuckDb` port and
- * publishes a `name → QueryResult` map.
+ * page, merged upstream) against the app's DuckDB service, then interpolates
+ * every named ` ```sql ` block once (memoized — also exposed through
+ * `useQuerySource` for filtered consumers) and runs them through the
+ * `DuckDb` port, publishing a `name → QueryResult` map.
  *
  * Registration is signature-gated so a remount with the same source-set
  * (StrictMode, re-render churn) registers once; a genuinely new mount
@@ -66,6 +90,20 @@ export function QueryRegistryProvider({
     sig: string;
     done: Promise<Exit.Exit<void, unknown>>;
   } | null>(null);
+  const [registered, setRegistered] = useState<Promise<
+    Exit.Exit<void, unknown>
+  > | null>(null);
+  const interpolated = useMemo(() => {
+    const queries = Object.fromEntries(
+      sqlBlocks.map((block) => [block.name, block.sql]),
+    );
+    return Object.fromEntries(
+      sqlBlocks.map((block) => [
+        block.name,
+        interpolateQuery(block.sql, { params, queries }, new Set([block.name])),
+      ]),
+    );
+  }, [sqlBlocks, params]);
 
   useEffect(() => {
     const sig = signatureOf(sqlTables);
@@ -73,33 +111,29 @@ export function QueryRegistryProvider({
     if (reg?.sig !== sig) {
       reg = { sig, done: runtime.runPromiseExit(registerAll(sqlTables)) };
       registration.current = reg;
+      setRegistered(reg.done);
     }
-    const registered = reg.done;
-    const queries = Object.fromEntries(
-      sqlBlocks.map((block) => [block.name, block.sql]),
-    );
     const control = new AbortController();
     setResults(initialResults(sqlBlocks));
-    for (const block of sqlBlocks) {
-      void runBlock(
-        runtime,
-        registered,
-        block,
-        queries,
-        params,
-        control.signal,
-      ).then((result) => {
+    for (const [name, query] of Object.entries(interpolated)) {
+      void runBlock(runtime, reg.done, query, control.signal).then((result) => {
         if (!control.signal.aborted) {
-          setResults((prev) => ({ ...prev, [block.name]: result }));
+          setResults((prev) => ({ ...prev, [name]: result }));
         }
       });
     }
     return () => control.abort();
-  }, [runtime, sqlBlocks, sqlTables, params]);
+  }, [runtime, sqlBlocks, sqlTables, interpolated]);
 
+  const source = useMemo(
+    () => ({ interpolated, registered }),
+    [interpolated, registered],
+  );
   return (
     <QueryResultsContext.Provider value={results}>
-      {children}
+      <QuerySourceContext.Provider value={source}>
+        {children}
+      </QuerySourceContext.Provider>
     </QueryResultsContext.Provider>
   );
 }
@@ -124,48 +158,4 @@ function registerAll(tables: SqlTableMap) {
       { discard: true },
     ),
   );
-}
-
-async function runBlock(
-  runtime: DataRuntime,
-  registered: Promise<Exit.Exit<void, unknown>>,
-  block: SqlBlock,
-  queries: Record<string, string>,
-  params: Readonly<Record<string, unknown>>,
-  signal: AbortSignal,
-): Promise<QueryResult> {
-  const interpolated = interpolateQuery(
-    block.sql,
-    { params, queries },
-    new Set([block.name]),
-  );
-  if (interpolated.errors.length > 0) {
-    return { status: "error", message: interpolated.errors.join("; ") };
-  }
-  // runBlock must never reject: callers `void` it and a rejection would be
-  // unobserved (a disposed runtime mid-unmount throws on await). Every
-  // failure becomes an `error` result — or a discarded one when aborted.
-  try {
-    const reg = await registered;
-    if (Exit.isFailure(reg)) {
-      return { status: "error", message: errorMessage(reg.cause) };
-    }
-    if (signal.aborted) return { status: "loading" };
-    const exit = await runtime.runPromiseExit(
-      DuckDb.use((db) => db.queryRows(interpolated.sql, interpolated.params)),
-      { signal },
-    );
-    if (Exit.isSuccess(exit)) return { status: "success", rows: exit.value };
-    return { status: "error", message: errorMessage(exit.cause) };
-  } catch (cause) {
-    return {
-      status: "error",
-      message: cause instanceof Error ? cause.message : String(cause),
-    };
-  }
-}
-
-function errorMessage(cause: Cause.Cause<unknown>): string {
-  const squashed = Cause.squash(cause);
-  return squashed instanceof Error ? squashed.message : String(squashed);
 }
