@@ -1,5 +1,7 @@
 import { Link, useSearch } from "@tanstack/react-router";
 import { useState, type AnchorHTMLAttributes } from "react";
+import { browserFilterUrlPort } from "../filters/filter-url-port";
+import { FiltersProvider } from "../filters/page-filters-context";
 import { NavToc } from "../chrome/nav-toc";
 import { Table } from "../widgets/table/table";
 import { AreaChart } from "../widgets/charts/area-chart";
@@ -100,19 +102,21 @@ export function MarkdownPage({
         ref={setArticle}
         className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20"
       >
-        {/* A page with no named ```sql blocks mounts no registry, so it never
-            downloads the wasm bundle. */}
-        {page.sqlBlocks.length > 0 ? (
-          <QueryRegistryProvider
-            sqlBlocks={page.sqlBlocks}
-            sqlTables={page.sqlTables}
-            params={params}
-          >
+        <FiltersProvider port={browserFilterUrlPort}>
+          {/* A page with no named ```sql blocks mounts no registry, so it never
+              downloads the wasm bundle. */}
+          {page.sqlBlocks.length > 0 ? (
+            <QueryRegistryProvider
+              sqlBlocks={page.sqlBlocks}
+              sqlTables={page.sqlTables}
+              params={params}
+            >
+              <Content components={mdxComponents} />
+            </QueryRegistryProvider>
+          ) : (
             <Content components={mdxComponents} />
-          </QueryRegistryProvider>
-        ) : (
-          <Content components={mdxComponents} />
-        )}
+          )}
+        </FiltersProvider>
       </main>
       {page.frontmatter.table_of_contents !== false && article && (
         <NavToc article={article} />
