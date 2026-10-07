@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useQueryResults } from "../../pages/query-registry";
+import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
 import { cellAt } from "./cell";
 import { DeltaDisplay } from "./delta-display";
 import { formatValue } from "./format";
@@ -9,7 +9,8 @@ import type { DeltaProps } from "./types";
 /**
  * The `<Delta>` MDX widget: `data`/`column`/`row` bind the cell holding the
  * signed delta — the WoW/QoQ/target logic lives in the ```sql fence as an
- * author-computed column, `fmt` only dresses it. Renders inline in prose.
+ * author-computed column, `fmt` only dresses it. `filters` names page
+ * filters whose predicates wrap the fence's query. Renders inline in prose.
  *
  * @example
  * up <Delta data="kpi" column="wow_pct" fmt="pct1" text="WoW" /> on the prior week.
@@ -18,9 +19,10 @@ export function Delta({
   data,
   column,
   row = 0,
+  filters,
   ...display
 }: DeltaProps): ReactElement {
-  const result = useQueryResults()[data];
+  const result = useFilteredQueryRows(data, filters);
   return (
     <ValueResult name={data} result={result}>
       {(rows) => {

@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import { AreaChart } from "./area-chart";
 import {
   TREND_ROWS,
@@ -33,5 +36,20 @@ export const PercentStack: Story = {
     expect(option.series?.every((s) => s.areaStyle !== undefined)).toBe(true);
     expect(option.series?.every((s) => s.stack === "total")).toBe(true);
     expect(option.yAxis?.[0]?.max).toBe(1);
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=South` seeds the filter; the remaining series keeps
+ * its area shading. */
+export const Filtered: Story = {
+  args: { filters: "region" },
+  decorators: [withFilteredData([WEEKLY_TREND], TREND_ROWS, "region", "South")],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { name?: string; areaStyle?: unknown }[];
+    }>(canvasElement);
+    expect(option.series?.map((s) => s.name)).toEqual(["South"]);
+    expect(option.series?.[0]?.areaStyle).toBeDefined();
   },
 };

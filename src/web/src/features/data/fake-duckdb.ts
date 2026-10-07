@@ -33,6 +33,25 @@ export class FakeDuckDb implements DuckDbService {
     return db;
   }
 
+  /**
+   * A fake whose queries return `rows` unless `when(sql)` supplies that
+   * query's own rows — the filtered-widget stories' shape: the wrapped
+   * query (`… where region = ?`) returns the filtered rows, the plain one
+   * the full set.
+   *
+   * @example
+   * FakeDuckDb.withRowsWhen(ALL, (sql) => sql.includes("where region = ?") ? WEST : null);
+   */
+  static withRowsWhen(
+    rows: Row[],
+    when: (sql: string) => Row[] | null,
+  ): FakeDuckDb {
+    const db = new FakeDuckDb();
+    db.rows = rows;
+    db.rowsWhen = when;
+    return db;
+  }
+
   /** A fake whose queries never resolve — for the loading state. */
   static pending(): FakeDuckDb {
     const db = new FakeDuckDb();

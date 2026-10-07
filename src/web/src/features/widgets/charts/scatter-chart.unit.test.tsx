@@ -59,6 +59,33 @@ describe("<ScatterChart>", () => {
     expect(option.legend.length).toBeGreaterThan(0);
   });
 
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? SCATTER_ROWS.filter((row) => row.region === "North")
+        : SCATTER_ROWS;
+    renderWithRegistry(
+      <ScatterChart
+        data="orders"
+        x="orders"
+        y="revenue"
+        series="region"
+        filters="region"
+        renderer="svg"
+      />,
+      { db, blocks: [ORDERS_REGIONAL], url: "?region=North" },
+    );
+
+    const option = await appliedOption<AppliedOption>(document, 4000);
+    expect(option.series.map((s) => s.name)).toEqual(["North"]);
+    expect(option.series[0]?.data).toHaveLength(2);
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select region, revenue, orders from orders) where region = ?",
+      params: ["North"],
+    });
+  });
+
   it("alerts when data names no registered fence", async () => {
     renderWithRegistry(<ScatterChart data="ghost" x="orders" y="revenue" />, {
       db: dbWith(SCATTER_ROWS),

@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { cn } from "../../../lib/cn";
-import { useQueryResults } from "../../pages/query-registry";
+import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
 import { cellAt } from "./cell";
 import { coerceNumeric, formatValue } from "./format";
 import { ValueResult } from "./states";
@@ -11,7 +11,8 @@ import type { ValueProps } from "./types";
  * whose materialized rows it reads — `column` picks the cell (default: the
  * row's first key), `row` the row index (default 0). All SQL, including the
  * aggregation, lives in the fence the author wrote; the widget only formats
- * and renders. It renders inline, so it can sit mid-sentence in prose.
+ * and renders. `filters` names page filters whose predicates wrap the
+ * fence's query. It renders inline, so it can sit mid-sentence in prose.
  *
  * @example
  * Quarter revenue closed at <Value data="kpi" column="revenue" fmt="usd" />.
@@ -23,8 +24,9 @@ export function Value({
   fmt,
   color,
   redNegatives = false,
+  filters,
 }: ValueProps): ReactElement {
-  const result = useQueryResults()[data];
+  const result = useFilteredQueryRows(data, filters);
   return (
     <ValueResult name={data} result={result}>
       {(rows) => {

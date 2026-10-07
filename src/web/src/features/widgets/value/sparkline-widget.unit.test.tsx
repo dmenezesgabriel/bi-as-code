@@ -22,16 +22,42 @@ const WEEKS: Row[] = [
 
 function renderSparkline(
   props: Partial<SparklineProps> = {},
-  { db = new FakeDuckDb(), blocks = [TREND], provider = true } = {},
+  {
+    db = new FakeDuckDb(),
+    blocks = [TREND],
+    provider = true,
+    url,
+  }: {
+    db?: FakeDuckDb;
+    blocks?: SqlBlock[];
+    provider?: boolean;
+    url?: string;
+  } = {},
 ) {
   return renderWithRegistry(<Sparkline data="weekly_revenue" {...props} />, {
     db,
     blocks,
     provider,
+    url,
   });
 }
 
 describe("Sparkline", () => {
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?") ? WEEKS.slice(0, 2) : WEEKS;
+    renderSparkline({ filters: "region" }, { db, url: "?region=West" });
+
+    const svg = await screen.findByRole("img");
+    const d = svg.querySelector("path")!.getAttribute("d")!;
+    expect(d.split("L")).toHaveLength(2);
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select week, revenue from orders) where region = ?",
+      params: ["West"],
+    });
+  });
+
   it("projects the named query's rows into a line sparkline", async () => {
     renderSparkline({}, { db: FakeDuckDb.withRows(WEEKS) });
 

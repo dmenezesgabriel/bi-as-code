@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { Row } from "../../data/types";
+import type { FilterIds } from "../../filters/filter-ids";
 import { EChart } from "./echart";
 import { ChartEmpty, ChartResult } from "./states";
 import type { ChartOption, ChartRenderer } from "./types";
@@ -8,6 +9,7 @@ import { useChartRows } from "./use-chart-rows";
 interface BoundChartProps<M> {
   data: string;
   height?: number;
+  filters?: FilterIds;
   renderer?: ChartRenderer;
   model: (rows: readonly Row[]) => M;
   /**
@@ -29,7 +31,11 @@ interface BoundChartProps<M> {
  * <BoundChart data="orders" model={(r) => toScatterSeries(r, spec)} option={(m) => toScatterOption(m, props)} />
  */
 export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
-  const { result, height } = useChartRows(props.data, props.height);
+  const { result, height } = useChartRows(
+    props.data,
+    props.height,
+    props.filters,
+  );
   return (
     <ChartResult name={props.data} result={result} height={height}>
       {(rows) => {

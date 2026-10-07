@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import type { Decorator } from "@storybook/react-vite";
 import {
   createMemoryHistory,
@@ -9,8 +9,12 @@ import {
 } from "@tanstack/react-router";
 import { Layer } from "effect";
 import { DuckDb } from "../src/features/data/data-service";
-import type { FakeDuckDb } from "../src/features/data/fake-duckdb";
+import { FakeDuckDb } from "../src/features/data/fake-duckdb";
+import type { Row } from "../src/features/data/types";
 import { DataRuntimeProvider } from "../src/features/data/runtime";
+import { FakeFilterUrlPort } from "../src/features/filters/fake-url-port";
+import type { FilterUrlPort } from "../src/features/filters/filter-url-port";
+import { FiltersProvider } from "../src/features/filters/page-filters-context";
 import { QueryRegistryProvider } from "../src/features/pages/query-registry";
 import type { SqlBlock } from "../src/features/pages/types";
 import { ThemeModeProvider } from "../src/features/chrome/theme-mode";
@@ -73,6 +77,25 @@ export function withDataRuntime(fake: FakeDuckDb): Decorator {
 }
 
 /**
+ * The runtime + registry tree `withQueryData` and `withFilteredData` share —
+ * one owner of the provider nesting so the registry never sits above the
+ * runtime it needs.
+ */
+function queryDataProvider(
+  sqlBlocks: readonly SqlBlock[],
+  fake: FakeDuckDb,
+  story: ReactNode,
+): ReactElement {
+  return (
+    <DataRuntimeProvider layer={Layer.succeed(DuckDb, fake)}>
+      <QueryRegistryProvider sqlBlocks={sqlBlocks} sqlTables={{}} params={{}}>
+        {story}
+      </QueryRegistryProvider>
+    </DataRuntimeProvider>
+  );
+}
+
+/**
  * Mounts the story inside a `QueryRegistryProvider` seeded with `blocks`
  * and the `FakeDuckDb` runtime it queries through — for components that
  * read `useQueryResults()` without mounting a registry themselves
@@ -88,12 +111,56 @@ export function withQueryData(
   sqlBlocks: readonly SqlBlock[],
   fake: FakeDuckDb,
 ): Decorator {
+  return (Story) => queryDataProvider(sqlBlocks, fake, <Story />);
+}
+
+/**
+ * Mounts the story inside a page-scoped `FiltersProvider` seeded through the
+ * injected `FilterUrlPort` — the storybook analogue of `markdown-page`'s
+ * provider mount, for stories of the `filters` widget prop. List this
+ * decorator AFTER `withQueryData` so the filters provider sits outermost,
+ * the page's own nesting.
+ *
+ * @example
+ * decorators: [withQueryData([ORDERS], fake), withPageFilters(new FakeFilterUrlPort("?region=West"))]
+ */
+export function withPageFilters(port: FilterUrlPort): Decorator {
   return (Story) => (
-    <DataRuntimeProvider layer={Layer.succeed(DuckDb, fake)}>
-      <QueryRegistryProvider sqlBlocks={sqlBlocks} sqlTables={{}} params={{}}>
-        <Story />
-      </QueryRegistryProvider>
-    </DataRuntimeProvider>
+    <FiltersProvider port={port}>
+      <Story />
+    </FiltersProvider>
+  );
+}
+
+/**
+ * The filtered-state story decorator, the whole wiring in one call: a
+ * `FakeDuckDb` whose wrapped queries (`where <filterId> = ?`) return
+ * `filteredRows` — defaulting to `allRows` narrowed to rows whose
+ * `<filterId>` cell equals `filterValue` — while every other query returns
+ * `allRows`; over that, the query-data tree and then the page's
+ * `FiltersProvider` seeded with `?${filterId}=${filterValue}` (the page's
+ * own nesting). The story declares only `filters` and its play.
+ *
+ * @example
+ * decorators: [withFilteredData([ORDERS], REGION_ROWS, "region", "West")]
+ */
+export function withFilteredData(
+  sqlBlocks: readonly SqlBlock[],
+  allRows: Row[],
+  filterId: string,
+  filterValue: string,
+  filteredRows?: Row[],
+): Decorator {
+  const fake = FakeDuckDb.withRowsWhen(allRows, (sql) =>
+    sql.includes(`where ${filterId} = ?`)
+      ? (filteredRows ?? allRows.filter((row) => row[filterId] === filterValue))
+      : null,
+  );
+  const port = new FakeFilterUrlPort(`?${filterId}=${filterValue}`);
+  return (Story) => (
+    <FiltersProvider port={port}>
+      {queryDataProvider(sqlBlocks, fake, <Story />)}
+    </FiltersProvider>
   );
 }
 

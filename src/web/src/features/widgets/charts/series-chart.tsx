@@ -25,6 +25,7 @@ export function SeriesChart({
     <BoundChart
       data={props.data}
       height={props.height}
+      filters={props.filters}
       renderer={renderer}
       model={(rows) =>
         toSeries(rows, { x: props.x, y: props.y, series: props.series }, type)

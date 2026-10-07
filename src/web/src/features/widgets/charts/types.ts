@@ -1,4 +1,5 @@
 import type { EChartsCoreOption, EChartsType } from "echarts/core";
+import type { FilterIds } from "../../filters/filter-ids";
 
 /**
  * The option bag `<EChart>` hands to `setOption` — re-exported from
@@ -93,13 +94,17 @@ export type StackedMode = boolean | "100%";
  * the legend on or off — unset, it appears once the chart has more than
  * one series. `height` sizes the chart host and its state boxes in px.
  * `renderer` selects the echarts backend — canvas in the app, `svg` under
- * jsdom (no canvas 2d); tests and stories pass it explicitly.
+ * jsdom (no canvas 2d); tests and stories pass it explicitly. `filters`
+ * names the page filters whose predicates wrap the fence's query — a lone
+ * id or a list; with no filter contributing, the registry's unfiltered
+ * result shows.
  */
 export interface SeriesChartProps {
   readonly data: string;
   readonly x: string;
   readonly y: string | readonly string[];
   readonly series?: string;
+  readonly filters?: FilterIds;
   readonly stacked?: StackedMode;
   readonly labels?: boolean;
   readonly labelsFmt?: string;

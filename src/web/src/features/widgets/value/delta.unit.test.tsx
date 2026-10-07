@@ -13,12 +13,23 @@ const KPI: SqlBlock = {
 
 function renderDelta(
   props: Partial<DeltaProps> = {},
-  { db = new FakeDuckDb(), blocks = [KPI], provider = true } = {},
+  {
+    db = new FakeDuckDb(),
+    blocks = [KPI],
+    provider = true,
+    url,
+  }: {
+    db?: FakeDuckDb;
+    blocks?: SqlBlock[];
+    provider?: boolean;
+    url?: string;
+  } = {},
 ) {
   return renderWithRegistry(<Delta data="kpi" {...props} />, {
     db,
     blocks,
     provider,
+    url,
   });
 }
 
@@ -27,6 +38,25 @@ const statusRoot = (): HTMLElement =>
   document.querySelector<HTMLElement>("[data-status]")!;
 
 describe("Delta", () => {
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? [{ wow_pct: 0.052, revenue: 100 }]
+        : [{ wow_pct: -0.041, revenue: 100 }];
+    renderDelta(
+      { fmt: "pct1", filters: "region" },
+      { db, url: "?region=West" },
+    );
+
+    await screen.findByText("+5.2%");
+    expect(screen.queryByText("-4.1%")).toBeNull();
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select revenue, wow_pct from orders) where region = ?",
+      params: ["West"],
+    });
+  });
+
   it("renders the named column as a signed, arrowed delta", async () => {
     renderDelta(
       { column: "wow_pct", fmt: "pct1" },

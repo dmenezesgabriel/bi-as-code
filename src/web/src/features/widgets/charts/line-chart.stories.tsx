@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import { LineChart } from "./line-chart";
 import {
   TREND_ROWS,
@@ -31,5 +34,21 @@ export const MultiSeries: Story = {
     expect(option.series?.every((s) => s.type === "line")).toBe(true);
     expect(option.series?.map((s) => s.name)).toEqual(["North", "South"]);
     expect(option.legend?.length).toBeGreaterThan(0);
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=North` seeds the filter; a single series also means
+ * the legend drops. */
+export const Filtered: Story = {
+  args: { filters: "region" },
+  decorators: [withFilteredData([WEEKLY_TREND], TREND_ROWS, "region", "North")],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { name?: string }[];
+      legend?: unknown[];
+    }>(canvasElement);
+    expect(option.series?.map((s) => s.name)).toEqual(["North"]);
+    expect(option.legend ?? []).toHaveLength(0);
   },
 };

@@ -2,7 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import type { SqlBlock } from "../../pages/types";
 import { Delta } from "./delta";
 import type { DeltaProps } from "./types";
@@ -125,6 +128,24 @@ export const UnknownFmt: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       'fmt="bogus"',
+    );
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=West` seeds the filter, the West-only delta shows. */
+export const Filtered: Story = {
+  args: { filters: "region" },
+  decorators: [
+    withFilteredData([KPI], ROWS, "region", "West", [
+      { revenue: 0, wow_pct: 0.052 },
+    ]),
+  ],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByText("+5.2%")).toBeInTheDocument();
+    await expect(root(canvasElement)).toHaveAttribute(
+      "data-status",
+      "positive",
     );
   },
 };

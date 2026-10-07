@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import type { Row } from "../../data/types";
-import { useQueryResults } from "../../pages/query-registry";
-import type { QueryResult } from "../../pages/types";
+import type { FilterIds } from "../../filters/filter-ids";
+import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
 import { cellAt } from "./cell";
 import { DeltaDisplay } from "./delta-display";
 import { formatValue } from "./format";
@@ -10,29 +10,32 @@ import { SparklineDisplay } from "./sparkline";
 import { ValueResult } from "./states";
 import type { BigValueProps, SparklineType } from "./types";
 
-type Results = Readonly<Record<string, QueryResult>>;
-
 /**
  * The `<BigValue>` MDX widget: a KPI headline — small title, formatted
  * scalar, signed delta below, sparkline inline-right — over an all-`<span>`
  * `display:block` tree so MDX `<p>` wrapping stays valid HTML. `data` names
  * a ```sql fence whose selected row holds the value and delta cells;
- * `sparkline` names a second fence for the series. A missing value cell
- * renders `–` and hides the delta and sparkline.
+ * `sparkline` names a second fence for the series; `filters` names page
+ * filters whose predicates wrap BOTH fences, so the KPI narrows as a unit.
+ * A missing value cell renders `–` and hides the delta and sparkline.
  *
  * @example
  * <BigValue data="kpi" column="revenue" title="Quarter revenue" fmt="usd"
  *   delta="wow_pct" deltaFmt="pct1" text="vs. prior" sparkline="weekly" />
  */
-export function BigValue({ data, ...props }: BigValueProps): ReactElement {
-  const results = useQueryResults();
+export function BigValue({
+  data,
+  filters,
+  ...props
+}: BigValueProps): ReactElement {
+  const result = useFilteredQueryRows(data, filters);
   return (
     <span className="block">
-      <ValueResult name={data} result={results[data]}>
+      <ValueResult name={data} result={result}>
         {(rows) => (
           <BigValueSuccess
             resolved={resolveCells(rows, props)}
-            results={results}
+            filters={filters}
             props={props}
           />
         )}
@@ -89,12 +92,12 @@ function resolveCells(
  */
 function BigValueSuccess({
   resolved,
-  results,
+  filters,
   props,
 }: {
   resolved: ResolvedCells;
-  results: Results;
-  props: Omit<BigValueProps, "data">;
+  filters: FilterIds | undefined;
+  props: Omit<BigValueProps, "data" | "filters">;
 }): ReactElement {
   const showDelta =
     !resolved.empty &&
@@ -112,7 +115,7 @@ function BigValueSuccess({
         {!resolved.empty && props.sparkline !== undefined && (
           <SparklineSlot
             name={props.sparkline}
-            result={results[props.sparkline]}
+            filters={filters}
             type={props.sparklineType}
             x={props.sparklineX}
             y={props.sparklineY}
@@ -141,24 +144,26 @@ function BigValueSuccess({
 /**
  * The sparkline on the value line: its own `ValueResult` so a missing,
  * in-flight or failed second query renders its face without touching the
- * value. An empty series draws nothing — standalone `<Sparkline>` shows `–`,
- * but inside a KPI the slot collapses instead.
+ * value. It reads the same `filters` the value fence answers — the KPI
+ * narrows as a unit. An empty series draws nothing — standalone
+ * `<Sparkline>` shows `–`, but inside a KPI the slot collapses instead.
  */
 function SparklineSlot({
   name,
-  result,
+  filters,
   type,
   x,
   y,
   color,
 }: {
   name: string;
-  result: QueryResult | undefined;
+  filters: FilterIds | undefined;
   type: SparklineType | undefined;
   x?: string;
   y?: string;
   color?: string;
 }): ReactElement {
+  const result = useFilteredQueryRows(name, filters);
   return (
     <ValueResult name={name} result={result}>
       {(rows) => {

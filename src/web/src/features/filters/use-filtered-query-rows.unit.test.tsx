@@ -9,6 +9,7 @@ import type { Row } from "../data/types";
 import { QueryRegistryProvider } from "../pages/query-registry";
 import type { QueryResult, SqlBlock, SqlTableMap } from "../pages/types";
 import { FakeFilterUrlPort } from "./fake-url-port";
+import type { FilterIds } from "./filter-ids";
 import type { Filters } from "./filters";
 import { FiltersProvider, usePageFilters } from "./page-filters-context";
 import { useFilteredQueryRows } from "./use-filtered-query-rows";
@@ -18,23 +19,23 @@ const WRAPPED = "select * from (select * from orders) where region = ?";
 
 function FilteredProbe({
   name,
-  filterIds,
+  filters,
   onEmit,
   onFilters,
 }: {
   name: string;
-  filterIds: readonly string[];
+  filters: FilterIds | undefined;
   onEmit: (result: QueryResult | undefined) => void;
   onFilters: (filters: Filters | undefined) => void;
 }) {
-  const filters = usePageFilters();
-  const result = useFilteredQueryRows(name, filterIds);
+  const pageFilters = usePageFilters();
+  const result = useFilteredQueryRows(name, filters);
   useEffect(() => {
     onEmit(result);
   }, [result, onEmit]);
   useEffect(() => {
-    onFilters(filters);
-  }, [filters, onFilters]);
+    onFilters(pageFilters);
+  }, [pageFilters, onFilters]);
   return null;
 }
 
@@ -45,7 +46,7 @@ function renderFiltered({
   url,
   db = new FakeDuckDb(),
   name = "orders",
-  filterIds = ["region"],
+  filters = ["region"],
 }: {
   blocks?: SqlBlock[];
   tables?: SqlTableMap;
@@ -53,7 +54,7 @@ function renderFiltered({
   url?: string;
   db?: FakeDuckDb;
   name?: string;
-  filterIds?: string[];
+  filters?: FilterIds;
 } = {}) {
   const emitted: (QueryResult | undefined)[] = [];
   const filtersRef: { current: Filters | undefined } = { current: undefined };
@@ -67,7 +68,7 @@ function renderFiltered({
         <FiltersProvider port={new FakeFilterUrlPort(url)}>
           <FilteredProbe
             name={name}
-            filterIds={filterIds}
+            filters={filters}
             onEmit={(result) => {
               emitted.push(result);
             }}
@@ -116,13 +117,39 @@ describe("useFilteredQueryRows", () => {
     expect(latest()).toEqual({ status: "success", rows: [{ n: 1 }] });
   });
 
+  it("accepts a lone string id as the authoring shape", async () => {
+    const db = new FakeDuckDb();
+    const { latest } = renderFiltered({
+      db,
+      url: "?region=West",
+      blocks: [ORDERS_BLOCK],
+      filters: "region",
+    });
+
+    await waitFor(() => expect(latest()?.status).toBe("success"));
+    expect(db.queries).toContainEqual({ sql: WRAPPED, params: ["West"] });
+  });
+
+  it("runs no wrapped query for an empty id list", async () => {
+    const db = new FakeDuckDb();
+    const { latest } = renderFiltered({
+      db,
+      url: "?region=West",
+      blocks: [ORDERS_BLOCK],
+      filters: [],
+    });
+
+    await waitFor(() => expect(latest()?.status).toBe("success"));
+    expect(db.queries).toEqual([{ sql: "select * from orders", params: [] }]);
+  });
+
   it("and-composes every contributing filter's predicate", async () => {
     const db = new FakeDuckDb();
     const { latest } = renderFiltered({
       db,
       url: "?region=West&channel=online",
       blocks: [ORDERS_BLOCK],
-      filterIds: ["region", "channel"],
+      filters: ["region", "channel"],
     });
 
     await waitFor(() => expect(latest()?.status).toBe("success"));

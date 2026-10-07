@@ -36,3 +36,27 @@ export function dbWith(
   db.rowsWhen = (sql) => (sql.includes("weekly") ? weeklyRows : null);
   return db;
 }
+
+/**
+ * The filtered-state fake: the wrapped queries (`where region = ?`) get the
+ * West-only kpi/weekly rows, the plain ones the full sets — the `filters`
+ * prop's dual-fence contract, seeded by tests and stories alike.
+ */
+export function filteredDbWith(
+  westKpiRows: Row[],
+  westWeeklyRows: Row[],
+): FakeDuckDb {
+  const db = new FakeDuckDb();
+  db.rowsWhen = (sql) => {
+    if (sql.includes("where region = ?")) {
+      return sql.includes("weekly") ? westWeeklyRows : westKpiRows;
+    }
+    return sql.includes("weekly") ? WEEKLY_ROWS : KPI_ROWS;
+  };
+  return db;
+}
+
+/** The West-only kpi row the filtered tests and stories bind. */
+export const WEST_KPI_ROWS: Row[] = [
+  { revenue: 500, wow_pct: 0.052, orders: 100 },
+];

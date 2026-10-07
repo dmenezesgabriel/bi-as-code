@@ -58,6 +58,33 @@ describe("<Histogram>", () => {
     expect(option.series.map((s) => s.name)).toEqual(["North", "South"]);
   });
 
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? AMOUNT_ROWS.filter((row) => row.region === "North")
+        : AMOUNT_ROWS;
+    renderWithRegistry(
+      <Histogram
+        data="order_amounts"
+        value="amount"
+        series="region"
+        filters="region"
+        renderer="svg"
+      />,
+      { db, blocks: [ORDER_AMOUNTS], url: "?region=North" },
+    );
+
+    const option = await appliedOption<AppliedOption>(document, 15000);
+    expect(option.series.map((s) => s.name)).toEqual(["North"]);
+    const counts = option.series[0]?.data as number[];
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(12);
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select amount, region from orders) where region = ?",
+      params: ["North"],
+    });
+  });
+
   it("alerts when data names no registered fence", async () => {
     renderWithRegistry(<Histogram data="ghost" value="amount" />, {
       db: dbWith(AMOUNT_ROWS),

@@ -24,6 +24,7 @@ export function Histogram({
     <BoundChart
       data={props.data}
       height={props.height}
+      filters={props.filters}
       renderer={renderer}
       model={(rows) =>
         toHistogram(rows, {

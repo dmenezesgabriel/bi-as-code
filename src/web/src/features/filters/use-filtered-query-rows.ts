@@ -4,6 +4,8 @@ import { runBlock } from "../pages/run-block";
 import type { InterpolatedQuery } from "../pages/interpolate";
 import type { QueryResult } from "../pages/types";
 import { useDataRuntime } from "../data/runtime";
+import type { FilterIds } from "./filter-ids";
+import { toFilterIds } from "./filter-ids";
 import type { FilterPredicate } from "./filter";
 import type { Filters } from "./filters";
 import { usePageFilters } from "./page-filters-context";
@@ -69,29 +71,29 @@ function useFilterPredicateKey(
 
 /**
  * The filtered read side of the query registry: `name` is a ```sql fence on
- * the page, `filterIds` the page filters the widget declares
- * (`filters=["region"]`). When any named filter holds a value, the block's
- * interpolated SQL is wrapped as `select * from (<interpolated>) where
- * <preds>` — predicates bind `?` args, never text-interpolated (ADR-0005) —
- * and re-runs on every filter change, cancelling in-flight work. When no
- * filter contributes, the registry's own unfiltered result is reused instead
- * of issuing a second identical query. Outside a `FiltersProvider` the hook
- * degrades to the unfiltered result.
+ * the page, `filters` the page filters the widget declares — a lone id
+ * (`filters="region"`) or a list (`filters={["region", "channel"]}`). When
+ * any named filter holds a value, the block's interpolated SQL is wrapped as
+ * `select * from (<interpolated>) where <preds>` — predicates bind `?` args,
+ * never text-interpolated (ADR-0005) — and re-runs on every filter change,
+ * cancelling in-flight work. When no filter contributes, the registry's own
+ * unfiltered result is reused instead of issuing a second identical query.
+ * Outside a `FiltersProvider` the hook degrades to the unfiltered result.
  *
  * @example
  * const result = useFilteredQueryRows(data, ["region"]);
  */
 export function useFilteredQueryRows(
   name: string,
-  filterIds: readonly string[],
+  filters: FilterIds | undefined,
 ): QueryResult | undefined {
   const registryResult = useQueryResults()[name];
   const { interpolated, registered } = useQuerySource();
-  const filters = usePageFilters();
+  const pageFilters = usePageFilters();
   const runtime = useDataRuntime();
   const block = interpolated[name];
-  const idsKey = filterIds.join(IDS_SEPARATOR);
-  const predicateKey = useFilterPredicateKey(filters, idsKey);
+  const idsKey = toFilterIds(filters).join(IDS_SEPARATOR);
+  const predicateKey = useFilterPredicateKey(pageFilters, idsKey);
   const [filteredResult, setFilteredResult] = useState<QueryResult>({
     status: "loading",
   });
@@ -104,17 +106,17 @@ export function useFilteredQueryRows(
     void runBlock(
       runtime,
       registered,
-      wrappedQuery(block, contributingPredicates(filters, idsKey)),
+      wrappedQuery(block, contributingPredicates(pageFilters, idsKey)),
       control.signal,
     ).then((result) => {
       if (!control.signal.aborted) setFilteredResult(result);
     });
     return () => control.abort();
-  }, [runtime, registered, block, filters, idsKey, predicateKey]);
+  }, [runtime, registered, block, pageFilters, idsKey, predicateKey]);
 
   if (registryResult === undefined) return undefined;
-  if (!filters || !block || block.errors.length > 0) return registryResult;
-  if (contributingPredicates(filters, idsKey).length === 0) {
+  if (!pageFilters || !block || block.errors.length > 0) return registryResult;
+  if (contributingPredicates(pageFilters, idsKey).length === 0) {
     return registryResult;
   }
   return filteredResult;

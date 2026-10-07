@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { SqlBlock } from "../../pages/types";
 import { BigValue } from "./big-value";
-import { dbWith, KPI, KPI_ROWS, WEEKLY } from "./big-value.fixture";
+import {
+  dbWith,
+  filteredDbWith,
+  KPI,
+  KPI_ROWS,
+  WEEKLY,
+  WEEKLY_ROWS,
+  WEST_KPI_ROWS,
+} from "./big-value.fixture";
 import { renderWithRegistry } from "./registry-harness";
 import type { BigValueProps } from "./types";
 
@@ -13,16 +21,48 @@ function renderBigValue(
     db = dbWith(KPI_ROWS),
     blocks = [KPI, WEEKLY],
     provider = true,
-  }: { db?: FakeDuckDb; blocks?: readonly SqlBlock[]; provider?: boolean } = {},
+    url,
+  }: {
+    db?: FakeDuckDb;
+    blocks?: readonly SqlBlock[];
+    provider?: boolean;
+    url?: string;
+  } = {},
 ) {
   return renderWithRegistry(<BigValue data="kpi" {...props} />, {
     db,
     blocks,
     provider,
+    url,
   });
 }
 
 describe("BigValue", () => {
+  it("wraps both the value fence and the sparkline fence with the filter's predicate", async () => {
+    const db = filteredDbWith(WEST_KPI_ROWS, WEEKLY_ROWS.slice(0, 5));
+    renderBigValue(
+      {
+        column: "revenue",
+        fmt: "usd",
+        sparkline: "weekly_revenue",
+        filters: "region",
+      },
+      { db, url: "?region=West" },
+    );
+
+    expect(await screen.findByText("$500")).toBeInTheDocument();
+    expect(screen.queryByText("$1.2M")).toBeNull();
+    expect(await screen.findByRole("img")).toBeInTheDocument();
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select revenue, wow_pct, orders from orders) where region = ?",
+      params: ["West"],
+    });
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select week, revenue from weekly) where region = ?",
+      params: ["West"],
+    });
+  });
+
   it("composes title, formatted value, delta and sparkline", async () => {
     renderBigValue({
       column: "revenue",

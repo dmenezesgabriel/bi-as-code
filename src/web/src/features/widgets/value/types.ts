@@ -1,4 +1,5 @@
 import { Data } from "effect";
+import type { FilterIds } from "../../filters/filter-ids";
 
 /**
  * A `fmt` failure a widget renders inline as `role=alert` — an unknown code,
@@ -58,13 +59,15 @@ export type SparklineType = "line" | "area" | "bar";
  * fence on the same page registered; `column` picks the cell out of the
  * selected row (default: the row's first key — the aggregation SQL lives in
  * the fence, this names a result column, not an expression); `row` selects
- * the row index (default 0).
+ * the row index (default 0); `filters` names the page filters whose
+ * predicates wrap the fence's query — a lone id or a list.
  */
 export interface ValueProps {
   readonly data: string;
   readonly column?: string;
   readonly row?: number;
   readonly fmt?: string;
+  readonly filters?: FilterIds;
   /** CSS color for the formatted value. */
   readonly color?: string;
   /** Render negative numbers in the negative color, wins over `color`. */
@@ -73,7 +76,8 @@ export interface ValueProps {
 
 /**
  * Props of the `<Delta>` MDX widget: `data`/`column`/`row` bind the signed
- * delta cell exactly like `<Value>`; the remaining props pass through to
+ * delta cell exactly like `<Value>`; `filters` names the page filters whose
+ * predicates wrap the fence's query; the remaining props pass through to
  * `DeltaDisplay` unchanged.
  */
 export interface DeltaProps {
@@ -81,6 +85,7 @@ export interface DeltaProps {
   readonly column?: string;
   readonly row?: number;
   readonly fmt?: string;
+  readonly filters?: FilterIds;
   readonly text?: string;
   readonly chip?: boolean;
   readonly downIsGood?: boolean;
@@ -98,7 +103,10 @@ export interface DeltaProps {
  * dressed by `deltaFmt`/`text`/`chip`/`downIsGood`/`showSymbol`/
  * `symbolPosition`/`neutralRange`; `sparkline` names a second ```sql fence
  * whose rows are the series, projected by `sparklineX`/`sparklineY` and
- * drawn as `sparklineType` in `sparklineColor`. A missing cell renders `–`
+ * drawn as `sparklineType` in `sparklineColor`; `filters` names the page
+ * filters whose predicates wrap BOTH fences — the value's and the
+ * sparkline's — so the KPI narrows as a unit: a trend of the same data
+ * must answer the same predicate. A missing cell renders `–`
  * and hides the delta and sparkline — a param-driven empty result is not
  * an author error.
  */
@@ -107,6 +115,7 @@ export interface BigValueProps {
   readonly column?: string;
   readonly row?: number;
   readonly fmt?: string;
+  readonly filters?: FilterIds;
   /** Title line; defaults to the resolved column key. */
   readonly title?: string;
   /** Column in the same row holding the signed delta. */
@@ -132,7 +141,9 @@ export interface BigValueProps {
  * Props of the `<Sparkline>` MDX widget: `data` names a ```sql fence whose
  * rows are the series; `x`/`y` name the projection columns (defaults: y =
  * second column or first on single-column rows, x = first column that isn't
- * y, else row position); `label` is the svg's `aria-label`.
+ * y, else row position); `label` is the svg's `aria-label`; `filters` names
+ * the page filters whose predicates wrap the fence's query — a lone id or a
+ * list.
  */
 export interface SparklineProps {
   readonly data: string;
@@ -141,4 +152,5 @@ export interface SparklineProps {
   readonly type?: SparklineType;
   readonly color?: string;
   readonly label?: string;
+  readonly filters?: FilterIds;
 }

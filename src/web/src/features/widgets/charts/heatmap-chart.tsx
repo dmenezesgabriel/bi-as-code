@@ -28,6 +28,7 @@ export function Heatmap({
     <BoundChart
       data={props.data}
       height={props.height}
+      filters={props.filters}
       renderer={renderer}
       model={(rows) =>
         toHeatmap(rows, { x: props.x, y: props.y, value: props.value })

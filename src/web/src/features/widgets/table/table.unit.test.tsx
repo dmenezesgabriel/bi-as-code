@@ -1,12 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { Effect, Layer } from "effect";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import { DuckDb } from "../../data/data-service";
+import type { FilterIds } from "../../filters/filter-ids";
 import { FakeDuckDb } from "../../data/fake-duckdb";
-import { DataRuntimeProvider } from "../../data/runtime";
 import type { Row } from "../../data/types";
-import { QueryRegistryProvider } from "../../pages/query-registry";
 import type { SqlBlock } from "../../pages/types";
+import { renderWithRegistry } from "../value/registry-harness";
 import { Table } from "./table";
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
@@ -15,6 +14,7 @@ const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
  * Renders `<Table>` exactly as a compiled page does: the component map
  * mounts it inside the page's `QueryRegistryProvider`, which is why a fake
  * `DuckDb` — not seeded props — decides which result `data` resolves to.
+ * `url` seeds a page filter for the `filters`-prop tests.
  */
 function renderTable({
   db = new FakeDuckDb(),
@@ -22,26 +22,21 @@ function renderTable({
   data = "orders",
   pageSize,
   provider = true,
+  filters,
+  url,
 }: {
   db?: FakeDuckDb;
   blocks?: SqlBlock[];
   data?: string;
   pageSize?: number;
   provider?: boolean;
+  filters?: FilterIds;
+  url?: string;
 } = {}) {
-  const element = <Table data={data} pageSize={pageSize} />;
-  render(
-    provider ? (
-      <DataRuntimeProvider layer={Layer.succeed(DuckDb, db)}>
-        <QueryRegistryProvider sqlBlocks={blocks} sqlTables={{}} params={{}}>
-          {element}
-        </QueryRegistryProvider>
-      </DataRuntimeProvider>
-    ) : (
-      element
-    ),
+  return renderWithRegistry(
+    <Table data={data} pageSize={pageSize} filters={filters} />,
+    { db, blocks, provider, url },
   );
-  return db;
 }
 
 describe("Table", () => {
@@ -120,6 +115,26 @@ describe("Table", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("orders");
+  });
+
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? [{ region: "West", orders: 140 }]
+        : [
+            { region: "West", orders: 140 },
+            { region: "North", orders: 120 },
+          ];
+    renderTable({ db, filters: "region", url: "?region=West" });
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
+    expect(screen.queryByRole("cell", { name: "North" })).toBeNull();
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select * from orders) where region = ?",
+      params: ["West"],
+    });
   });
 
   it("sorts and pages without re-querying the registry", async () => {

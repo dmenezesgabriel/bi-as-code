@@ -2,7 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import type { SqlBlock } from "../../pages/types";
 import { Sparkline } from "./sparkline-widget";
 import type { SparklineProps } from "./types";
@@ -100,5 +103,20 @@ export const UnknownColumn: Story = {
     const alert = await canvas.findByRole("alert");
     await expect(alert).toHaveTextContent('"sales"');
     await expect(alert).toHaveTextContent("week, revenue");
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=West` seeds the filter, the series narrows to the
+ * West-only weeks. */
+export const Filtered: Story = {
+  args: { filters: "region" },
+  decorators: [
+    withFilteredData([TREND], ROWS, "region", "West", ROWS.slice(0, 5)),
+  ],
+  play: async ({ canvas }) => {
+    const svg = await canvas.findByRole("img");
+    const d = svg.querySelector("path")!.getAttribute("d")!;
+    await expect(d.split("L")).toHaveLength(5);
   },
 };

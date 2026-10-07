@@ -3,7 +3,10 @@ import { expect, userEvent } from "storybook/test";
 import { Effect } from "effect";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import { Table } from "./table";
 import type { TableProps } from "./types";
 import type { SqlBlock } from "../../pages/types";
@@ -92,6 +95,28 @@ export const QueryError: Story = {
     const alert = await canvas.findByRole("alert");
     await expect(alert).toHaveTextContent("orders");
     await expect(alert).toHaveTextContent("does not exist");
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=West` seeds the filter, the table shows West only. */
+export const Filtered: Story = {
+  args: { data: "orders", filters: "region" },
+  decorators: [
+    withFilteredData(
+      [ORDERS],
+      [
+        { region: "West", orders: 140 },
+        { region: "North", orders: 120 },
+      ],
+      "region",
+      "West",
+    ),
+  ],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toBeVisible();
+    await expect(canvas.getAllByRole("cell", { name: "West" })).toHaveLength(1);
+    await expect(canvas.queryByRole("cell", { name: "North" })).toBeNull();
   },
 };
 

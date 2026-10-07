@@ -78,6 +78,35 @@ describe("series chart tags", () => {
     expect(appliedOption(host).series[0]?.data).toHaveLength(3);
   });
 
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? REGIONAL_ROWS.filter((row) => row.region === "West")
+        : REGIONAL_ROWS;
+    renderWithRegistry(
+      <BarChart
+        data="orders"
+        x="region"
+        y="revenue"
+        filters="region"
+        renderer="svg"
+      />,
+      { db, blocks: [ORDERS_REGIONAL], url: "?region=West" },
+    );
+
+    const option = appliedOption(await chartHost());
+    const points = option.series[0]?.data as
+      | readonly (readonly unknown[])[]
+      | undefined;
+    expect(points).toHaveLength(1);
+    expect(points?.[0]?.[0]).toBe("West");
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select region, revenue, orders from orders) where region = ?",
+      params: ["West"],
+    });
+  });
+
   it("fixes the echarts type per tag", async () => {
     renderWithRegistry(
       <>

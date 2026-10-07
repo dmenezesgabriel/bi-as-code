@@ -1,9 +1,21 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withPageFilters,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import { FakeDuckDb } from "../../data/fake-duckdb";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { BigValue } from "./big-value";
-import { dbWith, KPI, KPI_ROWS, WEEKLY } from "./big-value.fixture";
+import {
+  dbWith,
+  filteredDbWith,
+  KPI,
+  KPI_ROWS,
+  WEEKLY,
+  WEEKLY_ROWS,
+  WEST_KPI_ROWS,
+} from "./big-value.fixture";
 import type { BigValueProps } from "./types";
 
 const meta = {
@@ -181,4 +193,32 @@ export const QueryError: Story = {
     withData(FakeDuckDb.failing("Catalog Error: Table orders does not exist")),
   ],
   play: alertPlay("does not exist"),
+};
+
+/** `filters={["region"]}` wraps BOTH fences — the value's and the
+ * sparkline's — with the page filter's bound predicate, so the KPI narrows
+ * as a unit. */
+export const Filtered: Story = {
+  args: {
+    column: "revenue",
+    title: "Quarter revenue",
+    fmt: "usd",
+    sparkline: "weekly_revenue",
+    filters: ["region"],
+  },
+  decorators: [
+    withQueryData(
+      [KPI, WEEKLY],
+      filteredDbWith(WEST_KPI_ROWS, WEEKLY_ROWS.slice(0, 5)),
+    ),
+    withPageFilters(new FakeFilterUrlPort("?region=West")),
+  ],
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText("Quarter revenue"),
+    ).toBeInTheDocument();
+    await expect(await canvas.findByText("$500")).toBeInTheDocument();
+    await expect(canvas.queryByText("$1.2M")).toBeNull();
+    await expect(await canvas.findByRole("img")).toBeInTheDocument();
+  },
 };

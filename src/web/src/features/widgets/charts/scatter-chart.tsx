@@ -24,6 +24,7 @@ export function ScatterChart({
     <BoundChart
       data={props.data}
       height={props.height}
+      filters={props.filters}
       renderer={renderer}
       model={(rows) =>
         toScatterSeries(rows, {

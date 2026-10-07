@@ -13,16 +13,43 @@ const KPI: SqlBlock = {
 
 function renderValue(
   props: Partial<ValueProps> = {},
-  { db = new FakeDuckDb(), blocks = [KPI], provider = true } = {},
+  {
+    db = new FakeDuckDb(),
+    blocks = [KPI],
+    provider = true,
+    url,
+  }: {
+    db?: FakeDuckDb;
+    blocks?: SqlBlock[];
+    provider?: boolean;
+    url?: string;
+  } = {},
 ) {
   return renderWithRegistry(<Value data="kpi" {...props} />, {
     db,
     blocks,
     provider,
+    url,
   });
 }
 
 describe("Value", () => {
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? [{ revenue: 500 }]
+        : [{ revenue: 1500 }];
+    renderValue({ filters: "region" }, { db, url: "?region=West" });
+
+    expect(await screen.findByText("500")).toBeInTheDocument();
+    expect(screen.queryByText("1,500")).toBeNull();
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select revenue, wow_pct from orders) where region = ?",
+      params: ["West"],
+    });
+  });
+
   it("renders the row's first column when column is unset", async () => {
     renderValue(
       {},

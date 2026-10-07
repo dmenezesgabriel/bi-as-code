@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import { Histogram } from "./histogram-chart";
 import {
   AMOUNT_ROWS,
@@ -68,5 +71,23 @@ export const ExplicitBinCount: Story = {
     expect(option.xAxis?.[0]?.data?.[0]).toBe("$12");
     const counts = option.series?.[0]?.data as number[];
     expect(counts.reduce((a, b) => a + b, 0)).toBe(AMOUNT_ROWS.length);
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=North` seeds the filter, North's 12 orders bin. */
+export const Filtered: Story = {
+  args: { series: "region", filters: "region" },
+  decorators: [
+    withFilteredData([ORDER_AMOUNTS], AMOUNT_ROWS, "region", "North"),
+  ],
+  play: async ({ canvasElement }) => {
+    await readyHost(canvasElement);
+    const option = await appliedOption<{
+      series?: { name?: string; data?: unknown[] }[];
+    }>(canvasElement);
+    expect(option.series?.map((s) => s.name)).toEqual(["North"]);
+    const counts = option.series?.[0]?.data as number[];
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(12);
   },
 };

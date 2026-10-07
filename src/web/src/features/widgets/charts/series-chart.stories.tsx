@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import {
+  withFilteredData,
   withQueryData,
   withThemeMode,
 } from "../../../../.storybook/decorators";
@@ -186,5 +187,26 @@ export const Empty: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByText("0 rows")).toBeVisible();
     await expect(canvas.queryByRole("alert")).toBeNull();
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=South` seeds the filter, one series remains. */
+export const Filtered: Story = {
+  args: {
+    type: "line",
+    data: "weekly_trend",
+    x: "week",
+    y: "orders",
+    series: "region",
+    filters: "region",
+  },
+  decorators: [withFilteredData([WEEKLY_TREND], TREND_ROWS, "region", "South")],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { name?: string; data?: unknown[] }[];
+    }>(canvasElement);
+    expect(option.series?.map((s) => s.name)).toEqual(["South"]);
+    expect(option.series?.[0]?.data).toHaveLength(3);
   },
 };

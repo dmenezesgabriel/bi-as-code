@@ -63,6 +63,36 @@ describe("<Heatmap>", () => {
     expect(option.visualMap[0]?.max).toBe(140);
   });
 
+  it("wraps the fence with the declared filter's bound predicate", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? TREND_ROWS.filter((row) => row.region === "South")
+        : TREND_ROWS;
+    renderWithRegistry(
+      <Heatmap
+        data="weekly_trend"
+        x="week"
+        y="region"
+        value="orders"
+        filters="region"
+        renderer="svg"
+      />,
+      { db, blocks: [WEEKLY_TREND], url: "?region=South" },
+    );
+
+    const option = await appliedOption<AppliedOption>(document, 15000);
+    expect(option.series[0]?.data).toEqual([
+      [0, 0, 90],
+      [1, 0, 95],
+      [2, 0, 100],
+    ]);
+    expect(db.queries).toContainEqual({
+      sql: "select * from (select week, region, orders from trend) where region = ?",
+      params: ["South"],
+    });
+  });
+
   it("alerts when data names no registered fence", async () => {
     renderWithRegistry(
       <Heatmap data="ghost" x="week" y="region" value="orders" />,

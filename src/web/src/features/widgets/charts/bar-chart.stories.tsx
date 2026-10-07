@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import { BarChart } from "./bar-chart";
 import {
   ORDERS_REGIONAL,
@@ -37,6 +40,22 @@ export const Labeled: Story = {
       canvasElement,
     );
     expect(option.series?.[0]?.type).toBe("bar");
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=West` seeds the filter, one bar remains. */
+export const Filtered: Story = {
+  args: { filters: "region" },
+  decorators: [
+    withFilteredData([ORDERS_REGIONAL], REGIONAL_ROWS, "region", "West"),
+  ],
+  play: async ({ canvasElement }) => {
+    await readyHost(canvasElement);
+    const option = await appliedOption<{ series?: { data?: unknown[] }[] }>(
+      canvasElement,
+    );
+    await expect(option.series?.[0]?.data).toHaveLength(1);
   },
 };
 

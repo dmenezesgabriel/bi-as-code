@@ -2,7 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
-import { withQueryData } from "../../../../.storybook/decorators";
+import {
+  withFilteredData,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import type { SqlBlock } from "../../pages/types";
 import type { ValueProps } from "./types";
 import { Value } from "./value";
@@ -130,6 +133,21 @@ export const Loading: Story = {
   decorators: [withQueryData([KPI], FakeDuckDb.pending())],
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole("status")).toBeVisible();
+  },
+};
+
+/** `filters="region"` wraps the fence's sql with the page filter's bound
+ * predicate — `?region=West` seeds the filter, the West-only cell shows. */
+export const Filtered: Story = {
+  args: { column: "revenue", fmt: "usd", filters: "region" },
+  decorators: [
+    withFilteredData([KPI], ROWS, "region", "West", [
+      { revenue: 500, wow_pct: 0.052, orders: 100 },
+    ]),
+  ],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("$500")).toBeInTheDocument();
+    await expect(canvas.queryByText("$1.2M")).toBeNull();
   },
 };
 
