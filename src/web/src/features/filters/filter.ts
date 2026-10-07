@@ -93,6 +93,30 @@ export class Filter<Value = unknown> {
     if (!Object.is(previous, newValue)) this.#notify();
   }
 
+  /**
+   * Apply late-arriving options to an existing filter — provided fields
+   * replace their counterpart, absent ones are kept, and a held value is
+   * never reset. A fresh `deserialize` re-reads the live URL param through
+   * `setDefault`, repairing a value decoded under the default codec (a
+   * consumer's bare `ensure` beat the input's) without writing the URL —
+   * evidence's `addOrUpdateFilters` reaches the same end state by recreating
+   * the filter. `initialValue` seeds via `setDefault` only when nothing is
+   * held, so a cleared `""`/`[]` never snaps back.
+   */
+  configure(opts?: FilterOptions<Value>) {
+    if (!opts) return;
+    if (opts.column !== undefined) this.#opts.column = opts.column;
+    if (opts.serialize) this.#opts.serialize = opts.serialize;
+    if (opts.deserialize) {
+      this.#opts.deserialize = opts.deserialize;
+      const raw = this.#port.read()?.searchParams.get(this.id);
+      if (raw) this.setDefault(opts.deserialize(raw));
+    }
+    if (opts.initialValue !== undefined && this.#value === undefined) {
+      this.setDefault(opts.initialValue);
+    }
+  }
+
   /** Corrected value: keeps the URL in sync when the param is present, else behaves as a default. */
   normalize(newValue: Value | undefined) {
     if (this.#port.read()?.searchParams.has(this.id)) {

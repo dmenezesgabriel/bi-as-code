@@ -1,0 +1,52 @@
+import type { FilterIds } from "../../filters/filter-ids";
+
+/**
+ * One selectable option, the port of evidence's `Option` minus its render
+ * id: `value` is the filter-bound form, `label` the optional display text.
+ */
+export interface OptionItem {
+  readonly value: string;
+  readonly label?: string;
+}
+
+/**
+ * Props shared by the filter input widgets (`<Dropdown>`, `<MultiSelect>`)
+ * and the `FilterSelect` core they both render: `id` names the page filter;
+ * `data` + `valueColumn`/`labelColumn` derive options from a ```sql fence
+ * (`valueColumn` required when `data` is); `options` supplies static
+ * entries when `data` is absent; `filters` cascades other page filters into
+ * the option source; `title`/`placeholder` label the field; `search` and
+ * `clear` toggle the affordances (both default true); `selectFirst` seeds
+ * the first resolved option as a programmatic default.
+ */
+export interface FilterInputCommonProps {
+  readonly id: string;
+  readonly data?: string;
+  readonly valueColumn?: string;
+  readonly labelColumn?: string;
+  readonly options?: readonly unknown[];
+  readonly filters?: FilterIds;
+  readonly title?: string;
+  readonly placeholder?: string;
+  readonly selectFirst?: boolean;
+  readonly search?: boolean;
+  readonly clear?: boolean;
+}
+
+/** The `FilterSelect` core's internal props — `multiple` is the flag the two MDX tags differ on. */
+export interface FilterSelectProps extends FilterInputCommonProps {
+  readonly multiple: boolean;
+  readonly initialValue?: string | readonly string[];
+  readonly defaultTopN?: number;
+}
+
+/** Props of the `<Dropdown>` MDX widget — single-select with type-to-search. */
+export interface DropdownProps extends FilterInputCommonProps {
+  readonly initialValue?: string;
+}
+
+/** Props of the `<MultiSelect>` MDX widget — chip-select with `defaultTopN` seeding. */
+export interface MultiSelectProps extends FilterInputCommonProps {
+  readonly initialValue?: readonly string[];
+  readonly defaultTopN?: number;
+}

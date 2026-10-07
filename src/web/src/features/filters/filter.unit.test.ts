@@ -225,6 +225,101 @@ describe("Filter.predicate — placeholder-bound column predicate", () => {
   });
 });
 
+describe("Filter.configure — late-arriving options", () => {
+  it("is a no-op for undefined options", () => {
+    const port = new FakeFilterUrlPort("?region=West");
+    const filter = new Filter<string>("region", {}, port);
+    filter.configure(undefined);
+    expect(filter.value).toBe("West");
+    expect(port.written).toHaveLength(0);
+  });
+
+  it("replaces the predicate column when one is provided", () => {
+    const filter = new Filter<string>("region", {}, new FakeFilterUrlPort(""));
+    filter.configure({ column: "sales_region" });
+    filter.value = "West";
+    expect(filter.predicate()).toEqual({
+      sql: "sales_region = ?",
+      params: ["West"],
+    });
+  });
+
+  it("keeps the configured column when a later configure omits it", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "sales_region" },
+      new FakeFilterUrlPort(""),
+    );
+    filter.configure({ deserialize: (raw) => raw });
+    filter.value = "West";
+    expect(filter.predicate()).toEqual({
+      sql: "sales_region = ?",
+      params: ["West"],
+    });
+  });
+
+  it("re-decodes the live URL param when a deserialize arrives", () => {
+    const port = new FakeFilterUrlPort('?channel=["a","b"]');
+    // The column mirrors what a consumer's bare `Filters.ensure` sets.
+    const filter = new Filter<string | string[]>(
+      "channel",
+      { column: "channel" },
+      port,
+    );
+    expect(filter.value).toBe('["a","b"]');
+
+    filter.configure({ deserialize: listOptions.deserialize });
+    expect(filter.value).toEqual(["a", "b"]);
+    expect(filter.predicate()).toEqual({
+      sql: "channel IN (?, ?)",
+      params: ["a", "b"],
+    });
+    expect(port.written).toHaveLength(0);
+  });
+
+  it("notifies subscribers when the re-decode changes the value", () => {
+    const port = new FakeFilterUrlPort('?channel=["a","b"]');
+    const filter = new Filter<string | string[]>("channel", {}, port);
+    const seen: (string | string[] | undefined)[] = [];
+    filter.subscribe(() => seen.push(filter.getSnapshot()));
+    filter.configure({ deserialize: listOptions.deserialize });
+    expect(seen).toEqual([["a", "b"]]);
+  });
+
+  it("does not touch the value when no param is present", () => {
+    const port = new FakeFilterUrlPort("");
+    const filter = new Filter<string | string[]>("channel", {}, port);
+    filter.setDefault(["x"]);
+    filter.configure({ deserialize: listOptions.deserialize });
+    expect(filter.value).toEqual(["x"]);
+  });
+
+  it("seeds initialValue via setDefault only when unset", () => {
+    const empty = new Filter<string>("region", {}, new FakeFilterUrlPort(""));
+    empty.configure({ initialValue: "West" });
+    expect(empty.value).toBe("West");
+
+    const held = new Filter<string>(
+      "region",
+      {},
+      new FakeFilterUrlPort("?region=East"),
+    );
+    held.configure({ initialValue: "West" });
+    expect(held.value).toBe("East");
+  });
+
+  it("does not resurrect a cleared value via initialValue", () => {
+    const filter = new Filter<string>(
+      "region",
+      {},
+      new FakeFilterUrlPort("?region=West"),
+    );
+    filter.value = "";
+    filter.configure({ initialValue: "East" });
+    expect(filter.value).toBe("");
+  });
+});
+
 describe("Filter reactivity", () => {
   it("notifies subscribers on a value change and on setDefault", () => {
     const filter = new Filter<string | string[]>(

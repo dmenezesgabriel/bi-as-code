@@ -14,16 +14,23 @@ export class Filters {
   }
 
   /**
-   * Create the filter, or return the existing one unchanged — "ensure
-   * exists", never "reset to this value" (evidence's collision rule), so a
-   * value restored from the URL survives a second consumer's `ensure`.
+   * Create the filter, or configure the existing one — "ensure exists",
+   * never "reset to this value" (evidence's collision rule), so a value
+   * restored from the URL survives a second consumer's `ensure`. Provided
+   * `opts` still apply to the existing filter, so an input mounting after
+   * a consumer's bare `ensure` lands its codec and predicate column
+   * without waiting for remount order.
    *
    * @example
    * filters.ensure("region").value; // "West" when the URL has ?region=West
    */
   ensure<Value>(id: string, opts?: FilterOptions<Value>): Filter<Value> {
     const existing = this.#filters.get(id);
-    if (existing) return existing as Filter<Value>;
+    if (existing) {
+      const filter = existing as Filter<Value>;
+      filter.configure(opts);
+      return filter;
+    }
     const filter = new Filter<Value>(
       id,
       { ...opts, column: opts?.column ?? id },
