@@ -127,14 +127,15 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
       .allTextContents(),
   ).toEqual(["1", "North", "14"]);
 
-  // {{params.region}} lives in the `orders` block, so the param filters
-  // region_share through the composed subquery; weekly_trend reads the raw
-  // table and keeps its 39 rows either way.
+  // The fences stay raw under the param — the widgets that declare
+  // filters=["region"] are the filters spec's subject: `orders` keeps its
+  // three regions and `region_share` composes them, while `weekly_trend`
+  // keeps its 39 rows either way.
   await page.goto(`${biacDev.url}weekly-review?region=West`);
-  await expect(results.nth(1).getByRole("row")).toHaveCount(2, {
+  await expect(results.nth(1).getByRole("row")).toHaveCount(4, {
     timeout: 30_000,
   });
-  await expect(results.nth(2).getByRole("row")).toHaveCount(2);
+  await expect(results.nth(2).getByRole("row")).toHaveCount(4);
   expect(
     await results
       .nth(2)
@@ -142,7 +143,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
       .first()
       .locator("td")
       .allTextContents(),
-  ).toEqual(["West", "140", "100"]);
+  ).toEqual(["West", "140", "39.4"]);
   expect(errors).toEqual([]);
 });
 

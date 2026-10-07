@@ -12,7 +12,8 @@ the [orders overview](/).
 
 <Callout type="info" title="Reading guide">
 Every figure on this page re-runs live against the `orders` table — the
-`?region=` URL parameter scopes every query that declares it.
+`?region=` URL parameter scopes the widgets that declare `filters` and
+the queries that interpolate it.
 </Callout>
 
 ## Overview
@@ -62,8 +63,10 @@ where {{params.region}} is null or region = {{params.region}}
 </Details>
 
 <Details title="How the region filter works" open>
-The `?region=` URL parameter feeds `{{params.region}}` in the fences that
-declare it; fences without the parameter keep their full-quarter read.
+The `?region=` URL parameter feeds the widgets that declare
+`filters=["region"]` — each re-queries its fence's result scoped to the
+region. The KPI and sparklines read the same parameter through
+`{{params.region}}`; the trend charts keep their full-quarter read.
 </Details>
 
 <Details title="Mobile summary" openMobile>
@@ -86,12 +89,11 @@ with the other two regions.
 ```sql orders
 select region, count(*) as orders, sum(amount) as revenue
 from orders
-where {{params.region}} is null or region = {{params.region}}
 group by region
 order by revenue desc
 ```
 
-<BarChart data="orders" x="region" y="revenue" labels />
+<BarChart data="orders" x="region" y="revenue" labels filters={["region"]} />
 
 ```sql region_share
 select region, orders,
@@ -116,17 +118,16 @@ not a few oversized tickets carrying a region's number.
 ```sql region_week
 select week, region, count(*) as orders, sum(amount) as revenue
 from orders
-where {{params.region}} is null or region = {{params.region}}
 group by week, region
 order by week, region
 ```
 
 <Tabs>
   <Tab title="Chart">
-    <ScatterChart data="region_week" x="orders" y="revenue" series="region" />
+    <ScatterChart data="region_week" x="orders" y="revenue" series="region" filters={["region"]} />
   </Tab>
   <Tab title="Table">
-    <Table data="region_week" />
+    <Table data="region_week" filters={["region"]} />
   </Tab>
 </Tabs>
 
@@ -138,12 +139,11 @@ story rather than a ticket-size story. A wider spread would put the
 average-order-value read above in question; this shape doesn't.
 
 ```sql order_amounts
-select amount
+select amount, region
 from orders
-where {{params.region}} is null or region = {{params.region}}
 ```
 
-<Histogram data="order_amounts" value="amount" />
+<Histogram data="order_amounts" value="amount" filters={["region"]} />
 
 ## Trend lines
 

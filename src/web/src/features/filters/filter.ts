@@ -1,8 +1,8 @@
 /**
- * The named-filter model, a semantic port of evidence's `Filter.svelte.ts`
- * (see `docs/slices/SL-009-filter-model.md`). The URL is the persistence
- * layer through an injected `FilterUrlPort`; the port is the only browser
- * boundary, so tests drive the model with an in-memory fake.
+ * The named-filter model, a semantic port of evidence's `Filter.svelte.ts`:
+ * the URL is the persistence layer through an injected `FilterUrlPort`, and
+ * the port is the only browser boundary, so tests drive the model with an
+ * in-memory fake.
  *
  * Value priority: URL param > `initialValue` > `setDefault` > undefined.
  * `value` is the user-interaction setter (writes the URL);

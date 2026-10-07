@@ -142,6 +142,29 @@ test("?region=Atlantis empties the KPI to – and hides the delta and sparkline"
   expect(errors).toEqual([]);
 });
 
+test("?region=West narrows the KPI through its fences' raw param surface", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review?region=West`);
+
+  // The KPI's fences still interpolate {{params.region}} — sum(amount) over
+  // the West weeks is 6100, `usd` auto-scaling to `usd0k`, with the West
+  // WoW delta and its sparkline intact.
+  const widget = kpi(page);
+  await expect(widget.locator("span.text-xl")).toHaveText("$6k", {
+    timeout: 30_000,
+  });
+  await expect(widget.locator('[data-status="positive"]')).toContainText(
+    "+15.7%",
+  );
+  await expect(widget.locator('svg[aria-label="weekly_revenue"]')).toHaveCount(
+    1,
+  );
+  expect(errors).toEqual([]);
+});
+
 const BAD_REFS = [
   {
     name: "an undeclared data name",

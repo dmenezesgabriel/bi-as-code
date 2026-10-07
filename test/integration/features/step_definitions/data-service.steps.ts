@@ -85,6 +85,22 @@ Then(
   },
 );
 
+Then(
+  "the weekly-review module's orders, region_week and order_amounts blocks carry no region param",
+  async () => {
+    const code = await pageModule("weekly-review.md");
+    // The block entry runs from its name to the sql string's closing brace;
+    // its sql is the JSON-escaped text the browser interpolates.
+    for (const name of ["orders", "region_week", "order_amounts"]) {
+      const start = code.indexOf(`{"name":"${name}"`);
+      assert.ok(start >= 0, `weekly-review must declare a ${name} block`);
+      const end = code.indexOf('"}', start);
+      assert.ok(end > start, `the ${name} block must carry a sql string`);
+      assert.doesNotMatch(code.slice(start, end), /\{\{params\.region\}\}/);
+    }
+  },
+);
+
 Then("the config module declares the channels table", async () => {
   assert.ok(server, "server must be running");
   const code = await getOk(`${server.url}${CONFIG_URL}`);

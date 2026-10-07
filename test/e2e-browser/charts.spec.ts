@@ -329,17 +329,17 @@ test("the theme toggle repaints every chart in the other palette", async ({
   expect(errors).toEqual([]);
 });
 
-test("?region=Atlantis empties the filtered fences' charts while the unfiltered trend charts stay live", async ({
+test("?region=Atlantis empties the filter-declaring charts while the unfiltered trend charts stay live", async ({
   page,
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review?region=Atlantis`);
 
-  // `orders`, `region_week` and `order_amounts` carry {{params.region}} →
-  // 0 rows → the BarChart, ScatterChart and Histogram each render their
-  // empty face at the chart's 300px. `weekly_trend` reads the raw table,
-  // so the LineChart, AreaChart and Heatmap it feeds still render.
+  // The charts whose widgets declare `filters=["region"]` — the BarChart,
+  // ScatterChart and Histogram — wrap to 0 rows and render their empty face
+  // at the chart's 300px. `weekly_trend` carries no filter, so the
+  // LineChart, AreaChart and Heatmap still render.
   const empty = page.locator("[data-chart-empty]");
   await expect(empty).toHaveCount(3, { timeout: 30_000 });
   await expect(readyCharts(page)).toHaveCount(3);
@@ -347,6 +347,33 @@ test("?region=Atlantis empties the filtered fences' charts while the unfiltered 
     await expect(face).toContainText("0 rows");
     expect((await face.boundingBox())?.height).toBe(300);
   }
+  expect(errors).toEqual([]);
+});
+
+test("?region=West narrows the filter-declaring charts while the trend charts stay whole", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review?region=West`);
+  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+
+  // Bar: the wrapped `orders` read — one region, one bar.
+  const bar = await optionAt(page, 0);
+  expect(bar.xAxis[0]?.data).toEqual(["West"]);
+  expect(bar.series[0]?.data).toHaveLength(1);
+
+  // Scatter: the wrapped `region_week` read — the 13 West weeks.
+  const scatter = await optionAt(page, 1);
+  expect(scatter.series.map((s) => s.name)).toEqual(["West"]);
+  expect(scatter.series[0]?.data).toHaveLength(13);
+
+  // Line: weekly_trend carries no filter — all three regions stay.
+  const line = await optionAt(page, 3);
+  expect(line.series.map((s) => s.name)).toEqual(["North", "South", "West"]);
+
+  const posts = await workerPosts(page);
+  expect(await workerPosts(page)).toBe(posts);
   expect(errors).toEqual([]);
 });
 
