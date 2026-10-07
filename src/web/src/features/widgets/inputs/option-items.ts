@@ -59,6 +59,23 @@ export function parseOptionsProp(options: unknown): OptionItem[] {
 }
 
 /**
+ * Author precedence between the two option sources — evidence's
+ * `combinedOptions` (children > prop > rows) minus the children we don't
+ * ship: `options`-prop entries keep their spot ahead of row-derived ones,
+ * and a duplicate `value` keeps the primary's label.
+ *
+ * @example
+ * mergeOptionItems(parseOptionsProp(options), toOptionItems(rows, "region"));
+ */
+export function mergeOptionItems(
+  primary: readonly OptionItem[],
+  secondary: readonly OptionItem[],
+): OptionItem[] {
+  const seen = new Set(primary.map((item) => item.value));
+  return [...primary, ...secondary.filter((item) => !seen.has(item.value))];
+}
+
+/**
  * Whether `value` is still a defensible selection given the known options —
  * the four-state port of evidence's `isDropdownValueValid`: a pending query,
  * an unknown option set, or an empty loaded set all keep the value (clearing

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isOptionValueValid,
+  mergeOptionItems,
   parseOptionsProp,
   titleCase,
   toOptionItems,
@@ -92,6 +93,33 @@ describe("parseOptionsProp — static options prop", () => {
         "kept",
       ]),
     ).toEqual([{ value: "kept" }]);
+  });
+});
+
+describe("mergeOptionItems — prop options take precedence over row options", () => {
+  it("concatenates when values do not overlap", () => {
+    expect(mergeOptionItems([{ value: "All" }], [{ value: "West" }])).toEqual([
+      { value: "All" },
+      { value: "West" },
+    ]);
+  });
+
+  it("keeps the primary's label on a duplicate value", () => {
+    expect(
+      mergeOptionItems(
+        [{ value: "West", label: "authored" }],
+        [{ value: "West", label: "queried" }, { value: "East" }],
+      ),
+    ).toEqual([{ value: "West", label: "authored" }, { value: "East" }]);
+  });
+
+  it("passes through when one side is empty", () => {
+    expect(mergeOptionItems([], [{ value: "West" }])).toEqual([
+      { value: "West" },
+    ]);
+    expect(mergeOptionItems([{ value: "West" }], [])).toEqual([
+      { value: "West" },
+    ]);
   });
 });
 

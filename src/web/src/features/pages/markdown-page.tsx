@@ -10,6 +10,7 @@ import { LineChart } from "../widgets/charts/line-chart";
 import { Heatmap } from "../widgets/charts/heatmap-chart";
 import { Histogram } from "../widgets/charts/histogram-chart";
 import { ScatterChart } from "../widgets/charts/scatter-chart";
+import { Dropdown } from "../widgets/inputs/dropdown";
 import { Accordion, AccordionItem } from "../widgets/markdown/accordion";
 import { Callout } from "../widgets/markdown/callout";
 import { Details } from "../widgets/markdown/details";
@@ -33,7 +34,8 @@ import { useDocumentTitle } from "./use-document-title";
  * fenced code blocks to shiki and pairs named sql fences with their query
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
- * `Heatmap`) resolve `data` against that same registry; the markdown
+ * `Heatmap`) resolve `data` against that same registry; the input widgets
+ * (`Dropdown`) write the page filters those consumers declare; the markdown
  * widgets (`Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Tab`,
  * `Accordion`, `AccordionItem`, `Row`, `Stack`) render prose chrome.
  * Kept unexported so the map doesn't trip the Fast Refresh rule
@@ -53,6 +55,7 @@ const mdxComponents: MdxComponentMap = {
   ScatterChart,
   Histogram,
   Heatmap,
+  Dropdown,
   Callout,
   Note,
   LineBreak,

@@ -13,12 +13,10 @@ import type { FilterOptions } from "../../filters/filter";
  * filters.ensure(id, { column: valueColumn, ...selectValueCodec });
  */
 export const selectValueCodec = {
-  serialize(value: string | string[] | undefined): string | undefined {
+  serialize(value: string | readonly string[] | undefined): string | undefined {
     if (value === undefined || value === "") return undefined;
-    if (Array.isArray(value)) {
-      return value.length > 0 ? JSON.stringify(value) : undefined;
-    }
-    return value;
+    if (typeof value === "string") return value;
+    return value.length > 0 ? JSON.stringify(value) : undefined;
   },
   deserialize(raw: string): string | string[] {
     if (raw.startsWith("[")) {
@@ -36,4 +34,7 @@ export const selectValueCodec = {
     }
     return raw;
   },
-} satisfies Pick<FilterOptions<string | string[]>, "serialize" | "deserialize">;
+} satisfies Pick<
+  FilterOptions<string | readonly string[]>,
+  "serialize" | "deserialize"
+>;

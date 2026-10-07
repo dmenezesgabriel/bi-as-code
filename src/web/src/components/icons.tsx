@@ -2,12 +2,15 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  LoaderCircle,
   Moon,
+  Search,
   Sun,
   type LucideProps,
 } from "lucide-react";
@@ -67,4 +70,26 @@ export function ChevronsRightIcon(props: LucideProps) {
 /** Single chevron pointing down — a disclosure trigger's open state. */
 export function ChevronDownIcon(props: LucideProps) {
   return <ChevronDown aria-hidden size={16} {...props} />;
+}
+
+/** Check mark — the selected indicator inside a `Combobox.Item`. */
+export function CheckIcon(props: LucideProps) {
+  return <Check aria-hidden size={14} {...props} />;
+}
+
+/** Magnifier — decorates the search input inside a combobox popup. */
+export function SearchIcon(props: LucideProps) {
+  return <Search aria-hidden size={14} {...props} />;
+}
+
+/** Spinning ring — a select trigger's option query is in flight. */
+export function LoaderCircleIcon(props: LucideProps) {
+  return (
+    <LoaderCircle
+      aria-hidden
+      size={14}
+      className="animate-spin [animation-duration:1s]"
+      {...props}
+    />
+  );
 }

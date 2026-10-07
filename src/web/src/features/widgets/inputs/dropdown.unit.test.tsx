@@ -1,0 +1,331 @@
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { Effect } from "effect";
+import { describe, expect, it } from "vitest";
+import { FakeDuckDb } from "../../data/fake-duckdb";
+import type { Row } from "../../data/types";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
+import type { SqlBlock } from "../../pages/types";
+import { renderWithRegistry } from "../value/registry-harness";
+import { Dropdown } from "./dropdown";
+import type { DropdownProps } from "./types";
+
+const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
+
+const REGIONS: Row[] = [
+  { region: "West", label: "West region" },
+  { region: "West", label: "dup" },
+  { region: "North", label: "North region" },
+  { region: "East", label: "East region" },
+  { region: null },
+];
+
+function fakeDb(rows: Row[] = REGIONS): FakeDuckDb {
+  const db = new FakeDuckDb();
+  db.rows = rows;
+  return db;
+}
+
+/**
+ * Renders `<Dropdown>` as a compiled page does — registry + runtime +
+ * FiltersProvider (the page mounts it unconditionally). `filters: false`
+ * drops the provider while keeping runtime+registry, exercising the
+ * degraded render; `port` is created by the test when it asserts on URL
+ * writes.
+ */
+function renderDropdown(
+  props: Partial<DropdownProps> = {},
+  {
+    db = fakeDb(),
+    blocks = [ORDERS],
+    port = new FakeFilterUrlPort(""),
+    filters = true,
+  }: {
+    db?: FakeDuckDb;
+    blocks?: SqlBlock[];
+    port?: FakeFilterUrlPort;
+    filters?: boolean;
+  } = {},
+) {
+  return renderWithRegistry(
+    <Dropdown id="region" data="orders" valueColumn="region" {...props} />,
+    { db, blocks, port: filters ? port : undefined },
+  );
+}
+
+/** Both the trigger and the popup's search input carry `role="combobox"`;
+ * the trigger is the `<button>` one. */
+function triggerEl(): HTMLElement {
+  const button = screen
+    .getAllByRole("combobox")
+    .find((el) => el.tagName === "BUTTON");
+  if (!button) throw new Error("no combobox trigger rendered");
+  return button;
+}
+
+function searchInput() {
+  return screen.findByRole("combobox", { name: "Search" });
+}
+
+async function openPopup() {
+  await waitFor(() => triggerEl());
+  fireEvent.click(triggerEl());
+}
+
+/** Opens the popup, clicks Clear, and waits for the param's deletion write. */
+async function clearViaPopup(port: FakeFilterUrlPort) {
+  await openPopup();
+  fireEvent.click(await screen.findByRole("button", { name: "Clear" }));
+  await waitFor(() =>
+    expect(port.written.at(-1)?.searchParams.has("region")).toBe(false),
+  );
+}
+
+describe("Dropdown — option source", () => {
+  it("lists distinct valueColumn values in fence order", async () => {
+    renderDropdown();
+    await openPopup();
+
+    const options = await screen.findAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([
+      "West",
+      "North",
+      "East",
+    ]);
+  });
+
+  it("shows labelColumn text in the list but the value in the URL", async () => {
+    const port = new FakeFilterUrlPort("");
+    renderDropdown({ labelColumn: "label" }, { port });
+    await openPopup();
+
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toContain("West region");
+
+    fireEvent.click(screen.getByRole("option", { name: "West region" }));
+    await waitFor(() =>
+      expect(port.written.at(-1)?.searchParams.get("region")).toBe("West"),
+    );
+  });
+
+  it("renders the options prop when data is absent", async () => {
+    renderDropdown(
+      { data: undefined, valueColumn: undefined, options: ["West", "North"] },
+      { blocks: [] },
+    );
+    await openPopup();
+
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toEqual(["West", "North"]);
+  });
+
+  it("merges options prop ahead of row options, deduped by value", async () => {
+    renderDropdown({ options: ["West", "All"] });
+    await openPopup();
+
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toEqual(["West", "All", "North", "East"]);
+  });
+
+  it("narrows the option source through the filters prop", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? [{ region: "West" }]
+        : [{ region: "West" }, { region: "North" }];
+    renderDropdown(
+      { filters: "region" },
+      { db, port: new FakeFilterUrlPort("?region=West") },
+    );
+
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select * from (select * from orders) where region = ?",
+        params: ["West"],
+      }),
+    );
+  });
+});
+
+describe("Dropdown — selection lifecycle", () => {
+  it("writes ?region=<value> on pick", async () => {
+    const port = new FakeFilterUrlPort("");
+    renderDropdown({}, { port });
+    await openPopup();
+    fireEvent.click(await screen.findByRole("option", { name: "West" }));
+
+    await waitFor(() =>
+      expect(port.written.at(-1)?.searchParams.get("region")).toBe("West"),
+    );
+  });
+
+  it("shows the URL-seeded value's label on first render", async () => {
+    renderDropdown(
+      { labelColumn: "label" },
+      { port: new FakeFilterUrlPort("?region=West") },
+    );
+
+    await waitFor(() => expect(triggerEl()).toHaveTextContent("West region"));
+  });
+
+  it("removes the param on Clear", async () => {
+    const port = new FakeFilterUrlPort("?region=West");
+    renderDropdown({}, { port });
+
+    await clearViaPopup(port);
+  });
+
+  it("hides the clear affordance on clear={false}", async () => {
+    renderDropdown(
+      { clear: false },
+      { port: new FakeFilterUrlPort("?region=West") },
+    );
+    await openPopup();
+    await screen.findAllByRole("option");
+
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+  });
+});
+
+describe("Dropdown — search", () => {
+  it("narrows options by substring over the value", async () => {
+    renderDropdown();
+    await openPopup();
+    fireEvent.change(await searchInput(), { target: { value: "no" } });
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+        "North",
+      ]),
+    );
+  });
+
+  it("matches the label, not only the value", async () => {
+    renderDropdown({ labelColumn: "label" });
+    await openPopup();
+    fireEvent.change(await searchInput(), { target: { value: "region" } });
+
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3));
+  });
+
+  it("shows the empty state when nothing matches", async () => {
+    renderDropdown();
+    await openPopup();
+    fireEvent.change(await searchInput(), { target: { value: "zzz" } });
+
+    expect(await screen.findByText("No options found")).toBeVisible();
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+  });
+
+  it("hides the search field on search={false}", async () => {
+    renderDropdown({ search: false });
+    await openPopup();
+
+    expect(await screen.findAllByRole("option")).toHaveLength(3);
+    expect(screen.queryByLabelText("Search")).toBeNull();
+  });
+});
+
+describe("Dropdown — defaults", () => {
+  it("selectFirst seeds the first option without a URL write", async () => {
+    const port = new FakeFilterUrlPort("");
+    renderDropdown({ selectFirst: true }, { port });
+
+    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+    expect(port.written).toHaveLength(0);
+  });
+
+  it("never re-seeds after the reader clears", async () => {
+    const port = new FakeFilterUrlPort("");
+    renderDropdown({ selectFirst: true }, { port });
+    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+
+    await clearViaPopup(port);
+    // The popup stays open after clear — assert the trigger by its
+    // placeholder name while the search input shares the combobox role.
+    expect(triggerEl()).not.toHaveTextContent("West");
+  });
+
+  it("seeds initialValue when the URL holds nothing", async () => {
+    const port = new FakeFilterUrlPort("");
+    renderDropdown({ initialValue: "North" }, { port });
+
+    await waitFor(() => expect(triggerEl()).toHaveTextContent("North"));
+    expect(port.written).toHaveLength(0);
+  });
+});
+
+describe("Dropdown — stale-value clearing", () => {
+  it("clears a URL value missing from the loaded option set", async () => {
+    const port = new FakeFilterUrlPort("?region=Atlantis");
+    renderDropdown({}, { port });
+
+    await waitFor(() =>
+      expect(port.written.at(-1)?.searchParams.has("region")).toBe(false),
+    );
+  });
+
+  it("keeps the URL value while the options query is pending", async () => {
+    const db = new FakeDuckDb();
+    db.queryRows = () => Effect.promise(() => new Promise<Row[]>(() => {}));
+    const port = new FakeFilterUrlPort("?region=West");
+    renderDropdown({}, { db, port });
+
+    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(port.written).toHaveLength(0);
+  });
+
+  it("keeps the URL value when options load empty", async () => {
+    const port = new FakeFilterUrlPort("?region=West");
+    renderDropdown({}, { db: fakeDb([]), port });
+
+    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+    expect(port.written).toHaveLength(0);
+  });
+});
+
+describe("Dropdown — failure and loading faces", () => {
+  it("shows an inline alert when data names no fence", async () => {
+    renderDropdown({ data: "ghost" });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("ghost");
+    expect(alert).toHaveTextContent("no sql fence");
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  it("shows an inline alert naming the failing query", async () => {
+    const db = new FakeDuckDb();
+    db.failWhen = () => "Catalog Error: boom";
+    renderDropdown({}, { db });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("orders");
+    expect(alert).toHaveTextContent("boom");
+  });
+
+  it("shows an inline alert when data is set without valueColumn", async () => {
+    renderDropdown({ valueColumn: undefined });
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("valueColumn");
+    expect(alert).toHaveTextContent("region");
+  });
+
+  it("disables the trigger while the option query is in flight", async () => {
+    const db = new FakeDuckDb();
+    db.queryRows = () => Effect.promise(() => new Promise<Row[]>(() => {}));
+    renderDropdown({}, { db });
+
+    await waitFor(() => expect(triggerEl()).toBeDisabled());
+  });
+
+  it("degrades to disabled without a FiltersProvider", async () => {
+    renderDropdown({}, { filters: false });
+
+    await waitFor(() => expect(triggerEl()).toBeDisabled());
+  });
+});

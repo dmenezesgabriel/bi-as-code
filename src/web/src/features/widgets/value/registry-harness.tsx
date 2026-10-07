@@ -13,13 +13,15 @@ import type { SqlBlock } from "../../pages/types";
  * Mounts a widget exactly as a compiled page does — inside the page's
  * `QueryRegistryProvider` over a `FakeDuckDb` runtime — so a test asserts on
  * the `data`-name binding contract rather than seeded props.
- * `provider: false` renders bare, exercising the no-registry path. `url` seeds
- * a page filter through a `FiltersProvider` wrapping the registry (the page's
- * own nesting) — for tests of the `filters` widget prop. Returns the fake for
- * assertions on `queries`/`registered`.
+ * `provider: false` renders bare, exercising the no-registry path. `url` or
+ * `port` mounts a `FiltersProvider` wrapping the registry (the page's own
+ * nesting) — `url` seeds a page filter for the `filters` prop, while `port`
+ * hands the test the `FakeFilterUrlPort` instance it created for assertions
+ * on `written`. Returns the fake for assertions on `queries`/`registered`.
  *
  * @example
  * renderWithRegistry(<Value data="kpi" />, { db: FakeDuckDb.withRows(rows), blocks: [KPI] });
+ * renderWithRegistry(<Dropdown id="region" options={[]} />, { blocks: [], port: new FakeFilterUrlPort() });
  */
 export function renderWithRegistry(
   element: ReactElement,
@@ -28,11 +30,13 @@ export function renderWithRegistry(
     blocks,
     provider = true,
     url,
+    port,
   }: {
     db?: FakeDuckDb;
     blocks: readonly SqlBlock[];
     provider?: boolean;
     url?: string;
+    port?: FakeFilterUrlPort;
   },
 ): FakeDuckDb {
   const registry = (
@@ -40,15 +44,15 @@ export function renderWithRegistry(
       {element}
     </QueryRegistryProvider>
   );
+  const filtersPort =
+    port ?? (url === undefined ? undefined : new FakeFilterUrlPort(url));
   render(
     provider ? (
       <DataRuntimeProvider layer={Layer.succeed(DuckDb, db)}>
-        {url === undefined ? (
+        {filtersPort === undefined ? (
           registry
         ) : (
-          <FiltersProvider port={new FakeFilterUrlPort(url)}>
-            {registry}
-          </FiltersProvider>
+          <FiltersProvider port={filtersPort}>{registry}</FiltersProvider>
         )}
       </DataRuntimeProvider>
     ) : (
