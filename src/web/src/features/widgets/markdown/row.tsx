@@ -7,6 +7,12 @@ import type { RowAlign, RowProps } from "./types";
 // ResizeObserver grow-fix exists only for a per-child `width` prop we
 // don't ship, so equal `flex-1` shares need no fix-up. `h-auto` mirrors
 // its `*:h-auto` — keeps a child carrying `h-full` from pinning the line.
+// The basis is measured, not ported: at 1280px the article is ~688px
+// (sidebar + ToC rail), so thirds need a basis ≤ ~218px — 192px keeps
+// three-up down to a 608px article. No single basis can also force
+// one-per-line at phone widths (two 192px cells still fit a 452px
+// article), so phone-class viewports stack full-width instead —
+// streamlit's fixed wrap breakpoint (layouts.py `columns` ≤640px).
 const ROW_ALIGN: Record<RowAlign, string> = {
   top: "items-start",
   center: "items-center",
@@ -16,10 +22,11 @@ const ROW_ALIGN: Record<RowAlign, string> = {
 
 /**
  * The `<Row>` MDX widget — children share each line equally (`flex-1` on a
- * `basis-72`, so lines wrap under ~288px per child) and `min-w-0` lets
- * them shrink past their content width instead of overflowing. `align`
- * sets the vertical alignment inside the line (default `stretch`); a
- * value outside the four names renders an inline alert.
+ * `basis-48`, so lines wrap under ~192px per child) and `min-w-0` lets
+ * them shrink past their content width instead of overflowing; on
+ * phone-class viewports children stack full-width. `align` sets the
+ * vertical alignment inside the line (default `stretch`); a value
+ * outside the four names renders an inline alert.
  *
  * @example
  * <Row><BigValue data="kpi" column="revenue" /><BigValue data="kpi" column="orders" /></Row>
@@ -37,7 +44,7 @@ export function Row({ align = "stretch", children }: RowProps): ReactElement {
   return (
     <div
       className={cn(
-        "flex flex-wrap gap-4 [&>*]:h-auto [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-72",
+        "flex flex-wrap gap-4 [&>*]:h-auto [&>*]:min-w-0 [&>*]:flex-1 [&>*]:basis-48 max-md:[&>*]:basis-full",
         alignClass,
       )}
     >

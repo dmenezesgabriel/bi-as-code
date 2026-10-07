@@ -92,17 +92,18 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
 
   const results = resultTables(page);
   // Live tables in document order: kpi, orders, region_share, region_week,
-  // order_amounts, weekly_trend (fence), weekly_revenue, then the <Table>
-  // widget in Quarter detail. The fence result renders the shared table
-  // core: 39 rows paginate at pageSize 10, so the DOM holds the first
-  // page plus the pager caption.
-  await expect(results.nth(5).getByRole("row")).toHaveCount(11, {
+  // the <Table> widget in the Order-mix tabs, order_amounts, weekly_trend
+  // (fence), weekly_revenue, then the <Table> widget in Quarter detail.
+  // The fence result renders the shared table core: 39 rows paginate at
+  // pageSize 10, so the DOM holds the first page plus the pager caption.
+  await expect(results.nth(6).getByRole("row")).toHaveCount(11, {
     timeout: 30_000,
   });
-  // The caption appears three times: the weekly_trend fence's own result,
-  // the `<Table data="weekly_trend" />` widget in Quarter detail, and the
-  // region_week fence — also 39 rows — all rendering the same core.
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(3);
+  // The caption appears four times: the region_week fence, the tab
+  // <Table data="region_week" /> of the same fence, the weekly_trend
+  // fence's own result, and the <Table data="weekly_trend" /> widget in
+  // Quarter detail — all rendering the same 39-row core.
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
   // orders (region rollup) and region_share ({{orders}} + pct_of_total).
   await expect(results.nth(1).getByRole("row")).toHaveCount(4);
   await expect(results.nth(2).getByRole("row")).toHaveCount(4);
@@ -119,7 +120,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   // Deterministic order by week, region — week 1 opens North/South/West.
   expect(
     await results
-      .nth(5)
+      .nth(6)
       .locator("tbody tr")
       .first()
       .locator("td")

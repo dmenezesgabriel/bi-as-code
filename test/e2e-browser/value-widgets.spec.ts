@@ -12,11 +12,13 @@ import {
 /**
  * The `<BigValue>` root — a `span.block` containing the `text-xl` value
  * span; the title and delta rows are sibling `span.block`s without one.
+ * Scoped to the Revenue KPI: the Overview `<Row>` holds three BigValues.
  */
 function kpi(page: Page) {
   return page
     .locator("span.block")
-    .filter({ has: page.locator("span.text-xl") });
+    .filter({ has: page.locator("span.text-xl") })
+    .filter({ has: page.getByText("Quarter revenue", { exact: true }) });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -56,9 +58,9 @@ test("weekly-review's <BigValue> renders title, $15k scalar, green delta, 13-poi
     /^M [\d.]+ [\d.]+( L [\d.]+ [\d.]+){12}$/,
   );
 
-  // Seven named fences each render a result table; the <Table> widget in
-  // Quarter detail is the eighth live table.
-  await expect(resultTables(page)).toHaveCount(8);
+  // Seven named fences each render a result table; the <Table> widgets in
+  // the Order-mix tabs and Quarter detail make nine live tables.
+  await expect(resultTables(page)).toHaveCount(9);
 
   // Rendering is registry reads — nothing posts to the duckdb worker
   // after the results settle.

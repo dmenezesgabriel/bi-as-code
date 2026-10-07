@@ -123,8 +123,8 @@ A page author composes prose and data widgets inside eight new tags — `<Callou
 
 ## Open decisions
 
-- **Row wrap basis** — `basis-72` (288px, ≈ evidence's ~300px per-component `minWidth`) is the default; T5 measures wrap behavior at 1280px and ~500px on the demo page and adjusts if it reads wrong.
-- **`keepMounted` chart repaint** — T3 verifies a mounted-but-hidden chart repaints at real size on tab reveal (the `echart.tsx` ResizeObserver should fire); if it doesn't, panels flip to lazy mount.
+- **Row wrap basis** — resolved by T6's measurement: at 1280px the article is ~688px (sidebar + ToC rail), so `basis-72` wraps to 2+1 and no single basis also stacks one-per-line at ~452px. Shipped as `basis-48` (thirds hold down to a 608px article) + `max-md:[&>*]:basis-full` phone-class stack — streamlit's fixed wrap breakpoint.
+- **`keepMounted` chart repaint** — T3 verified a mounted-but-hidden chart repaints at real size on tab reveal (the `echart.tsx` ResizeObserver fires); panels stay `keepMounted`.
 - **`<LineBreak>` markup** — evidence renders `lines` × `<br/>` inline; adopt verbatim unless the demo shows block-level spacing reads better.
 - **`fullWidth`/`variant` keep-set** — both are cheap class maps adopted for evidence fidelity; review at T3/T4 can drop them before the slice ships (post-ship removal is a break).
 
@@ -145,7 +145,7 @@ A page author composes prose and data widgets inside eight new tags — `<Callou
 - [x] T3 — `<Tabs>`/`<Tab>`: `components/tabs.tsx` wrap (Root/List/Tab/Indicator/Panel); `tabs.tsx` prop inspection via `Children.toArray` (whitespace-only text children skipped; non-`Tab` child or missing `title` → `WidgetError`; `default` picks initial panel, multiple `default`s → `WidgetError`); `variant` default|well + `fullWidth` class maps (evidence `tv()` → plain objects); `Tabs.Panel keepMounted`; index-string `value`s; `overflow-x-auto` on the list. Unit tests + stories with play-function tab clicks; verify hidden-chart repaint (open decision above).
 - [x] T4 — `<Accordion>`/`<AccordionItem>`: `components/accordion.tsx` wrap (Root/Item/Header/Trigger/Panel); `accordion.tsx` same inspection contract (`title` required per item); `single` → `multiple={!single}`; item `open` → `defaultValue`; `variant` default|well|card class map; `hiddenUntilFound` on Root; chevron in triggers. Unit tests + stories.
 - [x] T5 — `<Row>`/`<Stack>`: `row.tsx` (`flex flex-wrap` + `[&>*]:flex-1 [&>*]:basis-72 [&>*]:min-w-0`, `align` top/center/bottom/stretch → `items-start/center/end/stretch`) and `stack.tsx` (`flex flex-col`, `align` left/center/right/stretch → `items-start/center/end/stretch`); registration. Unit tests (class assertions) + stories (content mix, narrow container wrap).
-- [ ] T6 — example project + demo: the `pages/weekly-review.md` additions from the Demo script; `test/e2e-browser/markdown-widgets.spec.ts` (callout presence/type classes, details toggle + `aria-expanded`, tablist click + arrow-key nav + `aria-selected`, accordion `single` behavior, Row wrap measurement at 1280→500px, console clean via `dev-server.fixture.ts`); headless `playwright-cli` pass with the §5 measurements; backlog + PRD bookkeeping.
+- [x] T6 — example project + demo: the `pages/weekly-review.md` additions from the Demo script; `test/e2e-browser/markdown-widgets.spec.ts` (callout presence/type classes, details toggle + `aria-expanded`, tablist click + arrow-key nav + `aria-selected`, accordion `single` behavior, Row wrap measurement at 1280→500px, console clean via `dev-server.fixture.ts`); headless `playwright-cli` pass with the §5 measurements; backlog + PRD bookkeeping.
 
 ## Out of scope
 

@@ -28,8 +28,20 @@ describe("Row", () => {
 
     const row = screen.getByText("first").parentElement!;
     expect(row.className).toContain("[&>*]:flex-1");
-    expect(row.className).toContain("[&>*]:basis-72");
+    expect(row.className).toContain("[&>*]:basis-48");
     expect(row.className).toContain("[&>*]:min-w-0");
+  });
+
+  it("stacks children full-width on phone-class viewports", () => {
+    render(
+      <Row>
+        <p>first</p>
+      </Row>,
+    );
+
+    expect(screen.getByText("first").parentElement!.className).toContain(
+      "max-md:[&>*]:basis-full",
+    );
   });
 
   it("defaults to stretch alignment", () => {

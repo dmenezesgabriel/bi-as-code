@@ -79,7 +79,7 @@ export const AlignCenter: Story = {
   },
 };
 
-/** A container narrower than two `basis-72` children wraps the second to
+/** A container narrower than two `basis-48` children wraps the second to
  * its own full-width line. */
 export const NarrowWraps: Story = {
   decorators: [

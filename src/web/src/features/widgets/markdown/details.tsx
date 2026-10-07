@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { useState } from "react";
 import { Collapsible } from "../../../components/collapsible";
 import { ChevronDownIcon } from "../../../components/icons";
 import { useMediaQuery } from "../../chrome/use-media-query";
@@ -28,10 +29,16 @@ export function Details({
   children,
 }: DetailsProps): ReactElement {
   const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY);
+  // Frozen at the first render: base-ui warns when an uncontrolled
+  // Collapsible sees its defaultOpen change after init, and the
+  // mount-time resolution semantic means a later breakpoint crossing
+  // must not touch it anyway.
+  const [defaultOpen] = useState(
+    () => (isMobile ? (openMobile ?? open) : open) ?? false,
+  );
   if (title === undefined || title === "") {
     return <WidgetError name="Details" message='requires a "title" prop' />;
   }
-  const defaultOpen = (isMobile ? (openMobile ?? open) : open) ?? false;
   return (
     <Collapsible.Root defaultOpen={defaultOpen} className="flex flex-col">
       <Collapsible.Trigger className="group flex max-w-full cursor-pointer items-center gap-0.5 text-left text-sm text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100">

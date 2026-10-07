@@ -10,9 +10,23 @@ A standing read on the trading week: what moved, where it moved, and what
 to watch next. Figures below come from the `orders` data set shared with
 the [orders overview](/).
 
+<Callout type="info" title="Reading guide">
+Every figure on this page re-runs live against the `orders` table — the
+`?region=` URL parameter scopes every query that declares it.
+</Callout>
+
 ## Overview
 
-<BigValue data="kpi" column="revenue" title="Quarter revenue" fmt="usd" delta="wow_pct" deltaFmt="pct1" text="last week vs. prior" sparkline="weekly_revenue" />
+<Row>
+  <BigValue data="kpi" column="revenue" title="Quarter revenue" fmt="usd" delta="wow_pct" deltaFmt="pct1" text="last week vs. prior" sparkline="weekly_revenue" />
+  <BigValue data="kpi" column="orders" title="Quarter orders" />
+  <BigValue data="kpi" column="wow_pct" title="Revenue WoW" fmt="pct1" />
+</Row>
+
+<Note>Figures cover the 13-week trading quarter; the delta compares the
+final week with the one before it.</Note>
+
+<LineBreak lines={2} />
 
 Quarter revenue closed at <Value data="kpi" column="revenue" fmt="usd" />,
 up <Delta data="kpi" column="wow_pct" fmt="pct1" text="WoW" /> on the prior
@@ -40,6 +54,21 @@ select
 from orders
 where {{params.region}} is null or region = {{params.region}}
 ```
+
+<Details title="Metric definitions">
+- **Revenue** — `sum(amount)` over the quarter.
+- **Order volume** — count of booked orders.
+- **Revenue WoW** — the final week against the one before it, signed.
+</Details>
+
+<Details title="How the region filter works" open>
+The `?region=` URL parameter feeds `{{params.region}}` in the fences that
+declare it; fences without the parameter keep their full-quarter read.
+</Details>
+
+<Details title="Mobile summary" openMobile>
+Revenue is up roughly 10% week over week on volume, led by the West.
+</Details>
 
 ## Regional split
 
@@ -71,9 +100,11 @@ from {{orders}}
 order by orders desc
 ```
 
-The concentration risk is real: the top five accounts drove 38% of weekly
-revenue, all of them in the West and North. A quiet week for even one of
-them shows up directly in the trend lines below.
+<Callout type="warning" title="Concentration risk">
+The top five accounts drove 38% of weekly revenue, all of them in the
+West and North. A quiet week for even one of them shows up directly in
+the trend lines below.
+</Callout>
 
 ## Order mix
 
@@ -90,7 +121,14 @@ group by week, region
 order by week, region
 ```
 
-<ScatterChart data="region_week" x="orders" y="revenue" series="region" />
+<Tabs>
+  <Tab title="Chart">
+    <ScatterChart data="region_week" x="orders" y="revenue" series="region" />
+  </Tab>
+  <Tab title="Table">
+    <Table data="region_week" />
+  </Tab>
+</Tabs>
 
 ## Order size
 
@@ -165,6 +203,17 @@ reading part of a pattern rather than noise.
 - Marketplace allocation holds at ~32%; no action needed this week.
 - Returns stayed inside the normal band, so the lift is clean.
 
+<Row>
+  <Stack>
+    <Value data="kpi" column="revenue" fmt="usd" />
+    <Note>quarter revenue, all regions</Note>
+  </Stack>
+  <Callout type="success" title="Clean lift">
+    Returns and cancellations stayed inside their normal band — the
+    week's growth is not being bought at the cost of order quality.
+  </Callout>
+</Row>
+
 The watch list for next week's review is short and specific:
 
 | Watch item             | Region | Trigger to act             |
@@ -178,3 +227,26 @@ continuation — same shape, updated numbers. If the South stalls again, it
 graduates from watch item to its own section. Next week's review re-runs
 the same sections against fresh data — the page edits itself once
 `orders` updates.
+
+<Accordion single>
+  <AccordionItem title="Methodology">
+    Figures aggregate the `orders` table over the 13-week quarter.
+    Week over week compares the final week with the one before it; the
+    regional split ranks regions by revenue.
+  </AccordionItem>
+  <AccordionItem title="Data quality">
+    Returns and cancellations stayed inside their normal band, and the
+    `orders` extract carries no late-arriving adjustments this week.
+  </AccordionItem>
+</Accordion>
+
+<Accordion>
+  <AccordionItem title="Change log">
+    This week: markdown layout widgets across the page. Last week:
+    scatter, histogram and heatmap views.
+  </AccordionItem>
+  <AccordionItem title="Sources">
+    `data/orders.parquet` — the shared orders extract behind the
+    [orders overview](/).
+  </AccordionItem>
+</Accordion>
