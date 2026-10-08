@@ -138,7 +138,7 @@ Files to open per repo, grouped by concern — read the real code, don't take th
 
 One TDD unit each, one conventional commit each.
 
-- [ ] T1 — `FilterOptions.predicate` builder + `column: false` opt-out in `filter.ts`; unit tests in `filter.unit.test.ts`/`filters.unit.test.ts`; no UI.
+- [x] T1 — `FilterOptions.predicate` builder + `column: false` opt-out in `filter.ts`; unit tests in `filter.unit.test.ts`/`filters.unit.test.ts`; no UI.
 - [ ] T2 — `<Slider>`: `components/slider.tsx` base-ui wrap; `features/widgets/inputs/slider.tsx` + range codec (`"a - b"`/single number); `data`+`valueColumn` bounds via `useFilteredQueryRows` (fallback static `min`/`max`/`step`); `range` mode; `filters` cascade; clamp held value into bounds; `>=`/`BETWEEN` predicate via T1; `select-fields`-style label/`WidgetError` states. Stories + unit tests.
 - [ ] T3 — `<ButtonGroup>`: `components/toggle-group.tsx` wrap; `button-group.tsx` reusing `option-items`/`selectValueCodec`/`selectFirst`/`multiple`/`filters`; `=`/`IN` predicate unchanged. Stories + unit tests.
 - [ ] T4 — `<TextInput>` + `<Toggle>`: `components/input.tsx` + `components/switch.tsx` wraps; `text-input.tsx` (debounced commit, `placeholder`, `title`, `initialValue`, `column: false`), `toggle.tsx` (`label`, `invert`, `initialValue`, `column: false`); consumption demo via `{{params.id}}`. Stories + unit tests.
