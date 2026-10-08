@@ -12,10 +12,16 @@
  * narrative: North leads the first six weeks, West overtakes at week 7 and
  * carries the week's lift; South stays flat (7 for the last three weeks).
  *
+ * `order_date` anchors the quarter to the generation week — week 13 ends on
+ * the most recent Sunday — so the <DateRange> presets (`last 7 days`,
+ * `last 30 days`, `month to date`) always hit fresh rows in the demo, and a
+ * regen inside the same week emits an identical file. The committed CSV is
+ * a snapshot: regenerate to re-anchor the window.
+ *
  * Run from the repo root: `pnpm --filter biac-web generate:data`.
  */
 
-import { writeFileSync } from "node:fs";
+import { rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,8 +74,24 @@ function spreadAmounts(count, revenue) {
   );
 }
 
+/** Local-date `YYYY-MM-DD` — `toISOString` would shift a day across zones. */
+function toIso(date) {
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${m}-${d}`;
+}
+
+/** The most recent Sunday (today included) — the 13-week quarter's close. */
+function quarterEnd() {
+  const today = new Date();
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  end.setDate(end.getDate() - end.getDay());
+  return end;
+}
+
 function orderRows() {
   const rows = [];
+  const end = quarterEnd();
   for (const region of REGIONS) {
     if (region.weekly.length !== WEEKS) {
       throw new Error(
@@ -79,9 +101,16 @@ function orderRows() {
     const amounts = spreadAmounts(total(region.weekly), region.revenue);
     let i = 0;
     region.weekly.forEach((count, week) => {
+      // The week's orders spread Mon–Sun ending (WEEKS - w) weeks before the
+      // quarter close — `floor(n * 7 / count)` spreads evenly over the week.
+      const weekStart = new Date(end);
+      weekStart.setDate(end.getDate() - (WEEKS - 1 - week) * 7 - 6);
       for (let n = 0; n < count; n++) {
+        const orderDate = new Date(weekStart);
+        orderDate.setDate(weekStart.getDate() + Math.floor((n * 7) / count));
         rows.push({
           week: week + 1,
+          order_date: toIso(orderDate),
           region: region.name,
           amount: amounts[i++],
         });
@@ -95,9 +124,10 @@ function orderRows() {
 
 function toCsv(rows) {
   const lines = rows.map(
-    (row) => `${row.order_id},${row.week},${row.region},${row.amount}`,
+    (row) =>
+      `${row.order_id},${row.week},${row.order_date},${row.region},${row.amount}`,
   );
-  return `order_id,week,region,amount\n${lines.join("\n")}\n`;
+  return `order_id,week,order_date,region,amount\n${lines.join("\n")}\n`;
 }
 
 /**
@@ -133,7 +163,11 @@ async function writeParquet(csvPath, parquetPath) {
 
 const csvPath = join(dataDir, "orders.csv");
 writeFileSync(csvPath, toCsv(orderRows()));
-await writeParquet(csvPath, join(dataDir, "orders.parquet"));
+const parquetPath = join(dataDir, "orders.parquet");
+// duckdb-wasm's fs bridge leaves a `tmp_` sibling instead of replacing an
+// existing copy target — delete it so the write lands on the real path.
+rmSync(parquetPath, { force: true });
+await writeParquet(csvPath, parquetPath);
 console.log(
   `data/orders.csv: ${total(REGIONS.map((r) => total(r.weekly)))} orders; data/orders.parquet written`,
 );

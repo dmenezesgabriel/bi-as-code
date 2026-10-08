@@ -92,11 +92,12 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
 
   const results = resultTables(page);
   // Live tables in document order: kpi, orders, region_share, region_week,
-  // the <Table> widget in the Order-mix tabs, order_amounts, weekly_trend
-  // (fence), weekly_revenue, then the <Table> widget in Quarter detail.
+  // the <Table> widget in the Order-mix tabs, order_amounts, order_detail
+  // (fence), the order_detail <Table> widget, weekly_trend (fence),
+  // weekly_revenue, then the <Table> widget in Quarter detail.
   // The fence result renders the shared table core: 39 rows paginate at
   // pageSize 10, so the DOM holds the first page plus the pager caption.
-  await expect(results.nth(6).getByRole("row")).toHaveCount(11, {
+  await expect(results.nth(8).getByRole("row")).toHaveCount(11, {
     timeout: 30_000,
   });
   // The caption appears four times: the region_week fence, the tab
@@ -120,7 +121,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   // Deterministic order by week, region — week 1 opens North/South/West.
   expect(
     await results
-      .nth(6)
+      .nth(8)
       .locator("tbody tr")
       .first()
       .locator("td")

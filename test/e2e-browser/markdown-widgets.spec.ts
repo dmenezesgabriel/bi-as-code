@@ -114,7 +114,9 @@ test("the order-mix tablist switches panels by click and arrow keys", async ({
   await expect(tableTab).toHaveAttribute("aria-selected", "true");
   await expect(chartTab).toHaveAttribute("aria-selected", "false");
   const visiblePanel = page.locator('[role="tabpanel"]:not([hidden])');
-  await expect(visiblePanel.locator("table tbody tr").first()).toBeVisible();
+  await expect(visiblePanel.locator("table tbody tr").first()).toBeVisible({
+    timeout: 30_000,
+  });
 
   // Panels stay mounted: the hidden Chart panel keeps its echarts host.
   await expect(

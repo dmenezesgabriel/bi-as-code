@@ -12,13 +12,22 @@ the [orders overview](/).
 
 <Callout type="info" title="Reading guide">
 Every figure on this page re-runs live against the `orders` table — the
-`?region=` URL parameter scopes the widgets that declare `filters` and
-the queries that interpolate it.
+`?region=`, `?amount=`, `?ordered=`, `?q=` and `?large_orders=` URL
+parameters scope the widgets that declare `filters` and the queries that
+interpolate them.
 </Callout>
 
 <Dropdown id="region" data="orders" valueColumn="region" title="Region" />
 
 ## Overview
+
+<Slider id="amount" data="order_amounts" valueColumn="amount" range title="Amount" filters={["region"]} />
+
+<DateRange id="ordered" valueColumn="order_date" title="Ordered" />
+
+<TextInput id="q" title="Search regions" placeholder="e.g. West" />
+
+<Toggle id="large_orders" label="Large orders only" />
 
 <Row>
   <BigValue data="kpi" column="revenue" title="Quarter revenue" fmt="usd" delta="wow_pct" deltaFmt="pct1" text="last week vs. prior" sparkline="weekly_revenue" />
@@ -141,11 +150,27 @@ story rather than a ticket-size story. A wider spread would put the
 average-order-value read above in question; this shape doesn't.
 
 ```sql order_amounts
-select amount, region
+-- varchar: the result table would render the raw DATE as epoch ms
+select order_date::varchar as order_date, amount, region
 from orders
 ```
 
-<Histogram data="order_amounts" value="amount" filters={["region"]} />
+<Histogram data="order_amounts" value="amount" filters={["region", "amount", "ordered"]} />
+
+The same distribution at order grain — the fence's own preview below
+stays unfiltered; the `<Table>` narrows on every input above: the region
+pick, the amount range and the ordered window through `filters`, `q`
+over the region name and the large-orders switch (`amount >= 44`)
+through the fence's own `{{params.*}}` clauses.
+
+```sql order_detail
+select order_id, order_date::varchar as order_date, region, amount
+from orders
+where ({{params.q}} is null or region ilike '%' || {{params.q}} || '%')
+  and ({{params.large_orders}} is distinct from 'true' or amount >= 44)
+```
+
+<Table data="order_detail" filters={["region", "amount", "ordered"]} />
 
 ## Trend lines
 

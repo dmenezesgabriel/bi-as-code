@@ -116,6 +116,49 @@ Then(
 );
 
 Then(
+  "the weekly-review module renders the amount, ordered, q and large_orders inputs",
+  async () => {
+    const code = await pageModule("weekly-review.md");
+    assert.match(
+      code,
+      /_jsx\(Slider, \{\s*id: "amount",\s*data: "order_amounts",\s*valueColumn: "amount",\s*range: true/,
+    );
+    assert.match(
+      code,
+      /_jsx\(DateRange, \{\s*id: "ordered",\s*valueColumn: "order_date"/,
+    );
+    assert.match(code, /_jsx\(TextInput, \{\s*id: "q"/);
+    assert.match(code, /_jsx\(Toggle, \{\s*id: "large_orders"/);
+  },
+);
+
+Then(
+  "the weekly-review module's order_detail block interpolates the q and large_orders params",
+  async () => {
+    const code = await pageModule("weekly-review.md");
+    const start = code.indexOf('{"name":"order_detail"');
+    assert.ok(start >= 0, "weekly-review must declare an order_detail block");
+    const end = code.indexOf('"}', start);
+    assert.ok(end > start, "the order_detail block must carry a sql string");
+    const block = code.slice(start, end);
+    assert.match(block, /\{\{params\.q\}\}/);
+    assert.match(block, /\{\{params\.large_orders\}\}/);
+  },
+);
+
+Then(
+  "the allocation module renders a ButtonGroup bound to the channel filter",
+  async () => {
+    const code = await pageModule("nested/allocation.md");
+    assert.match(code, /if \(!ButtonGroup\) _missingMdxReference/);
+    assert.match(
+      code,
+      /_jsx\(ButtonGroup, \{\s*id: "channel",\s*data: "channel_mix",\s*valueColumn: "channel"/,
+    );
+  },
+);
+
+Then(
   "the allocation module renders a MultiSelect and a channel-filtered Table",
   async () => {
     const code = await pageModule("nested/allocation.md");

@@ -20,9 +20,12 @@ from channels
 order by orders desc
 ```
 
+<ButtonGroup id="channel" data="channel_mix" valueColumn="channel" title="Channel" multiple />
+
 <MultiSelect id="channel" data="channel_mix" valueColumn="channel" title="Channel" />
 
 <Table data="channel_mix" filters="channel" />
 
-Channel mix is stable week over week; marketplace volume peaks on
-weekends. [Back to the region detail](/nested/page).
+The button group and the multi-select share the `?channel=` filter — picks
+stay in sync either way. Channel mix is stable week over week; marketplace
+volume peaks on weekends. [Back to the region detail](/nested/page).

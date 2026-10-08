@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import {
   collectConsoleErrors,
@@ -144,5 +146,186 @@ test("picking channels in the multi-select chips the field, filters the table an
   ).toBeVisible();
   await expect(resultTables(page).nth(1).getByRole("row")).toHaveCount(3);
   expect(urlParam(page, "channel")).toBe('["Direct","Marketplace"]');
+  expect(errors).toEqual([]);
+});
+
+/**
+ * The two live tables over `order_detail`, in DOM order: `nth(0)` is the
+ * sql fence's own preview (the registry's raw result — `{{params.*}}`
+ * interpolations reach it, `filters` predicates never do), `nth(1)` the
+ * `<Table>` widget (both). Both render the same `div.py-2` shell, so the
+ * widget root — the scroll container's parent — is what carries the pager.
+ */
+function orderDetailTables(page: Page): Locator {
+  return page
+    .locator("div.overflow-x-auto", {
+      has: page.getByRole("columnheader", { name: "order_id" }),
+    })
+    .locator("..");
+}
+
+/**
+ * The `order_date` column of the shipped fixture, read back rather than
+ * hardcoded: the generator anchors the quarter to the regen week, so
+ * absolute-range assertions derive their window from the data itself.
+ */
+function readOrderDates(projectDir: string): string[] {
+  const csv = readFileSync(join(projectDir, "data/orders.csv"), "utf8");
+  const lines = csv.trim().split("\n");
+  const column = lines[0]!.split(",").indexOf("order_date");
+  return lines.slice(1).map((line) => line.split(",")[column]!);
+}
+
+/** Local-date ISO arithmetic — the same form `type="date"` fields hold. */
+function addDaysIso(iso: string, days: number): string {
+  const date = new Date(`${iso}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${m}-${d}`;
+}
+
+test("the Amount slider writes a range param and narrows order_detail", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  // Bounds derive from order_amounts (38..44); the seed sits at both ends.
+  const minimum = page.getByRole("slider", { name: "Minimum" });
+  await expect(minimum).toBeEnabled({ timeout: 30_000 });
+  await expect(minimum).toHaveAttribute("aria-valuenow", "38");
+
+  await minimum.press("ArrowRight");
+  expect(urlParam(page, "amount")).toBe("39 - 44");
+  // 39..44 keeps South's 39s, all North 40s and all West — 350 of 355 in
+  // the widget; the fence's own preview stays raw (no `filters` on it).
+  const tables = orderDetailTables(page);
+  await expect(tables.nth(1)).toContainText("· 350 rows");
+  await expect(tables.nth(0)).toContainText("· 355 rows");
+
+  await page.reload();
+  await expect(page.getByRole("slider", { name: "Minimum" })).toHaveAttribute(
+    "aria-valuenow",
+    "39",
+    { timeout: 30_000 },
+  );
+  expect(urlParam(page, "amount")).toBe("39 - 44");
+  expect(errors).toEqual([]);
+});
+
+test("the Ordered date range persists the expression and narrows order_detail", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  // A preset writes its rolling expression; the reload re-rolls the window
+  // rather than pinning dates, so only the param, the label and the widget
+  // narrowing (any delta from the raw 355) assert here.
+  await page.locator("#ordered").click();
+  await page.getByRole("button", { name: "Last 30 Days" }).click();
+  await expect.poll(() => urlParam(page, "ordered")).toBe("last 30 days");
+  const tables = orderDetailTables(page);
+  await expect(tables.nth(0)).toContainText("· 355 rows");
+  await expect(tables.nth(1)).not.toContainText("· 355 rows");
+
+  await page.reload();
+  await expect(page.locator("#ordered")).toContainText("Last 30 Days", {
+    timeout: 30_000,
+  });
+  expect(urlParam(page, "ordered")).toBe("last 30 days");
+
+  // An absolute range over the fixture's own dates narrows the table —
+  // derived from the CSV so the assert never depends on fixture freshness.
+  const dates = readOrderDates(biacDev.projectDir);
+  const end = dates.reduce((a, b) => (a > b ? a : b));
+  const start = addDaysIso(end, -27);
+  const expected = dates.filter((d) => d >= start && d <= end).length;
+
+  await page.locator("#ordered").click();
+  await page.getByLabel("Start date").fill(start);
+  await page.getByLabel("End date").fill(end);
+  await expect.poll(() => urlParam(page, "ordered")).toBe(`${start} to ${end}`);
+  await expect(tables.nth(1)).toContainText(`· ${expected} rows`);
+  await expect(tables.nth(0)).toContainText("· 355 rows");
+  expect(errors).toEqual([]);
+});
+
+test("the q text input and large_orders toggle re-query order_detail", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const q = page.getByLabel("Search regions");
+  await expect(q).toBeEnabled({ timeout: 30_000 });
+  await q.fill("west");
+  // The commit lands after ~300ms of quiet — poll past the debounce. The
+  // `{{params.q}}` interpolation narrows the fence itself, so the preview
+  // and the widget agree row for row.
+  await expect.poll(() => urlParam(page, "q")).toBe("west");
+  const tables = orderDetailTables(page);
+  await expect(tables.nth(0)).toContainText("· 140 rows");
+  await expect(tables.nth(1)).toContainText("· 140 rows");
+
+  // The label activates the switch's hidden checkbox natively.
+  await page.locator("label[for='large_orders-face']").click();
+  await expect.poll(() => urlParam(page, "large_orders")).toBe("true");
+  // q=west ∩ amount >= 44 — West's 80 top-bracket orders.
+  await expect(tables.nth(0)).toContainText("· 80 rows");
+  await expect(tables.nth(1)).toContainText("· 80 rows");
+
+  await page.reload();
+  await expect(page.getByLabel("Search regions")).toHaveValue("west", {
+    timeout: 30_000,
+  });
+  // The label names both the switch face and its hidden checkbox input —
+  // the role locator pins the one carrying the checked face.
+  await expect(
+    page.getByRole("switch", { name: "Large orders only" }),
+  ).toBeChecked();
+  await expect(tables.nth(1)).toContainText("· 80 rows");
+  expect(errors).toEqual([]);
+});
+
+test("the Channel button group picks Direct, syncs the multi-select and persists", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}nested/allocation`);
+
+  const direct = page
+    .getByRole("group", { name: "Channel" })
+    .getByRole("button", { name: "Direct" });
+  await expect(direct).toBeEnabled({ timeout: 30_000 });
+  await direct.click();
+
+  // The ButtonGroup is `multiple` — the shared channel filter serializes a
+  // lone pick as the JSON list, so both inputs keep one canonical shape.
+  await expect.poll(() => urlParam(page, "channel")).toBe('["Direct"]');
+  await expect(
+    page.getByRole("button", { name: "Remove Direct" }),
+  ).toBeVisible();
+
+  const results = resultTables(page);
+  await expect(results.nth(1).getByRole("row")).toHaveCount(2);
+  await expect(results.nth(1)).toContainText("Direct");
+  await expect(results.nth(1)).not.toContainText("Partner");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Remove Direct" })).toBeVisible(
+    { timeout: 30_000 },
+  );
+  await expect(direct).toHaveAttribute("aria-pressed", "true");
+  await expect(resultTables(page).nth(1).getByRole("row")).toHaveCount(2);
   expect(errors).toEqual([]);
 });
