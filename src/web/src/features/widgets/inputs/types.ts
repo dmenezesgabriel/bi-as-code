@@ -125,3 +125,30 @@ export interface SliderProps {
   readonly title?: string;
   readonly initialValue?: number | readonly [number, number];
 }
+
+/**
+ * Props of the `<TextInput>` MDX widget — a free-text filter input, the
+ * port of evidence's `text_input` minus `info`/`icon`/`width`/`flex`.
+ * The value never predicates (`column: false`): it persists as `?id=<text>`
+ * and is consumed through `{{params.id}}` interpolation only.
+ */
+export interface TextInputProps {
+  readonly id: string;
+  readonly title?: string;
+  readonly placeholder?: string;
+  readonly initialValue?: string;
+}
+
+/**
+ * Props of the `<Toggle>` MDX widget — a boolean switch filter input, the
+ * port of evidence's `toggle` minus `info`. The value never predicates
+ * (`column: false`): `?id=true`/`?id=false` IS the emitted boolean —
+ * `invert` flips the stored value, so the switch's checked face is
+ * `value XOR invert`. Consumed through `{{params.id}}` only.
+ */
+export interface ToggleProps {
+  readonly id: string;
+  readonly label?: string;
+  readonly invert?: boolean;
+  readonly initialValue?: boolean;
+}

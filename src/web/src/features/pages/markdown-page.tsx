@@ -14,6 +14,8 @@ import { ButtonGroup } from "../widgets/inputs/button-group";
 import { Dropdown } from "../widgets/inputs/dropdown";
 import { MultiSelect } from "../widgets/inputs/multi-select";
 import { Slider } from "../widgets/inputs/slider";
+import { TextInput } from "../widgets/inputs/text-input";
+import { Toggle } from "../widgets/inputs/toggle";
 import { Accordion, AccordionItem } from "../widgets/markdown/accordion";
 import { Callout } from "../widgets/markdown/callout";
 import { Details } from "../widgets/markdown/details";
@@ -38,7 +40,8 @@ import { useDocumentTitle } from "./use-document-title";
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
  * `Heatmap`) resolve `data` against that same registry; the input widgets
- * (`Dropdown`, `MultiSelect`, `Slider`, `ButtonGroup`) write the page filters those
+ * (`Dropdown`, `MultiSelect`, `Slider`, `ButtonGroup`, `TextInput`,
+ * `Toggle`) write the page filters those
  * consumers declare; the markdown
  * widgets (`Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Tab`,
  * `Accordion`, `AccordionItem`, `Row`, `Stack`) render prose chrome.
@@ -63,6 +66,8 @@ const mdxComponents: MdxComponentMap = {
   MultiSelect,
   Slider,
   ButtonGroup,
+  TextInput,
+  Toggle,
   Callout,
   Note,
   LineBreak,

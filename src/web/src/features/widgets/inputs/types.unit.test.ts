@@ -6,6 +6,8 @@ import type {
   FilterSelectProps,
   MultiSelectProps,
   OptionItem,
+  TextInputProps,
+  ToggleProps,
 } from "./types";
 
 /**
@@ -65,5 +67,32 @@ describe("input widget prop types", () => {
     expectTypeOf<ButtonGroupProps>().not.toHaveProperty("defaultTopN");
     expectTypeOf<ButtonGroupProps>().not.toHaveProperty("search");
     expectTypeOf<ButtonGroupProps>().not.toHaveProperty("placeholder");
+  });
+
+  it("TextInput is a params-only input — no data/options/filters props", () => {
+    expectTypeOf<TextInputProps["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<TextInputProps["title"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<TextInputProps["placeholder"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<TextInputProps["initialValue"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<TextInputProps>().not.toHaveProperty("data");
+    expectTypeOf<TextInputProps>().not.toHaveProperty("valueColumn");
+    expectTypeOf<TextInputProps>().not.toHaveProperty("filters");
+  });
+
+  it("Toggle carries label/invert/initialValue and nothing else", () => {
+    expectTypeOf<ToggleProps["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<ToggleProps["label"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<ToggleProps["invert"]>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<ToggleProps["initialValue"]>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<ToggleProps>().not.toHaveProperty("data");
+    expectTypeOf<ToggleProps>().not.toHaveProperty("valueColumn");
+    expectTypeOf<ToggleProps>().not.toHaveProperty("filters");
+    expectTypeOf<ToggleProps>().not.toHaveProperty("title");
   });
 });
