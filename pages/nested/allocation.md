@@ -20,9 +20,10 @@ from channels
 order by orders desc
 ```
 
-<ButtonGroup id="channel" data="channel_mix" valueColumn="channel" title="Channel" multiple />
-
-<MultiSelect id="channel" data="channel_mix" valueColumn="channel" title="Channel" />
+<FilterBar>
+  <ButtonGroup id="channel" data="channel_mix" valueColumn="channel" title="Channel" multiple />
+  <MultiSelect id="channel" data="channel_mix" valueColumn="channel" title="Channel" />
+</FilterBar>
 
 <Table data="channel_mix" filters="channel" />
 

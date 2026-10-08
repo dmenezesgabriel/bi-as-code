@@ -329,3 +329,50 @@ test("the Channel button group picks Direct, syncs the multi-select and persists
   await expect(resultTables(page).nth(1).getByRole("row")).toHaveCount(2);
   expect(errors).toEqual([]);
 });
+
+test("the FilterBar docks at 64px, floats past its sentinel and inputs keep writing while pinned", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  // The bar is a `div.sticky.top-16` — the TOC shares the convention but
+  // is an `aside`, so the element scoping pins the bar alone.
+  const bar = page.locator("div.sticky.top-16");
+  await expect(bar).toBeVisible({ timeout: 30_000 });
+  await expect(bar).toContainText("Region");
+
+  // At rest the card face is down: transparent border, no background.
+  await expect(bar).toHaveClass(/border-transparent/);
+  await expect(bar).not.toHaveClass(/bg-white/);
+
+  // Past the sentinel the bar docks 64px under the viewport top (the
+  // `top-16` line below the `h-12` header) and gains the card face.
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await expect(bar).toHaveClass(/bg-white/);
+  await expect(bar).toHaveClass(/shadow/);
+  const dockOffset = await bar.evaluate((el) =>
+    Math.round(el.getBoundingClientRect().top),
+  );
+  expect(dockOffset).toBe(64);
+
+  // Inputs keep their URL writes while pinned — a raw pointer click at the
+  // pinned switch's coordinates, the reader's real gesture (Playwright's
+  // locator click scroll-into-views the target first, which a stuck sticky
+  // bar answers with its flow position).
+  const toggle = page.getByRole("switch", { name: "Large orders only" });
+  const box = await toggle.boundingBox();
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await expect.poll(() => urlParam(page, "large_orders")).toBe("true");
+  expect(
+    await bar.evaluate((el) => Math.round(el.getBoundingClientRect().top)),
+  ).toBe(64);
+
+  // Back at the top the card face drops as the sentinel re-enters.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(bar).toHaveClass(/border-transparent/);
+  await expect(bar).not.toHaveClass(/bg-white/);
+  expect(errors).toEqual([]);
+});

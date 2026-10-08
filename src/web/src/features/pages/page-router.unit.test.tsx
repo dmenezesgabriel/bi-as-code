@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   fireEvent,
   render,
@@ -192,5 +192,35 @@ describe("buildPageRouter", () => {
 
     expect(await screen.findByText("page load exploded")).toBeInTheDocument();
     expect(document.title).toBe("Error");
+  });
+
+  it("keeps the scroll position when a filter write replaces only the search params", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo");
+    const router = renderRouter(pages, "/");
+    await screen.findByText(/home body/);
+    scrollTo.mockClear();
+
+    // What `browserFilterUrlPort.write` issues — the history wrapper
+    // reports it as a REPLACE navigation, which must not scroll.
+    router.history.replace("/?large_orders=true");
+
+    await waitFor(() =>
+      expect(router.state.location.href).toContain("large_orders=true"),
+    );
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("scrolls to the top when a navigation changes the page", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo");
+    const router = renderRouter(pages, "/");
+    await screen.findByText(/home body/);
+    scrollTo.mockClear();
+
+    router.history.push("/nested");
+
+    await screen.findByText("nested body");
+    expect(scrollTo).toHaveBeenCalledWith(
+      expect.objectContaining({ top: 0, left: 0 }),
+    );
   });
 });

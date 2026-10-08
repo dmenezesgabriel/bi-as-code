@@ -133,6 +133,16 @@ Then(
 );
 
 Then(
+  "the weekly-review module renders its inputs inside a FilterBar",
+  async () => {
+    const code = await pageModule("weekly-review.md");
+    assert.match(code, /if \(!FilterBar\) _missingMdxReference/);
+    // Five children compile to the `s`-suffixed runtime call.
+    assert.match(code, /_jsxs\(FilterBar, \{\s*children:/);
+  },
+);
+
+Then(
   "the weekly-review module's order_detail block interpolates the q and large_orders params",
   async () => {
     const code = await pageModule("weekly-review.md");
@@ -171,6 +181,15 @@ Then(
       code,
       /_jsx\(Table, \{\s*data: "channel_mix",\s*filters: "channel"/,
     );
+  },
+);
+
+Then(
+  "the allocation module wraps its channel inputs in a FilterBar",
+  async () => {
+    const code = await pageModule("nested/allocation.md");
+    assert.match(code, /if \(!FilterBar\) _missingMdxReference/);
+    assert.match(code, /_jsxs\(FilterBar, \{\s*children:/);
   },
 );
 

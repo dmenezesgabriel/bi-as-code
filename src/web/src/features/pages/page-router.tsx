@@ -42,10 +42,25 @@ export function buildPageRouter(
   const routeTree = rootRoute.addChildren(
     pages.map((entry) => pageRoute(rootRoute, entry, site)),
   );
+  // Filter inputs persist through `history.replaceState`, which the router's
+  // history wrapper reports as a REPLACE navigation — and every committed
+  // navigation scroll-restores to the top by default, throwing a reader who
+  // picked a filter mid-page back to the top. Restoration stays on for real
+  // transitions (pathname or hash changed — the hash keeps anchor scrolling)
+  // and opts out when only the search string moved.
+  let previousLocation: { pathname: string; hash: string } | undefined;
   return createRouter({
     routeTree,
     history,
     defaultErrorComponent: PageError,
+    scrollRestoration: ({ location }) => {
+      const moved =
+        previousLocation === undefined ||
+        location.pathname !== previousLocation.pathname ||
+        location.hash !== previousLocation.hash;
+      previousLocation = { pathname: location.pathname, hash: location.hash };
+      return moved;
+    },
   });
 }
 

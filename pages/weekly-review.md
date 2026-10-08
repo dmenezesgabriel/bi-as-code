@@ -17,17 +17,15 @@ parameters scope the widgets that declare `filters` and the queries that
 interpolate them.
 </Callout>
 
-<Dropdown id="region" data="orders" valueColumn="region" title="Region" />
-
 ## Overview
 
-<Slider id="amount" data="order_amounts" valueColumn="amount" range title="Amount" filters={["region"]} />
-
-<DateRange id="ordered" valueColumn="order_date" title="Ordered" />
-
-<TextInput id="q" title="Search regions" placeholder="e.g. West" />
-
-<Toggle id="large_orders" label="Large orders only" />
+<FilterBar>
+  <Dropdown id="region" data="orders" valueColumn="region" title="Region" />
+  <Slider id="amount" data="order_amounts" valueColumn="amount" range title="Amount" filters={["region"]} />
+  <DateRange id="ordered" valueColumn="order_date" title="Ordered" />
+  <TextInput id="q" title="Search regions" placeholder="e.g. West" />
+  <Toggle id="large_orders" label="Large orders only" />
+</FilterBar>
 
 <Row>
   <BigValue data="kpi" column="revenue" title="Quarter revenue" fmt="usd" delta="wow_pct" deltaFmt="pct1" text="last week vs. prior" sparkline="weekly_revenue" />

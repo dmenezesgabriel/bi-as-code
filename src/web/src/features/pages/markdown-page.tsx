@@ -13,6 +13,7 @@ import { ScatterChart } from "../widgets/charts/scatter-chart";
 import { ButtonGroup } from "../widgets/inputs/button-group";
 import { DateRange } from "../widgets/inputs/date-range";
 import { Dropdown } from "../widgets/inputs/dropdown";
+import { FilterBar } from "../widgets/inputs/filter-bar";
 import { MultiSelect } from "../widgets/inputs/multi-select";
 import { Slider } from "../widgets/inputs/slider";
 import { TextInput } from "../widgets/inputs/text-input";
@@ -43,7 +44,8 @@ import { useDocumentTitle } from "./use-document-title";
  * `Heatmap`) resolve `data` against that same registry; the input widgets
  * (`Dropdown`, `MultiSelect`, `Slider`, `ButtonGroup`, `TextInput`,
  * `Toggle`, `DateRange`) write the page filters those
- * consumers declare; the markdown
+ * consumers declare, and `FilterBar` is their presentational sticky
+ * container; the markdown
  * widgets (`Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Tab`,
  * `Accordion`, `AccordionItem`, `Row`, `Stack`) render prose chrome.
  * Kept unexported so the map doesn't trip the Fast Refresh rule
@@ -70,6 +72,7 @@ const mdxComponents: MdxComponentMap = {
   TextInput,
   Toggle,
   DateRange,
+  FilterBar,
   Callout,
   Note,
   LineBreak,
