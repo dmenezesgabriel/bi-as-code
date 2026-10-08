@@ -12,6 +12,7 @@ import {
   Moon,
   Search,
   Sun,
+  X,
   type LucideProps,
 } from "lucide-react";
 
@@ -80,6 +81,11 @@ export function CheckIcon(props: LucideProps) {
 /** Magnifier — decorates the search input inside a combobox popup. */
 export function SearchIcon(props: LucideProps) {
   return <Search aria-hidden size={14} {...props} />;
+}
+
+/** Cross — removes one chip inside a multi-select field. */
+export function XIcon(props: LucideProps) {
+  return <X aria-hidden size={12} {...props} />;
 }
 
 /** Spinning ring — a select trigger's option query is in flight. */

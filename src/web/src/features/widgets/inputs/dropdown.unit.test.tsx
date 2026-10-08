@@ -5,8 +5,17 @@ import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
-import { renderWithRegistry } from "../value/registry-harness";
 import { Dropdown } from "./dropdown";
+import {
+  clearViaPopup,
+  clickOption,
+  comboboxField,
+  expectMissingFenceAlert,
+  mountSelectInput,
+  openSelectPopup,
+  searchInput,
+  type SelectMountOptions,
+} from "./select-harness";
 import type { DropdownProps } from "./types";
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
@@ -25,65 +34,21 @@ function fakeDb(rows: Row[] = REGIONS): FakeDuckDb {
   return db;
 }
 
-/**
- * Renders `<Dropdown>` as a compiled page does — registry + runtime +
- * FiltersProvider (the page mounts it unconditionally). `filters: false`
- * drops the provider while keeping runtime+registry, exercising the
- * degraded render; `port` is created by the test when it asserts on URL
- * writes.
- */
+/** Renders `<Dropdown>` bound to the `region` filter over the `orders` fence. */
 function renderDropdown(
   props: Partial<DropdownProps> = {},
-  {
-    db = fakeDb(),
-    blocks = [ORDERS],
-    port = new FakeFilterUrlPort(""),
-    filters = true,
-  }: {
-    db?: FakeDuckDb;
-    blocks?: SqlBlock[];
-    port?: FakeFilterUrlPort;
-    filters?: boolean;
-  } = {},
-) {
-  return renderWithRegistry(
+  opts: SelectMountOptions = {},
+): FakeDuckDb {
+  return mountSelectInput(
     <Dropdown id="region" data="orders" valueColumn="region" {...props} />,
-    { db, blocks, port: filters ? port : undefined },
-  );
-}
-
-/** Both the trigger and the popup's search input carry `role="combobox"`;
- * the trigger is the `<button>` one. */
-function triggerEl(): HTMLElement {
-  const button = screen
-    .getAllByRole("combobox")
-    .find((el) => el.tagName === "BUTTON");
-  if (!button) throw new Error("no combobox trigger rendered");
-  return button;
-}
-
-function searchInput() {
-  return screen.findByRole("combobox", { name: "Search" });
-}
-
-async function openPopup() {
-  await waitFor(() => triggerEl());
-  fireEvent.click(triggerEl());
-}
-
-/** Opens the popup, clicks Clear, and waits for the param's deletion write. */
-async function clearViaPopup(port: FakeFilterUrlPort) {
-  await openPopup();
-  fireEvent.click(await screen.findByRole("button", { name: "Clear" }));
-  await waitFor(() =>
-    expect(port.written.at(-1)?.searchParams.has("region")).toBe(false),
+    { db: fakeDb(), blocks: [ORDERS], ...opts },
   );
 }
 
 describe("Dropdown — option source", () => {
   it("lists distinct valueColumn values in fence order", async () => {
     renderDropdown();
-    await openPopup();
+    await openSelectPopup();
 
     const options = await screen.findAllByRole("option");
     expect(options.map((o) => o.textContent)).toEqual([
@@ -96,13 +61,13 @@ describe("Dropdown — option source", () => {
   it("shows labelColumn text in the list but the value in the URL", async () => {
     const port = new FakeFilterUrlPort("");
     renderDropdown({ labelColumn: "label" }, { port });
-    await openPopup();
+    await openSelectPopup();
 
     expect(
       (await screen.findAllByRole("option")).map((o) => o.textContent),
     ).toContain("West region");
 
-    fireEvent.click(screen.getByRole("option", { name: "West region" }));
+    await clickOption("West region");
     await waitFor(() =>
       expect(port.written.at(-1)?.searchParams.get("region")).toBe("West"),
     );
@@ -113,7 +78,7 @@ describe("Dropdown — option source", () => {
       { data: undefined, valueColumn: undefined, options: ["West", "North"] },
       { blocks: [] },
     );
-    await openPopup();
+    await openSelectPopup();
 
     expect(
       (await screen.findAllByRole("option")).map((o) => o.textContent),
@@ -122,7 +87,7 @@ describe("Dropdown — option source", () => {
 
   it("merges options prop ahead of row options, deduped by value", async () => {
     renderDropdown({ options: ["West", "All"] });
-    await openPopup();
+    await openSelectPopup();
 
     expect(
       (await screen.findAllByRole("option")).map((o) => o.textContent),
@@ -153,8 +118,8 @@ describe("Dropdown — selection lifecycle", () => {
   it("writes ?region=<value> on pick", async () => {
     const port = new FakeFilterUrlPort("");
     renderDropdown({}, { port });
-    await openPopup();
-    fireEvent.click(await screen.findByRole("option", { name: "West" }));
+    await openSelectPopup();
+    await clickOption("West");
 
     await waitFor(() =>
       expect(port.written.at(-1)?.searchParams.get("region")).toBe("West"),
@@ -167,14 +132,16 @@ describe("Dropdown — selection lifecycle", () => {
       { port: new FakeFilterUrlPort("?region=West") },
     );
 
-    await waitFor(() => expect(triggerEl()).toHaveTextContent("West region"));
+    await waitFor(() =>
+      expect(comboboxField()).toHaveTextContent("West region"),
+    );
   });
 
   it("removes the param on Clear", async () => {
     const port = new FakeFilterUrlPort("?region=West");
     renderDropdown({}, { port });
 
-    await clearViaPopup(port);
+    await clearViaPopup(port, "region");
   });
 
   it("hides the clear affordance on clear={false}", async () => {
@@ -182,7 +149,7 @@ describe("Dropdown — selection lifecycle", () => {
       { clear: false },
       { port: new FakeFilterUrlPort("?region=West") },
     );
-    await openPopup();
+    await openSelectPopup();
     await screen.findAllByRole("option");
 
     expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
@@ -192,7 +159,7 @@ describe("Dropdown — selection lifecycle", () => {
 describe("Dropdown — search", () => {
   it("narrows options by substring over the value", async () => {
     renderDropdown();
-    await openPopup();
+    await openSelectPopup();
     fireEvent.change(await searchInput(), { target: { value: "no" } });
 
     await waitFor(() =>
@@ -204,7 +171,7 @@ describe("Dropdown — search", () => {
 
   it("matches the label, not only the value", async () => {
     renderDropdown({ labelColumn: "label" });
-    await openPopup();
+    await openSelectPopup();
     fireEvent.change(await searchInput(), { target: { value: "region" } });
 
     await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3));
@@ -212,7 +179,7 @@ describe("Dropdown — search", () => {
 
   it("shows the empty state when nothing matches", async () => {
     renderDropdown();
-    await openPopup();
+    await openSelectPopup();
     fireEvent.change(await searchInput(), { target: { value: "zzz" } });
 
     expect(await screen.findByText("No options found")).toBeVisible();
@@ -221,7 +188,7 @@ describe("Dropdown — search", () => {
 
   it("hides the search field on search={false}", async () => {
     renderDropdown({ search: false });
-    await openPopup();
+    await openSelectPopup();
 
     expect(await screen.findAllByRole("option")).toHaveLength(3);
     expect(screen.queryByLabelText("Search")).toBeNull();
@@ -233,26 +200,26 @@ describe("Dropdown — defaults", () => {
     const port = new FakeFilterUrlPort("");
     renderDropdown({ selectFirst: true }, { port });
 
-    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+    await waitFor(() => expect(comboboxField()).toHaveTextContent("West"));
     expect(port.written).toHaveLength(0);
   });
 
   it("never re-seeds after the reader clears", async () => {
     const port = new FakeFilterUrlPort("");
     renderDropdown({ selectFirst: true }, { port });
-    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+    await waitFor(() => expect(comboboxField()).toHaveTextContent("West"));
 
-    await clearViaPopup(port);
+    await clearViaPopup(port, "region");
     // The popup stays open after clear — assert the trigger by its
     // placeholder name while the search input shares the combobox role.
-    expect(triggerEl()).not.toHaveTextContent("West");
+    expect(comboboxField()).not.toHaveTextContent("West");
   });
 
   it("seeds initialValue when the URL holds nothing", async () => {
     const port = new FakeFilterUrlPort("");
     renderDropdown({ initialValue: "North" }, { port });
 
-    await waitFor(() => expect(triggerEl()).toHaveTextContent("North"));
+    await waitFor(() => expect(comboboxField()).toHaveTextContent("North"));
     expect(port.written).toHaveLength(0);
   });
 });
@@ -273,7 +240,7 @@ describe("Dropdown — stale-value clearing", () => {
     const port = new FakeFilterUrlPort("?region=West");
     renderDropdown({}, { db, port });
 
-    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+    await waitFor(() => expect(comboboxField()).toHaveTextContent("West"));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(port.written).toHaveLength(0);
   });
@@ -282,7 +249,7 @@ describe("Dropdown — stale-value clearing", () => {
     const port = new FakeFilterUrlPort("?region=West");
     renderDropdown({}, { db: fakeDb([]), port });
 
-    await waitFor(() => expect(triggerEl()).toHaveTextContent("West"));
+    await waitFor(() => expect(comboboxField()).toHaveTextContent("West"));
     expect(port.written).toHaveLength(0);
   });
 });
@@ -291,10 +258,7 @@ describe("Dropdown — failure and loading faces", () => {
   it("shows an inline alert when data names no fence", async () => {
     renderDropdown({ data: "ghost" });
 
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("ghost");
-    expect(alert).toHaveTextContent("no sql fence");
-    expect(screen.queryByRole("combobox")).toBeNull();
+    await expectMissingFenceAlert("ghost");
   });
 
   it("shows an inline alert naming the failing query", async () => {
@@ -320,12 +284,12 @@ describe("Dropdown — failure and loading faces", () => {
     db.queryRows = () => Effect.promise(() => new Promise<Row[]>(() => {}));
     renderDropdown({}, { db });
 
-    await waitFor(() => expect(triggerEl()).toBeDisabled());
+    await waitFor(() => expect(comboboxField()).toBeDisabled());
   });
 
   it("degrades to disabled without a FiltersProvider", async () => {
     renderDropdown({}, { filters: false });
 
-    await waitFor(() => expect(triggerEl()).toBeDisabled());
+    await waitFor(() => expect(comboboxField()).toBeDisabled());
   });
 });

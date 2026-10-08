@@ -1,5 +1,5 @@
 import type { Row } from "../../data/types";
-import type { OptionItem } from "./types";
+import type { OptionItem, OptionValidity } from "./types";
 
 /**
  * Distinct `valueColumn` values over the filtered block's rows, in fence
@@ -85,11 +85,7 @@ export function mergeOptionItems(
 export function isOptionValueValid(
   value: string | undefined,
   availableValues: ReadonlySet<string>,
-  opts: {
-    hasQueryResults: boolean;
-    hasStaticOptions: boolean;
-    optionsQueryPending?: boolean;
-  },
+  opts: OptionValidity,
 ): boolean {
   if (!value) return true;
   if (opts.optionsQueryPending) return true;

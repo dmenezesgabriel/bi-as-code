@@ -1,4 +1,5 @@
 import type { FilterOptions } from "../../filters/filter";
+import type { SelectValue } from "./types";
 
 /**
  * The select inputs' URL codec, a port of evidence's `DropdownFilter`
@@ -13,7 +14,7 @@ import type { FilterOptions } from "../../filters/filter";
  * filters.ensure(id, { column: valueColumn, ...selectValueCodec });
  */
 export const selectValueCodec = {
-  serialize(value: string | readonly string[] | undefined): string | undefined {
+  serialize(value: SelectValue | undefined): string | undefined {
     if (value === undefined || value === "") return undefined;
     if (typeof value === "string") return value;
     return value.length > 0 ? JSON.stringify(value) : undefined;
@@ -34,7 +35,4 @@ export const selectValueCodec = {
     }
     return raw;
   },
-} satisfies Pick<
-  FilterOptions<string | readonly string[]>,
-  "serialize" | "deserialize"
->;
+} satisfies Pick<FilterOptions<SelectValue>, "serialize" | "deserialize">;

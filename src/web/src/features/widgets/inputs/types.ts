@@ -10,6 +10,24 @@ export interface OptionItem {
 }
 
 /**
+ * A select filter's held value — a bare string in single mode, a list in
+ * multi. `selectValueCodec` decodes `?id=v` → `string`, `?id=["a","b"]` →
+ * `string[]`, and `undefined`/`""`/`[]` all mean "no param".
+ */
+export type SelectValue = string | readonly string[];
+
+/**
+ * The option-set state `isOptionValueValid` consults — a pending query, an
+ * unknown set, or an empty loaded set can never invalidate a held value;
+ * only a loaded, non-empty set lacking the value marks it stale.
+ */
+export interface OptionValidity {
+  readonly hasQueryResults: boolean;
+  readonly hasStaticOptions: boolean;
+  readonly optionsQueryPending?: boolean;
+}
+
+/**
  * Props shared by the filter input widgets (`<Dropdown>`, `<MultiSelect>`)
  * and the `FilterSelect` core they both render: `id` names the page filter;
  * `data` + `valueColumn`/`labelColumn` derive options from a ```sql fence
