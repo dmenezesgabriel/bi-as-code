@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { FilterIds } from "../../filters/filter-ids";
 
 /**
@@ -168,4 +169,16 @@ export interface ToggleProps {
   readonly label?: string;
   readonly invert?: boolean;
   readonly initialValue?: boolean;
+}
+
+/**
+ * Props of the `<FilterBar>` MDX widget — a presentational container for
+ * the filter inputs (evidence's `filter_bar`): the children lay out as one
+ * horizontal bar that sticks under the page header on scroll and gains a
+ * floating card style once its rest position leaves the viewport. The bar
+ * carries no props of its own and stores no state — children keep their
+ * `?id=` writes and `filters=[...]` predicates.
+ */
+export interface FilterBarProps {
+  readonly children?: ReactNode;
 }

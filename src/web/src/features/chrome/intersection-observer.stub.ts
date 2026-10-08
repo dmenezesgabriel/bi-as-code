@@ -10,7 +10,10 @@ interface LiveObserver {
  * A controllable `IntersectionObserver` stub for web-unit tests: jsdom has
  * no IO at all, and the ToC scroll-spy's callback ignores entry payloads —
  * so the stub records each live observer and lets tests retrigger a
- * recompute by firing every live callback at once. Restore with
+ * recompute by firing every live callback at once. `fire()` with no
+ * argument passes an empty entry list; `fire(bool)` fabricates one entry
+ * per observed target carrying the flag, for consumers that read
+ * `entries[0].isIntersecting` (the FilterBar sentinel). Restore with
  * `vi.unstubAllGlobals()`.
  */
 export function stubIntersectionObserver() {
@@ -38,12 +41,22 @@ export function stubIntersectionObserver() {
 
   vi.stubGlobal("IntersectionObserver", StubIntersectionObserver);
   return {
-    /** Invokes every live observer's callback with an empty entry list. */
-    fire() {
+    /**
+     * Invokes every live observer's callback — an empty entry list when no
+     * flag is given, else one `{target, isIntersecting}` entry per target
+     * the observer watches.
+     */
+    fire(isIntersecting?: boolean) {
       for (const observer of live) {
-        if (!observer.dead) {
-          observer.callback([], observer as unknown as IntersectionObserver);
-        }
+        if (observer.dead) continue;
+        const entries =
+          isIntersecting === undefined
+            ? []
+            : [...observer.targets].map(
+                (target) =>
+                  ({ target, isIntersecting }) as IntersectionObserverEntry,
+              );
+        observer.callback(entries, observer as unknown as IntersectionObserver);
       }
     },
     liveCount: () => live.filter((o) => !o.dead).length,
