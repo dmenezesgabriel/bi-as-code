@@ -85,8 +85,8 @@ evidence is the only repo that has it — read the real code, don't take this ta
 
 ## Open decisions
 
-- Children enforcement lean (none) — confirm at T1's RED step; the fallback is a `collectItemChildren`-style check against the input components.
-- Whether `stubIntersectionObserver` stays imported cross-feature from `features/chrome/` or relocates beside the new test — decide when T1 writes the test.
+- Children enforcement lean (none) — confirmed at T1: the bar renders any children, no `WidgetError` check; the fallback stays unneeded.
+- `stubIntersectionObserver` stays imported cross-feature from `features/chrome/` (precedent: `details.unit.test.tsx` → `match-media.stub`); it gained a `fire(isIntersecting?)` mode fabricating one entry per observed target — the no-arg form still serves nav-toc.
 
 ## Surface
 
@@ -101,7 +101,7 @@ evidence is the only repo that has it — read the real code, don't take this ta
 
 One TDD unit each, one conventional commit each.
 
-- [ ] T1 — `<FilterBar>`: `features/widgets/inputs/filter-bar.tsx` — sentinel div + `IntersectionObserver` (`default: true`), `sticky top-16 z-10` bar (`flex flex-row flex-wrap items-end gap-4`), `floating` state adds card tokens; `FilterBarProps` in `inputs/types.ts`. Unit tests with `stubIntersectionObserver` (renders children, not floating initially, floats on sentinel exit, unfurls on re-entry) + `filter-bar.stories.tsx` (scrollable story; call `get-storybook-story-instructions` first per ADR-0006).
+- [x] T1 — `<FilterBar>`: `features/widgets/inputs/filter-bar.tsx` — sentinel div + `IntersectionObserver` (`default: true`), `sticky top-16 z-10` bar (`flex flex-row flex-wrap items-end gap-4`), `floating` state adds card tokens; `FilterBarProps` in `inputs/types.ts`. Unit tests with `stubIntersectionObserver` (renders children, not floating initially, floats on sentinel exit, unfurls on re-entry) + `filter-bar.stories.tsx` (scrollable story; call `get-storybook-story-instructions` first per ADR-0006).
 - [ ] T2 — demo + wiring: `mdxComponents` entry; regroup `pages/weekly-review.md` inputs into `<FilterBar>` (keep `## Overview` heading semantics intact) and `pages/nested/allocation.md`'s two inputs; extend `test/e2e-browser/filter-inputs.spec.ts` (scroll → float class via `eval`, params still write while pinned) + `filter-inputs.feature` compile shape; `playwright-cli` pass per `prompt-execution.md` §5 (measure: dock offset 64px, float transition, `console` clean) → backlog row → ship demo.
 
 ## Out of scope
