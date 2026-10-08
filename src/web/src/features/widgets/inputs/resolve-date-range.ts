@@ -1,4 +1,4 @@
-import type { FilterPredicate } from "../../filters/filter";
+import type { FilterPredicate } from "../../crossfilter/types";
 
 /**
  * The `<DateRange>` value grammar, a subset port of evidence's

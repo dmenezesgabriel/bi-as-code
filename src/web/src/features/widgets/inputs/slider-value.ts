@@ -1,4 +1,5 @@
-import type { FilterOptions, FilterPredicate } from "../../filters/filter";
+import type { FilterOptions } from "../../filters/filter";
+import type { FilterPredicate } from "../../crossfilter/types";
 import type { Row } from "../../data/types";
 import type { SliderValue } from "./types";
 

@@ -9,13 +9,8 @@
  * `setDefault` is programmatic (never writes); `normalize` corrects a
  * constrained value and writes only when the param is already there.
  */
+import type { FilterPredicate } from "../crossfilter/types";
 import type { FilterUrlPort } from "./filter-url-port";
-
-/** A predicate bound for a prepared statement: `sql` carries `?` holes. */
-export interface FilterPredicate {
-  readonly sql: string;
-  readonly params: readonly unknown[];
-}
 
 export interface FilterOptions<Value = unknown> {
   /**

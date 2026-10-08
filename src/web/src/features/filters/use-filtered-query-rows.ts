@@ -6,7 +6,7 @@ import type { QueryResult } from "../pages/types";
 import { useDataRuntime } from "../data/runtime";
 import type { FilterIds } from "./filter-ids";
 import { toFilterIds } from "./filter-ids";
-import type { FilterPredicate } from "./filter";
+import type { FilterPredicate } from "../crossfilter/types";
 import type { Filters } from "./filters";
 import { usePageFilters } from "./page-filters-context";
 
