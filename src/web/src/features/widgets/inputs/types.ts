@@ -68,3 +68,30 @@ export interface MultiSelectProps extends FilterInputCommonProps {
   readonly initialValue?: readonly string[];
   readonly defaultTopN?: number;
 }
+
+/**
+ * A slider filter's held value — a bare number in single mode, an ordered
+ * `lo, hi` pair in range mode (`?id=10 - 40` in the URL).
+ */
+export type SliderValue = number | readonly [number, number];
+
+/**
+ * Props of the `<Slider>` MDX widget: `data` + `valueColumn` derive the
+ * bounds from a ```sql fence's rows and name the predicate column (without
+ * `valueColumn` the value never predicates — `{{params.id}}` consumption
+ * only); `min`/`max`/`step` supply or override static bounds; `range`
+ * switches to a two-thumb `lo - hi` selection; `filters` cascades other
+ * page filters into the bounds source.
+ */
+export interface SliderProps {
+  readonly id: string;
+  readonly data?: string;
+  readonly valueColumn?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly range?: boolean;
+  readonly filters?: FilterIds;
+  readonly title?: string;
+  readonly initialValue?: number | readonly [number, number];
+}
