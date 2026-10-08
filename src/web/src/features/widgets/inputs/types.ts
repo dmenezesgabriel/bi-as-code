@@ -140,6 +140,23 @@ export interface TextInputProps {
 }
 
 /**
+ * Props of the `<DateRange>` MDX widget — a range-expression filter input,
+ * the port of evidence's `range_calendar` minus `preset_ranges`,
+ * `custom_ranges`, `all_time_range`, `default_range` (ours is
+ * `initialValue`) and the calendar grid. The held value is the range
+ * expression itself (`'last 30 days'`, `'2026-01-01 to 2026-01-31'`),
+ * persisted verbatim in `?id=` so relative windows re-roll on reload.
+ * `valueColumn` names the predicate column — without it the value never
+ * predicates (`column: false`) and is consumed through `{{params.id}}`.
+ */
+export interface DateRangeProps {
+  readonly id: string;
+  readonly title?: string;
+  readonly valueColumn?: string;
+  readonly initialValue?: string;
+}
+
+/**
  * Props of the `<Toggle>` MDX widget — a boolean switch filter input, the
  * port of evidence's `toggle` minus `info`. The value never predicates
  * (`column: false`): `?id=true`/`?id=false` IS the emitted boolean —

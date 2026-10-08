@@ -2,6 +2,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Calendar,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -81,6 +82,11 @@ export function CheckIcon(props: LucideProps) {
 /** Magnifier — decorates the search input inside a combobox popup. */
 export function SearchIcon(props: LucideProps) {
   return <Search aria-hidden size={14} {...props} />;
+}
+
+/** Calendar — decorates the `<DateRange>` trigger. */
+export function CalendarIcon(props: LucideProps) {
+  return <Calendar aria-hidden size={14} {...props} />;
 }
 
 /** Cross — removes one chip inside a multi-select field. */
