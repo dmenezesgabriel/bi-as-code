@@ -16,6 +16,8 @@ Every figure on this page re-runs live against the `orders` table — the
 the queries that interpolate it.
 </Callout>
 
+<Dropdown id="region" data="orders" valueColumn="region" title="Region" />
+
 ## Overview
 
 <Row>

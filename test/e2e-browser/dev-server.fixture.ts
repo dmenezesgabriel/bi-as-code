@@ -17,6 +17,26 @@ export function resultTables(page: Page) {
   return page.locator("div.overflow-x-auto table");
 }
 
+/** The first data row's cells of a live result table. */
+export async function firstRowCells(table: ReturnType<typeof resultTables>) {
+  return table.locator("tbody tr").first().locator("td").allTextContents();
+}
+
+/**
+ * Opens the Order-mix Table tab — the <Table> widget's panel is mounted but
+ * hidden until selected — and returns its first data row's cells once the
+ * panel's pager shows `caption`.
+ */
+export async function openOrderMixRow(
+  page: Page,
+  caption: string,
+): Promise<string[]> {
+  await page.getByRole("tab", { name: "Table" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Table" });
+  await expect(panel).toContainText(caption, { timeout: 30_000 });
+  return panel.locator("tbody tr").first().locator("td").allTextContents();
+}
+
 /**
  * Console errors and page errors fail every test — a clean console is part
  * of "renders correctly", not an optional extra. Wire this before the first

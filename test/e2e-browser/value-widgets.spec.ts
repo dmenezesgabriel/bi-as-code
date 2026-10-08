@@ -114,31 +114,24 @@ test("standalone <Sparkline> renders the same series as a line and as bars", asy
   expect(errors).toEqual([]);
 });
 
-test("?region=Atlantis empties the KPI to – and hides the delta and sparkline", async ({
+test("?region=Atlantis is pruned by the Region dropdown so the KPI renders unfiltered", async ({
   page,
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review?region=Atlantis`);
 
-  // An empty filter result is not an error: the value reads – while the
-  // delta and sparkline slots collapse instead of showing alerts.
+  // Atlantis is not a region option: the dropdown drops the stale param
+  // once its options load, so the KPI renders the full-quarter read with
+  // its delta and sparkline — not the empty face.
   const widget = kpi(page);
-  await expect(widget.locator("span.text-xl")).toHaveText("–", {
+  await expect(widget.locator("span.text-xl")).toHaveText("$15k", {
     timeout: 30_000,
   });
+  await expect(page).toHaveURL(/weekly-review$/);
   await expect(widget.getByText("Quarter revenue")).toBeVisible();
-  await expect(widget.locator("[data-status]")).toHaveCount(0);
-  await expect(widget.locator("svg")).toHaveCount(0);
-
-  // The prose scalars render – too, and the filtered-empty sparkline query
-  // leaves no `weekly_revenue` svg anywhere on the page.
-  const sentence = page.locator("p", {
-    hasText: "Quarter revenue closed at",
-  });
-  await expect(sentence).toContainText("–");
-  await expect(sentence.locator('[data-status="neutral"]')).toHaveCount(1);
-  await expect(page.locator('svg[aria-label="weekly_revenue"]')).toHaveCount(0);
+  await expect(widget.locator('[data-status="positive"]')).toContainText("+");
+  await expect(page.locator('svg[aria-label="weekly_revenue"]')).toHaveCount(3);
   expect(errors).toEqual([]);
 });
 

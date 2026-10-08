@@ -1,27 +1,11 @@
-import type { Page } from "@playwright/test";
 import {
   collectConsoleErrors,
   expect,
+  firstRowCells,
+  openOrderMixRow,
   resultTables,
   test,
 } from "./dev-server.fixture.js";
-
-/** The first data row's cells of a live result table. */
-async function firstRowCells(table: ReturnType<typeof resultTables>) {
-  return table.locator("tbody tr").first().locator("td").allTextContents();
-}
-
-/**
- * Opens the Order-mix Table tab — the <Table> widget's panel is mounted but
- * hidden until selected — and returns its first data row's cells once the
- * panel's pager shows `caption`.
- */
-async function openOrderMixRow(page: Page, caption: string): Promise<string[]> {
-  await page.getByRole("tab", { name: "Table" }).click();
-  const panel = page.getByRole("tabpanel", { name: "Table" });
-  await expect(panel).toContainText(caption, { timeout: 30_000 });
-  return panel.locator("tbody tr").first().locator("td").allTextContents();
-}
 
 /**
  * The filter model's user interaction is the URL itself: `?region=West` seeds
@@ -106,22 +90,22 @@ test("the filtered read survives a reload and clears when the param is removed",
   expect(errors).toEqual([]);
 });
 
-test("?region=Atlantis empties the filter-declaring widgets while the fences stay raw", async ({
+test("?region=Atlantis is pruned by the Region dropdown and the page renders unfiltered", async ({
   page,
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review?region=Atlantis`);
 
-  // The converted fences and the trend widgets keep their full reads; the
-  // four filtered widgets render their empty face — the three charts and
-  // the Order-mix <Table> (its empty face replaces the table element, as
-  // does the param-read weekly_revenue fence's, so seven tables remain).
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(3, {
-    timeout: 30_000,
-  });
+  // The Region dropdown validates the URL value once its options load:
+  // Atlantis matches none of them, so the filter normalizes the stale
+  // value away and the param drops from the URL. The settled page is the
+  // unfiltered read — every fence preview and both <Table> widgets at
+  // their full counts (the mounted-but-hidden Order-mix table included).
+  await expect(page).toHaveURL(/weekly-review$/, { timeout: 30_000 });
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
   await expect(page.getByText("Page 1 of 36 · 355 rows")).toHaveCount(1);
-  await expect(page.locator("[data-chart-empty]")).toHaveCount(3);
-  await expect(resultTables(page)).toHaveCount(7);
+  await expect(page.locator("[data-chart-empty]")).toHaveCount(0);
+  await expect(resultTables(page)).toHaveCount(9);
   expect(errors).toEqual([]);
 });

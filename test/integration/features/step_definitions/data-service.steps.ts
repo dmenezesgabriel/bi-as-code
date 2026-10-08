@@ -101,6 +101,36 @@ Then(
   },
 );
 
+Then(
+  "the weekly-review module renders a Dropdown bound to the region filter",
+  async () => {
+    const code = await pageModule("weekly-review.md");
+    // Compiled JSX keeps the author's props verbatim — the destructure and
+    // the missing-reference guard prove the tag survived the transform.
+    assert.match(code, /if \(!Dropdown\) _missingMdxReference/);
+    assert.match(
+      code,
+      /_jsx\(Dropdown, \{\s*id: "region",\s*data: "orders",\s*valueColumn: "region"/,
+    );
+  },
+);
+
+Then(
+  "the allocation module renders a MultiSelect and a channel-filtered Table",
+  async () => {
+    const code = await pageModule("nested/allocation.md");
+    assert.match(code, /if \(!MultiSelect\) _missingMdxReference/);
+    assert.match(
+      code,
+      /_jsx\(MultiSelect, \{\s*id: "channel",\s*data: "channel_mix",\s*valueColumn: "channel"/,
+    );
+    assert.match(
+      code,
+      /_jsx\(Table, \{\s*data: "channel_mix",\s*filters: "channel"/,
+    );
+  },
+);
+
 Then("the config module declares the channels table", async () => {
   assert.ok(server, "server must be running");
   const code = await getOk(`${server.url}${CONFIG_URL}`);

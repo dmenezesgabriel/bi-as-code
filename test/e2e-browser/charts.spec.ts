@@ -329,24 +329,19 @@ test("the theme toggle repaints every chart in the other palette", async ({
   expect(errors).toEqual([]);
 });
 
-test("?region=Atlantis empties the filter-declaring charts while the unfiltered trend charts stay live", async ({
+test("?region=Atlantis is pruned by the Region dropdown so every chart stays live", async ({
   page,
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review?region=Atlantis`);
 
-  // The charts whose widgets declare `filters=["region"]` — the BarChart,
-  // ScatterChart and Histogram — wrap to 0 rows and render their empty face
-  // at the chart's 300px. `weekly_trend` carries no filter, so the
-  // LineChart, AreaChart and Heatmap still render.
-  const empty = page.locator("[data-chart-empty]");
-  await expect(empty).toHaveCount(3, { timeout: 30_000 });
-  await expect(readyCharts(page)).toHaveCount(3);
-  for (const face of await empty.all()) {
-    await expect(face).toContainText("0 rows");
-    expect((await face.boundingBox())?.height).toBe(300);
-  }
+  // Atlantis is not a region option: the dropdown validates the URL value
+  // against its loaded options, drops the stale param, and all six charts
+  // render their unfiltered read — no empty faces.
+  await expect(page).toHaveURL(/weekly-review$/, { timeout: 30_000 });
+  await expect(page.locator("[data-chart-empty]")).toHaveCount(0);
+  await expect(readyCharts(page)).toHaveCount(6);
   expect(errors).toEqual([]);
 });
 
@@ -403,8 +398,10 @@ test("the index page renders a <BarChart> beside its <Table>", async ({
 const BAD_CHART_REFS = [
   {
     name: "an undeclared data name",
-    from: 'data="orders"',
-    to: 'data="ghost_query"',
+    // `data="orders"` alone would hit the <Dropdown>, the page's first
+    // occurrence — the x prop anchors the mutation on the <BarChart>.
+    from: 'data="orders" x="region"',
+    to: 'data="ghost_query" x="region"',
     want: ["ghost_query", "no sql fence on this page declares this name"],
   },
   {

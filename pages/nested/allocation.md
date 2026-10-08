@@ -20,5 +20,9 @@ from channels
 order by orders desc
 ```
 
+<MultiSelect id="channel" data="channel_mix" valueColumn="channel" title="Channel" />
+
+<Table data="channel_mix" filters="channel" />
+
 Channel mix is stable week over week; marketplace volume peaks on
 weekends. [Back to the region detail](/nested/page).
