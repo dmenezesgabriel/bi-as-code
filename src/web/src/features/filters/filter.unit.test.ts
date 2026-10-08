@@ -225,6 +225,78 @@ describe("Filter.predicate — placeholder-bound column predicate", () => {
   });
 });
 
+describe("Filter.predicate — per-input builder and column opt-out", () => {
+  // The range inputs' shape — evidence's `SliderFilter.predicateSql`.
+  const rangeOptions: FilterOptions<number | [number, number]> = {
+    column: "amount",
+    predicate: (column, value) => {
+      if (Array.isArray(value) && value.length === 2) {
+        return { sql: `${column} BETWEEN ? AND ?`, params: [...value] };
+      }
+      if (typeof value === "number") {
+        return { sql: `${column} >= ?`, params: [value] };
+      }
+      return undefined;
+    },
+  };
+
+  it("lets an input's predicate builder replace the `=`/`IN` shape", () => {
+    const filter = new Filter<number | [number, number]>(
+      "amount",
+      rangeOptions,
+      new FakeFilterUrlPort(""),
+    );
+    filter.value = [10, 40];
+    expect(filter.predicate()).toEqual({
+      sql: "amount BETWEEN ? AND ?",
+      params: [10, 40],
+    });
+    filter.value = 10;
+    expect(filter.predicate()).toEqual({ sql: "amount >= ?", params: [10] });
+  });
+
+  it("contributes nothing when the builder returns undefined for the held value", () => {
+    const filter = new Filter<number | [number, number]>(
+      "amount",
+      {
+        column: "amount",
+        predicate: (column, value) =>
+          Array.isArray(value)
+            ? { sql: `${column} BETWEEN ? AND ?`, params: [...value] }
+            : undefined,
+      },
+      new FakeFilterUrlPort(""),
+    );
+    filter.value = 10;
+    expect(filter.predicate()).toBeUndefined();
+  });
+
+  it("contributes nothing for `column: false` even with a value", () => {
+    const filter = new Filter<string>(
+      "q",
+      { column: false },
+      new FakeFilterUrlPort(""),
+    );
+    filter.value = "north";
+    expect(filter.predicate()).toBeUndefined();
+  });
+
+  it("replaces the builder on configure without writing the URL", () => {
+    const port = new FakeFilterUrlPort("");
+    const filter = new Filter<number | [number, number]>(
+      "amount",
+      { column: "amount" },
+      port,
+    );
+    filter.value = 10;
+    expect(filter.predicate()).toEqual({ sql: "amount = ?", params: [10] });
+    filter.configure(rangeOptions);
+    expect(filter.predicate()).toEqual({ sql: "amount >= ?", params: [10] });
+    // Only the user interaction wrote — configure is silent.
+    expect(port.written).toHaveLength(1);
+  });
+});
+
 describe("Filter.configure — late-arriving options", () => {
   it("is a no-op for undefined options", () => {
     const port = new FakeFilterUrlPort("?region=West");

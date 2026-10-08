@@ -18,21 +18,40 @@ export interface FilterPredicate {
 }
 
 export interface FilterOptions<Value = unknown> {
-  /** Predicate column; `Filters.ensure` defaults it to the filter id. */
-  column?: string;
+  /**
+   * Predicate column; `Filters.ensure` defaults it to the filter id.
+   * `false` opts the filter out of `filters=[...]` predication entirely —
+   * inputs whose value is consumed through `{{params.id}}` instead
+   * (evidence's filters whose `sql` getter is undefined).
+   */
+  column?: string | false;
   /** Programmatic fallback when neither URL nor author supplies a value. */
   initialValue?: Value;
   /** Value → URL-param string; `undefined` or `""` = no param (cleared). */
   serialize?(value: Value | undefined): string | undefined;
   /** URL-param string → value. */
   deserialize?(raw: string): Value;
+  /**
+   * Builds the WHERE fragment for the held value; the default emits
+   * `column = ?` or `column IN (...)`. Returning `undefined` contributes no
+   * predicate for that value (a range input half-set stays silent —
+   * evidence's `predicateSql` no-op branches).
+   */
+  predicate?(
+    column: string,
+    value: Value | undefined,
+  ): FilterPredicate | undefined;
 }
 
 interface ResolvedOptions<Value> {
-  column?: string;
+  column?: string | false;
   initialValue?: Value;
   serialize(value: Value | undefined): string | undefined;
   deserialize(raw: string): Value;
+  predicate?(
+    column: string,
+    value: Value | undefined,
+  ): FilterPredicate | undefined;
 }
 
 const defaultSerialize = (value: unknown): string | undefined =>
@@ -54,6 +73,7 @@ export class Filter<Value = unknown> {
       initialValue: opts.initialValue,
       serialize: opts.serialize ?? defaultSerialize,
       deserialize: opts.deserialize ?? ((raw) => raw as Value),
+      predicate: opts.predicate,
     };
     this.#port = port;
     const raw = port.read()?.searchParams.get(id);
@@ -107,6 +127,7 @@ export class Filter<Value = unknown> {
     if (!opts) return;
     if (opts.column !== undefined) this.#opts.column = opts.column;
     if (opts.serialize) this.#opts.serialize = opts.serialize;
+    if (opts.predicate) this.#opts.predicate = opts.predicate;
     if (opts.deserialize) {
       this.#opts.deserialize = opts.deserialize;
       const raw = this.#port.read()?.searchParams.get(this.id);
@@ -139,11 +160,14 @@ export class Filter<Value = unknown> {
   /**
    * The WHERE fragment this filter contributes, values bound as `?` args —
    * never text-interpolated (ADR-0005). `undefined` = contributes none.
+   * An input-supplied `predicate` builder owns the shape; the default is
+   * `=`/`IN`.
    */
   predicate(): FilterPredicate | undefined {
     const column = this.#opts.column;
     if (!column) return undefined;
     const value = this.#value;
+    if (this.#opts.predicate) return this.#opts.predicate(column, value);
     if (Array.isArray(value)) {
       if (value.length === 0) return undefined;
       return {

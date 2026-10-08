@@ -92,6 +92,21 @@ describe("Filters.ensure", () => {
     const filters = new Filters(new FakeFilterUrlPort("?region=West"));
     expect(filters.ensure("region").value).toBe("West");
   });
+
+  it("honours `column: false` over the id default — the filter never predicates", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    const filter = filters.ensure("q", { column: false });
+    filter.value = "north";
+    expect(filter.predicate()).toBeUndefined();
+  });
+
+  it("keeps `column: false` when a consumer's bare ensure lands second", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    filters.ensure("q", { column: false });
+    const filter = filters.ensure("q");
+    filter.value = "north";
+    expect(filter.predicate()).toBeUndefined();
+  });
 });
 
 describe("Filters lookup", () => {
