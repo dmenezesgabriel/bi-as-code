@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, it } from "vitest";
 import type { FilterIds } from "../../filters/filter-ids";
 import type {
+  ButtonGroupProps,
   DropdownProps,
   FilterSelectProps,
   MultiSelectProps,
@@ -46,5 +47,23 @@ describe("input widget prop types", () => {
     expectTypeOf<FilterSelectProps["initialValue"]>().toEqualTypeOf<
       string | readonly string[] | undefined
     >();
+  });
+
+  it("ButtonGroup takes the option-list contract minus defaultTopN", () => {
+    expectTypeOf<ButtonGroupProps["multiple"]>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<ButtonGroupProps["selectFirst"]>().toEqualTypeOf<
+      boolean | undefined
+    >();
+    expectTypeOf<ButtonGroupProps["initialValue"]>().toEqualTypeOf<
+      string | readonly string[] | undefined
+    >();
+    expectTypeOf<ButtonGroupProps["title"]>().toEqualTypeOf<
+      string | undefined
+    >();
+    expectTypeOf<ButtonGroupProps>().not.toHaveProperty("defaultTopN");
+    expectTypeOf<ButtonGroupProps>().not.toHaveProperty("search");
+    expectTypeOf<ButtonGroupProps>().not.toHaveProperty("placeholder");
   });
 });

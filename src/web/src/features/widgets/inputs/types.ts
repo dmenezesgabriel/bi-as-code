@@ -58,6 +58,24 @@ export interface FilterSelectProps extends FilterInputCommonProps {
   readonly defaultTopN?: number;
 }
 
+/**
+ * The option-list inputs' source-and-value contract, consumed by
+ * `useSelectInput` — `<Dropdown>`/`<MultiSelect>` (through `FilterSelect`)
+ * and `<ButtonGroup>` share it: `data`+`valueColumn`/`labelColumn` derive
+ * options from a ```sql fence, `options` supplies static entries, `filters`
+ * cascades page filters into the option source, `multiple` switches the
+ * held value between a bare string and a list, and `selectFirst`/
+ * `defaultTopN` seed programmatic defaults.
+ */
+export interface SelectInputProps extends Omit<
+  FilterInputCommonProps,
+  "title" | "placeholder" | "search" | "clear"
+> {
+  readonly multiple?: boolean;
+  readonly initialValue?: SelectValue;
+  readonly defaultTopN?: number;
+}
+
 /** Props of the `<Dropdown>` MDX widget — single-select with type-to-search. */
 export interface DropdownProps extends FilterInputCommonProps {
   readonly initialValue?: string;
@@ -67,6 +85,18 @@ export interface DropdownProps extends FilterInputCommonProps {
 export interface MultiSelectProps extends FilterInputCommonProps {
   readonly initialValue?: readonly string[];
   readonly defaultTopN?: number;
+}
+
+/**
+ * Props of the `<ButtonGroup>` MDX widget — the option-list contract minus
+ * `defaultTopN` (evidence's button_group has `select_first` only), plus
+ * `title` for the group's visible label.
+ */
+export interface ButtonGroupProps extends Omit<
+  SelectInputProps,
+  "defaultTopN"
+> {
+  readonly title?: string;
 }
 
 /**

@@ -11,6 +11,7 @@ import {
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { Dropdown } from "./dropdown";
+import { expectAlert } from "./input-stories.fixture";
 import type { DropdownProps } from "./types";
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
@@ -261,9 +262,7 @@ export const UnknownName: Story = {
   args: { data: "ghost" },
   decorators: regionDecorators(),
   play: async ({ canvas }) => {
-    const alert = await canvas.findByRole("alert");
-    await expect(alert).toHaveTextContent("ghost");
-    await expect(alert).toHaveTextContent("no sql fence");
+    await expectAlert(canvas, "ghost", "no sql fence");
     await expect(canvas.queryByRole("combobox")).toBeNull();
   },
 };
@@ -278,9 +277,7 @@ export const QueryError: Story = {
     withPageFilters(new FakeFilterUrlPort("")),
   ],
   play: async ({ canvas }) => {
-    const alert = await canvas.findByRole("alert");
-    await expect(alert).toHaveTextContent("orders");
-    await expect(alert).toHaveTextContent("does not exist");
+    await expectAlert(canvas, "orders", "does not exist");
   },
 };
 
@@ -289,7 +286,6 @@ export const MissingValueColumn: Story = {
   args: { valueColumn: undefined },
   decorators: regionDecorators(),
   play: async ({ canvas }) => {
-    const alert = await canvas.findByRole("alert");
-    await expect(alert).toHaveTextContent("valueColumn");
+    await expectAlert(canvas, "valueColumn");
   },
 };

@@ -1,37 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import type { Decorator } from "@storybook/react-vite";
 import { FakeDuckDb } from "../../data/fake-duckdb";
-import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
-import type { SqlBlock } from "../../pages/types";
 import {
   withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { MultiSelect } from "./multi-select";
+import {
+  CHANNELS,
+  channelDecorators,
+  expectAlert,
+  MIX,
+} from "./input-stories.fixture";
 import type { MultiSelectProps } from "./types";
-
-const MIX: SqlBlock = {
-  name: "mix",
-  sql: "select channel, share from channel_mix",
-};
-
-const CHANNELS: Row[] = [
-  { channel: "Direct", share: 0.46 },
-  { channel: "Marketplace", share: 0.32 },
-  { channel: "Partner", share: 0.22 },
-  { channel: "Referral", share: 0.1 },
-  { channel: "Organic", share: 0.08 },
-];
-
-/** The query-backed decoration most stories share — fresh fakes per call. */
-function channelDecorators(search?: string): Decorator[] {
-  return [
-    withQueryData([MIX], FakeDuckDb.withRows(CHANNELS)),
-    withPageFilters(new FakeFilterUrlPort(search)),
-  ];
-}
 
 type Canvas = ReturnType<typeof within>;
 
@@ -289,8 +271,7 @@ export const UnknownName: Story = {
   args: { data: "ghost" },
   decorators: channelDecorators(),
   play: async ({ canvas }) => {
-    const alert = await canvas.findByRole("alert");
-    await expect(alert).toHaveTextContent(/ghost.*no sql fence/);
+    await expectAlert(canvas, /ghost.*no sql fence/);
     await expect(canvas.queryByRole("combobox")).toBeNull();
   },
 };

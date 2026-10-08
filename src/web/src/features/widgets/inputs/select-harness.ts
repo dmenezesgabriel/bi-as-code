@@ -88,6 +88,55 @@ export async function clickOption(name: string): Promise<void> {
   fireEvent.click(await screen.findByRole("option", { name }));
 }
 
+/** The `id` param of the port's last write, `null` when absent. */
+export function lastWrittenParam(
+  port: FakeFilterUrlPort,
+  id: string,
+): string | null {
+  return port.written.at(-1)?.searchParams.get(id) ?? null;
+}
+
+/** Waits for the `id` param's deletion write. */
+export async function expectParamCleared(
+  port: FakeFilterUrlPort,
+  id: string,
+): Promise<void> {
+  await waitFor(() =>
+    expect(port.written.at(-1)?.searchParams.has(id)).toBe(false),
+  );
+}
+
+/** A settle window after which `port` must still hold no writes. */
+export async function expectNoUrlWrites(
+  port: FakeFilterUrlPort,
+): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(port.written).toHaveLength(0);
+}
+
+/** A db serving `filtered` rows once a `region = ?` predicate wraps the sql. */
+export function regionCascadeDb(
+  unfiltered: Row[],
+  filtered: Row[],
+): FakeDuckDb {
+  return FakeDuckDb.withRowsWhen(unfiltered, (sql) =>
+    sql.includes("where region = ?") ? filtered : null,
+  );
+}
+
+/** Asserts the `region = 'West'` cascade wrapped `fenceSql`. */
+export async function expectRegionCascade(
+  db: FakeDuckDb,
+  fenceSql: string,
+): Promise<void> {
+  await waitFor(() =>
+    expect(db.queries).toContainEqual({
+      sql: `select * from (${fenceSql}) where region = ?`,
+      params: ["West"],
+    }),
+  );
+}
+
 /** Asserts the inline alert for a `data` name no sql fence on the page declares. */
 export async function expectMissingFenceAlert(name: string): Promise<void> {
   const alert = await screen.findByRole("alert");
@@ -103,7 +152,5 @@ export async function clearViaPopup(
 ): Promise<void> {
   await openSelectPopup();
   fireEvent.click(await screen.findByRole("button", { name: "Clear" }));
-  await waitFor(() =>
-    expect(port.written.at(-1)?.searchParams.has(id)).toBe(false),
-  );
+  await expectParamCleared(port, id);
 }

@@ -1,5 +1,5 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
@@ -8,6 +8,7 @@ import {
   withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
+import { expectAlert } from "./input-stories.fixture";
 import { Slider } from "./slider";
 import type { SliderProps } from "./types";
 
@@ -26,19 +27,6 @@ function amountDecorators(search?: string): Decorator[] {
     withQueryData([ORDERS], FakeDuckDb.withRows(AMOUNTS)),
     withPageFilters(new FakeFilterUrlPort(search)),
   ];
-}
-
-type Canvas = ReturnType<typeof within>;
-
-/** Asserts the inline `role=alert` carries every fragment. */
-async function expectAlert(
-  canvas: Canvas,
-  ...fragments: string[]
-): Promise<void> {
-  const alert = await canvas.findByRole("alert");
-  for (const fragment of fragments) {
-    await expect(alert).toHaveTextContent(fragment);
-  }
 }
 
 const meta = {

@@ -11,8 +11,12 @@ import {
   clickOption,
   comboboxField,
   expectMissingFenceAlert,
+  expectNoUrlWrites,
+  expectParamCleared,
+  expectRegionCascade,
   mountSelectInput,
   openSelectPopup,
+  regionCascadeDb,
   type SelectMountOptions,
 } from "./select-harness";
 import type { MultiSelectProps } from "./types";
@@ -90,22 +94,16 @@ describe("MultiSelect — option source", () => {
   });
 
   it("narrows the option source through the filters prop", async () => {
-    const db = FakeDuckDb.withRowsWhen(
+    const db = regionCascadeDb(
       [{ channel: "Direct" }, { channel: "Partner" }],
-      (sql) =>
-        sql.includes("where region = ?") ? [{ channel: "Direct" }] : null,
+      [{ channel: "Direct" }],
     );
     renderMultiSelect(
       { filters: "region" },
       { db, port: new FakeFilterUrlPort("?region=West") },
     );
 
-    await waitFor(() =>
-      expect(db.queries).toContainEqual({
-        sql: "select * from (select * from channel_mix) where region = ?",
-        params: ["West"],
-      }),
-    );
+    await expectRegionCascade(db, "select * from channel_mix");
   });
 });
 
@@ -318,9 +316,7 @@ describe("MultiSelect — stale-value pruning", () => {
     const port = new FakeFilterUrlPort('?channel=["ghost","atlantis"]');
     renderMultiSelect({}, { port });
 
-    await waitFor(() =>
-      expect(port.written.at(-1)?.searchParams.has("channel")).toBe(false),
-    );
+    await expectParamCleared(port, "channel");
   });
 
   it("keeps the URL value while the options query is pending", async () => {
@@ -328,8 +324,7 @@ describe("MultiSelect — stale-value pruning", () => {
     renderMultiSelect({}, { db: FakeDuckDb.pending(), port });
 
     await waitFor(() => expect(comboboxField()).toBeInTheDocument());
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(port.written).toHaveLength(0);
+    await expectNoUrlWrites(port);
   });
 
   it("keeps the URL value when options load empty", async () => {

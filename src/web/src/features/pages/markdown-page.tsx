@@ -10,6 +10,7 @@ import { LineChart } from "../widgets/charts/line-chart";
 import { Heatmap } from "../widgets/charts/heatmap-chart";
 import { Histogram } from "../widgets/charts/histogram-chart";
 import { ScatterChart } from "../widgets/charts/scatter-chart";
+import { ButtonGroup } from "../widgets/inputs/button-group";
 import { Dropdown } from "../widgets/inputs/dropdown";
 import { MultiSelect } from "../widgets/inputs/multi-select";
 import { Slider } from "../widgets/inputs/slider";
@@ -37,7 +38,7 @@ import { useDocumentTitle } from "./use-document-title";
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
  * `Heatmap`) resolve `data` against that same registry; the input widgets
- * (`Dropdown`, `MultiSelect`, `Slider`) write the page filters those
+ * (`Dropdown`, `MultiSelect`, `Slider`, `ButtonGroup`) write the page filters those
  * consumers declare; the markdown
  * widgets (`Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Tab`,
  * `Accordion`, `AccordionItem`, `Row`, `Stack`) render prose chrome.
@@ -61,6 +62,7 @@ const mdxComponents: MdxComponentMap = {
   Dropdown,
   MultiSelect,
   Slider,
+  ButtonGroup,
   Callout,
   Note,
   LineBreak,
