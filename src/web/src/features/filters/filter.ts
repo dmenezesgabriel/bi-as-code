@@ -143,13 +143,7 @@ export class Filter<Value = unknown> {
 
   /** Programmatic default: updates state, never the URL. A later echo of the same value writes nothing. */
   setDefault(newValue: Value | undefined) {
-    const previous = this.#value;
-    this.#value = newValue;
-    this.#lastSerialized = this.#opts.serialize(newValue);
-    if (!Object.is(previous, newValue)) {
-      this.#notify();
-      this.#publish();
-    }
+    if (this.#setHeld(newValue)) this.#publish();
   }
 
   /**
@@ -185,13 +179,19 @@ export class Filter<Value = unknown> {
     }
   }
 
-  /** Corrected value: keeps the URL in sync when the param is present, else behaves as a default. */
+  /**
+   * Corrected value: keeps the URL in sync when the param is present —
+   * that path republishes through `value`, since the authored selection
+   * changed. Without a param the correction is silent (bounds collapsing
+   * under another filter's clause is a display constraint, not a new
+   * selection) — the published clause stays as authored.
+   */
   normalize(newValue: Value | undefined) {
     if (this.#port.read()?.searchParams.has(this.id)) {
       this.value = newValue;
-    } else {
-      this.setDefault(newValue);
+      return;
     }
+    this.#setHeld(newValue);
   }
 
   /** Apply a value in its URL-param form, as a user interaction. Empty/undefined clears. */
@@ -245,6 +245,16 @@ export class Filter<Value = unknown> {
     if (key === this.#lastClauseKey) return;
     this.#lastClauseKey = key;
     this.selection.update(clause);
+  }
+
+  /** Held-value write shared by `setDefault` and `normalize`; true when it changed. */
+  #setHeld(newValue: Value | undefined): boolean {
+    const previous = this.#value;
+    this.#value = newValue;
+    this.#lastSerialized = this.#opts.serialize(newValue);
+    if (Object.is(previous, newValue)) return false;
+    this.#notify();
+    return true;
   }
 
   #writeUrl(serialized: string | undefined) {

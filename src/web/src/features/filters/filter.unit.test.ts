@@ -282,6 +282,47 @@ describe("Filter clause publication — value change publishes into its selectio
     expect(blank.selection.clauses).toHaveLength(0);
   });
 
+  it("publishes a setDefault seed — an authored default is a selection", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "region" },
+      new FakeFilterUrlPort(""),
+    );
+    filter.setDefault("West");
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "region = ?",
+      params: ["West"],
+    });
+  });
+
+  it("keeps the authored clause through a silent normalize — bounds collapse is a correction, not a selection", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "region" },
+      new FakeFilterUrlPort(""),
+    );
+    filter.setDefault("West");
+    filter.normalize("North");
+    expect(filter.value).toBe("North");
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "region = ?",
+      params: ["West"],
+    });
+  });
+
+  it("republishes a normalize that rewrites an existing URL param", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "region" },
+      new FakeFilterUrlPort("?region=West"),
+    );
+    filter.normalize("North");
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "region = ?",
+      params: ["North"],
+    });
+  });
+
   it("does not re-publish an identical predicate — a same-content array write stays silent", () => {
     const filter = new Filter<string | string[]>(
       "region",
