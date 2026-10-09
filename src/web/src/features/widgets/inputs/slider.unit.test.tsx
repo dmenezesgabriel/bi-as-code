@@ -237,6 +237,13 @@ describe("Slider — predicate", () => {
     await expectNoAmountPredicate(db, "BETWEEN");
   });
 
+  it("emits nothing for the bounds seed — no authored selection yet", async () => {
+    const db = renderSlider({ range: true }, { consumer: true });
+
+    await waitFor(() => expect(thumbs()).toHaveLength(2));
+    await expectNoAmountPredicate(db, "where amount");
+  });
+
   it("emits nothing without a valueColumn even with a value", async () => {
     const db = renderSlider(
       { data: undefined, valueColumn: undefined, min: 0, max: 100 },

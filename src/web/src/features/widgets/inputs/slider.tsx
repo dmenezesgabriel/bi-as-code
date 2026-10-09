@@ -68,7 +68,10 @@ function useSliderSource(
 /**
  * Evidence's seed-or-clamp: an unset filter takes the bounds' default
  * silently; a held value outside them normalizes (the URL param rewrites
- * only when it was already present). A shape that mismatches the mode is
+ * only when it was already present). Both paths are silent without a
+ * param — the bounds are display state, not a selection, so no clause
+ * publishes until the reader actually drags (a cascade-collapsed extent
+ * must not narrow other consumers). A shape that mismatches the mode is
  * left alone — the codec can only produce the right shape.
  */
 function reconcileHeldValue(
@@ -79,7 +82,7 @@ function reconcileHeldValue(
 ): void {
   const value = filter.value;
   if (value === undefined) {
-    filter.setDefault(range ? [min, max] : min);
+    filter.normalize(range ? [min, max] : min);
     return;
   }
   const clamped = clampSliderValue(value, min, max);
