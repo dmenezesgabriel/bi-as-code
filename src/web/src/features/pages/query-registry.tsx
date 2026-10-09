@@ -63,8 +63,11 @@ export function useQuerySource(): QuerySource {
  * Registration is signature-gated so a remount with the same source-set
  * (StrictMode, re-render churn) registers once; a genuinely new mount
  * re-registers, which is why registration itself is `CREATE OR REPLACE`.
- * Param changes re-run queries without re-registering; unmount aborts
- * in-flight queries (`cancelSent` via run-query's interrupt handler).
+ * A param change re-runs only the blocks whose interpolated SQL or bound
+ * params it changed — a fence that never reads `{{params.*}}` keeps its
+ * result and its in-flight query, so a filter input whose bounds read that
+ * fence stays enabled through its own changes. Unmount aborts in-flight
+ * queries (`cancelSent` via run-query's interrupt handler).
  *
  * @example
  * <QueryRegistryProvider sqlBlocks={page.sqlBlocks} sqlTables={page.sqlTables} params={search}>
@@ -93,37 +96,37 @@ export function QueryRegistryProvider({
   const [registered, setRegistered] = useState<Promise<
     Exit.Exit<void, unknown>
   > | null>(null);
-  const interpolated = useMemo(() => {
-    const queries = Object.fromEntries(
-      sqlBlocks.map((block) => [block.name, block.sql]),
-    );
-    return Object.fromEntries(
-      sqlBlocks.map((block) => [
-        block.name,
-        interpolateQuery(block.sql, { params, queries }, new Set([block.name])),
-      ]),
-    );
-  }, [sqlBlocks, params]);
+  const interpolated = useStableInterpolation(sqlBlocks, params);
+  const blockRuns = useRef<BlockRuns | null>(null);
 
   useEffect(() => {
     const sig = signatureOf(sqlTables);
-    let reg = registration.current;
-    if (reg?.sig !== sig) {
-      reg = { sig, done: runtime.runPromiseExit(registerAll(sqlTables)) };
-      registration.current = reg;
-      setRegistered(reg.done);
+    if (registration.current?.sig === sig) return;
+    const done = runtime.runPromiseExit(registerAll(sqlTables));
+    registration.current = { sig, done };
+    setRegistered(done);
+  }, [runtime, sqlTables]);
+
+  useEffect(() => {
+    if (!registered) return;
+    const runs = runsFor(blockRuns, registered);
+    const stale = staleBlocks(runs, interpolated);
+    if (stale.size === 0) return;
+    setResults((prev) => withLoading(prev, interpolated, stale));
+    for (const name of stale) {
+      const query = interpolated[name];
+      if (!query) continue;
+      const control = startRun(runs, name, query);
+      void runBlock(runtime, registered, query, control.signal).then(
+        (result) => {
+          if (!control.signal.aborted) {
+            setResults((prev) => ({ ...prev, [name]: result }));
+          }
+        },
+      );
     }
-    const control = new AbortController();
-    setResults(initialResults(sqlBlocks));
-    for (const [name, query] of Object.entries(interpolated)) {
-      void runBlock(runtime, reg.done, query, control.signal).then((result) => {
-        if (!control.signal.aborted) {
-          setResults((prev) => ({ ...prev, [name]: result }));
-        }
-      });
-    }
-    return () => control.abort();
-  }, [runtime, sqlBlocks, sqlTables, interpolated]);
+  }, [runtime, registered, interpolated]);
+  useEffect(() => () => abortRuns(blockRuns), []);
 
   const source = useMemo(
     () => ({ interpolated, registered }),
@@ -137,6 +140,133 @@ export function QueryRegistryProvider({
     </QueryResultsContext.Provider>
   );
 }
+
+/**
+ * Every block interpolated against `params`, reusing the previous render's
+ * `InterpolatedQuery` object for each block whose SQL, params and errors
+ * are unchanged — identity is what tells the run effect and filtered
+ * consumers (`useFilteredQueryClient`'s connect effect) that a block did
+ * not change. Derived state from the previous render, React's sanctioned
+ * alternative to reading a ref during render.
+ */
+function useStableInterpolation(
+  sqlBlocks: readonly SqlBlock[],
+  params: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, InterpolatedQuery>> {
+  const fresh = useMemo(
+    () => interpolateBlocks(sqlBlocks, params),
+    [sqlBlocks, params],
+  );
+  const [stable, setStable] = useState(() => ({ fresh, queries: fresh }));
+  if (stable.fresh === fresh) return stable.queries;
+  const queries = reuseUnchanged(stable.queries, fresh);
+  setStable({ fresh, queries });
+  return queries;
+}
+
+function interpolateBlocks(
+  sqlBlocks: readonly SqlBlock[],
+  params: Readonly<Record<string, unknown>>,
+): Record<string, InterpolatedQuery> {
+  const queries = Object.fromEntries(
+    sqlBlocks.map((block) => [block.name, block.sql]),
+  );
+  return Object.fromEntries(
+    sqlBlocks.map((block) => [
+      block.name,
+      interpolateQuery(block.sql, { params, queries }, new Set([block.name])),
+    ]),
+  );
+}
+
+function reuseUnchanged(
+  previous: Readonly<Record<string, InterpolatedQuery>>,
+  next: Readonly<Record<string, InterpolatedQuery>>,
+): Record<string, InterpolatedQuery> {
+  return Object.fromEntries(
+    Object.entries(next).map(([name, query]) => {
+      const before = previous[name];
+      const same = before && JSON.stringify(before) === JSON.stringify(query);
+      return [name, same ? before : query];
+    }),
+  );
+}
+
+/** The query each block last started, keyed by block name, per registration. */
+interface BlockRuns {
+  readonly registration: Promise<Exit.Exit<void, unknown>>;
+  readonly byName: Map<
+    string,
+    { readonly query: InterpolatedQuery; readonly control: AbortController }
+  >;
+}
+
+/** The runs made against `registration` — a new registration starts over. */
+function runsFor(
+  blockRuns: { current: BlockRuns | null },
+  registration: Promise<Exit.Exit<void, unknown>>,
+): BlockRuns {
+  if (blockRuns.current?.registration !== registration) {
+    abortRuns(blockRuns);
+    blockRuns.current = { registration, byName: new Map() };
+  }
+  return blockRuns.current;
+}
+
+/**
+ * Names whose current query differs from the one last started; runs of
+ * blocks no longer on the page are aborted and forgotten.
+ */
+function staleBlocks(
+  runs: BlockRuns,
+  interpolated: Readonly<Record<string, InterpolatedQuery>>,
+): ReadonlySet<string> {
+  for (const [name, run] of runs.byName) {
+    if (name in interpolated) continue;
+    run.control.abort();
+    runs.byName.delete(name);
+  }
+  return new Set(
+    Object.keys(interpolated).filter(
+      (name) => runs.byName.get(name)?.query !== interpolated[name],
+    ),
+  );
+}
+
+/** Aborts the block's previous run and records `query` as its current one. */
+function startRun(
+  runs: BlockRuns,
+  name: string,
+  query: InterpolatedQuery,
+): AbortController {
+  runs.byName.get(name)?.control.abort();
+  const control = new AbortController();
+  runs.byName.set(name, { query, control });
+  return control;
+}
+
+function abortRuns(blockRuns: { current: BlockRuns | null }): void {
+  for (const run of blockRuns.current?.byName.values() ?? []) {
+    run.control.abort();
+  }
+  blockRuns.current = null;
+}
+
+/** The page's blocks, `stale` ones reset to loading, the rest kept. */
+function withLoading(
+  prev: Readonly<Record<string, QueryResult>>,
+  interpolated: Readonly<Record<string, InterpolatedQuery>>,
+  stale: ReadonlySet<string>,
+): Record<string, QueryResult> {
+  return Object.fromEntries(
+    Object.keys(interpolated).map((name) => [
+      name,
+      stale.has(name) ? LOADING : (prev[name] ?? LOADING),
+    ]),
+  );
+}
+
+const LOADING: QueryResult = { status: "loading" };
 
 function signatureOf(tables: SqlTableMap): string {
   return JSON.stringify(Object.entries(tables).sort());

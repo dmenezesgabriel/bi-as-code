@@ -6,6 +6,7 @@ import {
   expect,
   openOrderMixRow,
   resultTables,
+  sliderThumbBox,
   test,
   type BiacDev,
 } from "./dev-server.fixture.js";
@@ -213,6 +214,39 @@ test("the Amount slider writes a range param and narrows order_detail", async ({
     { timeout: 30_000 },
   );
   expect(urlParam(page, "amount")).toBe("39 - 44");
+  expect(errors).toEqual([]);
+});
+
+test("a pointer drag keeps moving the Amount slider past its first step", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+  const maximum = page.getByRole("slider", { name: "Maximum" });
+  await expect(maximum).toBeEnabled({ timeout: 30_000 });
+  const from = await sliderThumbBox(page, "Maximum");
+  const to = await sliderThumbBox(page, "Minimum");
+  const y = from.y + from.height / 2;
+
+  // Each step publishes the amount clause and rewrites the URL; a page
+  // re-run that disabled the slider mid-drag would end the gesture at the
+  // first step (44 → 43), so every later step must move the thumb again.
+  await page.mouse.move(from.x + from.width / 2, y);
+  await page.mouse.down();
+  let held = 44;
+  for (const k of [0.2, 0.4, 0.6, 0.8]) {
+    await page.mouse.move(from.x + (to.x - from.x) * k, y);
+    await expect
+      .poll(async () => Number(await maximum.getAttribute("aria-valuenow")))
+      .toBeLessThan(held);
+    held = Number(await maximum.getAttribute("aria-valuenow"));
+  }
+  await page.mouse.up();
+
+  await expect(maximum).toHaveAttribute("aria-valuenow", "39");
+  expect(urlParam(page, "amount")).toBe("38 - 39");
   expect(errors).toEqual([]);
 });
 

@@ -12,6 +12,19 @@ export interface BiacDev {
   projectDir: string;
 }
 
+/**
+ * A slider thumb's box — the `slider` role sits on a visually hidden range
+ * input inside the thumb, whose own box is not where a pointer grabs.
+ */
+export async function sliderThumbBox(page: Page, name: string) {
+  const box = await page
+    .getByRole("slider", { name })
+    .locator("..")
+    .boundingBox();
+  if (!box) throw new Error(`slider thumb "${name}" has no box`);
+  return box;
+}
+
 /** Live result tables render inside `div.overflow-x-auto`; static gfm tables don't. */
 export function resultTables(page: Page) {
   return page.locator("div.overflow-x-auto table");

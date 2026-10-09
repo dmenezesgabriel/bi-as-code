@@ -23,6 +23,15 @@ function ResultsProbe({ onChange }: { onChange: (results: Results) => void }) {
   return null;
 }
 
+/** Records every `QuerySource` the provider hands its consumers. */
+function SourceProbe({ sources }: { sources: QuerySource[] }) {
+  const source = useQuerySource();
+  useEffect(() => {
+    sources.push(source);
+  }, [source, sources]);
+  return null;
+}
+
 function renderRegistry({
   blocks = [] as SqlBlock[],
   tables = {} as SqlTableMap,
@@ -153,6 +162,72 @@ describe("QueryRegistryProvider", () => {
     expect(db.registered).toHaveLength(1);
   });
 
+  it("re-runs only the blocks a param change reaches, keeping the others' results", async () => {
+    const snapshots: Results[] = [];
+    const { db, resultsRef, rerenderParams } = renderRegistry({
+      blocks: [
+        { name: "total", sql: "select count(*) from orders" },
+        {
+          name: "q",
+          sql: "select * from orders where region = {{params.region}}",
+        },
+        { name: "inlined", sql: "select * from {{q}}" },
+      ],
+      params: { region: "West" },
+    });
+    await waitFor(() =>
+      expect(resultsRef.current.inlined?.status).toBe("success"),
+    );
+    const settled = resultsRef.current.total;
+
+    rerenderParams({ region: "South" });
+    snapshots.push(resultsRef.current);
+    await waitFor(() => expect(db.queries).toHaveLength(5));
+    await waitFor(() =>
+      expect(resultsRef.current.inlined?.status).toBe("success"),
+    );
+
+    expect(db.queries.slice(3).map((q) => q.params)).toEqual([
+      ["South"],
+      ["South"],
+    ]);
+    expect([...snapshots, resultsRef.current].map((r) => r.total)).toEqual([
+      settled,
+      settled,
+    ]);
+  });
+
+  it("keeps an unchanged block's interpolated query identity across a param change", async () => {
+    const sources: QuerySource[] = [];
+    const layer = Layer.succeed(DuckDb, new FakeDuckDb());
+    const tree = (region: string) => (
+      <DataRuntimeProvider layer={layer}>
+        <QueryRegistryProvider
+          sqlBlocks={[
+            { name: "total", sql: "select count(*) from orders" },
+            { name: "q", sql: "select * from orders where r = {{params.r}}" },
+          ]}
+          sqlTables={{}}
+          params={{ r: region }}
+        >
+          <SourceProbe sources={sources} />
+        </QueryRegistryProvider>
+      </DataRuntimeProvider>
+    );
+    const { rerender } = render(tree("West"));
+    await waitFor(() =>
+      expect(sources.some((s) => s.registered !== null)).toBe(true),
+    );
+    const before = sources.at(-1)?.interpolated;
+
+    rerender(tree("South"));
+
+    const after = sources.at(-1)?.interpolated;
+    expect(after?.q?.params).toEqual(["South"]);
+    expect(after?.total).toBe(before?.total);
+    expect(after?.q).not.toBe(before?.q);
+  });
+
   it("marks every block errored when registration fails, naming the source", async () => {
     const db = new FakeDuckDb();
     db.registerCause = new Error("HTTP 404");
@@ -210,13 +285,6 @@ describe("QueryRegistryProvider", () => {
 
   it("exposes each block's interpolated sql and the registration gate", async () => {
     const sources: QuerySource[] = [];
-    function SourceProbe() {
-      const source = useQuerySource();
-      useEffect(() => {
-        sources.push(source);
-      }, [source]);
-      return null;
-    }
     render(
       <DataRuntimeProvider layer={Layer.succeed(DuckDb, new FakeDuckDb())}>
         <QueryRegistryProvider
@@ -226,7 +294,7 @@ describe("QueryRegistryProvider", () => {
           sqlTables={{}}
           params={{ r: "West" }}
         >
-          <SourceProbe />
+          <SourceProbe sources={sources} />
         </QueryRegistryProvider>
       </DataRuntimeProvider>,
     );
