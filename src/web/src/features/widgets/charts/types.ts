@@ -22,6 +22,39 @@ export interface EChartProps {
   readonly height?: number;
   readonly renderer?: ChartRenderer;
   readonly className?: string;
+  readonly events?: EChartEvents;
+}
+
+/**
+ * The echarts mouse-event params a chart interactor reads:
+ * `componentType` distinguishes series marks from legend or axis parts;
+ * `value` carries the datum's `[x, y, …]` tuple; `event.event` is the
+ * native mouse event, so modifier keys drive accumulate-vs-replace.
+ * Declared field-by-field (like `TooltipParam`) because the engine's own
+ * callback signature is loose.
+ */
+export interface ChartClickParams {
+  readonly componentType?: string;
+  readonly seriesIndex?: number;
+  readonly dataIndex?: number;
+  readonly name?: string;
+  readonly value?: unknown;
+  readonly event?: {
+    readonly event?: {
+      readonly shiftKey?: boolean;
+      readonly metaKey?: boolean;
+    };
+  };
+}
+
+export type ChartClickHandler = (params: ChartClickParams) => void;
+
+/**
+ * The echarts events `EChart` subscribes on the live instance — the
+ * selection-gesture wiring a `select="crossfilter"` chart declares.
+ */
+export interface EChartEvents {
+  readonly click?: ChartClickHandler;
 }
 
 /**
@@ -97,7 +130,10 @@ export type StackedMode = boolean | "100%";
  * jsdom (no canvas 2d); tests and stories pass it explicitly. `filters`
  * names the page filters whose predicates wrap the fence's query — a lone
  * id or a list; with no filter contributing, the registry's unfiltered
- * result shows.
+ * result shows. `select="crossfilter"` publishes the chart's selection
+ * gestures as clauses into the interacted field's selection — mark clicks
+ * predicate `x` — so every widget declaring that field in `filters`
+ * re-queries while the chart skips its own clause (ADR-0004).
  */
 export interface SeriesChartProps {
   readonly data: string;
@@ -105,6 +141,7 @@ export interface SeriesChartProps {
   readonly y: string | readonly string[];
   readonly series?: string;
   readonly filters?: FilterIds;
+  readonly select?: "crossfilter";
   readonly stacked?: StackedMode;
   readonly labels?: boolean;
   readonly labelsFmt?: string;

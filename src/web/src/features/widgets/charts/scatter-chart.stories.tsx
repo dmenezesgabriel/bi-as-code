@@ -2,13 +2,19 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import {
   withFilteredData,
+  withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
+import { Table } from "../table/table";
 import { ScatterChart } from "./scatter-chart";
 import {
+  OPTS,
   ORDERS_REGIONAL,
   SCATTER_ROWS,
   appliedOption,
+  crossfilterTogglePlay,
+  dbSelectable,
   dbWith,
   readyHost,
 } from "./series-chart.fixture";
@@ -81,4 +87,27 @@ export const Filtered: Story = {
     expect(option.series?.map((s) => s.name)).toEqual(["North"]);
     expect(option.series?.[0]?.data).toHaveLength(2);
   },
+};
+
+/**
+ * `select="crossfilter"` on a value-axis chart: a point click publishes
+ * `orders = ?` with the datum's numeric x — the consumer narrows, the
+ * publishing scatter keeps all four points, click-same clears.
+ */
+export const SelectCrossfilter: Story = {
+  args: { filters: "orders", select: "crossfilter" },
+  decorators: [
+    withQueryData(
+      [ORDERS_REGIONAL, OPTS],
+      dbSelectable("orders", SCATTER_ROWS),
+    ),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  render: (args) => (
+    <>
+      <ScatterChart {...args} />
+      <Table data="opts" filters="orders" />
+    </>
+  ),
+  play: crossfilterTogglePlay(4),
 };

@@ -22,6 +22,7 @@ import { useThemeMode } from "../../chrome/theme-mode";
 import type { ThemeMode } from "../../chrome/theme";
 import { themeName } from "./theme";
 import type {
+  ChartClickParams,
   ChartOption,
   ChartRenderer,
   EChartHostElement,
@@ -66,9 +67,16 @@ function mountChart(
   option: ChartOption,
   mode: ThemeMode,
   renderer: ChartRenderer,
+  eventsRef: { readonly current: EChartProps["events"] },
 ): EChartsType {
   const instance = echarts.init(el, themeName(mode), { renderer });
   instance.on("finished", () => el.setAttribute("data-echarts-ready", ""));
+  // The ref delegates to the latest `events` prop so a handler that changes
+  // identity between renders never resubscribes, and a re-init (theme flip)
+  // rewires against the same delegate.
+  instance.on("click", (params) =>
+    eventsRef.current?.click?.(params as ChartClickParams),
+  );
   instance.setOption(option, { notMerge: true });
   return instance;
 }
@@ -98,6 +106,7 @@ export function EChart({
   height = DEFAULT_CHART_HEIGHT,
   renderer = "canvas",
   className,
+  events,
 }: EChartProps): ReactElement {
   const mode = useThemeMode();
   const hostRef = useRef<EChartHostElement>(null);
@@ -109,6 +118,10 @@ export function EChart({
   useEffect(() => {
     optionRef.current = option;
   });
+  const eventsRef = useRef<EChartProps["events"]>(events);
+  useEffect(() => {
+    eventsRef.current = events;
+  });
   const appliedOption = useRef<ChartOption | null>(null);
 
   useEffect(() => {
@@ -116,7 +129,13 @@ export function EChart({
     if (!el) return;
     el.removeAttribute("data-echarts-ready");
     const init = () => {
-      el.echartsInstance = mountChart(el, optionRef.current, mode, renderer);
+      el.echartsInstance = mountChart(
+        el,
+        optionRef.current,
+        mode,
+        renderer,
+        eventsRef,
+      );
       appliedOption.current = optionRef.current;
     };
     // display:none hosts (an inactive keepMounted tab panel, a

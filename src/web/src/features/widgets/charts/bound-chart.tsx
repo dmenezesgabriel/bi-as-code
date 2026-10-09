@@ -5,12 +5,21 @@ import { EChart } from "./echart";
 import { ChartEmpty, ChartResult } from "./states";
 import type { ChartOption, ChartRenderer } from "./types";
 import { useChartRows } from "./use-chart-rows";
+import { usePointSelect } from "./use-point-select";
 
 interface BoundChartProps<M> {
   data: string;
   height?: number;
   filters?: FilterIds;
   renderer?: ChartRenderer;
+  /**
+   * `"crossfilter"`: the chart publishes its selection gestures as clauses
+   * into the interacted field's selection; consumers declaring that field
+   * in `filters` re-query while the chart's own clause skips it.
+   */
+  select?: "crossfilter";
+  /** The column a mark click predicates — the `x` binding on series and scatter charts. */
+  pointField?: string;
   model: (rows: readonly Row[]) => M;
   /**
    * When the projected model carries nothing to draw — e.g. a histogram of
@@ -26,15 +35,21 @@ interface BoundChartProps<M> {
  * at chart height, else project rows through `model` and paint `option`.
  * The projection runs inside `ChartResult`'s callback so its typed errors
  * (ColumnError/FormatError) land on the chart's error face.
+ * `select="crossfilter"` wires the gestures the bound fields support —
+ * `pointField` attaches the mark-click interactor.
  *
  * @example
- * <BoundChart data="orders" model={(r) => toScatterSeries(r, spec)} option={(m) => toScatterOption(m, props)} />
+ * <BoundChart data="orders" select="crossfilter" pointField="region" model={(r) => toScatterSeries(r, spec)} option={(m) => toScatterOption(m, props)} />
  */
 export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
-  const { result, height } = useChartRows(
+  const { result, height, client } = useChartRows(
     props.data,
     props.height,
     props.filters,
+  );
+  const pointClick = usePointSelect(
+    props.select === "crossfilter" ? props.pointField : undefined,
+    client,
   );
   return (
     <ChartResult name={props.data} result={result} height={height}>
@@ -47,6 +62,7 @@ export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
             option={props.option(model)}
             height={height}
             renderer={props.renderer}
+            events={pointClick ? { click: pointClick } : undefined}
           />
         );
       }}

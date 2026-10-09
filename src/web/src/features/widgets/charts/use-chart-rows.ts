@@ -1,6 +1,7 @@
-import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
+import { useFilteredQueryClient } from "../../filters/use-filtered-query-rows";
 import type { FilterIds } from "../../filters/filter-ids";
 import type { QueryResult } from "../../pages/types";
+import type { QueryClient } from "../../crossfilter/types";
 import { DEFAULT_CHART_HEIGHT } from "./echart";
 
 /**
@@ -9,13 +10,20 @@ import { DEFAULT_CHART_HEIGHT } from "./echart";
  * contributes, the plain registry result otherwise (undefined = no fence
  * declares the name — the caller's `ChartResult` renders the alert) — and
  * `height` resolves to the chart default when unset so every face sizes
- * itself to the canvas box.
+ * itself to the canvas box. `client` is the consumption `QueryClient` the
+ * coordinator connects for `filters` — a chart that also publishes clauses
+ * (`select="crossfilter"`) stamps it into `clause.clients` so its own
+ * clause never narrows its own rows.
  */
 export function useChartRows(
   data: string,
   height?: number,
   filters?: FilterIds,
-): { result: QueryResult | undefined; height: number } {
-  const result = useFilteredQueryRows(data, filters);
-  return { result, height: height ?? DEFAULT_CHART_HEIGHT };
+): {
+  result: QueryResult | undefined;
+  height: number;
+  client: QueryClient;
+} {
+  const { result, client } = useFilteredQueryClient(data, filters);
+  return { result, height: height ?? DEFAULT_CHART_HEIGHT, client };
 }

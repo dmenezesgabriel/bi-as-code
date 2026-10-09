@@ -14,7 +14,9 @@ the [orders overview](/).
 Every figure on this page re-runs live against the `orders` table — the
 `?region=`, `?amount=`, `?ordered=`, `?q=` and `?large_orders=` URL
 parameters scope the widgets that declare `filters` and the queries that
-interpolate them.
+interpolate them. Clicking a bar in the regional split below
+cross-filters the same `region`-filtered widgets — session state, no URL
+parameter; click it again to clear.
 </Callout>
 
 ## Overview
@@ -102,7 +104,7 @@ group by region
 order by revenue desc
 ```
 
-<BarChart data="orders" x="region" y="revenue" labels filters={["region"]} />
+<BarChart data="orders" x="region" y="revenue" labels filters={["region"]} select="crossfilter" />
 
 ```sql region_share
 select region, orders,

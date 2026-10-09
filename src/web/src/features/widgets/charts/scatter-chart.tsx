@@ -25,6 +25,8 @@ export function ScatterChart({
       data={props.data}
       height={props.height}
       filters={props.filters}
+      select={props.select}
+      pointField={props.x}
       renderer={renderer}
       model={(rows) =>
         toScatterSeries(rows, {

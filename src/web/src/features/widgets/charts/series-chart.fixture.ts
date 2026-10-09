@@ -38,6 +38,23 @@ export const TREND_ROWS: Row[] = [
   { week: 3, region: "South", orders: 100 },
 ];
 
+/**
+ * A second fence a `filters="region"` consumer binds to — the chart-click
+ * tests and stories narrow it through the chart's published point clauses.
+ */
+export const OPTS: SqlBlock = {
+  name: "opts",
+  sql: "select * from opts",
+};
+
+export const OPTS_ROWS: Row[] = [
+  { region: "West", amount: 12 },
+  { region: "North", amount: 30 },
+  { region: "South", amount: 48 },
+];
+
+export const OPTS_WEST: Row[] = [{ region: "West", amount: 12 }];
+
 /** Scatter fixture: orders↔revenue correlation across two regions + a size column. */
 export const SCATTER_ROWS: Row[] = [
   { week: 1, orders: 120, revenue: 4800, region: "North", accounts: 14 },
@@ -82,6 +99,21 @@ export const AMOUNT_ROWS: Row[] = [
 /** Every query on the fake returns `rows` — callers bind one fence at a time. */
 export function dbWith(rows: Row[]): FakeDuckDb {
   return FakeDuckDb.withRows(rows);
+}
+
+/**
+ * The fake behind the `select="crossfilter"` tests and stories: the
+ * chart's own fence gets `allRows`, the `opts` consumer gets `OPTS_ROWS`,
+ * and any `where <field> = ?`-wrapped query — the published point clause —
+ * gets the narrowed `OPTS_WEST`.
+ */
+export function dbSelectable(field: string, allRows: Row[]): FakeDuckDb {
+  const db = new FakeDuckDb();
+  db.rowsWhen = (sql) => {
+    if (sql.includes(`where ${field} = ?`)) return OPTS_WEST;
+    return sql.includes("from opts") ? OPTS_ROWS : allRows;
+  };
+  return db;
 }
 
 /**
@@ -159,4 +191,77 @@ export async function expectEmptyFace(element: ReactElement): Promise<void> {
   });
   expect(await screen.findByText("0 rows")).toBeInTheDocument();
   expect(document.querySelector("[data-echarts-theme]")).toBeNull();
+}
+
+/** The engine internals `clickMark` reaches — typed narrowly, no `any`. */
+interface ChartInternals {
+  getModel(): {
+    getSeriesByIndex(i: number): {
+      getData(): { getItemGraphicEl(dataIndex: number): unknown };
+    };
+  };
+  getZr(): {
+    handler: {
+      dispatchToElement(
+        targetInfo: { target: unknown },
+        eventName: string,
+        event: object,
+      ): void;
+    };
+  };
+}
+
+/**
+ * The SelectCrossfilter story play: click mark 0 → the consumer table
+ * narrows to one row while the publisher's own option holds
+ * `publisherPoints`, then click-same restores the table. The bar and
+ * scatter stories share it verbatim — only the publisher's point count
+ * differs.
+ */
+export function crossfilterTogglePlay(
+  publisherPoints: number,
+): ({ canvasElement }: { canvasElement: HTMLElement }) => Promise<void> {
+  return async ({ canvasElement }) => {
+    const host = await readyHost(canvasElement);
+    const bodyRows = () => canvasElement.querySelectorAll("tbody tr").length;
+    await waitFor(() => expect(bodyRows()).toBe(3));
+
+    clickMark(host, 0);
+    await waitFor(() => expect(bodyRows()).toBe(1));
+    const option = await appliedOption<{ series?: { data?: unknown[] }[] }>(
+      canvasElement,
+    );
+    expect(option.series?.[0]?.data).toHaveLength(publisherPoints);
+
+    clickMark(host, 0);
+    await waitFor(() => expect(bodyRows()).toBe(3));
+  };
+}
+
+/**
+ * Synthesizes a mark click on the series-0 datum at `dataIndex`. jsdom's
+ * svg surface has no layout for zrender's coordinate hit test, so this
+ * calls the same `dispatchToElement` the DOM proxy invokes after its hit
+ * test — the echarts `click` event still flows through the real series
+ * packet assembly. `modifiers` become the zrender event's native event.
+ */
+export function clickMark(
+  host: EChartHostElement,
+  dataIndex: number,
+  modifiers?: { shiftKey?: boolean; metaKey?: boolean },
+): void {
+  const chart = host.echartsInstance;
+  if (!chart) throw new Error("no echartsInstance on host");
+  const internals = chart as unknown as ChartInternals;
+  const el = internals
+    .getModel()
+    .getSeriesByIndex(0)
+    .getData()
+    .getItemGraphicEl(dataIndex);
+  if (!el) throw new Error(`no graphic element for dataIndex ${dataIndex}`);
+  internals.getZr().handler.dispatchToElement({ target: el }, "click", {
+    zrX: 0,
+    zrY: 0,
+    ...modifiers,
+  });
 }

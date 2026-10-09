@@ -1,16 +1,22 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
+import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
 import { renderWithRegistry } from "../value/registry-harness";
 import { AreaChart } from "./area-chart";
 import { BarChart } from "./bar-chart";
 import { LineChart } from "./line-chart";
 import { SeriesChart } from "./series-chart";
 import {
+  OPTS,
   ORDERS_REGIONAL,
   REGIONAL_ROWS,
   TREND_ROWS,
   WEEKLY_TREND,
+  clickMark,
+  dbSelectable,
   dbWith,
 } from "./series-chart.fixture";
 import type { EChartHostElement } from "./types";
@@ -57,6 +63,46 @@ function appliedOption(host: EChartHostElement): AppliedOption {
 
 function noChart(): void {
   expect(document.querySelector("[data-echarts-theme]")).toBeNull();
+}
+
+/**
+ * A `filters="region"` consumer probe — a chart's published point clauses
+ * reach its wrapped query and change the row count it renders.
+ */
+function OptsRowCount(): ReactElement {
+  const result = useFilteredQueryRows("opts", "region");
+  return (
+    <output data-testid="opts-rows">
+      {result?.status === "success" ? String(result.rows.length) : "-"}
+    </output>
+  );
+}
+
+/**
+ * Renders the regional BarChart plus the `opts` consumer; the fake serves
+ * `OPTS_WEST` to any `region = ?`-wrapped query, the full set otherwise.
+ */
+function renderSelectableBarChart(select?: "crossfilter"): {
+  db: FakeDuckDb;
+  port: FakeFilterUrlPort;
+} {
+  const db = dbSelectable("region", REGIONAL_ROWS);
+  const port = new FakeFilterUrlPort("");
+  renderWithRegistry(
+    <>
+      <BarChart
+        data="orders"
+        x="region"
+        y="revenue"
+        filters="region"
+        select={select}
+        renderer="svg"
+      />
+      <OptsRowCount />
+    </>,
+    { db, blocks: [ORDERS_REGIONAL, OPTS], port },
+  );
+  return { db, port };
 }
 
 describe("series chart tags", () => {
@@ -334,6 +380,82 @@ describe("series chart states", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent('fmt="bogus"');
+  });
+});
+
+describe('series chart — select="crossfilter"', () => {
+  it("publishes the clicked bar's x, narrowing consumers while its own rows hold", async () => {
+    const { db } = renderSelectableBarChart("crossfilter");
+    const host = await chartHost();
+    const optsRows = screen.getByTestId("opts-rows");
+    await waitFor(() => expect(optsRows).toHaveTextContent("3"));
+
+    act(() => clickMark(host, 0));
+
+    // The consumer re-queried wrapped; the publisher's own clause skips
+    // it, so no wrapped `orders` query ever issues and its three bars hold.
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select * from (select * from opts) where region = ?",
+        params: ["West"],
+      }),
+    );
+    await waitFor(() => expect(optsRows).toHaveTextContent("1"));
+    expect(
+      db.queries.filter(({ sql }) =>
+        sql.includes("(select region, revenue, orders"),
+      ),
+    ).toHaveLength(0);
+    expect(appliedOption(host).series[0]?.data).toHaveLength(3);
+  });
+
+  it("clears on a second plain click of the sole selected bar, restoring consumers", async () => {
+    renderSelectableBarChart("crossfilter");
+    const host = await chartHost();
+    const optsRows = screen.getByTestId("opts-rows");
+
+    act(() => clickMark(host, 0));
+    await waitFor(() => expect(optsRows).toHaveTextContent("1"));
+    act(() => clickMark(host, 0));
+    await waitFor(() => expect(optsRows).toHaveTextContent("3"));
+  });
+
+  it("accumulates shift clicks into an IN list", async () => {
+    const { db } = renderSelectableBarChart("crossfilter");
+    const host = await chartHost();
+
+    act(() => clickMark(host, 0));
+    act(() => clickMark(host, 1, { shiftKey: true }));
+
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select * from (select * from opts) where region IN (?, ?)",
+        params: ["West", "North"],
+      }),
+    );
+  });
+
+  it("publishes nothing without the select prop", async () => {
+    const { db } = renderSelectableBarChart();
+    const host = await chartHost();
+
+    act(() => clickMark(host, 0));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(
+      db.queries.filter(({ sql }) => sql.includes("where region")),
+    ).toHaveLength(0);
+  });
+
+  it("keeps chart selections session-state — no URL writes", async () => {
+    const { port } = renderSelectableBarChart("crossfilter");
+    const host = await chartHost();
+
+    act(() => clickMark(host, 0));
+    await waitFor(() =>
+      expect(screen.getByTestId("opts-rows")).toHaveTextContent("1"),
+    );
+    expect(port.written).toHaveLength(0);
   });
 });
 

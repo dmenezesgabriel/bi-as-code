@@ -372,6 +372,90 @@ test("?region=West narrows the filter-declaring charts while the trend charts st
   expect(errors).toEqual([]);
 });
 
+/**
+ * The page-space point inside the regional split's bar `dataIndex` —
+ * `convertToPixel` maps [category index, mid-bar value] into the host's
+ * own pixels, then the host's bounding rect lifts them to viewport space.
+ */
+async function barPoint(
+  page: Page,
+  dataIndex: number,
+): Promise<{ x: number; y: number }> {
+  return page.evaluate((di) => {
+    const host = document.querySelectorAll<HTMLElement>(
+      "[data-echarts-theme]",
+    )[0];
+    if (!host) throw new Error("chart host 0 not in the document");
+    const chart = (
+      host as unknown as {
+        echartsInstance?: {
+          convertToPixel(finder: unknown, value: unknown[]): number[];
+        };
+      }
+    ).echartsInstance;
+    if (!chart) throw new Error("chart host 0 has no echartsInstance");
+    const [x, y] = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [
+      di,
+      3000,
+    ]);
+    if (x === undefined || y === undefined)
+      throw new Error("convertToPixel returned no point");
+    const rect = host.getBoundingClientRect();
+    return { x: rect.left + x, y: rect.top + y };
+  }, dataIndex);
+}
+
+test("a bar click cross-filters the region consumers while the bar chart holds its rows", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  const posts = await workerPosts(page);
+
+  // Baseline: three bars; four pagers read "39 rows" — the region_week
+  // and weekly_trend fence previews (always unfiltered) plus their two
+  // <Table>s — and the weekly_revenue preview already reads "13 rows".
+  expect((await optionAt(page, 0)).series[0]?.data).toHaveLength(3);
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
+  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(1);
+
+  await chartHosts(page).nth(0).scrollIntoViewIfNeeded();
+  const westBar = await barPoint(page, 0);
+  await page.mouse.click(westBar.x, westBar.y);
+
+  // The publisher's own clause skips it — all three bars hold — while
+  // every filters={["region"]} consumer re-queries: the scatter keeps
+  // only West's 13 weeks, the keepMounted region_week <Table> joins the
+  // "13 rows" pagers, and order_detail pages down to West's 140 rows.
+  const bar = await optionAt(page, 0);
+  expect(bar.xAxis[0]?.data).toEqual(["West", "North", "South"]);
+  expect(bar.series[0]?.data).toHaveLength(3);
+  await expect
+    .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
+    .toEqual(["West"]);
+  expect((await optionAt(page, 1)).series[0]?.data).toHaveLength(13);
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(3);
+  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(2);
+  await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(1);
+
+  // Session state — the URL stays bare — and the consumers' re-query did
+  // reach the worker.
+  await expect(page).toHaveURL(/weekly-review$/);
+  expect(await workerPosts(page)).toBeGreaterThan(posts);
+
+  // Clicking the same bar clears: every consumer re-queries unfiltered.
+  await page.mouse.click(westBar.x, westBar.y);
+  await expect
+    .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
+    .toEqual(["North", "South", "West"]);
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
+  await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(0);
+
+  expect(errors).toEqual([]);
+});
+
 test("the index page renders a <BarChart> beside its <Table>", async ({
   page,
   biacDev,

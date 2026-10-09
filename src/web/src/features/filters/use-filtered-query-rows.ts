@@ -65,6 +65,25 @@ export function useFilteredQueryRows(
   filters: FilterIds | undefined,
   owner?: string,
 ): QueryResult | undefined {
+  return useFilteredQueryClient(name, filters, owner).result;
+}
+
+/**
+ * The filtered read plus the `QueryClient` the coordinator connects: the
+ * consumption client a widget needs when it also publishes clauses — its
+ * clauses stamp `clients: {client}` so cross-filtering skips the publisher.
+ * Widgets that only read use `useFilteredQueryRows`, the same hook without
+ * the client.
+ *
+ * @example
+ * const { result, client } = useFilteredQueryClient(data, filters);
+ * selection(field).update(clausePoint(field, x, { source, clients: new Set([client]) }));
+ */
+export function useFilteredQueryClient(
+  name: string,
+  filters: FilterIds | undefined,
+  owner?: string,
+): { result: QueryResult | undefined; client: QueryClient } {
   const registryResult = useQueryResults()[name];
   const { interpolated, registered } = useQuerySource();
   const pageFilters = usePageFilters();
@@ -131,12 +150,14 @@ export function useFilteredQueryRows(
     };
   }, [pageFilters, idsKey, block, registered, runtime, owner, client]);
 
-  if (registryResult === undefined) return undefined;
-  if (!pageFilters || !block || block.errors.length > 0) return registryResult;
+  if (registryResult === undefined) return { result: undefined, client };
+  if (!pageFilters || !block || block.errors.length > 0) {
+    return { result: registryResult, client };
+  }
   const predicate = composeAnd(
     selections
       .map((selection) => selection.predicate(client))
       .filter((p): p is FilterPredicate => p !== undefined),
   );
-  return predicate ? filteredResult : registryResult;
+  return { result: predicate ? filteredResult : registryResult, client };
 }

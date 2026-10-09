@@ -2,15 +2,21 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import {
   withFilteredData,
+  withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
+import { Table } from "../table/table";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { BarChart } from "./bar-chart";
 import {
+  OPTS,
   ORDERS_REGIONAL,
   REGIONAL_ROWS,
   TREND_ROWS,
   WEEKLY_TREND,
   appliedOption,
+  crossfilterTogglePlay,
+  dbSelectable,
   dbWith,
   readyHost,
 } from "./series-chart.fixture";
@@ -57,6 +63,29 @@ export const Filtered: Story = {
     );
     await expect(option.series?.[0]?.data).toHaveLength(1);
   },
+};
+
+/**
+ * `select="crossfilter"`: a mark click publishes a `region = ?` clause —
+ * the consumer table re-queries while the publishing chart's own clause
+ * skips it (all three bars hold), and clicking the same bar again clears.
+ */
+export const SelectCrossfilter: Story = {
+  args: { filters: "region", select: "crossfilter" },
+  decorators: [
+    withQueryData(
+      [ORDERS_REGIONAL, OPTS],
+      dbSelectable("region", REGIONAL_ROWS),
+    ),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  render: (args) => (
+    <>
+      <BarChart {...args} />
+      <Table data="opts" filters="region" />
+    </>
+  ),
+  play: crossfilterTogglePlay(3),
 };
 
 /** `series` + `stacked` piles each week's regions into one column. */

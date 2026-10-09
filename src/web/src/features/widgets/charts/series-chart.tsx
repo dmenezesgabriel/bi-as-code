@@ -26,6 +26,8 @@ export function SeriesChart({
       data={props.data}
       height={props.height}
       filters={props.filters}
+      select={props.select}
+      pointField={props.x}
       renderer={renderer}
       model={(rows) =>
         toSeries(rows, { x: props.x, y: props.y, series: props.series }, type)
