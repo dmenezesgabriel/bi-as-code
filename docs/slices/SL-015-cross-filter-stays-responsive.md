@@ -1,0 +1,162 @@
+# SL-015 — Cross-filter stays responsive while I drag a slider or brush on a large dataset
+
+Milestone: Phase 1 · State: open · Depends on: SL-013, SL-014 · Evidence: `docs/research/interaction-reference.md` (R2) · Closes: —
+
+> Written per `docs/slices/_TEMPLATE.md`. Every `research_repos/` path below was verified with `test -e` in the session that wrote this file (2026-10-09). Line ranges rot — paths are the citation; open the file.
+
+## Outcome
+
+On a page with ~200k rows, dragging a slider or brushing a histogram re-queries each cross-filtered chart a bounded number of times per drag, never paints a result older than one already painted, and settles on the clause the user released.
+
+## Demo
+
+1. Cold start: `bin/biac dev`, open `http://localhost:<port>/crossfilter-scale` (page added by T1).
+2. Drag the slider end to end over ~2 s — every histogram repaints progressively during the drag (not only after release), and the browser stays responsive (no frozen frames).
+3. Release — every histogram shows the counts for the released extent (spot-check one bar against the same `count(*)` run in the SQL block).
+4. Brush an interval on one histogram and drag it — the other histograms follow; the brushed histogram itself is not re-queried (cross-filter skip, SL-013/SL-014).
+5. `console` stays clean (named known debt only).
+6. Regression: `/weekly-review` — Region dropdown ↔ Amount slider and the Order size histogram brush still cross-filter as shipped in SL-013/SL-014.
+
+**Before:** see "Baseline" below (355 rows, `/weekly-review`); the 200k-row "before" is T1's deliverable.
+
+## Who else implements this
+
+| Repo      | Has it  | Entry points                                                                                                                                                                                                                                                                 | Approach in one line                                                                                                                                                                                                    |
+| --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| mosaic    | FULL    | `research_repos/mosaic/packages/mosaic/core/src/util/throttle.ts`, `research_repos/mosaic/packages/mosaic/core/src/util/AsyncDispatch.ts`, `research_repos/mosaic/packages/mosaic/core/src/Coordinator.ts`, `research_repos/mosaic/packages/mosaic/core/src/QueryManager.ts` | One selection update in flight at a time (dispatch waits on `Promise.allSettled` of every client's re-query), queued updates filtered to the latest, per-client rAF-debounced throttle; plus cache/consolidation/preagg |
+| evidence  | PARTIAL | `research_repos/evidence/core/src/Query.svelte.ts`, `research_repos/evidence/core/src/rawResource.svelte.ts`, `research_repos/evidence/core/src/user-components/interfaces/query-service.ts`                                                                                 | Per-query 500 ms time debounce (`debounce: 500` default), abort the superseded fetch via `AbortSignal`, SQL-keyed result cache (`noCache` opt-out)                                                                      |
+| framework | PARTIAL | `research_repos/framework/src/client/stdlib/generators/input.js`, `research_repos/framework/src/client/stdlib/vgplot.js`                                                                                                                                                     | No throttle of its own — inputs fire on every `input` event; cross-filter dashboards delegate to a mosaic `Coordinator` (`vgplot.js`), inheriting mosaic's mechanisms                                                   |
+| streamlit | PARTIAL | `research_repos/streamlit/frontend/lib/src/components/widgets/Slider/Slider.tsx`, `research_repos/streamlit/frontend/lib/src/components/widgets/TextInput/TextInput.tsx`, `research_repos/streamlit/lib/streamlit/runtime/scriptrunner/script_runner.py`                     | Slider commits only on release (`onChangeEnd` → `handleFinalChange`); text input commits on a `liveDebounceMs` debounce; a new commit interrupts the running script (`request_rerun`); server-side `st.cache_data`      |
+
+**Count:** 4 of 4 bound query churn from continuous input — mosaic and framework (via mosaic) by latest-wins serialization, evidence by time debounce + abort, streamlit by commit-on-release + interrupt. Building it is not an invention; _which_ mechanism is the decision below.
+
+## Implementation inventory
+
+### mosaic
+
+| Concern                                | Files                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Throttle primitive (latest-wins + rAF) | `research_repos/mosaic/packages/mosaic/core/src/util/throttle.ts` — `throttle(callback, debounce)`: while a promise is in flight only the most recent call is kept as `next`; with `debounce=true` calls within one animation frame collapse to the last                                                                                                                                                                               |
+| Throttle use site                      | `research_repos/mosaic/packages/mosaic/core/src/MosaicClient.ts` — `_requestUpdate = throttle(() => this.requestQuery(), true)`; `requestUpdate()` vs `requestQuery()` (every `requestQuery` call executes; `requestUpdate` calls may be consolidated)                                                                                                                                                                                 |
+| Selection update serialization         | `research_repos/mosaic/packages/mosaic/core/src/util/AsyncDispatch.ts` — `emit()`: if `entry.pending`, enqueue with `emitQueueFilter`; otherwise broadcast and set `pending = Promise.allSettled(callbacks)`, dequeue the next on settle                                                                                                                                                                                               |
+| Which queued updates survive           | `research_repos/mosaic/packages/mosaic/core/src/Selection.ts` — `emitQueueFilter` → resolver `queueFilter`: under `cross`, drop queued values from the **same** `active.source` only (other sources' updates survive); otherwise drop every queued value                                                                                                                                                                               |
+| Coordinator update path                | `research_repos/mosaic/packages/mosaic/core/src/Coordinator.ts` — `updateSelection` returns `Promise.allSettled` over the group's clients (this is what `AsyncDispatch` waits on); `activateSelection` (preagg warm-up on pointer-enter)                                                                                                                                                                                               |
+| Query scheduling / cancellation        | `research_repos/mosaic/packages/mosaic/core/src/QueryManager.ts` (`Priority`, `maxConcurrentRequests = 32`, `cancel(requests)` drops only queued, not submitted, requests), `research_repos/mosaic/packages/mosaic/core/src/util/priority-queue.ts`, `research_repos/mosaic/packages/mosaic/core/src/util/query-result.ts`                                                                                                             |
+| Result cache (out of scope — decide)   | `research_repos/mosaic/packages/mosaic/core/src/util/cache.ts` — `lruCache({ maxBytes = 256 MiB })`, `voidCache()`; enabled by `Coordinator` option `cache = true`                                                                                                                                                                                                                                                                     |
+| Consolidation (out of scope — decide)  | `research_repos/mosaic/packages/mosaic/core/src/QueryConsolidator.ts` — groups structurally compatible queries per `requestAnimationFrame` into one; option `consolidate = true`                                                                                                                                                                                                                                                       |
+| Preaggregation (out of scope — decide) | `research_repos/mosaic/packages/mosaic/core/src/preagg/PreAggregator.ts`                                                                                                                                                                                                                                                                                                                                                               |
+| Tests to port semantics from           | `research_repos/mosaic/packages/mosaic/core/test/throttle.test.ts`, `research_repos/mosaic/packages/mosaic/core/test/selection.test.ts`, `research_repos/mosaic/packages/mosaic/core/test/coordinator.test.ts`, `research_repos/mosaic/packages/mosaic/core/test/query-manager.test.ts`, `research_repos/mosaic/packages/mosaic/core/test/query-consolidator.test.ts`, `research_repos/mosaic/packages/mosaic/core/test/cache.test.ts` |
+| Large-data demo spec                   | `research_repos/mosaic/specs/yaml/flights-200k.yaml` (three `intervalX` histograms, `select: crossfilter`, `data/flights-200k.parquet`), `research_repos/mosaic/specs/yaml/flights-10m.yaml`                                                                                                                                                                                                                                           |
+| Public contract                        | `research_repos/mosaic/docs/api/core/coordinator.md` (`cache`, `consolidate` options), `research_repos/mosaic/docs/api/core/client.md` (`requestUpdate` vs `requestQuery`)                                                                                                                                                                                                                                                             |
+
+### evidence
+
+| Concern                       | Files                                                                                                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Debounce default              | `research_repos/evidence/core/src/Query.svelte.ts` — `QueryOptions.debounce`, default `500`; passed as `{ debounce }` to the resource                                                                                           |
+| Stale-result guard            | `research_repos/evidence/core/src/Query.svelte.ts` — every fetcher checks `signal.aborted \|\| this._destroyed` after each await; the `_destroyed` comment records that the debounced resource does not abort at teardown       |
+| Loading state during debounce | `research_repos/evidence/core/src/Query.svelte.ts` — `watch(() => this.dataQuery, …)` flips `_manualLoading` immediately so a filter change shows a spinner instead of a stale chart for the debounce window (EVI-3119 comment) |
+| Resource primitive            | `research_repos/evidence/core/src/rawResource.svelte.ts` (loading, error, debounce, lazy, abort, refetch)                                                                                                                       |
+| Result cache                  | `research_repos/evidence/core/src/user-components/interfaces/query-service.ts` (`noCache`, `primeCache`)                                                                                                                        |
+| Batch loading                 | `research_repos/evidence/core/src/metadata/inline-query-metadata.svelte.ts` (`loadAllDebounced`)                                                                                                                                |
+
+### framework
+
+| Concern                 | Files                                                                                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Input event cadence     | `research_repos/framework/src/client/stdlib/generators/input.js` — `eventof(element)` returns `"input"` for range inputs: one value per tick, no debounce |
+| Cross-filter delegation | `research_repos/framework/src/client/stdlib/vgplot.js` — `new vgplot.Coordinator()` + `wasmConnector({duckdb})`: all throttling is mosaic's               |
+| DuckDB client           | `research_repos/framework/src/client/stdlib/duckdb.js` (`sources` map; no result cache)                                                                   |
+
+### streamlit
+
+| Concern                    | Files                                                                                                                                                                                                                                               |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit on release          | `research_repos/streamlit/frontend/lib/src/components/widgets/Slider/Slider.tsx` — `handleChange` updates UI only (`setUiValue`); `handleFinalChange` (`onChangeEnd`) commits; keyboard fires both in one batch (comment above `handleFinalChange`) |
+| Time debounce              | `research_repos/streamlit/frontend/lib/src/components/widgets/TextInput/TextInput.tsx` (`liveDebounceMs`), `research_repos/streamlit/frontend/lib/src/hooks/useDebouncedCallback.ts`                                                                |
+| Supersede the running work | `research_repos/streamlit/lib/streamlit/runtime/scriptrunner/script_runner.py` — `request_rerun` interrupts the current run at its next interrupt point                                                                                             |
+| Result cache               | `research_repos/streamlit/lib/streamlit/runtime/caching/cache_data_api.py`                                                                                                                                                                          |
+
+### Where the references disagree — the decisions this slice makes
+
+| #   | Axis                       | Options seen (repo → approach)                                                                                                                                                      |
+| --- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Superseded query           | mosaic → let it finish, queue only the latest (`throttle.ts`, `AsyncDispatch.emit`); evidence → abort via `AbortSignal`; streamlit → interrupt the run; ours → abort + `cancelSent` |
+| D2  | Debounce clock             | mosaic → one animation frame; evidence → 500 ms; streamlit → release for slider, `liveDebounceMs` for text; ours → none for slider, 150 ms brush throttle, 300 ms text commit       |
+| D3  | Where serialization lives  | mosaic → both per selection dispatch (`AsyncDispatch`) and per client (`MosaicClient._requestUpdate`); evidence/streamlit → per query/run                                           |
+| D4  | Queue filter under cross   | mosaic → drop same-source queued updates only; everyone else has no queue                                                                                                           |
+| D5  | Large-data source for demo | mosaic → a committed/fetched parquet (`flights-200k.yaml` `data/flights-200k.parquet`); ours → `sql-frontmatter.ts` only accepts `data/…` `.csv\|json\|arrow\|parquet`              |
+
+## Trade-offs and what we adopt
+
+| Axis | Options seen (repo → approach)                        | Trade-off                                                                                                                                                                                                                                             | Our choice, and why                                                                                                                                                                                       |
+| ---- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1   | finish + latest-wins (mosaic) vs abort (evidence, us) | Abort keeps the worker free but, when one query outlasts the publish interval, every query is cancelled before it paints — the chart freezes until the drag stops. Latest-wins paints every completed query but may run one stale query to completion | **Decide on T1's numbers.** If a 200k-row re-query exceeds the drag's publish interval, adopt latest-wins (mosaic); keep `cancelSent` for disconnect only. Record in the ADR (T3)                         |
+| D2   | rAF vs fixed ms vs release                            | Release (streamlit) gives no live feedback during a drag — the opposite of the cross-filter UX mosaic exists for; 500 ms (evidence) adds fixed lag to every interaction; rAF adds ≤ 1 frame                                                           | **rAF** (mosaic): live feedback, no fixed lag. Brush keeps its echarts 150 ms throttle (already bounds dispatch); text input keeps its 300 ms commit                                                      |
+| D3   | per selection vs per client                           | Per selection keeps a group's charts in step (all settle before the next clause); per client lets a fast chart run ahead of a slow one                                                                                                                | **Per selection** — it is the one that guarantees "never paints an older result" across a group; per-client throttle only if T1 shows a slow client starving the rest                                     |
+| D4   | same-source drop (mosaic) vs drop all                 | Drop-all loses a different widget's clause that queued behind a drag                                                                                                                                                                                  | **Same-source drop under cross, drop-all otherwise** (mosaic `queueFilter`), because our Selection already resolves by source identity (SL-013)                                                           |
+| D5   | committed parquet vs generated file                   | A committed 200k-row parquet costs MBs in history forever; a generator script needs a run step before `bin/biac dev`                                                                                                                                  | **Open — T1 decides** after measuring the parquet size (`duckdb` `COPY … TO … (FORMAT parquet, COMPRESSION zstd)`); a `pnpm` script writing a gitignored `data/` file is the fallback if it exceeds ~2 MB |
+
+## Gap analysis — what we already have vs the references
+
+| Concern                               | Ours today (file)                                                                                                                                                   | Best reference (file)                                                                         | Gap                                                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Superseded-query policy               | `src/web/src/features/crossfilter/coordinator.ts` — `#updateClient` aborts the previous `AbortController` and starts a new query on every publish                   | `research_repos/mosaic/packages/mosaic/core/src/util/throttle.ts`                             | **partial** — no starvation guard; correctness holds (aborted results are dropped), progress under load does not |
+| Selection update dispatch             | `src/web/src/features/crossfilter/selection.ts` — `update()`/`reset()` call `#notify()` synchronously; no pending/queue                                             | `research_repos/mosaic/packages/mosaic/core/src/util/AsyncDispatch.ts`                        | **absent**                                                                                                       |
+| Queue filter                          | none                                                                                                                                                                | `research_repos/mosaic/packages/mosaic/core/src/Selection.ts` (`queueFilter`)                 | **absent**                                                                                                       |
+| Cancellation at the worker            | `src/web/src/features/data/run-query.ts` — `send()` + `cancelSent()` on interrupt, fresh connection per query                                                       | `research_repos/mosaic/packages/mosaic/core/src/QueryManager.ts` (`cancel` drops only queued) | **complete** (ours goes further: it cancels submitted work)                                                      |
+| Slider publish cadence                | `src/web/src/features/widgets/inputs/slider.tsx` — `onChange` sets `filter.value` on every `onValueChange` tick                                                     | `research_repos/streamlit/frontend/lib/src/components/widgets/Slider/Slider.tsx`              | **partial** — every tick publishes; under D2 the throttle, not the widget, absorbs it                            |
+| Brush publish cadence                 | `src/web/src/features/widgets/charts/use-brush-select.ts` — `throttleType: "fixRate"`, `throttleDelay: 150`                                                         | mosaic interactors (rAF via `throttle.ts`)                                                    | **complete** for dispatch rate                                                                                   |
+| Coordinator ↔ hook bridge             | `src/web/src/features/filters/use-filtered-query-rows.ts` (`coordinator.connect(client, selections, run)`), `src/web/src/features/widgets/charts/use-chart-rows.ts` | `research_repos/mosaic/packages/mosaic/core/src/MosaicClient.ts`                              | **complete** — the throttle lands behind `connect`, no hook change expected                                      |
+| Large-data demo page                  | none — `data/orders.parquet` has 355 rows (`wc -l data/orders.csv` → 356 incl. header)                                                                              | `research_repos/mosaic/specs/yaml/flights-200k.yaml`                                          | **absent**                                                                                                       |
+| Latency measurement                   | only `test/e2e-browser/table-widget.spec.ts` (`performance.now()` + `MutationObserver` around a sort)                                                               | —                                                                                             | **absent** for cross-filter; reuse that spec's pattern                                                           |
+| Result cache / consolidation / preagg | none — `coordinator.ts` docstring says "no queue, cache or preaggregation"                                                                                          | `util/cache.ts`, `QueryConsolidator.ts`, `preagg/PreAggregator.ts`                            | **absent, deliberately** — ADR-0004 defers them; T3 records whether the numbers justify a later slice            |
+
+The ledger's `shipped` claim for SL-013/SL-014 survives: correctness (final state, cross skip) is unaffected; this slice is about progress and cost under load.
+
+`docs/research/interaction-reference.md` decision row 6 ("Debounce and consolidation … SL-015 measures our query latency first, then decides") is closed by T3.
+
+## Baseline
+
+`bin/biac dev` → `/weekly-review` (355 rows), headless `playwright-cli`, 2026-10-09. Method: patch `Worker.prototype.postMessage` in the page to log every duckdb-wasm request `type` with `performance.now()`, then drag the Amount slider's Maximum thumb with 7 `mousemove` steps (`mousedown` → 7 moves → `mouseup`). T1 reuses this method on the large page.
+
+| Measure                                                  | Value                                                                                                                                        |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Slider value change                                      | 38–44 → 38–43 (`?amount=38+-+43`); the 355-row domain has 7 integer steps, so the drag moved one step                                        |
+| Worker requests during the drag                          | `CONNECT` 14, `DISCONNECT` 14, `CREATE_PREPARED` 6, `SEND_PREPARED` 6, `START_PENDING_QUERY` 5, `FETCH_QUERY_RESULTS` 22, `CLOSE_PREPARED` 6 |
+| Cancelled queries                                        | 0 (no cancel request type logged)                                                                                                            |
+| Connection lifetime per query (`CONNECT` → `DISCONNECT`) | median 113 ms, max 225 ms over 14 queries                                                                                                    |
+| Console                                                  | 0 errors, 0 warnings (React DevTools info only)                                                                                              |
+
+Reading: even at 355 rows a cross-filter query holds its connection ~113 ms — about 7 animation frames and close to the brush's 150 ms dispatch throttle. A slider drag that publishes faster than that is where D1 (abort vs latest-wins) starts to matter; T1 measures how that scales at 200k rows.
+
+## Deviations
+
+- Consolidation, result cache and preaggregation are not ported (ADR-0004). T3's ADR states the measured reason.
+- `cancelSent` on a superseded query is ours, not mosaic's; whether it survives D1 is stated at the point it applies in `coordinator.ts`.
+
+## Open decisions
+
+- **D1** — abort vs latest-wins: evidence is T1's per-query latency at 200k rows against the slider's publish interval.
+- **D5** — committed parquet vs generated file: evidence is the zstd parquet size at 200k rows.
+
+## Surface
+
+| Layer  | Files                                                                                                                                                             |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| engine | none expected (D5 fallback: a data-generation script under `scripts/`)                                                                                            |
+| client | `src/web/src/features/crossfilter/selection.ts`, `src/web/src/features/crossfilter/coordinator.ts`, new throttle module under `src/web/src/features/crossfilter/` |
+| ui     | `pages/crossfilter-scale.md` (new), `data/` (D5)                                                                                                                  |
+| tests  | `src/web/src/features/crossfilter/*.unit.test.ts`, new `test/e2e-browser/crossfilter-scale.spec.ts`, `test/e2e-browser/` regression for `/weekly-review`          |
+
+## Tasks
+
+- [ ] T1 — Large-data demo page `pages/crossfilter-scale.md`: settle D5, ~200k rows, three `select="crossfilter"` histograms + a slider over one column. New `test/e2e-browser/crossfilter-scale.spec.ts` scripts a slider drag and a brush drag and records: queries issued per chart, queries completed vs aborted, frames with a painted update during the drag, time from release to settled. `playwright-cli` pass on `/crossfilter-scale` with the same numbers. Settle D1 from them.
+- [ ] T2 — Latest-wins selection dispatch (D1–D4): RED unit tests porting `throttle.test.ts` and `selection.test.ts` queue semantics (one in flight, same-source drop under cross, other-source survival, rAF collapse), then GREEN in `selection.ts`/`coordinator.ts`. Re-run T1's spec — report before/after for each number; `playwright-cli` on `/crossfilter-scale` and `/weekly-review`.
+- [ ] T3 — ADR-0007: cross-filter throttling policy and why consolidation/cache/preagg wait (or do not), citing T1/T2 numbers; close `docs/research/interaction-reference.md` row 6; backlog row SL-015 → `partial` pending the human demo.
+
+## Out of scope
+
+- Query consolidation, result cache, preaggregation — a later slice, only if T3's numbers justify it (ADR-0004).
+- Server-side or remote query execution (ADR-0005: queries run client-side).
+- Changing the slider to commit-on-release — rejected under D2.
