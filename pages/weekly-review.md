@@ -20,7 +20,7 @@ interpolate them.
 ## Overview
 
 <FilterBar>
-  <Dropdown id="region" data="orders" valueColumn="region" title="Region" />
+  <Dropdown id="region" data="order_amounts" valueColumn="region" title="Region" filters={["region", "amount"]} />
   <Slider id="amount" data="order_amounts" valueColumn="amount" range title="Amount" filters={["region"]} />
   <DateRange id="ordered" valueColumn="order_date" title="Ordered" />
   <TextInput id="q" title="Search regions" placeholder="e.g. West" />

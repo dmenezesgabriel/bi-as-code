@@ -14,8 +14,8 @@ A filter change publishes a typed clause through a page coordinator; every widge
 2. Record before numbers: region `<Table>` row count, `<BarChart>` bar count, Region `<Dropdown>` option count, `console` output.
 3. Pick `West` in the Region dropdown — BarChart, ScatterChart, Histogram and both tables narrow; the dropdown's own options stay complete.
 4. Drag the Amount slider to a narrow range — Histogram and the order-detail table narrow; the dropdown's options narrow to regions with orders inside the range (its options query declares `filters={["region", "amount"]}` on a fence that carries `amount`).
-5. Pick `East` in the dropdown — its options do not narrow to `East` (the region clause skips the dropdown's own client), while every other linked widget re-queries.
-6. Reload — `?region=East&amount=…` persists; URL semantics are unchanged (SL-009).
+5. Pick `North` in the dropdown — its options do not narrow to `North` (the region clause skips the dropdown's own client), while every other linked widget re-queries.
+6. Reload — `?region=North&amount=…` persists; URL semantics are unchanged (SL-009).
 
 The dropdown's options source moves from the `orders` fence (which projects only `region`, `orders`, `revenue` — an `amount` predicate against it is a binder error) to `order_amounts` (projects `order_date`, `amount`, `region`); option values dedupe, so the option set stays the same three regions.
 

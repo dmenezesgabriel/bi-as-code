@@ -216,6 +216,50 @@ test("the Amount slider writes a range param and narrows order_detail", async ({
   expect(errors).toEqual([]);
 });
 
+test("the Region dropdown cross-filters on amount but never on its own pick", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  const region = await pickRegion(page, biacDev, "West");
+
+  // The publishing input's own clause skips its own options query —
+  // reopening the dropdown still lists every region.
+  await region.click();
+  await expect(page.getByRole("option")).toHaveCount(3);
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect.poll(() => urlParam(page, "region")).toBeNull();
+
+  // The slider's amount clause does reach the dropdown's options query
+  // (`filters={["region","amount"]}` on order_amounts): pinning the range
+  // to West's 43..44 band leaves West alone in the list. Reload first —
+  // the cascade-collapsed bounds hold the thumb at 43 silently; a fresh
+  // page re-seeds it to the full extent, so five ArrowRight steps land 43.
+  await page.reload();
+  const minimum = page.getByRole("slider", { name: "Minimum" });
+  await expect(minimum).toBeEnabled({ timeout: 30_000 });
+  // Each step republishes the clause and re-renders the thumb — poll-press
+  // rather than firing five blind presses, so a mid-render keypress can't
+  // drop.
+  await expect
+    .poll(
+      async () => {
+        const now = Number(await minimum.getAttribute("aria-valuenow"));
+        if (now < 43) await minimum.press("ArrowRight");
+        if (now > 43) await minimum.press("ArrowLeft");
+        return urlParam(page, "amount");
+      },
+      { timeout: 30_000 },
+    )
+    .toBe("43 - 44");
+
+  await region.click();
+  await expect(page.getByRole("option")).toHaveCount(1);
+  await expect(page.getByRole("option", { name: "West" })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("the Ordered date range persists the expression and narrows order_detail", async ({
   page,
   biacDev,

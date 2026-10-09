@@ -110,7 +110,7 @@ Then(
     assert.match(code, /if \(!Dropdown\) _missingMdxReference/);
     assert.match(
       code,
-      /_jsx\(Dropdown, \{\s*id: "region",\s*data: "orders",\s*valueColumn: "region"/,
+      /_jsx\(Dropdown, \{\s*id: "region",\s*data: "order_amounts",\s*valueColumn: "region"/,
     );
   },
 );
