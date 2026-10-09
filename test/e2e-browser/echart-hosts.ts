@@ -1,0 +1,64 @@
+import type { Locator, Page } from "@playwright/test";
+import { expect } from "./dev-server.fixture.js";
+
+/**
+ * The option shape a test reads back off the live echarts instance — the
+ * host element carries `echartsInstance` so browser assertions can inspect
+ * what `setOption` actually applied, same as the web-unit suite.
+ */
+export interface AppliedOption {
+  series: {
+    name?: string;
+    type?: string;
+    stack?: string;
+    areaStyle?: unknown;
+    label?: { show?: boolean };
+    data?: unknown[];
+    symbolSize?: unknown;
+    barCategoryGap?: unknown;
+  }[];
+  xAxis: { type?: string; data?: unknown[] }[];
+  yAxis: { max?: number; name?: string; data?: unknown[] }[];
+  legend: { selected?: Record<string, boolean> }[];
+  visualMap?: { min?: number; max?: number; inRange?: { color?: string[] } }[];
+}
+
+/**
+ * Chart hosts in document order — on weekly-review that's the Regional
+ * split's <BarChart>, the Order mix <ScatterChart>, the Order size
+ * <Histogram>, then the Trend lines' <LineChart>/<AreaChart>/<Heatmap>.
+ * `data-echarts-theme` marks the host immediately; `data-echarts-ready`
+ * lands on the first finished paint, so readiness waits on the latter.
+ */
+export function chartHosts(page: Page): Locator {
+  return page.locator("[data-echarts-theme]");
+}
+
+export function readyCharts(page: Page): Locator {
+  return page.locator("[data-echarts-ready]");
+}
+
+export function optionAt(page: Page, index: number): Promise<AppliedOption> {
+  return page.evaluate((i) => {
+    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
+      i
+    ];
+    const chart = (
+      host as unknown as { echartsInstance?: { getOption(): unknown } }
+    ).echartsInstance;
+    if (!chart) throw new Error(`chart host ${i} has no echartsInstance`);
+    return chart.getOption() as AppliedOption;
+  }, index);
+}
+
+/**
+ * Opens weekly-review on the dev server at `url` and waits for its six
+ * charts' first finished paint — the baseline every chart spec reads from.
+ */
+export async function openWeeklyReviewCharts(
+  page: Page,
+  url: string,
+): Promise<void> {
+  await page.goto(`${url}weekly-review`);
+  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+}

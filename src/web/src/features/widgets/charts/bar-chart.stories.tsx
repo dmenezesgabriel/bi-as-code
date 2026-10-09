@@ -16,6 +16,7 @@ import {
   WEEKLY_TREND,
   appliedOption,
   brushMarks,
+  crossfilterScene,
   crossfilterTogglePlay,
   dbSelectable,
   dbWith,
@@ -111,9 +112,7 @@ export const SelectCrossfilterBrush: Story = {
     </>
   ),
   play: async ({ canvasElement }) => {
-    const host = await readyHost(canvasElement);
-    const bodyRows = () => canvasElement.querySelectorAll("tbody tr").length;
-    await waitFor(() => expect(bodyRows()).toBe(3));
+    const { host, bodyRows } = await crossfilterScene(canvasElement, 3);
 
     brushMarks(host, [0, 1]);
     await waitFor(() => expect(bodyRows()).toBe(2));

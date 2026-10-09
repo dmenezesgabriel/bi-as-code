@@ -80,6 +80,19 @@ describe("toHistogram", () => {
     expect(model.series.map((s) => s.name)).toEqual(["North", "South"]);
     expect(model.series[0]?.counts).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
     expect(model.series[1]?.counts).toEqual([0, 1, 0, 0, 0, 0, 0, 0, 0, 1]);
+    expect(model.seriesValues).toEqual(
+      new Map([
+        ["North", "North"],
+        ["South", "South"],
+      ]),
+    );
+  });
+
+  it("carries no seriesValues with the series column unbound", () => {
+    const model = toHistogram([{ amount: 1 }, { amount: 2 }], {
+      value: "amount",
+    });
+    expect(model.seriesValues).toBeUndefined();
   });
 
   it("groups a null series cell under 'Unknown'", () => {

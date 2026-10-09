@@ -4,6 +4,7 @@ import {
   resolveSeriesSpec,
   seriesKey,
   seriesName,
+  seriesValuesOf,
   toY,
 } from "./to-series";
 import type {
@@ -50,6 +51,7 @@ export function toScatterSeries(
     xDomain: [...domain.values()],
     xType: resolved.xType,
     series: buildSeries(resolved.ys, spec, groups),
+    ...seriesValuesOf(rows, spec.series, resolved.ys),
   };
 }
 

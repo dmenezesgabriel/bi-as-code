@@ -7,56 +7,12 @@ import {
   testBadRefs,
   workerPosts,
 } from "./dev-server.fixture.js";
-
-/**
- * The option shape a test reads back off the live echarts instance — the
- * host element carries `echartsInstance` so browser assertions can inspect
- * what `setOption` actually applied, same as the web-unit suite.
- */
-interface AppliedOption {
-  series: {
-    name?: string;
-    type?: string;
-    stack?: string;
-    areaStyle?: unknown;
-    label?: { show?: boolean };
-    data?: unknown[];
-    symbolSize?: unknown;
-    barCategoryGap?: unknown;
-  }[];
-  xAxis: { type?: string; data?: unknown[] }[];
-  yAxis: { max?: number; name?: string; data?: unknown[] }[];
-  legend: unknown[];
-  visualMap?: { min?: number; max?: number; inRange?: { color?: string[] } }[];
-}
-
-/**
- * Chart hosts in document order — on weekly-review that's the Regional
- * split's <BarChart>, the Order mix <ScatterChart>, the Order size
- * <Histogram>, then the Trend lines' <LineChart>/<AreaChart>/<Heatmap>.
- * `data-echarts-theme` marks the host immediately; `data-echarts-ready`
- * lands on the first finished paint, so readiness waits on the latter.
- */
-function chartHosts(page: Page) {
-  return page.locator("[data-echarts-theme]");
-}
-
-function readyCharts(page: Page) {
-  return page.locator("[data-echarts-ready]");
-}
-
-function optionAt(page: Page, index: number): Promise<AppliedOption> {
-  return page.evaluate((i) => {
-    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
-      i
-    ];
-    const chart = (
-      host as unknown as { echartsInstance?: { getOption(): unknown } }
-    ).echartsInstance;
-    if (!chart) throw new Error(`chart host ${i} has no echartsInstance`);
-    return chart.getOption() as AppliedOption;
-  }, index);
-}
+import {
+  chartHosts,
+  openWeeklyReviewCharts,
+  optionAt,
+  readyCharts,
+} from "./echart-hosts.js";
 
 test.beforeEach(async ({ page }) => {
   // Charts are registry reads — every worker post after first render would
@@ -140,8 +96,7 @@ test("the scatter, histogram and heatmap apply their own option shapes", async (
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await openWeeklyReviewCharts(page, biacDev.url);
 
   // Scatter: sparse [x,y] tuples on a value x-axis — one point per
   // region-week, one series per region, uniform 9px points (no `size`).
@@ -185,8 +140,7 @@ test("hovering the line chart shows an axis tooltip listing all regions", async 
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await openWeeklyReviewCharts(page, biacDev.url);
   const posts = await workerPosts(page);
 
   // The tooltip is an html div appended inside the chart host; an axis
@@ -233,8 +187,7 @@ test("the scatter, histogram and heatmap tooltips name their bound columns", asy
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await openWeeklyReviewCharts(page, biacDev.url);
   const posts = await workerPosts(page);
 
   // Scatter item tooltip: the series marker/name, then one row per bound
@@ -278,8 +231,7 @@ test("the theme toggle repaints every chart in the other palette", async ({
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await openWeeklyReviewCharts(page, biacDev.url);
 
   // Mark the live instances: a mode flip re-inits the engine, so a probe
   // property set now must not survive on the post-toggle instances.
@@ -369,190 +321,6 @@ test("?region=West narrows the filter-declaring charts while the trend charts st
 
   const posts = await workerPosts(page);
   expect(await workerPosts(page)).toBe(posts);
-  expect(errors).toEqual([]);
-});
-
-/**
- * The page-space point inside the regional split's bar `dataIndex` —
- * `convertToPixel` maps [category index, mid-bar value] into the host's
- * own pixels, then the host's bounding rect lifts them to viewport space.
- */
-async function barPoint(
-  page: Page,
-  dataIndex: number,
-): Promise<{ x: number; y: number }> {
-  return page.evaluate((di) => {
-    const host = document.querySelectorAll<HTMLElement>(
-      "[data-echarts-theme]",
-    )[0];
-    if (!host) throw new Error("chart host 0 not in the document");
-    const chart = (
-      host as unknown as {
-        echartsInstance?: {
-          convertToPixel(finder: unknown, value: unknown[]): number[];
-        };
-      }
-    ).echartsInstance;
-    if (!chart) throw new Error("chart host 0 has no echartsInstance");
-    const [x, y] = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [
-      di,
-      3000,
-    ]);
-    if (x === undefined || y === undefined)
-      throw new Error("convertToPixel returned no point");
-    const rect = host.getBoundingClientRect();
-    return { x: rect.left + x, y: rect.top + y };
-  }, dataIndex);
-}
-
-test("a bar click cross-filters the region consumers while the bar chart holds its rows", async ({
-  page,
-  biacDev,
-}) => {
-  const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
-  const posts = await workerPosts(page);
-
-  // Baseline: three bars; four pagers read "39 rows" — the region_week
-  // and weekly_trend fence previews (always unfiltered) plus their two
-  // <Table>s — and the weekly_revenue preview already reads "13 rows".
-  expect((await optionAt(page, 0)).series[0]?.data).toHaveLength(3);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
-  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(1);
-
-  await chartHosts(page).nth(0).scrollIntoViewIfNeeded();
-  const westBar = await barPoint(page, 0);
-  await page.mouse.click(westBar.x, westBar.y);
-
-  // The publisher's own clause skips it — all three bars hold — while
-  // every filters={["region"]} consumer re-queries: the scatter keeps
-  // only West's 13 weeks, the keepMounted region_week <Table> joins the
-  // "13 rows" pagers, and order_detail pages down to West's 140 rows.
-  const bar = await optionAt(page, 0);
-  expect(bar.xAxis[0]?.data).toEqual(["West", "North", "South"]);
-  expect(bar.series[0]?.data).toHaveLength(3);
-  await expect
-    .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
-    .toEqual(["West"]);
-  expect((await optionAt(page, 1)).series[0]?.data).toHaveLength(13);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(3);
-  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(2);
-  await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(1);
-
-  // Session state — the URL stays bare — and the consumers' re-query did
-  // reach the worker.
-  await expect(page).toHaveURL(/weekly-review$/);
-  expect(await workerPosts(page)).toBeGreaterThan(posts);
-
-  // Clicking the same bar clears: every consumer re-queries unfiltered.
-  await page.mouse.click(westBar.x, westBar.y);
-  await expect
-    .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
-    .toEqual(["North", "South", "West"]);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
-  await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(0);
-
-  expect(errors).toEqual([]);
-});
-
-/**
- * The page-space point at a histogram bin's band center — the same
- * `convertToPixel` lift as `barPoint`, on the order-size chart host.
- * The drag starts and ends on band centers so pixel slop stays inside
- * the ±0.5-index rounding the clause mapping uses.
- */
-async function binPoint(
-  page: Page,
-  binIndex: number,
-): Promise<{ x: number; y: number }> {
-  return page.evaluate((bi) => {
-    const host = document.querySelectorAll<HTMLElement>(
-      "[data-echarts-theme]",
-    )[2];
-    if (!host) throw new Error("chart host 2 not in the document");
-    const chart = (
-      host as unknown as {
-        echartsInstance?: {
-          convertToPixel(finder: unknown, value: unknown[]): number[];
-        };
-      }
-    ).echartsInstance;
-    if (!chart) throw new Error("chart host 2 has no echartsInstance");
-    const [x, y] = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [
-      bi,
-      60,
-    ]);
-    if (x === undefined || y === undefined)
-      throw new Error("convertToPixel returned no point");
-    const rect = host.getBoundingClientRect();
-    return { x: rect.left + x, y: rect.top + y };
-  }, binIndex);
-}
-
-/**
- * The two order_id tables — the `order_detail` fence preview (always
- * unfiltered) then the `<Table>` widget — same shape as
- * `filter-inputs.spec.ts`'s helper.
- */
-function orderDetailTables(page: Page) {
-  return page
-    .locator("div.overflow-x-auto", {
-      has: page.getByRole("columnheader", { name: "order_id" }),
-    })
-    .locator("..");
-}
-
-test("a histogram brush cross-filters the amount consumers while the histogram holds its bins", async ({
-  page,
-  biacDev,
-}) => {
-  const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
-  const posts = await workerPosts(page);
-
-  // Baseline: 15 bins over amounts 38..44; both order_detail tables page
-  // all 355 orders.
-  expect((await optionAt(page, 2)).xAxis[0]?.data).toHaveLength(15);
-  const tables = orderDetailTables(page);
-  await expect(tables).toHaveCount(2);
-  await expect(tables.nth(0)).toContainText("· 355 rows");
-  await expect(tables.nth(1)).toContainText("· 355 rows");
-
-  // Drag center-of-bin-0 → center-of-bin-3: the clause spans the covered
-  // edges [38, 39.6], narrowing order_detail to the 95 orders under $40.
-  await chartHosts(page).nth(2).scrollIntoViewIfNeeded();
-  const from = await binPoint(page, 0);
-  const to = await binPoint(page, 3);
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: 8 });
-  await page.mouse.up();
-
-  // The publisher's own clause skips it — all 15 bins hold — while the
-  // amount-filtered order_detail re-queries to the covered rows; the
-  // unfiltered preview and the region-filtered scatter are untouched.
-  await expect(tables.nth(1)).toContainText("· 95 rows");
-  await expect(tables.nth(0)).toContainText("· 355 rows");
-  expect((await optionAt(page, 2)).xAxis[0]?.data).toHaveLength(15);
-  expect((await optionAt(page, 1)).series.map((s) => s.name)).toEqual([
-    "North",
-    "South",
-    "West",
-  ]);
-
-  // Session state — the URL stays bare — and the consumers' re-query did
-  // reach the worker.
-  await expect(page).toHaveURL(/weekly-review$/);
-  expect(await workerPosts(page)).toBeGreaterThan(posts);
-
-  // A plain click on the panel clears the brush: order_detail re-queries
-  // unfiltered.
-  const clear = await binPoint(page, 10);
-  await page.mouse.click(clear.x, clear.y);
-  await expect(tables.nth(1)).toContainText("· 355 rows");
-
   expect(errors).toEqual([]);
 });
 

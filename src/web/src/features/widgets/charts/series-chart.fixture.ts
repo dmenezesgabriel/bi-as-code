@@ -236,6 +236,48 @@ export function brushMarks(
   });
 }
 
+/**
+ * A selection story's opening state: the publisher chart's ready host and
+ * a live count of the consumer `<Table>`'s body rows, resolved once the
+ * consumer shows its `unfilteredRows` before any gesture.
+ *
+ * @example
+ * const { host, bodyRows } = await crossfilterScene(canvasElement, 3);
+ * brushMarks(host, [1, 2]);
+ */
+export async function crossfilterScene(
+  canvasElement: HTMLElement,
+  unfilteredRows: number,
+): Promise<{ host: EChartHostElement; bodyRows: () => number }> {
+  const host = await readyHost(canvasElement);
+  const bodyRows = () => canvasElement.querySelectorAll("tbody tr").length;
+  await waitFor(() => expect(bodyRows()).toBe(unfilteredRows));
+  return { host, bodyRows };
+}
+
+/**
+ * The opacity a dimmed data item carries — `undefined` on a bare `[x, y]`
+ * tuple. Point-select de-emphasis wraps non-selected marks as
+ * `{value, itemStyle: {opacity}}`, so this is the read both the dimmed
+ * and the cleared assertions share.
+ */
+export function markOpacity(item: unknown): number | undefined {
+  return (item as { itemStyle?: { opacity?: number } } | null)?.itemStyle
+    ?.opacity;
+}
+
+/**
+ * Dispatches the `legendToggleSelect` action for legend item `name` — the
+ * same action a legend click performs, so `legendselectchanged` flows
+ * through the real subscription (jsdom's svg surface can't hit-test the
+ * legend's glyphs, same as `clickMark`).
+ */
+export function legendToggle(host: EChartHostElement, name: string): void {
+  const chart = host.echartsInstance;
+  if (!chart) throw new Error("no echartsInstance on host");
+  chart.dispatchAction({ type: "legendToggleSelect", name });
+}
+
 /** The engine internals `clickMark` reaches — typed narrowly, no `any`. */
 interface ChartInternals {
   getModel(): {
@@ -287,9 +329,24 @@ export function crossfilterTogglePlay(
       canvasElement,
     );
     expect(option.series?.[0]?.data).toHaveLength(publisherPoints);
+    // The publish also dims every mark that isn't the held one — mosaic's
+    // Highlight port paints de-emphasis, not a selection outline.
+    const marks = (option.series ?? []).flatMap((s) => s.data ?? []);
+    expect(markOpacity(marks[0])).toBeUndefined();
+    for (const mark of marks.slice(1))
+      expect(markOpacity(mark)).toBeCloseTo(0.2);
 
     clickMark(host, 0);
     await waitFor(() => expect(bodyRows()).toBe(consumerRows));
+    // Clearing merges the bare tuples back — no mark keeps the dim wrap.
+    const cleared = await appliedOption<{
+      series?: { data?: unknown[] }[];
+    }>(canvasElement);
+    expect(
+      (cleared.series ?? [])
+        .flatMap((s) => s.data ?? [])
+        .every((mark) => markOpacity(mark) === undefined),
+    ).toBe(true);
 
     clickMark(host, 1);
     await waitFor(() => expect(bodyRows()).toBe(1));

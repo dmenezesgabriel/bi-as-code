@@ -1,14 +1,19 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { renderWithRegistry } from "../value/registry-harness";
+import { Table } from "../table/table";
 import { Histogram } from "./histogram-chart";
 import {
   AMOUNT_ROWS,
+  OPTS,
   ORDER_AMOUNTS,
   appliedOption,
+  dbSelectable,
   dbWith,
   expectPendingPulse,
+  legendToggle,
   readyHost,
 } from "./series-chart.fixture";
 
@@ -83,6 +88,43 @@ describe("<Histogram>", () => {
       sql: "select * from (select amount, region from orders) where region = ?",
       params: ["North"],
     });
+  });
+
+  it("publishes the enabled set on a legend toggle under crossfilter", async () => {
+    renderWithRegistry(
+      <>
+        <Histogram
+          data="order_amounts"
+          value="amount"
+          series="region"
+          filters="region"
+          select="crossfilter"
+          renderer="svg"
+        />
+        <Table data="opts" filters="region" />
+      </>,
+      {
+        db: dbSelectable("region", AMOUNT_ROWS),
+        blocks: [ORDER_AMOUNTS, OPTS],
+        port: new FakeFilterUrlPort(""),
+      },
+    );
+
+    const host = await readyHost(document, 15000);
+    const bodyRows = () => document.querySelectorAll("tbody tr").length;
+    await waitFor(() => expect(bodyRows()).toBe(3));
+
+    act(() => legendToggle(host, "North"));
+
+    // `region IN ('South')` narrows the consumer; the histogram's own
+    // clause skips it — both region series and the disabled entry hold.
+    await waitFor(() => expect(bodyRows()).toBe(1));
+    const option = await appliedOption<{
+      series: { name?: string }[];
+      legend: { selected?: Record<string, boolean> }[];
+    }>(document);
+    expect(option.series.map((s) => s.name)).toEqual(["North", "South"]);
+    expect(option.legend[0]?.selected?.North).toBe(false);
   });
 
   it("alerts when data names no registered fence", async () => {

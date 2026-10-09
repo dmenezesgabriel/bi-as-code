@@ -4,6 +4,7 @@ import { toChartOption } from "./to-option";
 import { toSeries } from "./to-series";
 import type { SeriesChartWidgetProps } from "./types";
 import { seriesBrushAxis } from "./use-brush-select";
+import { legendSelectTarget } from "./use-legend-select";
 
 /**
  * The shared body of `<BarChart>`/`<LineChart>`/`<AreaChart>`: `data` names a
@@ -37,6 +38,7 @@ export function SeriesChart({
       brushAxis={(model) =>
         seriesBrushAxis(model.xType, props.x, model.xDomain)
       }
+      legendTarget={(model) => legendSelectTarget(props, model.seriesValues)}
     />
   );
 }

@@ -3,6 +3,7 @@ import { BoundChart } from "./bound-chart";
 import { toHistogram } from "./to-histogram";
 import { toHistogramOption } from "./to-histogram-option";
 import type { HistogramChartProps } from "./types";
+import { legendSelectTarget } from "./use-legend-select";
 
 /**
  * The `<Histogram>` MDX widget: the distribution of one numeric column in a
@@ -42,6 +43,7 @@ export function Histogram({
         field: props.value,
         bins: model.bins,
       })}
+      legendTarget={(model) => legendSelectTarget(props, model.seriesValues)}
     />
   );
 }

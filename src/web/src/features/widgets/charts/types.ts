@@ -86,6 +86,33 @@ export type ChartBrushSelectedHandler = (
 export type ChartBrushEndHandler = (params: ChartBrushEndParams) => void;
 
 /**
+ * The echarts `legendselectchanged` params — the `legendToggleSelect`
+ * action's payload: `name` is the toggled legend item, `selected` the full
+ * name → enabled map across every legend component. The select-all and
+ * inverse-select gestures arrive as separate event types, unreachable here
+ * — our legend renders no `selector` buttons.
+ */
+export interface ChartLegendSelectParams {
+  readonly name?: string;
+  readonly selected?: Readonly<Record<string, boolean>>;
+}
+
+export type ChartLegendSelectHandler = (
+  params: ChartLegendSelectParams,
+) => void;
+
+/**
+ * What a legend toggle predicates on a `select="crossfilter"` chart:
+ * `field` is the bound `series` column, `values` maps each rendered legend
+ * name back to the raw series-column cell (legend names are `String(value)`
+ * keys — the map keeps non-string columns binding their real values).
+ */
+export interface LegendTarget {
+  readonly field: string;
+  readonly values: ReadonlyMap<string, unknown>;
+}
+
+/**
  * The axis a chart's interval brush predicates, supplied per chart kind:
  * `value`/`time` axes convert `coordRange` directly (time epochs wrap to
  * `Date`), a `category` axis maps covered indexes through `domain` into a
@@ -115,6 +142,7 @@ export interface EChartEvents {
   readonly click?: ChartClickHandler;
   readonly brushSelected?: ChartBrushSelectedHandler;
   readonly brushEnd?: ChartBrushEndHandler;
+  readonly legendSelectChanged?: ChartLegendSelectHandler;
   readonly optionApplied?: (instance: EChartsType) => void;
 }
 
@@ -167,6 +195,8 @@ export interface SeriesModel {
   readonly xDomain: readonly unknown[];
   readonly xType: XAxisKind;
   readonly series: readonly ChartSeries[];
+  /** Legend name → raw `series`-column cell; present iff `series` is bound. */
+  readonly seriesValues?: ReadonlyMap<string, unknown>;
 }
 
 /**
@@ -256,6 +286,8 @@ export interface ScatterModel {
   readonly xDomain: readonly unknown[];
   readonly xType: XAxisKind;
   readonly series: readonly ScatterSeries[];
+  /** Legend name → raw `series`-column cell; present iff `series` is bound. */
+  readonly seriesValues?: ReadonlyMap<string, unknown>;
 }
 
 /** The column bindings a scatter chart resolves against result rows. */
@@ -302,6 +334,8 @@ export interface HistogramSeries {
 export interface HistogramModel {
   readonly bins: readonly HistogramBin[];
   readonly series: readonly HistogramSeries[];
+  /** Legend name → raw `series`-column cell; present iff `series` is bound. */
+  readonly seriesValues?: ReadonlyMap<string, unknown>;
 }
 
 /** The column bindings a histogram resolves against result rows. */

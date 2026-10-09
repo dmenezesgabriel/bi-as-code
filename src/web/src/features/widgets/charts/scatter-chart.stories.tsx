@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import {
   withFilteredData,
   withPageFilters,
@@ -14,9 +14,11 @@ import {
   ORDERS_REGIONAL,
   SCATTER_ROWS,
   appliedOption,
+  crossfilterScene,
   crossfilterTogglePlay,
   dbSelectable,
   dbWith,
+  legendToggle,
   readyHost,
 } from "./series-chart.fixture";
 import type { ScatterChartProps } from "./types";
@@ -111,4 +113,50 @@ export const SelectCrossfilter: Story = {
     </>
   ),
   play: crossfilterTogglePlay(4, 4, ["120", "140"]),
+};
+
+/**
+ * `select="crossfilter"` + `series="region"`: toggling a legend item
+ * publishes the enabled set as `region IN (…)` — the consumer narrows,
+ * the publishing scatter keeps both series (its own clause skips it) and
+ * the legend's native hide/show is the local de-emphasis. Toggling the
+ * item back on clears the clause.
+ */
+export const SelectCrossfilterLegend: Story = {
+  args: { series: "region", filters: "region", select: "crossfilter" },
+  decorators: [
+    withQueryData(
+      [ORDERS_REGIONAL, OPTS],
+      dbSelectable("region", SCATTER_ROWS),
+    ),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  render: (args) => (
+    <>
+      <ScatterChart {...args} />
+      <Table data="opts" filters="region" />
+    </>
+  ),
+  play: async ({ canvasElement }) => {
+    const { host, bodyRows } = await crossfilterScene(canvasElement, 3);
+
+    // North off → `region IN (South)`: the consumer keeps the South row
+    // while the publisher's own clause skips it — both series and the
+    // disabled legend entry stay in its option.
+    legendToggle(host, "North");
+    await waitFor(() => expect(bodyRows()).toBe(1));
+    const option = await appliedOption<{
+      series?: { name?: string }[];
+      legend?: { selected?: Record<string, boolean> }[];
+    }>(canvasElement);
+    expect(option.series?.map((s) => s.name)).toEqual(["North", "South"]);
+    expect(option.legend?.[0]?.selected?.North).toBe(false);
+
+    legendToggle(host, "North");
+    await waitFor(() => expect(bodyRows()).toBe(3));
+    const restored = await appliedOption<{
+      legend?: { selected?: Record<string, boolean> }[];
+    }>(canvasElement);
+    expect(restored.legend?.[0]?.selected?.North).toBe(true);
+  },
 };

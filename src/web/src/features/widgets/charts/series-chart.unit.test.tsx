@@ -19,6 +19,8 @@ import {
   clickMark,
   dbSelectable,
   dbWith,
+  legendToggle,
+  markOpacity,
 } from "./series-chart.fixture";
 import type { EChartHostElement } from "./types";
 
@@ -33,7 +35,7 @@ interface AppliedOption {
     data?: unknown[];
   }[];
   yAxis: { max?: number }[];
-  legend: unknown[];
+  legend: { selected?: Record<string, boolean> }[];
 }
 
 /**
@@ -420,6 +422,81 @@ describe('series chart — select="crossfilter"', () => {
     await waitFor(() => expect(optsRows).toHaveTextContent("1"));
     act(() => clickMark(host, 0));
     await waitFor(() => expect(optsRows).toHaveTextContent("3"));
+  });
+
+  it("dims the non-selected marks while holding the clicked one whole", async () => {
+    renderSelectableBarChart("crossfilter");
+    const host = await chartHost();
+
+    act(() => clickMark(host, 0));
+
+    const data = appliedOption(host).series[0]?.data ?? [];
+    expect(markOpacity(data[0])).toBeUndefined();
+    expect(markOpacity(data[1])).toBeCloseTo(0.2);
+    expect(markOpacity(data[2])).toBeCloseTo(0.2);
+
+    act(() => clickMark(host, 0));
+    const cleared = appliedOption(host).series[0]?.data ?? [];
+    expect(cleared.every((mark) => markOpacity(mark) === undefined)).toBe(true);
+  });
+
+  it("publishes the dimmed mark's x — wrapped items still click through", async () => {
+    const { db } = renderSelectableBarChart("crossfilter");
+    const host = await chartHost();
+    const optsRows = screen.getByTestId("opts-rows");
+
+    act(() => clickMark(host, 0));
+    await waitFor(() => expect(optsRows).toHaveTextContent("1"));
+    // Mark 1 is a dimmed `{value, itemStyle}` item now; clicking it must
+    // still publish its x — `region = 'North'`, not the wrapper object.
+    act(() => clickMark(host, 1));
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select * from (select * from opts) where region = ?",
+        params: ["North"],
+      }),
+    );
+    const data = appliedOption(host).series[0]?.data ?? [];
+    expect(markOpacity(data[0])).toBeCloseTo(0.2);
+    expect(markOpacity(data[1])).toBeUndefined();
+  });
+
+  it("publishes the enabled set on a legend toggle, hiding natively", async () => {
+    renderWithRegistry(
+      <>
+        <LineChart
+          data="weekly_trend"
+          x="week"
+          y="orders"
+          series="region"
+          filters="region"
+          select="crossfilter"
+          renderer="svg"
+        />
+        <OptsRowCount />
+      </>,
+      {
+        db: dbSelectable("region", TREND_ROWS),
+        blocks: [WEEKLY_TREND, OPTS],
+        port: new FakeFilterUrlPort(""),
+      },
+    );
+    const host = await chartHost();
+    const optsRows = screen.getByTestId("opts-rows");
+    await waitFor(() => expect(optsRows).toHaveTextContent("3"));
+
+    act(() => legendToggle(host, "North"));
+
+    // `region IN ('South')` narrows the consumer; the publisher's own
+    // clause skips it — both series and the disabled legend entry hold.
+    await waitFor(() => expect(optsRows).toHaveTextContent("1"));
+    const option = appliedOption(host);
+    expect(option.series.map((s) => s.name)).toEqual(["North", "South"]);
+    expect(option.legend[0]?.selected?.North).toBe(false);
+
+    act(() => legendToggle(host, "North"));
+    await waitFor(() => expect(optsRows).toHaveTextContent("3"));
+    expect(appliedOption(host).legend[0]?.selected?.North).toBe(true);
   });
 
   it("does not re-apply its option when its own publish skips its rows", async () => {

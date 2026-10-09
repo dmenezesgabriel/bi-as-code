@@ -10,9 +10,11 @@ import type {
   ChartOption,
   ChartRenderer,
   EChartEvents,
+  LegendTarget,
 } from "./types";
 import { useChartRows } from "./use-chart-rows";
 import { useBrushSelect } from "./use-brush-select";
+import { useLegendSelect } from "./use-legend-select";
 import { usePointSelect } from "./use-point-select";
 
 interface BoundChartProps<M> {
@@ -34,6 +36,13 @@ interface BoundChartProps<M> {
    * column on histograms. Wired only under `select="crossfilter"`.
    */
   brushAxis?: (model: M) => BrushAxis | undefined;
+  /**
+   * The legend publish target under `select="crossfilter"` — `series`
+   * bound and single-`y` charts only (legend names read "<value> - <y>"
+   * under multi-`y` and can't predicate one field). A toggle publishes
+   * `clauseList(field, enabled)`; native hide/show is the local emphasis.
+   */
+  legendTarget?: (model: M) => LegendTarget | undefined;
   model: (rows: readonly Row[]) => M;
   /**
    * When the projected model carries nothing to draw — e.g. a histogram of
@@ -63,10 +72,11 @@ export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
     props.height,
     props.filters,
   );
-  const pointClick = usePointSelect(
+  const point = usePointSelect(
     props.select === "crossfilter" ? props.pointField : undefined,
     client,
   );
+  const legend = useLegendSelect(client);
   const brush = useBrushSelect(client);
   const rows = result?.status === "success" ? result.rows : undefined;
   // The memo keys on rows identity (plus theme mode — the projection's
@@ -87,12 +97,13 @@ export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
     if (!rows?.length) return undefined;
     try {
       const model = props.model(rows);
-      const axis =
-        props.select === "crossfilter" ? props.brushAxis?.(model) : undefined;
+      const selecting = props.select === "crossfilter";
+      const axis = selecting ? props.brushAxis?.(model) : undefined;
+      const legendTarget = selecting ? props.legendTarget?.(model) : undefined;
       const option = axis
         ? { ...props.option(model), ...BRUSH_OPTION }
         : props.option(model);
-      return { model, axis, option } as const;
+      return { model, axis, legendTarget, option } as const;
     } catch (error) {
       return { error } as const;
     }
@@ -103,21 +114,33 @@ export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
       {() => {
         if (painted === undefined) return <ChartEmpty height={height} />;
         if ("error" in painted) throw painted.error;
-        const { model, axis, option } = painted;
+        const { model, axis, legendTarget, option } = painted;
         if (props.isEmpty?.(model)) return <ChartEmpty height={height} />;
         // The events bag rebuilds per render, binding the current model's
-        // axis — no ref, no render-phase mutation.
+        // axis/targets — no ref, no render-phase mutation. `optionApplied`
+        // composes every interactor's restore so a notMerge repaint keeps
+        // the brush extent, the point dim, and the held legend toggles.
         const events: EChartEvents | undefined =
-          pointClick || axis
+          point.click || axis || legendTarget
             ? {
-                click: pointClick,
+                click: point.click,
                 ...(axis
                   ? {
                       brushSelected: (params) => brush.selected(params, axis),
                       brushEnd: (params) => brush.ended(params, axis),
-                      optionApplied: brush.optionApplied,
                     }
                   : {}),
+                ...(legendTarget
+                  ? {
+                      legendSelectChanged: (params) =>
+                        legend.changed(params, legendTarget),
+                    }
+                  : {}),
+                optionApplied: (instance) => {
+                  if (axis) brush.optionApplied(instance);
+                  point.optionApplied(instance);
+                  legend.optionApplied(instance);
+                },
               }
             : undefined;
         return (

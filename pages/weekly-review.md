@@ -14,11 +14,11 @@ the [orders overview](/).
 Every figure on this page re-runs live against the `orders` table — the
 `?region=`, `?amount=`, `?ordered=`, `?q=` and `?large_orders=` URL
 parameters scope the widgets that declare `filters` and the queries that
-interpolate them. Clicking a bar in the regional split below
-cross-filters the same `region`-filtered widgets — session state, no URL
-parameter; click it again to clear. Dragging across the order-size
-histogram cross-filters the `amount`-filtered widgets the same way —
-click the chart once to clear the range.
+interpolate them. Charts cross-filter in session state, with no URL
+parameter: a regional-split bar click or an order-mix legend toggle
+narrows the `region`-filtered widgets, a drag across the order-size
+histogram the `amount`-filtered ones; repeat the gesture (or click
+the histogram once) to clear.
 </Callout>
 
 ## Overview
@@ -137,7 +137,7 @@ order by week, region
 
 <Tabs>
   <Tab title="Chart">
-    <ScatterChart data="region_week" x="orders" y="revenue" series="region" filters={["region"]} />
+    <ScatterChart data="region_week" x="orders" y="revenue" series="region" filters={["region"]} select="crossfilter" />
   </Tab>
   <Tab title="Table">
     <Table data="region_week" filters={["region"]} />

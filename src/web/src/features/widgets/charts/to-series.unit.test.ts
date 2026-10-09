@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ColumnError } from "../value/types";
-import { inferXType, toSeries } from "./to-series";
+import { inferXType, seriesValuesOf, toSeries } from "./to-series";
 
 const REVENUE = [
   { week: 1, revenue: 10 },
@@ -95,6 +95,54 @@ describe("toSeries", () => {
       ["1", 1],
       ["2", 3],
     ]);
+  });
+
+  it("maps each legend name back to the raw series cell", () => {
+    const model = toSeries(
+      TREND,
+      { x: "week", y: "orders", series: "region" },
+      "line",
+    );
+    expect(model.seriesValues).toEqual(
+      new Map([
+        ["North", "North"],
+        ["South", "South"],
+        ["West", "West"],
+      ]),
+    );
+  });
+
+  it("keeps the raw cell when the legend name is a stringified key", () => {
+    const cohort = new Date("2026-01-05T00:00:00Z");
+    const model = toSeries(
+      [{ w: 1, cohort, v: 10 }],
+      { x: "w", y: "v", series: "cohort" },
+      "bar",
+    );
+    expect(model.series[0]?.name).toBe(String(cohort));
+    expect(model.seriesValues?.get(String(cohort))).toBe(cohort);
+  });
+
+  it("maps the composed '<key> - <y>' names under multi-y + series", () => {
+    const model = toSeries(
+      [
+        { w: 1, region: "North", a: 1, b: 10 },
+        { w: 1, region: "South", a: 2, b: 20 },
+      ],
+      { x: "w", y: ["a", "b"], series: "region" },
+      "bar",
+    );
+    expect([...(model.seriesValues?.keys() ?? [])]).toEqual([
+      "North - a",
+      "South - a",
+      "North - b",
+      "South - b",
+    ]);
+  });
+
+  it("carries no seriesValues with the series column unbound", () => {
+    const model = toSeries(TREND, { x: "week", y: "orders" }, "line");
+    expect(model.seriesValues).toBeUndefined();
   });
 
   it("keeps the x domain in first-appearance order, not sorted", () => {
@@ -212,6 +260,29 @@ describe("toSeries", () => {
       xType: "category",
       series: [],
     });
+  });
+});
+
+describe("seriesValuesOf", () => {
+  it("spreads nothing with the series column unbound", () => {
+    expect(seriesValuesOf(TREND, undefined, ["orders"])).toEqual({});
+  });
+
+  it("maps every y's legend name to the first raw cell of its key", () => {
+    const rows = [
+      { region: "North", a: 1, b: 10 },
+      { region: null, a: 2, b: 20 },
+      { region: "North", a: 3, b: 30 },
+    ];
+    const { seriesValues } = seriesValuesOf(rows, "region", ["a", "b"]);
+    expect(seriesValues).toEqual(
+      new Map([
+        ["North - a", "North"],
+        ["Unknown - a", null],
+        ["North - b", "North"],
+        ["Unknown - b", null],
+      ]),
+    );
   });
 });
 

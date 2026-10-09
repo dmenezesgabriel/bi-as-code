@@ -40,6 +40,17 @@ describe("toScatterSeries", () => {
       [90, 3700],
       [95, 3900],
     ]);
+    expect(model.seriesValues).toEqual(
+      new Map([
+        ["North", "North"],
+        ["South", "South"],
+      ]),
+    );
+  });
+
+  it("carries no seriesValues with the series column unbound", () => {
+    const model = toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" });
+    expect(model.seriesValues).toBeUndefined();
   });
 
   it("emits one series per column when y is an array", () => {

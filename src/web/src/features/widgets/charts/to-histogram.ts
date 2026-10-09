@@ -1,5 +1,5 @@
 import type { Row } from "../../data/types";
-import { assertColumns, seriesKey, toY } from "./to-series";
+import { assertColumns, seriesKey, seriesValuesOf, toY } from "./to-series";
 import type {
   HistogramBin,
   HistogramModel,
@@ -38,6 +38,7 @@ export function toHistogram(
   return {
     bins: binDomain(min, width, count),
     series: countIntoBins(cells, spec, min, width, count),
+    ...seriesValuesOf(rows, spec.series, [spec.value]),
   };
 }
 

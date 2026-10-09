@@ -27,6 +27,7 @@ import type {
   ChartBrushEndParams,
   ChartBrushSelectedParams,
   ChartClickParams,
+  ChartLegendSelectParams,
   ChartOption,
   ChartRenderer,
   EChartHostElement,
@@ -88,6 +89,9 @@ function mountChart(
   );
   instance.on("brushEnd", (params) =>
     eventsRef.current?.brushEnd?.(params as ChartBrushEndParams),
+  );
+  instance.on("legendselectchanged", (params) =>
+    eventsRef.current?.legendSelectChanged?.(params as ChartLegendSelectParams),
   );
   instance.setOption(option, { notMerge: true });
   eventsRef.current?.optionApplied?.(instance);

@@ -1,14 +1,6 @@
-import { act, renderHook } from "@testing-library/react";
+import { act } from "@testing-library/react";
 import type { EChartsType } from "echarts/core";
-import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import type { ClauseOptions, QueryClient } from "../../crossfilter/types";
-import { FakeFilterUrlPort } from "../../filters/fake-url-port";
-import type { Filters } from "../../filters/filters";
-import {
-  FiltersProvider,
-  usePageFilters,
-} from "../../filters/page-filters-context";
 import type {
   BrushAxis,
   ChartBrushEndParams,
@@ -16,15 +8,13 @@ import type {
   HistogramBin,
 } from "./types";
 import { brushClause, useBrushSelect } from "./use-brush-select";
+import {
+  IdleQueryClient,
+  renderInteractor,
+  TEST_CLAUSE_OPTIONS as OPTIONS,
+} from "./chart-interactor.fixture";
 
-const OPTIONS: ClauseOptions = { source: {}, clients: new Set() };
-
-const CLIENT: QueryClient = {
-  query: () => undefined,
-  queryPending: () => {},
-  queryResult: () => {},
-  queryError: () => {},
-};
+const CLIENT = new IdleQueryClient();
 
 const VALUE_AXIS: BrushAxis = { kind: "value", field: "amount" };
 const TIME_AXIS: BrushAxis = { kind: "time", field: "ordered" };
@@ -62,22 +52,8 @@ function brushSelected(
   };
 }
 
-function filtersWrapper({ children }: { children: ReactNode }) {
-  return (
-    <FiltersProvider port={new FakeFilterUrlPort("")}>
-      {children}
-    </FiltersProvider>
-  );
-}
-
 function renderBrushSelect() {
-  return renderHook(
-    () => ({
-      filters: usePageFilters() as Filters,
-      brush: useBrushSelect(CLIENT),
-    }),
-    { wrapper: filtersWrapper },
-  );
+  return renderInteractor("brush", () => useBrushSelect(CLIENT));
 }
 
 describe("brushClause", () => {
@@ -143,7 +119,9 @@ describe("useBrushSelect", () => {
     });
     expect(clauses[0]?.clients?.has(CLIENT)).toBe(true);
     expect(filters.selection("amount").predicate(CLIENT)).toBeUndefined();
-    expect(filters.selection("amount").predicate({} as QueryClient)).toEqual({
+    expect(
+      filters.selection("amount").predicate(new IdleQueryClient()),
+    ).toEqual({
       sql: "amount BETWEEN ? AND ?",
       params: [10, 20],
     });

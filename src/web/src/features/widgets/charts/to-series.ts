@@ -47,6 +47,7 @@ export function toSeries(
     xDomain: [...domain.values()],
     xType: resolved.xType,
     series: buildSeries(resolved.ys, spec, domain, groups),
+    ...seriesValuesOf(rows, spec.series, resolved.ys),
   };
 }
 
@@ -222,6 +223,36 @@ function buildSeries(
     }
   }
   return series;
+}
+
+/**
+ * The legend name → raw `series`-column cell map, ready to spread into a
+ * chart model — `{}` with `series` unbound. Legend names are
+ * `String(cell)` keys (composed `"<key> - <y>"` under several `y`), so the
+ * map lets a toggled legend item publish the bound column's real value: a
+ * `Date` cell binds the `Date`, not its name. The first cell per key wins.
+ *
+ * @example
+ * seriesValuesOf(rows, "region", ["revenue"]);
+ * // { seriesValues: Map { "North" => "North", "West" => "West" } }
+ */
+export function seriesValuesOf(
+  rows: readonly Row[],
+  series: string | undefined,
+  ys: readonly string[],
+): { seriesValues?: ReadonlyMap<string, unknown> } {
+  if (series === undefined) return {};
+  const cells = new Map<string, unknown>();
+  for (const row of rows) {
+    const key = seriesKey(row, series);
+    if (!cells.has(key)) cells.set(key, row[series]);
+  }
+  const named = ys.flatMap((y) =>
+    [...cells].map(
+      ([key, cell]) => [seriesName(key, y, series, ys.length), cell] as const,
+    ),
+  );
+  return { seriesValues: new Map(named) };
 }
 
 export function seriesName(

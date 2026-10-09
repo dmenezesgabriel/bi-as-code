@@ -4,6 +4,7 @@ import { toScatterOption } from "./to-scatter-option";
 import { toScatterSeries } from "./to-scatter-series";
 import type { ScatterChartProps } from "./types";
 import { seriesBrushAxis } from "./use-brush-select";
+import { legendSelectTarget } from "./use-legend-select";
 
 /**
  * The `<ScatterChart>` MDX widget: a correlation plot bound to a named
@@ -41,6 +42,7 @@ export function ScatterChart({
       brushAxis={(model) =>
         seriesBrushAxis(model.xType, props.x, model.xDomain)
       }
+      legendTarget={(model) => legendSelectTarget(props, model.seriesValues)}
     />
   );
 }
