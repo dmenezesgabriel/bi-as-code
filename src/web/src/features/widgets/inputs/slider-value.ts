@@ -1,5 +1,6 @@
 import type { FilterOptions } from "../../filters/filter";
-import type { FilterPredicate } from "../../crossfilter/types";
+import { clauseInterval } from "../../crossfilter/clause";
+import type { ClauseOptions, IntervalExtent } from "../../crossfilter/types";
 import type { Row } from "../../data/types";
 import type { SliderValue } from "./types";
 
@@ -48,28 +49,27 @@ export const sliderValueCodec = {
 >;
 
 /**
- * The `<Slider>` predicate builder — evidence's `SliderFilter.predicateSql`
- * gated on the `range` attribute: a range-mode pair binds
- * `column BETWEEN ? AND ?`, a single-mode number binds `column >= ?`, and a
- * held value whose shape mismatches the mode contributes nothing.
+ * The `<Slider>` clause factory — evidence's `SliderFilter.predicateSql`
+ * gated on the `range` attribute, re-expressed as an interval clause: a
+ * range-mode pair binds `column BETWEEN ? AND ?`, a single-mode number
+ * binds `column >= ?`, and a held value whose shape mismatches the mode
+ * publishes a predicate-less clause — silent, never a wrong filter.
  */
-export function sliderPredicate(
+export function sliderClause(
   range: boolean,
-): (
-  column: string,
+): NonNullable<FilterOptions<SliderValue | undefined>["clause"]> {
+  return (column: string, value: SliderValue | undefined, ctx: ClauseOptions) =>
+    clauseInterval(column, sliderExtent(value, range), ctx);
+}
+
+/** Held value → interval extent; a shape mismatch carries no bounds. */
+function sliderExtent(
   value: SliderValue | undefined,
-) => FilterPredicate | undefined {
-  return (column, value) => {
-    if (typeof value === "number") {
-      return range ? undefined : { sql: `${column} >= ?`, params: [value] };
-    }
-    if (value !== undefined) {
-      return range
-        ? { sql: `${column} BETWEEN ? AND ?`, params: [...value] }
-        : undefined;
-    }
-    return undefined;
-  };
+  range: boolean,
+): IntervalExtent | undefined {
+  if (typeof value === "number") return range ? undefined : [value, undefined];
+  if (value === undefined || !range) return undefined;
+  return [value[0], value[1]];
 }
 
 /**

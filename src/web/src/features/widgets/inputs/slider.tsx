@@ -11,7 +11,7 @@ import {
   columnBounds,
   initialSliderValue,
   resolveSliderBounds,
-  sliderPredicate,
+  sliderClause,
   sliderValueCodec,
 } from "./slider-value";
 import { sourceError } from "./source-error";
@@ -45,7 +45,7 @@ function useSliderSource(
   filters: FilterIds | undefined,
   id: string,
 ): SliderSource {
-  const result = useFilteredQueryRows(data ?? "", filters);
+  const result = useFilteredQueryRows(data ?? "", filters, id);
   const derived = useMemo(() => {
     if (data === undefined || result?.status !== "success" || !valueColumn) {
       return {};
@@ -224,7 +224,7 @@ export function Slider({
   const filter = usePageFilter<SliderValue | undefined>(id, {
     column: valueColumn ?? false,
     ...sliderValueCodec,
-    predicate: sliderPredicate(range),
+    clause: sliderClause(range),
     initialValue: initialSliderValue(initialValue, range),
   });
   const bounds = resolveSliderBounds(source.derived, { min, max, step });

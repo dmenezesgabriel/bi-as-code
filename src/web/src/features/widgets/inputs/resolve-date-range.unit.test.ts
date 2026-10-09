@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   DATE_RANGE_PRESETS,
-  dateRangePredicate,
+  dateRangeClause,
   isRecognizedDateRange,
   resolveDateRange,
 } from "./resolve-date-range";
 
 /** A fixed anchor — Thursday, October 8, 2026 — so relative ranges are deterministic. */
 const TODAY = new Date(2026, 9, 8);
+
+/** A stand-in clause source — identity, not shape, is what resolution keys on. */
+const ctx = { source: {} };
 
 describe("resolveDateRange — unbounded", () => {
   it("resolves undefined, empty and 'all time' to no bounds", () => {
@@ -185,10 +188,10 @@ describe("DATE_RANGE_PRESETS", () => {
   });
 });
 
-describe("dateRangePredicate", () => {
+describe("dateRangeClause", () => {
   it("binds a closed range as `column BETWEEN ? AND ?`", () => {
     expect(
-      dateRangePredicate("order_date", "2026-01-01 to 2026-01-31"),
+      dateRangeClause("order_date", "2026-01-01 to 2026-01-31", ctx).predicate,
     ).toEqual({
       sql: "order_date BETWEEN ? AND ?",
       params: ["2026-01-01", "2026-01-31"],
@@ -196,21 +199,23 @@ describe("dateRangePredicate", () => {
   });
 
   it("binds 'from X' as `column >= ?` and 'until Y' as `column <= ?`", () => {
-    expect(dateRangePredicate("order_date", "from 2026-01-01")).toEqual({
+    expect(
+      dateRangeClause("order_date", "from 2026-01-01", ctx).predicate,
+    ).toEqual({
       sql: "order_date >= ?",
       params: ["2026-01-01"],
     });
-    expect(dateRangePredicate("order_date", "until 2026-01-31")).toEqual({
+    expect(
+      dateRangeClause("order_date", "until 2026-01-31", ctx).predicate,
+    ).toEqual({
       sql: "order_date <= ?",
       params: ["2026-01-31"],
     });
   });
 
-  it("contributes nothing for all-time, absent or unrecognized values", () => {
-    expect(dateRangePredicate("order_date", "all time")).toBeUndefined();
-    expect(
-      dateRangePredicate("order_date", undefined as unknown as string),
-    ).toBeUndefined();
-    expect(dateRangePredicate("order_date", "garbage")).toBeUndefined();
+  it("publishes a predicate-less clause for all-time, absent or unrecognized values", () => {
+    expect(dateRangeClause("order_date", "all time", ctx).predicate).toBeNull();
+    expect(dateRangeClause("order_date", undefined, ctx).predicate).toBeNull();
+    expect(dateRangeClause("order_date", "garbage", ctx).predicate).toBeNull();
   });
 });

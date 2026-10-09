@@ -4,9 +4,12 @@ import {
   columnBounds,
   initialSliderValue,
   resolveSliderBounds,
-  sliderPredicate,
+  sliderClause,
   sliderValueCodec,
 } from "./slider-value";
+
+/** A stand-in clause source — identity, not shape, is what resolution keys on. */
+const ctx = { source: {} };
 
 describe("sliderValueCodec.serialize", () => {
   it("serializes a single number bare", () => {
@@ -49,29 +52,29 @@ describe("sliderValueCodec.deserialize", () => {
   });
 });
 
-describe("sliderPredicate", () => {
+describe("sliderClause", () => {
   it("binds a single value as `column >= ?` in single mode", () => {
-    expect(sliderPredicate(false)("amount", 30)).toEqual({
+    expect(sliderClause(false)("amount", 30, ctx).predicate).toEqual({
       sql: "amount >= ?",
       params: [30],
     });
   });
 
   it("binds a pair as `column BETWEEN ? AND ?` in range mode", () => {
-    expect(sliderPredicate(true)("amount", [10, 40])).toEqual({
+    expect(sliderClause(true)("amount", [10, 40], ctx).predicate).toEqual({
       sql: "amount BETWEEN ? AND ?",
       params: [10, 40],
     });
   });
 
-  it("contributes nothing when the held shape mismatches the mode", () => {
-    expect(sliderPredicate(false)("amount", [10, 40])).toBeUndefined();
-    expect(sliderPredicate(true)("amount", 30)).toBeUndefined();
+  it("publishes a predicate-less clause when the held shape mismatches the mode", () => {
+    expect(sliderClause(false)("amount", [10, 40], ctx).predicate).toBeNull();
+    expect(sliderClause(true)("amount", 30, ctx).predicate).toBeNull();
   });
 
-  it("contributes nothing for an unset value", () => {
-    expect(sliderPredicate(false)("amount", undefined)).toBeUndefined();
-    expect(sliderPredicate(true)("amount", undefined)).toBeUndefined();
+  it("publishes a predicate-less clause for an unset value", () => {
+    expect(sliderClause(false)("amount", undefined, ctx).predicate).toBeNull();
+    expect(sliderClause(true)("amount", undefined, ctx).predicate).toBeNull();
   });
 });
 

@@ -58,7 +58,7 @@ export function useSelectInput({
   selectFirst = false,
   defaultTopN,
 }: SelectInputProps): SelectInputState {
-  const result = useFilteredQueryRows(data ?? "", filters);
+  const result = useFilteredQueryRows(data ?? "", filters, id);
   const filter = usePageFilter<SelectValue>(id, {
     column: valueColumn,
     ...selectValueCodec,

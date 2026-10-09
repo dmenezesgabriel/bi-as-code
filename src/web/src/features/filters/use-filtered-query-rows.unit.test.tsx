@@ -15,21 +15,24 @@ import { FiltersProvider, usePageFilters } from "./page-filters-context";
 import { useFilteredQueryRows } from "./use-filtered-query-rows";
 
 const ORDERS_BLOCK: SqlBlock = { name: "orders", sql: "select * from orders" };
+const OPTS_BLOCK: SqlBlock = { name: "opts", sql: "select * from opts" };
 const WRAPPED = "select * from (select * from orders) where region = ?";
 
 function FilteredProbe({
   name,
   filters,
+  owner,
   onEmit,
   onFilters,
 }: {
   name: string;
   filters: FilterIds | undefined;
+  owner?: string;
   onEmit: (result: QueryResult | undefined) => void;
   onFilters: (filters: Filters | undefined) => void;
 }) {
   const pageFilters = usePageFilters();
-  const result = useFilteredQueryRows(name, filters);
+  const result = useFilteredQueryRows(name, filters, owner);
   useEffect(() => {
     onEmit(result);
   }, [result, onEmit]);
@@ -47,6 +50,7 @@ function renderFiltered({
   db = new FakeDuckDb(),
   name = "orders",
   filters = ["region"],
+  owner,
 }: {
   blocks?: SqlBlock[];
   tables?: SqlTableMap;
@@ -55,6 +59,7 @@ function renderFiltered({
   db?: FakeDuckDb;
   name?: string;
   filters?: FilterIds;
+  owner?: string;
 } = {}) {
   const emitted: (QueryResult | undefined)[] = [];
   const filtersRef: { current: Filters | undefined } = { current: undefined };
@@ -69,6 +74,7 @@ function renderFiltered({
           <FilteredProbe
             name={name}
             filters={filters}
+            owner={owner}
             onEmit={(result) => {
               emitted.push(result);
             }}
@@ -80,14 +86,70 @@ function renderFiltered({
       </QueryRegistryProvider>
     </DataRuntimeProvider>
   );
-  render(tree);
+  const view = render(tree);
   return {
     db,
     emitted,
     filtersRef,
+    unmount: view.unmount,
     latest: () => emitted[emitted.length - 1],
   };
 }
+
+/**
+ * Two consumers on the same page: `opts` consumes the `region` selection as
+ * the publishing input's own client (`owner="region"`), `orders` as a plain
+ * one — the arrangement the cross-filter tests compare.
+ */
+function renderOwnerVsConsumer({ url, db }: { url?: string; db: FakeDuckDb }) {
+  const emittedOpts: (QueryResult | undefined)[] = [];
+  const emittedOrders: (QueryResult | undefined)[] = [];
+  const filtersRef: { current: Filters | undefined } = { current: undefined };
+  render(
+    <DataRuntimeProvider layer={Layer.succeed(DuckDb, db)}>
+      <QueryRegistryProvider
+        sqlBlocks={[ORDERS_BLOCK, OPTS_BLOCK]}
+        sqlTables={{
+          orders: "data/orders.parquet",
+          opts: "data/opts.parquet",
+        }}
+        params={{}}
+      >
+        <FiltersProvider port={new FakeFilterUrlPort(url)}>
+          <FilteredProbe
+            name="opts"
+            filters={["region"]}
+            owner="region"
+            onEmit={(result) => {
+              emittedOpts.push(result);
+            }}
+            onFilters={(filters) => {
+              filtersRef.current = filters;
+            }}
+          />
+          <FilteredProbe
+            name="orders"
+            filters={["region"]}
+            onEmit={(result) => {
+              emittedOrders.push(result);
+            }}
+            onFilters={() => {}}
+          />
+        </FiltersProvider>
+      </QueryRegistryProvider>
+    </DataRuntimeProvider>,
+  );
+  return {
+    filtersRef,
+    latestOpts: () => emittedOpts[emittedOpts.length - 1],
+    latestOrders: () => emittedOrders[emittedOrders.length - 1],
+  };
+}
+
+const wrappedOptsQueries = (db: FakeDuckDb) =>
+  db.queries.filter(
+    (q) => q.sql !== "select * from opts" && q.sql.includes("opts"),
+  );
 
 describe("useFilteredQueryRows", () => {
   it("reuses the registry result and issues no second query when no filter contributes", async () => {
@@ -154,7 +216,7 @@ describe("useFilteredQueryRows", () => {
 
     await waitFor(() => expect(latest()?.status).toBe("success"));
     expect(db.queries).toContainEqual({
-      sql: "select * from (select * from orders) where region = ? AND channel = ?",
+      sql: "select * from (select * from orders) where (region = ?) AND (channel = ?)",
       params: ["West", "online"],
     });
   });
@@ -272,5 +334,83 @@ describe("useFilteredQueryRows", () => {
     const result = latest();
     expect(result?.status === "error" && result.message).toContain("nope");
     expect(db.queries).toEqual([]);
+  });
+
+  it("returns to the registry result when the only contributing filter clears", async () => {
+    const db = FakeDuckDb.withRowsWhen([{ n: 1 }], (sql) =>
+      sql === WRAPPED ? [{ region: "West" }] : null,
+    );
+    const { latest, filtersRef } = renderFiltered({
+      db,
+      url: "?region=West",
+      blocks: [ORDERS_BLOCK],
+    });
+    await waitFor(() =>
+      expect(latest()).toEqual({
+        status: "success",
+        rows: [{ region: "West" }],
+      }),
+    );
+    const issued = db.queries.length;
+
+    act(() => filtersRef.current?.get("region")?.applySerialized(""));
+
+    // The clause clears; no callback runs and no second query is issued —
+    // the render falls back to the registry's already-loaded result.
+    await waitFor(() =>
+      expect(latest()).toEqual({ status: "success", rows: [{ n: 1 }] }),
+    );
+    expect(db.queries).toHaveLength(issued);
+  });
+
+  it("stops re-querying once the consumer unmounts", async () => {
+    const db = new FakeDuckDb();
+    const { filtersRef, unmount } = renderFiltered({
+      db,
+      url: "?region=West",
+      blocks: [ORDERS_BLOCK],
+    });
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({ sql: WRAPPED, params: ["West"] }),
+    );
+
+    unmount();
+    const issued = db.queries.length;
+    await act(async () => {
+      filtersRef.current?.get("region")?.applySerialized("South");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(db.queries).toHaveLength(issued);
+  });
+
+  it("skips the owner client's own publish while another consumer narrows", async () => {
+    const db = new FakeDuckDb();
+    const { filtersRef, latestOpts, latestOrders } = renderOwnerVsConsumer({
+      db,
+    });
+    await waitFor(() => expect(latestOrders()?.status).toBe("success"));
+
+    act(() => filtersRef.current?.get("region")?.applySerialized("West"));
+
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({ sql: WRAPPED, params: ["West"] }),
+    );
+    expect(wrappedOptsQueries(db)).toEqual([]);
+    expect(latestOpts()).toEqual({ status: "success", rows: [{ n: 1 }] });
+  });
+
+  it("never issues the owner client's wrapped query for a URL-seeded own pick", async () => {
+    const db = new FakeDuckDb();
+    const { latestOpts, latestOrders } = renderOwnerVsConsumer({
+      url: "?region=West",
+      db,
+    });
+
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({ sql: WRAPPED, params: ["West"] }),
+    );
+    expect(wrappedOptsQueries(db)).toEqual([]);
+    expect(latestOpts()).toEqual({ status: "success", rows: [{ n: 1 }] });
+    expect(latestOrders()?.status).toBe("success");
   });
 });

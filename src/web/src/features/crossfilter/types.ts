@@ -39,6 +39,13 @@ export interface SelectionClause {
   readonly meta?: ClauseMetadata;
 }
 
+/** Source and skip-clients shared by every clause constructor. */
+export interface ClauseOptions {
+  readonly source: ClauseSource;
+  /** Clients this clause skips under cross-filtering (the port of mosaic's per-clause `clients`). */
+  readonly clients?: ReadonlySet<QueryClient>;
+}
+
 /**
  * A coordinator-registered data consumer, the port of mosaic's
  * `MosaicClient` contract: the coordinator resolves the predicate for this

@@ -48,7 +48,7 @@ describe("usePageFilter", () => {
     const filter = seen[0];
     expect(filter).toBeDefined();
     expect(filter!.value).toEqual(["a", "b"]);
-    expect(filter!.predicate()).toEqual({
+    expect(filter!.selection.clauses[0]?.predicate).toEqual({
       sql: "sales_channel IN (?, ?)",
       params: ["a", "b"],
     });

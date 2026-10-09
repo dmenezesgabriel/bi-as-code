@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { clauseInterval, clausePoint } from "../crossfilter/clause";
+import type {
+  FilterPredicate,
+  IntervalExtent,
+  QueryClient,
+} from "../crossfilter/types";
 import { FakeFilterUrlPort } from "./fake-url-port";
 import { Filter, type FilterOptions } from "./filter";
 
@@ -13,6 +19,22 @@ const listOptions: FilterOptions<string | string[]> = {
     if (raw.startsWith("[")) return JSON.parse(raw) as string[];
     return raw;
   },
+};
+
+/** The bound predicate of the clause this filter published, `undefined` when it holds none. */
+function publishedPredicate<V>(filter: Filter<V>): FilterPredicate | undefined {
+  return (
+    filter.selection.clauses.find((clause) => clause.source === filter)
+      ?.predicate ?? undefined
+  );
+}
+
+/** An inert `QueryClient` — only its identity matters for `clients` sets. */
+const stubClient: QueryClient = {
+  query: () => undefined,
+  queryPending: () => {},
+  queryResult: () => {},
+  queryError: () => {},
 };
 
 describe("Filter construction — value priority", () => {
@@ -177,98 +199,148 @@ describe("Filter.applySerialized — set from the URL-param form", () => {
   });
 });
 
-describe("Filter.predicate — placeholder-bound column predicate", () => {
-  it("is undefined without a column", () => {
+describe("Filter clause publication — value change publishes into its selection", () => {
+  it("publishes nothing without a column", () => {
     const filter = new Filter<string>("region", {}, new FakeFilterUrlPort(""));
     filter.value = "West";
-    expect(filter.predicate()).toBeUndefined();
+    expect(publishedPredicate(filter)).toBeUndefined();
   });
 
-  it("binds a single value as `column = ?`", () => {
+  it("publishes the URL-seeded value at construction", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "region" },
+      new FakeFilterUrlPort("?region=West"),
+    );
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "region = ?",
+      params: ["West"],
+    });
+  });
+
+  it("binds a single value as a point clause `column = ?` with itself as source", () => {
     const filter = new Filter<string>(
       "region",
       { column: "region" },
       new FakeFilterUrlPort(""),
     );
     filter.value = "West";
-    expect(filter.predicate()).toEqual({ sql: "region = ?", params: ["West"] });
+    const clause = filter.selection.clauses[0];
+    expect(clause?.source).toBe(filter);
+    expect(clause?.predicate).toEqual({ sql: "region = ?", params: ["West"] });
   });
 
-  it("binds an array as `column IN (?, …)`", () => {
+  it("binds an array as a list clause `column IN (?, …)`", () => {
     const filter = new Filter<string | string[]>(
       "region",
       listOptions,
       new FakeFilterUrlPort(""),
     );
     filter.value = ["West", "East"];
-    expect(filter.predicate()).toEqual({
+    expect(publishedPredicate(filter)).toEqual({
       sql: "region IN (?, ?)",
       params: ["West", "East"],
     });
   });
 
-  it("is undefined for an empty array, null and empty string", () => {
-    const empty = new Filter<string | string[]>(
-      "region",
-      listOptions,
-      new FakeFilterUrlPort(""),
-    );
-    empty.value = [];
-    expect(empty.predicate()).toBeUndefined();
-    const blank = new Filter<string>(
+  it("replaces its own clause on a new value — one clause per source", () => {
+    const filter = new Filter<string>(
       "region",
       { column: "region" },
       new FakeFilterUrlPort(""),
     );
+    filter.value = "West";
+    filter.value = "East";
+    expect(filter.selection.clauses).toHaveLength(1);
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "region = ?",
+      params: ["East"],
+    });
+  });
+
+  it("clears its clause when the value is cleared", () => {
+    const filter = new Filter<string | string[]>(
+      "region",
+      listOptions,
+      new FakeFilterUrlPort("?region=West"),
+    );
+    filter.value = undefined;
+    expect(filter.selection.clauses).toHaveLength(0);
+    const empty = new Filter<string | string[]>(
+      "empty",
+      listOptions,
+      new FakeFilterUrlPort(""),
+    );
+    empty.value = [];
+    expect(empty.selection.clauses).toHaveLength(0);
+    const blank = new Filter<string>(
+      "blank",
+      { column: "blank" },
+      new FakeFilterUrlPort(""),
+    );
     blank.value = "";
-    expect(blank.predicate()).toBeUndefined();
+    expect(blank.selection.clauses).toHaveLength(0);
+  });
+
+  it("does not re-publish an identical predicate — a same-content array write stays silent", () => {
+    const filter = new Filter<string | string[]>(
+      "region",
+      listOptions,
+      new FakeFilterUrlPort(""),
+    );
+    let updates = 0;
+    filter.selection.subscribe(() => {
+      updates += 1;
+    });
+    filter.value = ["West", "East"];
+    filter.value = ["West", "East"];
+    expect(updates).toBe(1);
+    expect(filter.selection.clauses).toHaveLength(1);
   });
 });
 
-describe("Filter.predicate — per-input builder and column opt-out", () => {
-  // The range inputs' shape — evidence's `SliderFilter.predicateSql`.
+describe("Filter clause publication — per-input factory and column opt-out", () => {
+  // The range inputs' shape — evidence's `SliderFilter.predicateSql` as a
+  // clause factory.
   const rangeOptions: FilterOptions<number | [number, number]> = {
     column: "amount",
-    predicate: (column, value) => {
-      if (Array.isArray(value) && value.length === 2) {
-        return { sql: `${column} BETWEEN ? AND ?`, params: [...value] };
-      }
-      if (typeof value === "number") {
-        return { sql: `${column} >= ?`, params: [value] };
-      }
-      return undefined;
-    },
+    clause: (column, value, context) =>
+      clauseInterval(column, rangeExtent(value), context),
   };
 
-  it("lets an input's predicate builder replace the `=`/`IN` shape", () => {
+  it("lets an input's clause factory replace the `=`/`IN` shape", () => {
     const filter = new Filter<number | [number, number]>(
       "amount",
       rangeOptions,
       new FakeFilterUrlPort(""),
     );
     filter.value = [10, 40];
-    expect(filter.predicate()).toEqual({
+    expect(publishedPredicate(filter)).toEqual({
       sql: "amount BETWEEN ? AND ?",
       params: [10, 40],
     });
+    expect(filter.selection.clauses[0]?.meta).toEqual({ type: "interval" });
     filter.value = 10;
-    expect(filter.predicate()).toEqual({ sql: "amount >= ?", params: [10] });
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "amount >= ?",
+      params: [10],
+    });
   });
 
-  it("contributes nothing when the builder returns undefined for the held value", () => {
+  it("contributes nothing when the factory emits a predicate-less clause", () => {
     const filter = new Filter<number | [number, number]>(
       "amount",
       {
         column: "amount",
-        predicate: (column, value) =>
+        clause: (column, value, context) =>
           Array.isArray(value)
-            ? { sql: `${column} BETWEEN ? AND ?`, params: [...value] }
-            : undefined,
+            ? clauseInterval(column, [value[0], value[1]], context)
+            : clauseNoneLike(column, context),
       },
       new FakeFilterUrlPort(""),
     );
     filter.value = 10;
-    expect(filter.predicate()).toBeUndefined();
+    expect(publishedPredicate(filter)).toBeUndefined();
   });
 
   it("contributes nothing for `column: false` even with a value", () => {
@@ -278,10 +350,10 @@ describe("Filter.predicate — per-input builder and column opt-out", () => {
       new FakeFilterUrlPort(""),
     );
     filter.value = "north";
-    expect(filter.predicate()).toBeUndefined();
+    expect(publishedPredicate(filter)).toBeUndefined();
   });
 
-  it("replaces the builder on configure without writing the URL", () => {
+  it("republishes under a swapped factory on configure without writing the URL", () => {
     const port = new FakeFilterUrlPort("");
     const filter = new Filter<number | [number, number]>(
       "amount",
@@ -289,13 +361,33 @@ describe("Filter.predicate — per-input builder and column opt-out", () => {
       port,
     );
     filter.value = 10;
-    expect(filter.predicate()).toEqual({ sql: "amount = ?", params: [10] });
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "amount = ?",
+      params: [10],
+    });
     filter.configure(rangeOptions);
-    expect(filter.predicate()).toEqual({ sql: "amount >= ?", params: [10] });
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "amount >= ?",
+      params: [10],
+    });
     // Only the user interaction wrote — configure is silent.
     expect(port.written).toHaveLength(1);
   });
 });
+
+/** A predicate-less clause standing in for a factory's no-op branch. */
+function clauseNoneLike(column: string, context: { source: object }) {
+  return clausePoint(column, null, context);
+}
+
+/** The test range factory's extent — a number bounds-lo, a pair bounds both. */
+function rangeExtent(
+  value: number | [number, number] | undefined,
+): IntervalExtent | null {
+  if (typeof value === "number") return [value, undefined];
+  if (Array.isArray(value) && value.length === 2) return [value[0], value[1]];
+  return null;
+}
 
 describe("Filter.configure — late-arriving options", () => {
   it("is a no-op for undefined options", () => {
@@ -310,7 +402,7 @@ describe("Filter.configure — late-arriving options", () => {
     const filter = new Filter<string>("region", {}, new FakeFilterUrlPort(""));
     filter.configure({ column: "sales_region" });
     filter.value = "West";
-    expect(filter.predicate()).toEqual({
+    expect(publishedPredicate(filter)).toEqual({
       sql: "sales_region = ?",
       params: ["West"],
     });
@@ -324,7 +416,7 @@ describe("Filter.configure — late-arriving options", () => {
     );
     filter.configure({ deserialize: (raw) => raw });
     filter.value = "West";
-    expect(filter.predicate()).toEqual({
+    expect(publishedPredicate(filter)).toEqual({
       sql: "sales_region = ?",
       params: ["West"],
     });
@@ -342,7 +434,7 @@ describe("Filter.configure — late-arriving options", () => {
 
     filter.configure({ deserialize: listOptions.deserialize });
     expect(filter.value).toEqual(["a", "b"]);
-    expect(filter.predicate()).toEqual({
+    expect(publishedPredicate(filter)).toEqual({
       sql: "channel IN (?, ?)",
       params: ["a", "b"],
     });
@@ -444,5 +536,39 @@ describe("Filter reactivity", () => {
     );
     filter.value = ["West", "East"];
     expect(filter.serializedValue).toBe('["West","East"]');
+  });
+});
+
+describe("Filter.registerClient — own-client cross-skip registration", () => {
+  it("names the registered client on clauses published after registration", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "region" },
+      new FakeFilterUrlPort(""),
+    );
+    filter.registerClient(stubClient);
+    filter.value = "West";
+    expect(filter.selection.clauses[0]?.clients?.has(stubClient)).toBe(true);
+  });
+
+  it("applies to an already-published clause — the clients set is live", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "region" },
+      new FakeFilterUrlPort("?region=West"),
+    );
+    filter.registerClient(stubClient);
+    expect(filter.selection.clauses[0]?.clients?.has(stubClient)).toBe(true);
+  });
+
+  it("unregisters through the returned cleanup", () => {
+    const filter = new Filter<string>(
+      "region",
+      { column: "region" },
+      new FakeFilterUrlPort("?region=West"),
+    );
+    const unregister = filter.registerClient(stubClient);
+    unregister();
+    expect(filter.selection.clauses[0]?.clients?.has(stubClient)).toBe(false);
   });
 });

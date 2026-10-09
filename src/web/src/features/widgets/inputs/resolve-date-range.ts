@@ -1,4 +1,8 @@
-import type { FilterPredicate } from "../../crossfilter/types";
+import type {
+  ClauseOptions,
+  FilterPredicate,
+  SelectionClause,
+} from "../../crossfilter/types";
 
 /**
  * The `<DateRange>` value grammar, a subset port of evidence's
@@ -147,29 +151,52 @@ export function resolveDateRange(
   return undefined;
 }
 
+/** The SQL shape a resolved range binds — the expression's form, not its dates. */
+function intervalSql(
+  column: string,
+  range: ResolvedRange | undefined,
+): string | null {
+  if (range?.start !== undefined && range.end !== undefined) {
+    return `${column} BETWEEN ? AND ?`;
+  }
+  if (range?.start !== undefined) return `${column} >= ?`;
+  if (range?.end !== undefined) return `${column} <= ?`;
+  return null;
+}
+
 /**
- * The `<DateRange>` `FilterOptions.predicate` — resolves the held expression
- * at query time (so a rolling window re-anchors on each run) and binds the
- * ISO bounds as `?` params, never text-interpolated (ADR-0005). Open ends
- * degrade `BETWEEN` to `>=`/`<=`; an unbounded value contributes nothing.
+ * The `<DateRange>` `FilterOptions.clause` — an interval clause whose `sql`
+ * fixes the expression's shape while `params` re-resolve on every read, so
+ * a rolling window (`'last 30 days'`, `'month to date'`) re-anchors on each
+ * composed query — the same resolve-at-run guarantee the predicate builder
+ * had (ADR-0005: bounds stay `?` params, never interpolated). `'all time'`,
+ * absent or unrecognized values publish a predicate-less clause — silent,
+ * it only clears.
  */
-export function dateRangePredicate(
+export function dateRangeClause(
   column: string,
   value: string | undefined,
-): FilterPredicate | undefined {
-  const range = resolveDateRange(value);
-  if (!range) return undefined;
-  if (range.start !== undefined && range.end !== undefined) {
-    return {
-      sql: `${column} BETWEEN ? AND ?`,
-      params: [range.start, range.end],
-    };
-  }
-  if (range.start !== undefined) {
-    return { sql: `${column} >= ?`, params: [range.start] };
-  }
-  if (range.end !== undefined) {
-    return { sql: `${column} <= ?`, params: [range.end] };
-  }
-  return undefined;
+  { source, clients }: ClauseOptions,
+): SelectionClause {
+  const sql = intervalSql(column, resolveDateRange(value));
+  const predicate: FilterPredicate | null =
+    sql === null
+      ? null
+      : {
+          sql,
+          get params(): readonly unknown[] {
+            const range = resolveDateRange(value);
+            return [range?.start, range?.end].filter(
+              (bound): bound is string => bound !== undefined,
+            );
+          },
+        };
+  return {
+    meta: { type: "interval" },
+    source,
+    clients,
+    fields: [column],
+    value,
+    predicate,
+  };
 }

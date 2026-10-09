@@ -100,8 +100,10 @@ describe("Dropdown — option source", () => {
       sql.includes("where region = ?")
         ? [{ region: "West" }]
         : [{ region: "West" }, { region: "North" }];
+    // A different filter id — consuming its own selection skips the options
+    // query under cross-filtering, so the cascade is probed through another.
     renderDropdown(
-      { filters: "region" },
+      { id: "picked", filters: "region" },
       { db, port: new FakeFilterUrlPort("?region=West") },
     );
 
@@ -111,6 +113,20 @@ describe("Dropdown — option source", () => {
         params: ["West"],
       }),
     );
+  });
+
+  it("keeps the option source unfiltered by its own pick", async () => {
+    const db = fakeDb();
+    renderDropdown(
+      { filters: "region" },
+      { db, port: new FakeFilterUrlPort("?region=West") },
+    );
+
+    // The own clause skips the owner client — options load unfiltered and
+    // the wrapped query is never issued even after the popup settles.
+    await openSelectPopup();
+    await screen.findAllByRole("option");
+    expect(db.queries).toEqual([{ sql: "select * from orders", params: [] }]);
   });
 });
 

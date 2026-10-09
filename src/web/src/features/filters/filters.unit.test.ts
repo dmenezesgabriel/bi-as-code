@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { Coordinator } from "../crossfilter/coordinator";
 import { FakeFilterUrlPort } from "./fake-url-port";
-import type { FilterOptions } from "./filter";
+import type { Filter, FilterOptions } from "./filter";
 import { Filters } from "./filters";
 
 const ARRAY_CODEC: FilterOptions<string | string[]> = {
@@ -11,12 +12,21 @@ const ARRAY_CODEC: FilterOptions<string | string[]> = {
   deserialize: (raw) => (raw.startsWith("[") ? JSON.parse(raw) : raw),
 };
 
+/** The bound predicate of the filter's published clause — `undefined` when it holds none. */
+function publishedPredicate<V>(filter: Filter<V>) {
+  return filter.selection.clauses.find((clause) => clause.source === filter)
+    ?.predicate;
+}
+
 describe("Filters.ensure", () => {
   it("creates a filter whose predicate column defaults to the id", () => {
     const filters = new Filters(new FakeFilterUrlPort(""));
     const filter = filters.ensure("region");
     filter.value = "West";
-    expect(filter.predicate()).toEqual({ sql: "region = ?", params: ["West"] });
+    expect(publishedPredicate(filter)).toEqual({
+      sql: "region = ?",
+      params: ["West"],
+    });
   });
 
   it("honours an explicit column over the id", () => {
@@ -25,7 +35,7 @@ describe("Filters.ensure", () => {
       column: "sales_channel",
     });
     filter.value = "Web";
-    expect(filter.predicate()).toEqual({
+    expect(publishedPredicate(filter)).toEqual({
       sql: "sales_channel = ?",
       params: ["Web"],
     });
@@ -51,7 +61,7 @@ describe("Filters.ensure", () => {
     });
     expect(configured).toBe(bare);
     expect(configured.value).toEqual(["a", "b"]);
-    expect(configured.predicate()).toEqual({
+    expect(publishedPredicate(configured)).toEqual({
       sql: "sales_channel IN (?, ?)",
       params: ["a", "b"],
     });
@@ -66,7 +76,7 @@ describe("Filters.ensure", () => {
     });
     const second = filters.ensure("channel");
     second.value = ["a", "b"];
-    expect(second.predicate()).toEqual({
+    expect(publishedPredicate(second)).toEqual({
       sql: "sales_channel IN (?, ?)",
       params: ["a", "b"],
     });
@@ -97,7 +107,7 @@ describe("Filters.ensure", () => {
     const filters = new Filters(new FakeFilterUrlPort(""));
     const filter = filters.ensure("q", { column: false });
     filter.value = "north";
-    expect(filter.predicate()).toBeUndefined();
+    expect(publishedPredicate(filter)).toBeUndefined();
   });
 
   it("keeps `column: false` when a consumer's bare ensure lands second", () => {
@@ -105,7 +115,29 @@ describe("Filters.ensure", () => {
     filters.ensure("q", { column: false });
     const filter = filters.ensure("q");
     filter.value = "north";
-    expect(filter.predicate()).toBeUndefined();
+    expect(publishedPredicate(filter)).toBeUndefined();
+  });
+});
+
+describe("Filters selections and coordinator", () => {
+  it("hands out the filter's own cross-filter selection per id", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    const filter = filters.ensure("region");
+    expect(filters.selection("region")).toBe(filter.selection);
+  });
+
+  it("selection(id) ensure-creates like ensure — a declared id resolves even without an input", () => {
+    const filters = new Filters(new FakeFilterUrlPort("?region=West"));
+    const selection = filters.selection("region");
+    expect(selection.clauses[0]?.predicate).toEqual({
+      sql: "region = ?",
+      params: ["West"],
+    });
+  });
+
+  it("exposes one coordinator for the page", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    expect(filters.coordinator).toBeInstanceOf(Coordinator);
   });
 });
 

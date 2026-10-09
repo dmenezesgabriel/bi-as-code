@@ -1,18 +1,11 @@
 import type {
   ClauseMetadata,
+  ClauseOptions,
   ClauseSource,
   FilterPredicate,
   IntervalExtent,
-  QueryClient,
   SelectionClause,
 } from "./types";
-
-/** Source and skip-clients shared by every clause constructor. */
-interface ClauseOptions {
-  source: ClauseSource;
-  /** Clients this clause skips under cross-filtering (the port of mosaic's per-clause `clients`). */
-  clients?: ReadonlySet<QueryClient>;
-}
 
 /**
  * A clause for one selected point value: `field = ?`.

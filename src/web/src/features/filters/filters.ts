@@ -1,16 +1,28 @@
+import { Coordinator } from "../crossfilter/coordinator";
+import type { Selection } from "../crossfilter/selection";
 import { Filter, type FilterOptions } from "./filter";
 import type { FilterUrlPort } from "./filter-url-port";
 
 /**
- * A page's named filters — the port of evidence's `Filters.svelte.ts`.
- * Page-scoped: each page mounts its own collection, seeded from the URL.
+ * A page's named filters — the port of evidence's `Filters.svelte.ts` —
+ * and the page's cross-filter `Coordinator`: each `Filter` owns the
+ * `Selection` it publishes into, and `coordinator` brokers every
+ * `filters=[...]` consumer's re-query. Page-scoped: each page mounts its
+ * own collection, seeded from the URL.
  */
 export class Filters {
   readonly #filters = new Map<string, Filter>();
   readonly #port: FilterUrlPort;
+  readonly #coordinator: Coordinator;
 
-  constructor(port: FilterUrlPort) {
+  constructor(port: FilterUrlPort, coordinator = new Coordinator()) {
     this.#port = port;
+    this.#coordinator = coordinator;
+  }
+
+  /** The page's cross-filter coordinator — clients connect through it. */
+  get coordinator(): Coordinator {
+    return this.#coordinator;
   }
 
   /**
@@ -38,6 +50,15 @@ export class Filters {
     );
     this.#filters.set(id, filter);
     return filter;
+  }
+
+  /**
+   * The selection filter `id` publishes into — ensure-creates like
+   * `ensure`, so a `filters=[...]` consumer always resolves the canonical
+   * selection even when no input has mounted for the id yet.
+   */
+  selection(id: string): Selection {
+    return this.ensure(id).selection;
   }
 
   get(id: string): Filter | undefined {

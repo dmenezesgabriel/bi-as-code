@@ -8,8 +8,18 @@
  * `value` is the user-interaction setter (writes the URL);
  * `setDefault` is programmatic (never writes); `normalize` corrects a
  * constrained value and writes only when the param is already there.
+ *
+ * Every value change also publishes a `SelectionClause` into the filter's
+ * own `Selection` (ADR-0004) — the coordinator's clients re-query under the
+ * clauses that survive skip resolution.
  */
-import type { FilterPredicate } from "../crossfilter/types";
+import { clauseList, clauseNone, clausePoint } from "../crossfilter/clause";
+import { Selection } from "../crossfilter/selection";
+import type {
+  ClauseOptions,
+  QueryClient,
+  SelectionClause,
+} from "../crossfilter/types";
 import type { FilterUrlPort } from "./filter-url-port";
 
 export interface FilterOptions<Value = unknown> {
@@ -27,15 +37,16 @@ export interface FilterOptions<Value = unknown> {
   /** URL-param string → value. */
   deserialize?(raw: string): Value;
   /**
-   * Builds the WHERE fragment for the held value; the default emits
-   * `column = ?` or `column IN (...)`. Returning `undefined` contributes no
-   * predicate for that value (a range input half-set stays silent —
-   * evidence's `predicateSql` no-op branches).
+   * Builds the clause published on each value change; the default emits a
+   * point clause (`column = ?`) or a list clause (`column IN (…)`) for the
+   * held value. A range input's half-set state stays silent through a
+   * predicate-less clause (evidence's `predicateSql` no-op branches).
    */
-  predicate?(
+  clause?(
     column: string,
     value: Value | undefined,
-  ): FilterPredicate | undefined;
+    context: ClauseOptions,
+  ): SelectionClause;
 }
 
 interface ResolvedOptions<Value> {
@@ -43,22 +54,49 @@ interface ResolvedOptions<Value> {
   initialValue?: Value;
   serialize(value: Value | undefined): string | undefined;
   deserialize(raw: string): Value;
-  predicate?(
+  clause?(
     column: string,
     value: Value | undefined,
-  ): FilterPredicate | undefined;
+    context: ClauseOptions,
+  ): SelectionClause;
 }
 
 const defaultSerialize = (value: unknown): string | undefined =>
   value === undefined ? undefined : String(value);
 
+/**
+ * The `=`/`IN` clause a filter publishes absent an input-supplied factory —
+ * `""`, `null` and `undefined` all carry no predicate, so they clear.
+ */
+function defaultClause<Value>(
+  column: string,
+  value: Value | undefined,
+  context: ClauseOptions,
+): SelectionClause {
+  if (Array.isArray(value)) return clauseList(column, value, context);
+  return clausePoint(column, value === "" ? null : value, context);
+}
+
 export class Filter<Value = unknown> {
   readonly id: string;
+  /**
+   * The selection this filter publishes its clauses into — `cross`, so a
+   * client the clause names (the input's own data query, registered through
+   * `registerClient`) is never narrowed by it.
+   */
+  readonly selection = Selection.crossfilter();
   readonly #opts: ResolvedOptions<Value>;
   readonly #port: FilterUrlPort;
   readonly #listeners = new Set<() => void>();
+  /**
+   * Clients this filter's clauses skip — handed to each clause as the live
+   * set, so a client registering after a clause was published (a URL-seeded
+   * value precedes any mount effect) is still excluded by it.
+   */
+  readonly #clients = new Set<QueryClient>();
   #value: Value | undefined;
   #lastSerialized: string | undefined;
+  #lastClauseKey = "";
   #isInitializing = true;
 
   constructor(id: string, opts: FilterOptions<Value>, port: FilterUrlPort) {
@@ -68,7 +106,7 @@ export class Filter<Value = unknown> {
       initialValue: opts.initialValue,
       serialize: opts.serialize ?? defaultSerialize,
       deserialize: opts.deserialize ?? ((raw) => raw as Value),
-      predicate: opts.predicate,
+      clause: opts.clause,
     };
     this.#port = port;
     const raw = port.read()?.searchParams.get(id);
@@ -95,7 +133,10 @@ export class Filter<Value = unknown> {
     const serialized = this.#opts.serialize(newValue);
     const changed = serialized !== this.#lastSerialized;
     this.#lastSerialized = serialized;
-    if (!Object.is(previous, newValue)) this.#notify();
+    if (!Object.is(previous, newValue)) {
+      this.#notify();
+      this.#publish();
+    }
     if (this.#isInitializing || !changed) return;
     this.#writeUrl(serialized);
   }
@@ -105,7 +146,10 @@ export class Filter<Value = unknown> {
     const previous = this.#value;
     this.#value = newValue;
     this.#lastSerialized = this.#opts.serialize(newValue);
-    if (!Object.is(previous, newValue)) this.#notify();
+    if (!Object.is(previous, newValue)) {
+      this.#notify();
+      this.#publish();
+    }
   }
 
   /**
@@ -116,13 +160,15 @@ export class Filter<Value = unknown> {
    * consumer's bare `ensure` beat the input's) without writing the URL —
    * evidence's `addOrUpdateFilters` reaches the same end state by recreating
    * the filter. `initialValue` seeds via `setDefault` only when nothing is
-   * held, so a cleared `""`/`[]` never snaps back.
+   * held, so a cleared `""`/`[]` never snaps back. A `column`/`clause` swap
+   * on an unchanged value republishes the held clause under the new shape.
    */
   configure(opts?: FilterOptions<Value>) {
     if (!opts) return;
+    const valueBefore = this.#value;
     if (opts.column !== undefined) this.#opts.column = opts.column;
     if (opts.serialize) this.#opts.serialize = opts.serialize;
-    if (opts.predicate) this.#opts.predicate = opts.predicate;
+    if (opts.clause) this.#opts.clause = opts.clause;
     if (opts.deserialize) {
       this.#opts.deserialize = opts.deserialize;
       const raw = this.#port.read()?.searchParams.get(this.id);
@@ -130,6 +176,12 @@ export class Filter<Value = unknown> {
     }
     if (opts.initialValue !== undefined && this.#value === undefined) {
       this.setDefault(opts.initialValue);
+    }
+    if (
+      (opts.column !== undefined || opts.clause !== undefined) &&
+      Object.is(valueBefore, this.#value)
+    ) {
+      this.#publish();
     }
   }
 
@@ -153,30 +205,46 @@ export class Filter<Value = unknown> {
   }
 
   /**
-   * The WHERE fragment this filter contributes, values bound as `?` args —
-   * never text-interpolated (ADR-0005). `undefined` = contributes none.
-   * An input-supplied `predicate` builder owns the shape; the default is
-   * `=`/`IN`.
+   * Register a client this filter's clauses must skip under `cross` — the
+   * input's own data query (an options or bounds source) so it is never
+   * narrowed by its own pick. Returns the unregister cleanup.
+   *
+   * @example
+   * useEffect(() => filter.registerClient(client), [filter, client]);
    */
-  predicate(): FilterPredicate | undefined {
-    const column = this.#opts.column;
-    if (!column) return undefined;
-    const value = this.#value;
-    if (this.#opts.predicate) return this.#opts.predicate(column, value);
-    if (Array.isArray(value)) {
-      if (value.length === 0) return undefined;
-      return {
-        sql: `${column} IN (${value.map(() => "?").join(", ")})`,
-        params: [...value],
-      };
-    }
-    if (value === undefined || value === null || value === "") return undefined;
-    return { sql: `${column} = ?`, params: [value] };
+  registerClient(client: QueryClient): () => void {
+    this.#clients.add(client);
+    return () => {
+      this.#clients.delete(client);
+    };
   }
 
   subscribe(listener: () => void): () => void {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
+  }
+
+  /**
+   * Publish the held value's clause into the page selection — `column:
+   * false` emits `clauseNone`, which only clears. An identical predicate
+   * skips the update entirely: the serialized key stands in for mosaic's
+   * `Param.distinct()`, so a `column: false` keystroke or a same-content
+   * array write never re-queries the selection's clients.
+   */
+  #publish() {
+    const column = this.#opts.column;
+    const clause = column
+      ? (this.#opts.clause ?? defaultClause)(column, this.#value, {
+          source: this,
+          clients: this.#clients,
+        })
+      : clauseNone(this);
+    const key = clause.predicate
+      ? `${clause.predicate.sql}|${JSON.stringify(clause.predicate.params)}`
+      : "";
+    if (key === this.#lastClauseKey) return;
+    this.#lastClauseKey = key;
+    this.selection.update(clause);
   }
 
   #writeUrl(serialized: string | undefined) {

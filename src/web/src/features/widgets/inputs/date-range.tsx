@@ -8,7 +8,7 @@ import { WidgetError } from "../markdown/states";
 import { titleCase } from "./option-items";
 import {
   DATE_RANGE_PRESETS,
-  dateRangePredicate,
+  dateRangeClause,
   isRecognizedDateRange,
   resolveDateRange,
 } from "./resolve-date-range";
@@ -102,7 +102,7 @@ export function DateRange({
     initialValue !== undefined && !isRecognizedDateRange(initialValue);
   const filter = usePageFilter<string | undefined>(id, {
     column: valueColumn ?? false,
-    predicate: dateRangePredicate,
+    clause: dateRangeClause,
     deserialize: (raw) => raw.trim() || undefined,
     initialValue: badInitial ? undefined : initialValue,
   });
