@@ -13,8 +13,8 @@ A user clicks a chart mark, drags an interval brush over a continuous axis, or t
 1. Cold start: `bin/biac dev`, open `http://localhost:5175/weekly-review`.
 2. Record before numbers: `<BarChart>` bar count, `<Histogram>` bin count, `<Table data="region_week">` and `<Table data="order_detail">` row counts, Region `<Dropdown>` option count, `console` output.
 3. Click the `West` bar of `<BarChart data="orders" x="region" y="revenue" select="crossfilter">` — the scatter chart, histogram and both tables narrow to `region = 'West'`; the bar chart itself keeps all bars (its clause skips its own client) and dims the non-West bars; the Region dropdown's option list narrows to `West` (its options query is not the clause's publisher).
-4. Click `West` again — the clause clears; every widget returns to unfiltered counts.
-5. Drag an interval brush across `<Histogram data="order_amounts" value="amount" select="crossfilter">` — `order_detail` narrows to the brushed amount window, the histogram keeps its full shape, and the Amount `<Slider>` bounds contract (its bounds query consumes `amount`, not its own clause).
+4. Click `West` again — the clause clears; every widget returns to unfiltered counts and the Amount slider's thumbs return to 38–44.
+5. Drag an interval brush across `<Histogram data="order_amounts" value="amount" select="crossfilter">` — `order_detail` narrows to the brushed amount window, the histogram keeps its full shape, and the Region `<Dropdown>` options narrow to the regions with orders in the window (it declares `filters={["region", "amount"]}`); the Amount `<Slider>` keeps 38–44 — it declares only `filters={["region"]}`. A plain click on the histogram clears the brush.
 6. Toggle a series off in the `<ScatterChart>` legend (`series="region"`) — `region_week` widgets narrow to the enabled regions; the legend's native hide/show still applies.
 7. Reload — chart selections are session-state: no URL params appear for them, nothing persists (decision 2 below); `?region=…` params authored through inputs behave exactly as before.
 
