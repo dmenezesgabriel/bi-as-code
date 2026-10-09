@@ -35,6 +35,12 @@ Cross-filtering is implemented natively in `src/web/src/features/crossfilter/` a
 
 Chart interactions map to clauses: brush ranges → `interval`, click on a mark → `point`, legend/category toggles → `list`, search-as-you-type → `match`. Filter inputs own named selections; `filters=["id"]` on a widget includes those selections' clauses; `select: crossfilter` declares a chart-published selection.
 
+Chart-published selections follow the reference's semantics, not the input model's:
+
+- They are session state. A chart clause never writes the URL and never sets an input's `Filter.value`; inputs remain the only persisted filter state. Publishing through `Filter.value` would make the input the clause's source, so `cross` could no longer exclude the chart from its own selection.
+- The target selection is the bound field's name (filter id ⇄ column), so a chart and an input on the same field publish into one selection. Their clauses AND together (`intersect`); replace-by-source is per publisher, not per field. A chart pick does not "switch" an input's pick.
+- The publishing chart keeps its own rows and de-emphasizes its unselected marks from the clause value it just published — no per-mark test query.
+
 Performance mechanisms from the reference (query consolidation, preaggregation) are deliberately deferred to their own slices.
 
 ## Consequences
