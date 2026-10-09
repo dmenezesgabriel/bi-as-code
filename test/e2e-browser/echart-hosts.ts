@@ -23,6 +23,46 @@ export interface AppliedOption {
   visualMap?: { min?: number; max?: number; inRange?: { color?: string[] } }[];
 }
 
+/** A viewport-space point, ready for `page.mouse`. */
+export interface PagePoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * The page-space point at data coordinate `[x, y]` on chart host
+ * `hostIndex` — `convertToPixel` maps it into the host's own pixels, then
+ * the host's bounding rect lifts them to viewport space.
+ */
+export async function chartPoint(
+  page: Page,
+  hostIndex: number,
+  value: [number, number],
+): Promise<PagePoint> {
+  return page.evaluate(
+    ([hi, v]) => {
+      const host = document.querySelectorAll<HTMLElement>(
+        "[data-echarts-theme]",
+      )[hi];
+      if (!host) throw new Error(`chart host ${hi} not in the document`);
+      const chart = (
+        host as unknown as {
+          echartsInstance?: {
+            convertToPixel(finder: unknown, value: unknown[]): number[];
+          };
+        }
+      ).echartsInstance;
+      if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
+      const [x, y] = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, v);
+      if (x === undefined || y === undefined)
+        throw new Error(`convertToPixel returned no point for ${String(v)}`);
+      const rect = host.getBoundingClientRect();
+      return { x: rect.left + x, y: rect.top + y };
+    },
+    [hostIndex, value] as const,
+  );
+}
+
 /**
  * Chart hosts in document order — on weekly-review that's the Regional
  * split's <BarChart>, the Order mix <ScatterChart>, the Order size

@@ -18,6 +18,13 @@
  * regen inside the same week emits an identical file. The committed CSV is
  * a snapshot: regenerate to re-anchor the window.
  *
+ * `data/flights.parquet` is the cross-filter scale fixture: 200,000 synthetic
+ * flights (`delay` minutes, `distance` miles, `time` hour of day) in the
+ * shape of mosaic's flights-200k benchmark
+ * (https://github.com/uwdata/mosaic/blob/main/specs/yaml/flights-200k.yaml).
+ * It is built in SQL from `range()` with `hash()`-derived values, so a regen
+ * is byte-identical.
+ *
  * Run from the repo root: `pnpm --filter biac-web generate:data`.
  */
 
@@ -130,12 +137,38 @@ function toCsv(rows) {
   return `order_id,week,order_date,region,amount\n${lines.join("\n")}\n`;
 }
 
+const FLIGHTS = 200_000;
+
 /**
- * Compiles the on-disk csv to parquet via duckdb-wasm's node blocking
- * bindings. Absolute paths — relative ones land in the engine's MEMFS
- * sandbox, shadowed by any same-named real file.
+ * Uniform [0, 1) per row and stream — `hash(i, stream)` decorrelates the
+ * three columns' draws while staying deterministic.
  */
-async function writeParquet(csvPath, parquetPath) {
+function uniform(stream) {
+  return `(hash(i, '${stream}') % 1000000) / 1000000.0`;
+}
+
+/**
+ * Daytime departures (06–22h); short hops dominate (`u²` skew); delays are
+ * exponential with a mean that grows through the day, so brushing late
+ * departures visibly shifts the delay histogram right.
+ */
+function flightsSql() {
+  return `select
+  round(-ln(1 - ${uniform("delay")}) * (8 + 2 * time) - 10)::integer as delay,
+  round(100 + 2900 * pow(${uniform("distance")}, 2))::integer as distance,
+  time
+from (
+  select i, round(6 + 16 * ${uniform("time")}, 2) as time
+  from range(${FLIGHTS}) t(i)
+)`;
+}
+
+/**
+ * Opens a duckdb-wasm connection through its node blocking bindings — the
+ * same build the browser runs, so dev, e2e and the demo read the exact
+ * bytes this script emits.
+ */
+async function connectDuckDb() {
   const require = createRequire(import.meta.url);
   const dist = dirname(
     require.resolve("@duckdb/duckdb-wasm/dist/duckdb-node-blocking.cjs"),
@@ -150,24 +183,42 @@ async function writeParquet(csvPath, parquetPath) {
     duckdb.NODE_RUNTIME,
   );
   await db.instantiate();
-  const connection = db.connect();
-  const literal = (value) => `'${value.replaceAll("'", "''")}'`;
-  try {
-    connection.query(
-      `copy (from ${literal(csvPath)}) to ${literal(parquetPath)} (format parquet)`,
-    );
-  } finally {
-    connection.close();
-  }
+  return db.connect();
+}
+
+const literal = (value) => `'${value.replaceAll("'", "''")}'`;
+
+/**
+ * Writes `source` (a query) to `parquetPath`. Absolute paths — relative ones
+ * land in the engine's MEMFS sandbox, shadowed by any same-named real file.
+ */
+function copyToParquet(connection, source, parquetPath, options = "") {
+  // duckdb-wasm's fs bridge leaves a `tmp_` sibling instead of replacing an
+  // existing copy target — delete it so the write lands on the real path.
+  rmSync(parquetPath, { force: true });
+  connection.query(
+    `copy (${source}) to ${literal(parquetPath)} (format parquet${options})`,
+  );
 }
 
 const csvPath = join(dataDir, "orders.csv");
 writeFileSync(csvPath, toCsv(orderRows()));
-const parquetPath = join(dataDir, "orders.parquet");
-// duckdb-wasm's fs bridge leaves a `tmp_` sibling instead of replacing an
-// existing copy target — delete it so the write lands on the real path.
-rmSync(parquetPath, { force: true });
-await writeParquet(csvPath, parquetPath);
+const connection = await connectDuckDb();
+try {
+  copyToParquet(
+    connection,
+    `from ${literal(csvPath)}`,
+    join(dataDir, "orders.parquet"),
+  );
+  copyToParquet(
+    connection,
+    flightsSql(),
+    join(dataDir, "flights.parquet"),
+    ", compression zstd",
+  );
+} finally {
+  connection.close();
+}
 console.log(
-  `data/orders.csv: ${total(REGIONS.map((r) => total(r.weekly)))} orders; data/orders.parquet written`,
+  `data/orders.csv: ${total(REGIONS.map((r) => total(r.weekly)))} orders; data/orders.parquet, data/flights.parquet (${FLIGHTS} rows) written`,
 );
