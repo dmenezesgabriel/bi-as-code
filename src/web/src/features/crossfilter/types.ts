@@ -1,5 +1,6 @@
 import type { Row } from "../data/types";
 import type { InterpolatedQuery } from "../pages/interpolate";
+import type { QueryResult } from "../pages/types";
 
 /**
  * A predicate bound for a prepared statement: `sql` carries `?` holes.
@@ -58,3 +59,13 @@ export interface QueryClient {
   queryResult(rows: readonly Row[]): void;
   queryError(message: string): void;
 }
+
+/**
+ * Runs one wrapped query to completion — the data boundary the coordinator
+ * hands each client's query to; the bridge binds it to the page's runtime
+ * and registered block (`runBlock`).
+ */
+export type QueryRunner = (
+  query: InterpolatedQuery,
+  signal: AbortSignal,
+) => Promise<QueryResult>;
