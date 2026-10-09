@@ -10,6 +10,7 @@ import { Table } from "../table/table";
 import { ScatterChart } from "./scatter-chart";
 import {
   OPTS,
+  OPTS_BY_ORDERS,
   ORDERS_REGIONAL,
   SCATTER_ROWS,
   appliedOption,
@@ -99,7 +100,7 @@ export const SelectCrossfilter: Story = {
   decorators: [
     withQueryData(
       [ORDERS_REGIONAL, OPTS],
-      dbSelectable("orders", SCATTER_ROWS),
+      dbSelectable("orders", SCATTER_ROWS, OPTS_BY_ORDERS),
     ),
     withPageFilters(new FakeFilterUrlPort("")),
   ],
@@ -109,5 +110,5 @@ export const SelectCrossfilter: Story = {
       <Table data="opts" filters="orders" />
     </>
   ),
-  play: crossfilterTogglePlay(4),
+  play: crossfilterTogglePlay(4, 4, ["120", "140"]),
 };

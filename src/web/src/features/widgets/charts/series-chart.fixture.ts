@@ -53,7 +53,13 @@ export const OPTS_ROWS: Row[] = [
   { region: "South", amount: 48 },
 ];
 
-export const OPTS_WEST: Row[] = [{ region: "West", amount: 12 }];
+/** Scatter-story consumer: one `opts` row per distinct `orders` x value. */
+export const OPTS_BY_ORDERS: Row[] = [
+  { orders: 120, amount: 12 },
+  { orders: 140, amount: 30 },
+  { orders: 90, amount: 48 },
+  { orders: 95, amount: 20 },
+];
 
 /** Scatter fixture: orders↔revenue correlation across two regions + a size column. */
 export const SCATTER_ROWS: Row[] = [
@@ -103,15 +109,21 @@ export function dbWith(rows: Row[]): FakeDuckDb {
 
 /**
  * The fake behind the `select="crossfilter"` tests and stories: the
- * chart's own fence gets `allRows`, the `opts` consumer gets `OPTS_ROWS`,
+ * chart's own fence gets `allRows`, the `opts` consumer gets `consumerRows`,
  * and any `where <field> = ?`-wrapped query — the published point clause —
- * gets the narrowed `OPTS_WEST`.
+ * gets the consumer rows matching the bound value, so clicking different
+ * marks narrows to different rows.
  */
-export function dbSelectable(field: string, allRows: Row[]): FakeDuckDb {
+export function dbSelectable(
+  field: string,
+  allRows: Row[],
+  consumerRows: Row[] = OPTS_ROWS,
+): FakeDuckDb {
   const db = new FakeDuckDb();
-  db.rowsWhen = (sql) => {
-    if (sql.includes(`where ${field} = ?`)) return OPTS_WEST;
-    return sql.includes("from opts") ? OPTS_ROWS : allRows;
+  db.rowsWhen = (sql, params) => {
+    if (sql.includes(`where ${field} = ?`))
+      return consumerRows.filter((row) => row[field] === params[0]);
+    return sql.includes("from opts") ? consumerRows : allRows;
   };
   return db;
 }
@@ -213,28 +225,47 @@ interface ChartInternals {
 
 /**
  * The SelectCrossfilter story play: click mark 0 → the consumer table
- * narrows to one row while the publisher's own option holds
- * `publisherPoints`, then click-same restores the table. The bar and
- * scatter stories share it verbatim — only the publisher's point count
- * differs.
+ * narrows to that mark's row while the publisher's own option holds
+ * `publisherPoints`; click-same restores; click mark 1 → narrows to *its*
+ * row (different marks publish different values); click-same restores
+ * again. `consumerRows` is the unfiltered table row count; `clickedValues`
+ * are marks 0 and 1's x values as the consumer table renders them. The
+ * bar and scatter stories share it verbatim — only the counts differ.
  */
 export function crossfilterTogglePlay(
   publisherPoints: number,
+  consumerRows: number,
+  clickedValues: readonly string[],
 ): ({ canvasElement }: { canvasElement: HTMLElement }) => Promise<void> {
   return async ({ canvasElement }) => {
     const host = await readyHost(canvasElement);
     const bodyRows = () => canvasElement.querySelectorAll("tbody tr").length;
-    await waitFor(() => expect(bodyRows()).toBe(3));
+    const tableText = () =>
+      canvasElement.querySelector("tbody")?.textContent ?? "";
+    const [first, second] = clickedValues;
+    if (!first || !second)
+      throw new Error(
+        `clickedValues needs two mark values, got ${JSON.stringify(clickedValues)}`,
+      );
+    await waitFor(() => expect(bodyRows()).toBe(consumerRows));
 
     clickMark(host, 0);
     await waitFor(() => expect(bodyRows()).toBe(1));
+    expect(tableText()).toContain(first);
     const option = await appliedOption<{ series?: { data?: unknown[] }[] }>(
       canvasElement,
     );
     expect(option.series?.[0]?.data).toHaveLength(publisherPoints);
 
     clickMark(host, 0);
-    await waitFor(() => expect(bodyRows()).toBe(3));
+    await waitFor(() => expect(bodyRows()).toBe(consumerRows));
+
+    clickMark(host, 1);
+    await waitFor(() => expect(bodyRows()).toBe(1));
+    expect(tableText()).toContain(second);
+
+    clickMark(host, 1);
+    await waitFor(() => expect(bodyRows()).toBe(consumerRows));
   };
 }
 

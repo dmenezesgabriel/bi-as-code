@@ -80,7 +80,8 @@ function OptsRowCount(): ReactElement {
 
 /**
  * Renders the regional BarChart plus the `opts` consumer; the fake serves
- * `OPTS_WEST` to any `region = ?`-wrapped query, the full set otherwise.
+ * the consumer rows matching the bound value to any `region = ?`-wrapped
+ * query, the full set otherwise.
  */
 function renderSelectableBarChart(select?: "crossfilter"): {
   db: FakeDuckDb;

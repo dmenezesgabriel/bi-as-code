@@ -85,7 +85,7 @@ export const SelectCrossfilter: Story = {
       <Table data="opts" filters="region" />
     </>
   ),
-  play: crossfilterTogglePlay(3),
+  play: crossfilterTogglePlay(3, 3, ["West", "North"]),
 };
 
 /** `series` + `stacked` piles each week's regions into one column. */
