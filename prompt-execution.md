@@ -58,7 +58,7 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 
 ## 6. Close the step
 
-- Run the full gate and put the results in the **commit body**, never in a doc: typecheck, lint, lint:style, format:check, knip, dep:cruise, jscpd, unit, web-unit, integration, e2e, cucumber, e2e-browser, plus the `playwright-cli` pass from §5.
+- Run the full gate (`pnpm gate`) and put the results in the **commit body**, never in a doc: typecheck, lint, lint:style, format:check, knip, dep:cruise, jscpd, unit, web-unit, integration, e2e, cucumber, e2e-browser, plus the `playwright-cli` pass from §5.
 - Commit each step or subtask with a conventional commit.
 - Update the PRD's checkbox and the backlog ledger by **editing** them: one line per slice, no appended corrections, no dated blocks.
 - When a `GAP-NNN` is closed and re-measured, mark it closed in `docs/research/usability-audit.md`.

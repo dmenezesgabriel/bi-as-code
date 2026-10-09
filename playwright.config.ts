@@ -27,6 +27,11 @@ export default defineConfig({
       timeout: 120_000,
     },
   ],
+  // Each worker boots its own `biac dev` plus a Chromium (~1 GB together),
+  // so playwright's half-the-cores default oversubscribes a host shared
+  // with other repos' runs — measured: load average 51 on 8 cores, and
+  // tests failing only under that load. `--workers=N` overrides it.
+  workers: 2,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   forbidOnly: !!process.env.CI,

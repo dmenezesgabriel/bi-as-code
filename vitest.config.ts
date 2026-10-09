@@ -10,6 +10,10 @@ export default defineConfig({
     // module or a test only once it has failed, with the default reporter's
     // full diff and stack. `--reporter=default` restores the live file tree.
     reporters: ["minimal"],
+    // Half the cores, not vitest's cores-minus-one run default: jsdom
+    // workers are heavy and this host runs other repos' suites alongside.
+    // vitest's own VITEST_MAX_WORKERS env var overrides it.
+    maxWorkers: "50%",
     coverage: {
       provider: "v8",
       // Global thresholds; `text-summary` prints the four numbers the gate is
