@@ -1,4 +1,10 @@
-import { useEffect, useMemo, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactElement,
+} from "react";
 import { Slider as SliderPrimitive } from "../../../components/slider";
 import type { Filter } from "../../filters/filter";
 import type { FilterIds } from "../../filters/filter-ids";
@@ -66,34 +72,65 @@ function useSliderSource(
 }
 
 /**
- * Evidence's seed-or-clamp: an unset filter takes the bounds' default
- * silently; a held value outside them normalizes (the URL param rewrites
- * only when it was already present). Both paths are silent without a
- * param — the bounds are display state, not a selection, so no clause
- * publishes until the reader actually drags (a cascade-collapsed extent
- * must not narrow other consumers). A shape that mismatches the mode is
- * left alone — the codec can only produce the right shape.
+ * A correction the slider itself wrote — `held` is the value it left on the
+ * filter, `intent` what it was derived from (`undefined` for the bounds
+ * seed). While the filter still holds that exact value no reader has
+ * authored anything since, so the next bounds change re-derives from the
+ * intent instead of from the corrected value.
+ */
+interface SliderCorrection {
+  readonly held: SliderValue | undefined;
+  readonly intent: SliderValue | undefined;
+}
+
+/** The bounds' default for an unset intent, else the intent clamped into them. */
+function correctedValue(
+  intent: SliderValue | undefined,
+  range: boolean,
+  bounds: { readonly min: number; readonly max: number },
+): SliderValue {
+  if (intent !== undefined) {
+    return clampSliderValue(intent, bounds.min, bounds.max);
+  }
+  return range ? [bounds.min, bounds.max] : bounds.min;
+}
+
+/**
+ * Evidence's seed-or-clamp, made reversible: an unset filter takes the
+ * bounds' default silently; a held value outside them normalizes (the URL
+ * param rewrites only when it was already present). Both paths are silent
+ * without a param — the bounds are display state, not a selection, so no
+ * clause publishes until the reader actually drags (a cascade-collapsed
+ * extent must not narrow other consumers). Because those corrections
+ * apply no clause, they must not stick either: a seed narrowed by another
+ * filter's cascade widens back with the bounds rather than showing a
+ * window nothing is filtered by. A shape that mismatches the mode is left
+ * alone — the codec can only produce the right shape.
  */
 function reconcileHeldValue(
   filter: Filter<SliderValue | undefined>,
   range: boolean,
-  min: number,
-  max: number,
+  bounds: { readonly min: number; readonly max: number },
+  correction: { current: SliderCorrection | null },
 ): void {
   const value = filter.value;
-  if (value === undefined) {
-    filter.normalize(range ? [min, max] : min);
-    return;
-  }
-  const clamped = clampSliderValue(value, min, max);
-  const usable = range ? Array.isArray(clamped) : typeof clamped === "number";
-  if (usable && !sameSliderValue(value, clamped)) filter.normalize(clamped);
+  const intent =
+    correction.current && Object.is(value, correction.current.held)
+      ? correction.current.intent
+      : value;
+  const next = correctedValue(intent, range, bounds);
+  const usable = range ? Array.isArray(next) : typeof next === "number";
+  if (!usable || (value !== undefined && sameSliderValue(value, next))) return;
+  filter.normalize(next);
+  correction.current = { held: filter.value, intent };
 }
 
 /**
  * Keeps the held value inside resolved bounds — skips while `blocked`
  * (bounds query in flight, a source error, or contradictory props) so an
  * unresolved source never clamps a URL seed against fallback bounds.
+ * Returns `authored`, which the reader's own change calls so a value they
+ * picked is never mistaken for one of the slider's corrections.
  */
 function useSliderValueSync(
   filter: Filter<SliderValue | undefined> | undefined,
@@ -101,11 +138,15 @@ function useSliderValueSync(
   min: number,
   max: number,
   blocked: boolean,
-): void {
+): () => void {
+  const correction = useRef<SliderCorrection | null>(null);
   useEffect(() => {
     if (filter === undefined || blocked) return;
-    reconcileHeldValue(filter, range, min, max);
+    reconcileHeldValue(filter, range, { min, max }, correction);
   }, [filter, blocked, range, min, max]);
+  return useCallback(() => {
+    correction.current = null;
+  }, []);
 }
 
 interface SliderFieldProps {
@@ -231,7 +272,7 @@ export function Slider({
     initialValue: initialSliderValue(initialValue, range),
   });
   const bounds = resolveSliderBounds(source.derived, { min, max, step });
-  useSliderValueSync(
+  const authored = useSliderValueSync(
     filter,
     range,
     bounds.min,
@@ -261,9 +302,9 @@ export function Slider({
       held={filter?.value}
       disabled={source.loading || !filter || pinned}
       onChange={(next) => {
-        if (filter) {
-          filter.value = clampSliderValue(next, bounds.min, bounds.max);
-        }
+        if (!filter) return;
+        authored();
+        filter.value = clampSliderValue(next, bounds.min, bounds.max);
       }}
     />
   );

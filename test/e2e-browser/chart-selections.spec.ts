@@ -172,6 +172,12 @@ test("a bar click cross-filters the region consumers while the bar chart holds i
     .toEqual(["North", "South", "West"]);
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
   await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(0);
+  // The Amount slider's seed followed West's narrower bounds without
+  // publishing, so it widens back with them — no stale 43–44 window.
+  await expect(page.getByRole("slider", { name: "Minimum" })).toHaveAttribute(
+    "aria-valuenow",
+    "38",
+  );
 
   expect(errors).toEqual([]);
 });

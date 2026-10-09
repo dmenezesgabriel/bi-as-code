@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
+import { usePageFilter } from "../../filters/use-page-filter";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
@@ -28,23 +29,50 @@ function AmountConsumer(): ReactElement | null {
   return null;
 }
 
+/**
+ * A stand-in region input — "Pick West" sets the `region` filter the
+ * slider's `filters` cascade consumes, "Clear region" unsets it.
+ */
+function RegionPicker(): ReactElement {
+  const region = usePageFilter<string>("region");
+  return (
+    <>
+      <button onClick={() => region && (region.value = "West")}>
+        Pick West
+      </button>
+      <button onClick={() => region && (region.value = undefined)}>
+        Clear region
+      </button>
+    </>
+  );
+}
+
 interface MountOptions {
   readonly db?: FakeDuckDb;
   readonly blocks?: readonly SqlBlock[];
   readonly port?: FakeFilterUrlPort;
   readonly provider?: boolean;
   readonly consumer?: boolean;
+  readonly regionPicker?: boolean;
 }
 
 /** Renders `<Slider id="amount">` bound to the `orders` fence, optionally with the consumer probe. */
 function renderSlider(
   props: Partial<SliderProps> = {},
-  { db, blocks, port, provider = true, consumer = false }: MountOptions = {},
+  {
+    db,
+    blocks,
+    port,
+    provider = true,
+    consumer = false,
+    regionPicker = false,
+  }: MountOptions = {},
 ): FakeDuckDb {
   return renderWithRegistry(
     <>
       <Slider id="amount" data="orders" valueColumn="amount" {...props} />
       {consumer && <AmountConsumer />}
+      {regionPicker && <RegionPicker />}
     </>,
     {
       db: db ?? FakeDuckDb.withRows(AMOUNTS),
@@ -188,6 +216,74 @@ describe("Slider — value lifecycle", () => {
     await waitFor(() => expect(thumb()).toBeDisabled());
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(port.written).toHaveLength(0);
+  });
+
+  it("re-seeds the full extent when a cascade-narrowed extent widens back", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? AMOUNTS.filter(({ region }) => region === "West")
+        : AMOUNTS;
+    renderSlider(
+      { range: true, filters: "region" },
+      { db, regionPicker: true },
+    );
+    const maxThumb = () => screen.getByRole("slider", { name: "Maximum" });
+    await waitFor(() =>
+      expect(maxThumb()).toHaveAttribute("aria-valuenow", "48"),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Pick West" }));
+    await waitFor(() =>
+      expect(maxThumb()).toHaveAttribute("aria-valuenow", "30"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Clear region" }));
+
+    // The narrowed pair was a silent display clamp, never an authored
+    // selection — so the thumbs follow the bounds back out.
+    await waitFor(() => expect(maxThumb()).toHaveAttribute("max", "48"));
+    await waitFor(() =>
+      expect(maxThumb()).toHaveAttribute("aria-valuenow", "48"),
+    );
+  });
+
+  it("restores a clamped URL window, param included, when bounds widen back", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? AMOUNTS.filter(({ region }) => region === "West")
+        : AMOUNTS;
+    const port = new FakeFilterUrlPort("?amount=20 - 40");
+    renderSlider(
+      { range: true, filters: "region" },
+      { db, port, regionPicker: true },
+    );
+    const amountParam = () => port.written.at(-1)?.searchParams.get("amount");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Pick West" }));
+    await waitFor(() => expect(amountParam()).toBe("20 - 30"));
+    fireEvent.click(screen.getByRole("button", { name: "Clear region" }));
+
+    await waitFor(() => expect(amountParam()).toBe("20 - 40"));
+  });
+
+  it("keeps a reader-picked value that equals the seed when bounds move", async () => {
+    const db = new FakeDuckDb();
+    db.rowsWhen = (sql) =>
+      sql.includes("where region = ?")
+        ? [{ amount: 5 }, { amount: 48 }]
+        : AMOUNTS;
+    renderSlider({ filters: "region" }, { db, regionPicker: true });
+    await waitFor(() => expect(thumb()).toHaveAttribute("aria-valuenow", "12"));
+
+    fireEvent.keyDown(thumb(), { key: "ArrowRight" });
+    fireEvent.keyDown(thumb(), { key: "ArrowLeft" });
+    fireEvent.click(screen.getByRole("button", { name: "Pick West" }));
+
+    // 12 is now the reader's pick, not the seed — a lower min must not
+    // drag it down to 5.
+    await waitFor(() => expect(thumb()).toHaveAttribute("min", "5"));
+    expect(thumb()).toHaveAttribute("aria-valuenow", "12");
   });
 
   it("seeds initialValue when the URL holds nothing", async () => {
