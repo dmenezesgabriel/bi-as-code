@@ -110,9 +110,9 @@ export function dbWith(rows: Row[]): FakeDuckDb {
 /**
  * The fake behind the `select="crossfilter"` tests and stories: the
  * chart's own fence gets `allRows`, the `opts` consumer gets `consumerRows`,
- * and any `where <field> = ?`-wrapped query — the published point clause —
- * gets the consumer rows matching the bound value, so clicking different
- * marks narrows to different rows.
+ * and any wrapped query carrying the published clause's predicate — a point
+ * `= ?`, a list `IN (?, …)`, an interval `BETWEEN ? AND ?` — gets the
+ * consumer rows matching it, so clicks and brushes narrow to different rows.
  */
 export function dbSelectable(
   field: string,
@@ -123,6 +123,15 @@ export function dbSelectable(
   db.rowsWhen = (sql, params) => {
     if (sql.includes(`where ${field} = ?`))
       return consumerRows.filter((row) => row[field] === params[0]);
+    if (sql.includes(`${field} IN (`))
+      return consumerRows.filter((row) => params.includes(row[field]));
+    if (sql.includes(`${field} BETWEEN`)) {
+      const [lo, hi] = params;
+      return consumerRows.filter(
+        (row) =>
+          Number(row[field]) >= Number(lo) && Number(row[field]) <= Number(hi),
+      );
+    }
     return sql.includes("from opts") ? consumerRows : allRows;
   };
   return db;
@@ -203,6 +212,28 @@ export async function expectEmptyFace(element: ReactElement): Promise<void> {
   });
   expect(await screen.findByText("0 rows")).toBeInTheDocument();
   expect(document.querySelector("[data-echarts-theme]")).toBeNull();
+}
+
+/**
+ * Dispatches the `brushEnd` action with a `lineX` area over `coordRange`
+ * (bin/category indexes on a category axis, data values on a continuous
+ * one); `undefined` dispatches empty areas — the cleared brush. jsdom's
+ * svg surface has no layout for the brush controller's hit test, so this
+ * drives the same action a real drag ends by dispatching; the event still
+ * flows through the real subscription.
+ */
+export function brushMarks(
+  host: EChartHostElement,
+  coordRange: readonly [number, number] | undefined,
+): void {
+  const chart = host.echartsInstance;
+  if (!chart) throw new Error("no echartsInstance on host");
+  chart.dispatchAction({
+    type: "brushEnd",
+    areas: coordRange
+      ? [{ brushType: "lineX", coordRange: [...coordRange], xAxisIndex: 0 }]
+      : [],
+  });
 }
 
 /** The engine internals `clickMark` reaches — typed narrowly, no `any`. */

@@ -25,6 +25,7 @@ export function Histogram({
       data={props.data}
       height={props.height}
       filters={props.filters}
+      select={props.select}
       renderer={renderer}
       model={(rows) =>
         toHistogram(rows, {
@@ -36,6 +37,11 @@ export function Histogram({
       }
       isEmpty={(model) => model.bins.length === 0}
       option={(model) => toHistogramOption(model, props)}
+      brushAxis={(model) => ({
+        kind: "bins",
+        field: props.value,
+        bins: model.bins,
+      })}
     />
   );
 }

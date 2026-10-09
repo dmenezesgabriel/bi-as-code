@@ -16,7 +16,9 @@ Every figure on this page re-runs live against the `orders` table — the
 parameters scope the widgets that declare `filters` and the queries that
 interpolate them. Clicking a bar in the regional split below
 cross-filters the same `region`-filtered widgets — session state, no URL
-parameter; click it again to clear.
+parameter; click it again to clear. Dragging across the order-size
+histogram cross-filters the `amount`-filtered widgets the same way —
+click the chart once to clear the range.
 </Callout>
 
 ## Overview
@@ -155,11 +157,12 @@ select order_date::varchar as order_date, amount, region
 from orders
 ```
 
-<Histogram data="order_amounts" value="amount" filters={["region", "amount", "ordered"]} />
+<Histogram data="order_amounts" value="amount" filters={["region", "amount", "ordered"]} select="crossfilter" />
 
 The same distribution at order grain — the fence's own preview below
 stays unfiltered; the `<Table>` narrows on every input above: the region
-pick, the amount range and the ordered window through `filters`, `q`
+pick, the amount range and the ordered window through `filters`, a
+drag across the histogram through the same `amount` clause, `q`
 over the region name and the large-orders switch (`amount >= 44`)
 through the fence's own `{{params.*}}` clauses.
 

@@ -50,11 +50,72 @@ export interface ChartClickParams {
 export type ChartClickHandler = (params: ChartClickParams) => void;
 
 /**
+ * One brush area from the echarts brush events, narrowed to the fields the
+ * interval interactor reads: `coordRange` is the brushed extent in data
+ * space — category indexes on a category axis, epoch millis on a time axis.
+ * `panelId`/`xAxisIndex` bind the area to a coordinate system — echarts
+ * fills them on a real drag; without one the area resolves as a global
+ * pixel-range brush.
+ */
+export interface ChartBrushArea {
+  readonly brushType?: string;
+  readonly coordRange?: readonly [number, number];
+  readonly panelId?: string;
+  readonly xAxisIndex?: number;
+}
+
+/**
+ * The echarts `brushSelected` params — a batch with one entry per brush
+ * component, each carrying the live areas (throttled during the drag).
+ */
+export interface ChartBrushSelectedParams {
+  readonly batch?: readonly {
+    readonly areas?: readonly ChartBrushArea[];
+  }[];
+}
+
+/** The echarts `brushEnd` params — the final areas of the drag gesture. */
+export interface ChartBrushEndParams {
+  readonly areas?: readonly ChartBrushArea[];
+}
+
+export type ChartBrushSelectedHandler = (
+  params: ChartBrushSelectedParams,
+) => void;
+
+export type ChartBrushEndHandler = (params: ChartBrushEndParams) => void;
+
+/**
+ * The axis a chart's interval brush predicates, supplied per chart kind:
+ * `value`/`time` axes convert `coordRange` directly (time epochs wrap to
+ * `Date`), a `category` axis maps covered indexes through `domain` into a
+ * value list, and the histogram's `bins` axis maps them to the bin-edge
+ * window of the measured column.
+ */
+export type BrushAxis =
+  | { readonly kind: "value" | "time"; readonly field: string }
+  | {
+      readonly kind: "category";
+      readonly field: string;
+      readonly domain: readonly unknown[];
+    }
+  | {
+      readonly kind: "bins";
+      readonly field: string;
+      readonly bins: readonly HistogramBin[];
+    };
+
+/**
  * The echarts events `EChart` subscribes on the live instance — the
  * selection-gesture wiring a `select="crossfilter"` chart declares.
+ * `optionApplied` runs after every `setOption` (mount included) so a brush
+ * interactor can re-arm the cursor and restore its areas across repaints.
  */
 export interface EChartEvents {
   readonly click?: ChartClickHandler;
+  readonly brushSelected?: ChartBrushSelectedHandler;
+  readonly brushEnd?: ChartBrushEndHandler;
+  readonly optionApplied?: (instance: EChartsType) => void;
 }
 
 /**

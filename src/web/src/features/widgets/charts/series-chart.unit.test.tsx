@@ -1,6 +1,6 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
@@ -15,6 +15,7 @@ import {
   REGIONAL_ROWS,
   TREND_ROWS,
   WEEKLY_TREND,
+  brushMarks,
   clickMark,
   dbSelectable,
   dbWith,
@@ -419,6 +420,26 @@ describe('series chart — select="crossfilter"', () => {
     await waitFor(() => expect(optsRows).toHaveTextContent("1"));
     act(() => clickMark(host, 0));
     await waitFor(() => expect(optsRows).toHaveTextContent("3"));
+  });
+
+  it("does not re-apply its option when its own publish skips its rows", async () => {
+    renderSelectableBarChart("crossfilter");
+    const host = await chartHost();
+    const chart = host.echartsInstance;
+    if (!chart) throw new Error("echartsInstance not exposed on host");
+    const setOption = vi.spyOn(chart, "setOption");
+
+    act(() => brushMarks(host, [0, 1]));
+
+    // The covered categories narrow the `region` consumer to West+North,
+    // but the publisher's own rows are unchanged — a second setOption
+    // here would mean the notMerge rebuild (which mid-drag kills the
+    // brush gesture) fired off an identical option.
+    await waitFor(() =>
+      expect(screen.getByTestId("opts-rows")).toHaveTextContent("2"),
+    );
+    expect(setOption).not.toHaveBeenCalled();
+    expect(appliedOption(host).series[0]?.data).toHaveLength(3);
   });
 
   it("accumulates shift clicks into an IN list", async () => {

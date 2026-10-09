@@ -1,14 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import {
   withFilteredData,
+  withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
+import { Table } from "../table/table";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { Histogram } from "./histogram-chart";
 import {
   AMOUNT_ROWS,
   ORDER_AMOUNTS,
+  OPTS,
   appliedOption,
+  brushMarks,
+  dbSelectable,
   dbWith,
   readyHost,
 } from "./series-chart.fixture";
@@ -89,5 +95,42 @@ export const Filtered: Story = {
     expect(option.series?.map((s) => s.name)).toEqual(["North"]);
     const counts = option.series?.[0]?.data as number[];
     expect(counts.reduce((a, b) => a + b, 0)).toBe(12);
+  },
+};
+
+/**
+ * `select="crossfilter"`: a brush over the bins publishes the covered
+ * bin-edge window as an interval clause on `amount` — bins 1–2 of the
+ * rice-rule six, the ~26–55 window — so the consumer table narrows to the
+ * amounts inside it while the histogram keeps its full shape (its own
+ * clause skips it); a brush with no areas clears.
+ */
+export const SelectCrossfilterBrush: Story = {
+  args: { select: "crossfilter" },
+  decorators: [
+    withQueryData([ORDER_AMOUNTS, OPTS], dbSelectable("amount", AMOUNT_ROWS)),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  render: (args) => (
+    <>
+      <Histogram {...args} />
+      <Table data="opts" filters="amount" />
+    </>
+  ),
+  play: async ({ canvasElement }) => {
+    const host = await readyHost(canvasElement);
+    const bodyRows = () => canvasElement.querySelectorAll("tbody tr").length;
+    await waitFor(() => expect(bodyRows()).toBe(3));
+
+    brushMarks(host, [1, 2]);
+    await waitFor(() => expect(bodyRows()).toBe(2));
+    expect(canvasElement.querySelector("tbody")?.textContent).toContain("48");
+    const option = await appliedOption<{ xAxis?: { data?: unknown[] }[] }>(
+      canvasElement,
+    );
+    expect(option.xAxis?.[0]?.data).toHaveLength(6);
+
+    brushMarks(host, undefined);
+    await waitFor(() => expect(bodyRows()).toBe(3));
   },
 };

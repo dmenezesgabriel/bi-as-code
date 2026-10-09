@@ -8,9 +8,11 @@ import {
 } from "echarts/charts";
 import {
   AriaComponent,
+  BrushComponent,
   GridComponent,
   LegendComponent,
   TitleComponent,
+  ToolboxComponent,
   TooltipComponent,
   VisualMapComponent,
 } from "echarts/components";
@@ -22,6 +24,8 @@ import { useThemeMode } from "../../chrome/theme-mode";
 import type { ThemeMode } from "../../chrome/theme";
 import { themeName } from "./theme";
 import type {
+  ChartBrushEndParams,
+  ChartBrushSelectedParams,
   ChartClickParams,
   ChartOption,
   ChartRenderer,
@@ -43,6 +47,8 @@ echarts.use([
   AriaComponent,
   LabelLayout,
   VisualMapComponent,
+  BrushComponent,
+  ToolboxComponent,
   CanvasRenderer,
   SVGRenderer,
 ]);
@@ -77,7 +83,14 @@ function mountChart(
   instance.on("click", (params) =>
     eventsRef.current?.click?.(params as ChartClickParams),
   );
+  instance.on("brushSelected", (params) =>
+    eventsRef.current?.brushSelected?.(params as ChartBrushSelectedParams),
+  );
+  instance.on("brushEnd", (params) =>
+    eventsRef.current?.brushEnd?.(params as ChartBrushEndParams),
+  );
   instance.setOption(option, { notMerge: true });
+  eventsRef.current?.optionApplied?.(instance);
   return instance;
 }
 
@@ -171,6 +184,7 @@ export function EChart({
     if (!instance || appliedOption.current === option) return;
     appliedOption.current = option;
     instance.setOption(option, { notMerge: true });
+    eventsRef.current?.optionApplied?.(instance);
   }, [option]);
 
   return (

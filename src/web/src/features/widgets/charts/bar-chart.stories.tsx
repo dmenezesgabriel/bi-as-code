@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import {
   withFilteredData,
   withPageFilters,
@@ -15,6 +15,7 @@ import {
   TREND_ROWS,
   WEEKLY_TREND,
   appliedOption,
+  brushMarks,
   crossfilterTogglePlay,
   dbSelectable,
   dbWith,
@@ -86,6 +87,47 @@ export const SelectCrossfilter: Story = {
     </>
   ),
   play: crossfilterTogglePlay(3, 3, ["West", "North"]),
+};
+
+/**
+ * `select="crossfilter"`: a brush across bars publishes the covered
+ * categories as a list clause — the Region-rect semantic on a category
+ * axis. The consumer narrows to the covered regions while the bar chart
+ * keeps all three bars; a brush with no areas clears.
+ */
+export const SelectCrossfilterBrush: Story = {
+  args: { filters: "region", select: "crossfilter" },
+  decorators: [
+    withQueryData(
+      [ORDERS_REGIONAL, OPTS],
+      dbSelectable("region", REGIONAL_ROWS),
+    ),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  render: (args) => (
+    <>
+      <BarChart {...args} />
+      <Table data="opts" filters="region" />
+    </>
+  ),
+  play: async ({ canvasElement }) => {
+    const host = await readyHost(canvasElement);
+    const bodyRows = () => canvasElement.querySelectorAll("tbody tr").length;
+    await waitFor(() => expect(bodyRows()).toBe(3));
+
+    brushMarks(host, [0, 1]);
+    await waitFor(() => expect(bodyRows()).toBe(2));
+    expect(canvasElement.querySelector("tbody")?.textContent).toContain(
+      "North",
+    );
+    const option = await appliedOption<{ series?: { data?: unknown[] }[] }>(
+      canvasElement,
+    );
+    expect(option.series?.[0]?.data).toHaveLength(3);
+
+    brushMarks(host, undefined);
+    await waitFor(() => expect(bodyRows()).toBe(3));
+  },
 };
 
 /** `series` + `stacked` piles each week's regions into one column. */

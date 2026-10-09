@@ -13,7 +13,7 @@ import { useChartPublish } from "./use-chart-publish";
  * instant — equal cells emit fresh `Date` objects per render, so identity
  * would never see the same point clicked twice.
  */
-function sameX(a: unknown, b: unknown): boolean {
+export function sameX(a: unknown, b: unknown): boolean {
   if (a instanceof Date && b instanceof Date) {
     return a.getTime() === b.getTime();
   }

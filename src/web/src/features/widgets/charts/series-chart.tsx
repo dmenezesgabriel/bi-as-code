@@ -3,6 +3,7 @@ import { BoundChart } from "./bound-chart";
 import { toChartOption } from "./to-option";
 import { toSeries } from "./to-series";
 import type { SeriesChartWidgetProps } from "./types";
+import { seriesBrushAxis } from "./use-brush-select";
 
 /**
  * The shared body of `<BarChart>`/`<LineChart>`/`<AreaChart>`: `data` names a
@@ -33,6 +34,9 @@ export function SeriesChart({
         toSeries(rows, { x: props.x, y: props.y, series: props.series }, type)
       }
       option={(model) => toChartOption(model, type, props)}
+      brushAxis={(model) =>
+        seriesBrushAxis(model.xType, props.x, model.xDomain)
+      }
     />
   );
 }
