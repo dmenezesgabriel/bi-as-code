@@ -3,7 +3,8 @@
   "_comment": [
     "Mutation gate. `mutate` is scoped to src production files; the web UI and test files are never mutated. `ignorePatterns` keeps research_repos out of the sandbox copy.",
     "Exclusion rule: a module whose body is a real I/O boundary is excluded, and every decision it used to hold is extracted into a pure module that stays mutated. An exclusion without one is a coverage gap in disguise. Each entry names that pairing as it lands.",
-    "src/cli/main.ts - process entry: error mapping, exit codes and serve wiring; covered by the integration and e2e tiers."
+    "src/cli/main.ts - process entry: error mapping, exit codes and serve wiring; covered by the integration and e2e tiers.",
+    "concurrency - half the logical cores, so it scales with the host: Stryker's own default is cores minus one (7 of 8 here), which starves every other job on a shared host. `--concurrency <n>` overrides it for one run."
   ],
   "packageManager": "pnpm",
   "testRunner": "vitest",
@@ -28,6 +29,7 @@
     "docs"
   ],
   "coverageAnalysis": "perTest",
+  "concurrency": "50%",
   "reporters": ["clear-text", "progress"],
   "allowConsoleColors": false,
   "clearTextReporter": {
