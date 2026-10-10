@@ -12,8 +12,8 @@ In `biac dev`, a report author opens any page in a split-pane editor (CodeMirror
 
 1. Cold start: `pnpm build && bin/biac dev`, open `http://localhost:5175/weekly-review`.
 2. The header shows an `Edit` link (dev only). Click it — the URL becomes the edit route for `pages/weekly-review.md`; the left pane holds the page source, the right pane the rendered page.
-3. Change the first heading's text and the `LIMIT` of one ` ```sql ` fence; the tab title / status shows the buffer is dirty. Press `Mod-s`.
-4. The status shows `Saved`; `git diff pages/weekly-review.md` shows exactly that edit; the right pane shows the new heading and re-ran query, and the editor kept its buffer, cursor position and scroll (`window` marker survives — no full reload).
+3. Change the first heading's text and append `limit 5` to the ` ```sql order_detail ` fence (no fence on this page has a `LIMIT` to change); the status shows `Unsaved changes`. Press `Mod-s`.
+4. The status shows `Saved`; `git diff pages/weekly-review.md` shows exactly that edit; the right pane shows the new heading and both `order_detail` tables at 5 rows, and the editor kept its buffer, cursor position and scroll (`window` marker survives — no full reload).
 5. Pick `Region = West` in the preview, then save another edit — `?region=West` stays in the URL and the dropdown keeps its value.
 6. Type a broken MDX tag (`<Callout`) and save — the right pane shows the page error, the editor stays usable; fix it, save, the page renders again.
 7. Reload the browser — the edit is still there (it is on disk).
@@ -131,7 +131,7 @@ Overall: **absent**, built on a live-update path that is **present and partial**
 - [x] T1 — Dev page-source endpoint: `GET` returns a page's bytes, `PUT` writes atomically (temp + rename); 403 path escape, 404 non-page/missing, 405 other methods, 415 non-JSON, 403 cross-origin `Origin`/`Sec-Fetch-Site`, 413 oversize. Unit tests per rule; integration test against a real vite dev server proves a `PUT` lands on disk and vite's watcher fires once. Visible check: `curl` the endpoint against `bin/biac dev`, then `playwright-cli` confirms `/weekly-review` reflects the written change.
 - [x] T2 — Content-only page edits hot-update without a full reload; add/remove or nav front-matter change still reloads. Unit tests on the `hotUpdate` decision; e2e-browser: set a `window` marker, edit the page file, assert new DOM text and marker survives, `?region=` survives. `playwright-cli`: measure edit→render latency and full-reload count (baseline: 1 reload per edit).
 - [x] T3 — `features/editor/` CodeMirror wrapper (markdown + SQL-in-fence highlighting, theme from `use-theme.ts`, `Mod-s` callback) with stories covering empty, long document, dark theme, and a play test for the save keybinding. Install packages exact.
-- [ ] T4 — Split-pane `?edit` route + dev-only `Edit` link: loads source via T1 `GET`, saves via `PUT` on `Mod-s`, shows dirty/saved/save-failed status, preview pane is the live page (T2), panes stack below `lg`. Stories, unit tests, cucumber feature, e2e-browser driven entirely through the UI. `playwright-cli`: Demo steps 2–5 and 7, narrow-viewport stacking measured with `resize`.
+- [x] T4 — Split-pane `?edit` route + dev-only `Edit` link: loads source via T1 `GET`, saves via `PUT` on `Mod-s`, shows dirty/saved/save-failed status, preview pane is the live page (T2), panes stack below `lg`. Stories, unit tests, cucumber feature, e2e-browser driven entirely through the UI. `playwright-cli`: Demo steps 2–5 and 7, narrow-viewport stacking measured with `resize`.
 - [ ] T5 — A compile error stays inside the page (preview pane included) instead of vite's full-screen overlay; the editor stays usable and the next good save renders again. Unit, e2e-browser, `playwright-cli`: Demo step 6.
 - [ ] T6 — Build exclusion: `biac build` output has no `Edit` link and no `codemirror` bytes (integration test); run the full Demo and record before/after numbers.
 
