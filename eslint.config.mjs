@@ -91,6 +91,16 @@ export default tseslint.config(
     },
   },
   {
+    // This directory is codemirror's wrap site (.dependency-cruiser.cjs
+    // `editor-engine-only-behind-its-wrapper`): its static imports are the
+    // wrapper itself. Deferring the load is the importer's job — one dynamic
+    // import of the editor feature — not a per-file split inside it.
+    files: ["src/web/src/features/editor/**"],
+    rules: {
+      "react-doctor/prefer-dynamic-import": "off",
+    },
+  },
+  {
     files: ["vite*.ts", "src/web/vite*.ts"],
     languageOptions: {
       globals: globals.node,
