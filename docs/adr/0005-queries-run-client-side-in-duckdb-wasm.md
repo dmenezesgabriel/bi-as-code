@@ -26,7 +26,7 @@ The product's quality goals — works on any static host, zero infrastructure to
 
 All page queries execute in `@duckdb/duckdb-wasm` inside the browser. Pages register tables from data files (parquet, csv, json, arrow) via the `sql:` front-matter key and project config; ` ```sql name ` fenced blocks define named queries resolved at render time against a query registry.
 
-The dev server and static build both serve the project's `data/` files over HTTP; `biac build` copies them into `dist/` so a deployed report is self-contained. Remote database connectors (warehouse URLs) are a later milestone and do not change this decision — they are an additional source kind, not a different engine location.
+The dev server and static build both serve the project's `data/` files over HTTP; `biac build` copies them into `build/data/` so a deployed report is self-contained ([ADR-0008](0008-static-build-is-a-spa-folder.md)). Remote database connectors (warehouse URLs) are a later milestone and do not change this decision — they are an additional source kind, not a different engine location.
 
 `@duckdb/duckdb-wasm` is pinned to `1.32.0`: the `latest` dist-tag currently tracks a `-dev` prerelease, so `latest` is not a stable signal for this package.
 
