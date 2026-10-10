@@ -26,6 +26,24 @@ export function buildCli(): void {
   );
 }
 
+/**
+ * Runs `bin/biac build <projectRoot>`, writing `<projectRoot>/build` — the
+ * folder `biac preview` serves. Throws on a non-zero exit.
+ *
+ * @example
+ * buildProject(projectRoot);
+ * const server = await startBiacServer("preview", projectRoot);
+ */
+export function buildProject(projectRoot: string): void {
+  execFileSync(
+    process.execPath,
+    [join(repoRoot, "bin/biac"), "build", projectRoot],
+    {
+      stdio: "pipe",
+    },
+  );
+}
+
 export interface DevServer {
   /** The URL vite advertised, e.g. "http://localhost:51234/". */
   url: string;

@@ -58,7 +58,7 @@ Three categories only: development tooling, the frameworks the application runs 
 
 ````
 author → pages/*.md ──> biac dev ──> vite (dev) ──> browser SPA
-                        biac build ──> dist/ (static)
+                        biac build ──> <project>/build/ (static SPA + data/)
                         biac preview ──> static server
 
 browser SPA: page module (compiled MDX) ──> widget registry

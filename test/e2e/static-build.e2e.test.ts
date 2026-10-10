@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   buildCli,
+  buildProject,
   startBiacServer,
   type DevServer,
 } from "../lib/dev-server.js";
@@ -44,7 +45,7 @@ describe("biac preview", () => {
   beforeAll(() => {
     root = makeTempProject("biac-e2e-preview-");
     copyShippedProject(root);
-    execFileSync(process.execPath, [biac, "build", root], { stdio: "pipe" });
+    buildProject(root);
   }, 120_000);
 
   afterAll(() => {
