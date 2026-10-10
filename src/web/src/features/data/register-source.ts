@@ -29,7 +29,7 @@ export interface RegistrationConnection {
 /**
  * Registers one `sql:` source as a DuckDB table. `source` is a
  * project-relative `data/…` path — served at `/data/…` in dev and copied to
- * `dist/data/` by `biac build`, so the URL is `"/" + source` in both modes.
+ * `build/data/` by `biac build`, so the URL is `"/" + source` in both modes.
  *
  * csv/json/parquet read through duckdb's HTTP filesystem (ranged GETs
  * against `/data/`); arrow has no lazy reader so the file is fetched whole

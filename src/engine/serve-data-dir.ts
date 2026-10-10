@@ -11,7 +11,7 @@ const CONTENT_TYPES: Record<string, string> = {
 /**
  * Serves the project's `data/` directory over HTTP for DuckDB-WASM, which
  * fetches every `sql:` source through `registerFileURL`. Mounting the real
- * directory at `/data/` keeps the dev URL identical to the `dist/data/`
+ * directory at `/data/` keeps the dev URL identical to the `build/data/`
  * copy `biac build` emits, so page SQL never rewrites between modes.
  * Byte ranges are honored because the wasm HTTP filesystem reads parquet
  * footers with ranged GETs; `no-cache` keeps edits visible on refetch.

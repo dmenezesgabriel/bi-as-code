@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { cp } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import type { Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
@@ -98,11 +100,19 @@ export function pagesPlugin(projectRoot: string): Plugin {
     },
     configureServer(server) {
       // sql: sources resolve to /data/<path> — served from the real
-      // directory so dev and the copied dist/data/ stay identical.
+      // directory so dev and the copied build/data/ stay identical.
       server.middlewares.use("/data", serveDataDir(dataDir));
       server.watcher.add(pagesDir);
       server.watcher.add(configFile);
       server.watcher.add(dataDir);
+    },
+    async writeBundle({ dir }) {
+      if (dir === undefined) {
+        throw new Error(
+          `biac:pages needs a build output directory to copy data/ into, got output.dir=${dir} (expected a path string)`,
+        );
+      }
+      await copyDataDir(dataDir, join(dir, "data"));
     },
     hotUpdate({ file, modules }) {
       if (file === configFile) {
@@ -136,6 +146,17 @@ export function pagesPlugin(projectRoot: string): Plugin {
       return [...modules, manifest];
     },
   };
+}
+
+/**
+ * Copies the whole `data/` tree unhashed: `sql:` sources fetch `/data/<path>`
+ * in dev and in the built site alike, so page SQL never rewrites. Symlinks
+ * are followed because the dev mount serves their targets too. A project
+ * without `data/` copies nothing.
+ */
+async function copyDataDir(dataDir: string, outDataDir: string): Promise<void> {
+  if (!existsSync(dataDir)) return;
+  await cp(dataDir, outDataDir, { recursive: true, dereference: true });
 }
 
 function configModuleSource(config: BiacConfig): string {

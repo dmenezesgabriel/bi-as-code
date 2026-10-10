@@ -6,7 +6,7 @@ import type { SqlTableMap } from "./types.js";
  * queries: `sql: {orders: data/orders.parquet}` registers table `orders`
  * from `<project>/data/orders.parquet`. Sources are restricted to the
  * project's `data/` directory so the dev URL (`/data/…`) and the copied
- * `dist/data/` from `biac build` resolve identically. Only formats duckdb
+ * `build/data/` from `biac build` resolve identically. Only formats duckdb
  * reads natively are accepted; anything else is an author error worth
  * failing loudly on. `location` labels where the map was declared so the
  * error names its source ("front-matter in pages/a.md", "biac.config.ts").
