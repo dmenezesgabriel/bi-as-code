@@ -43,6 +43,23 @@ export const Default: Story = {
 
 const scrollPort = new FakeFilterUrlPort("");
 
+/**
+ * Resolves once an IntersectionObserver has delivered its first reading of
+ * `target`. Observers notify in creation order, so by then the FilterBar's
+ * own observer (created at mount) has delivered its first reading too. A
+ * scroll issued before that reading can leave Chromium with only the stale
+ * pre-scroll one and no follow-up, and the bar never docks.
+ */
+function firstIntersectionReading(target: Element): Promise<void> {
+  return new Promise((resolve) => {
+    const observer = new IntersectionObserver(() => {
+      observer.disconnect();
+      resolve();
+    });
+    observer.observe(target);
+  });
+}
+
 /** The pin behavior in a real browser: past the sentinel the bar docks
  * 64px under the viewport top and gains the card face; inputs inside keep
  * writing `?id=` params; back at the top the card face drops. */
@@ -69,6 +86,7 @@ export const FloatsOnScroll: Story = {
     const bar = canvas.getByLabelText("Region").closest(".sticky")!;
     await expect(bar.className).toContain("border-transparent");
 
+    await firstIntersectionReading(bar.previousElementSibling!);
     window.scrollTo(0, 600);
     await waitFor(() => expect(bar.className).toContain(" bg-white"));
     await expect(bar.className).toContain("shadow");
