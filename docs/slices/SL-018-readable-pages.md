@@ -109,7 +109,7 @@ No shipped ledger row claims page typography; SL-001's `shipped` stays true (it 
 ## Tasks
 
 - [x] T1 — Headings and paragraphs (GAP-001, GAP-002): `h1`–`h6` and `p` in the MDX map. Measure `getComputedStyle` font-size/weight of `h1`/`h2`/`h3` and `main p` margin on `/`, `/weekly-review`, `/nested/allocation`, `/nested/page`; confirm a widget's own `p`/`h*` (e.g. `<BigValue>`, `<Callout>`) is unchanged.
-- [ ] T2 — Links (GAP-003): classes on `MarkdownLink` for both branches. Measure link vs paragraph color contrast (≥ 3:1) and `text-decoration-line: underline`, light and dark; visible `:focus-visible` outline.
+- [x] T2 — Links (GAP-003): classes on `MarkdownLink` for both branches. Measure link vs paragraph color contrast (≥ 3:1) and `text-decoration-line: underline`, light and dark; visible `:focus-visible` outline.
 - [ ] T3 — GFM tables (GAP-004): `table`/`thead`/`th`/`td` in the MDX map. Measure on `/nested/allocation`: `th` padding > 0, row border width 1px, header widths no longer touching; `<Table>` widget on `/weekly-review` unchanged.
 - [ ] T4 — Fences scroll in place (GAP-005): overflow + keyboard focus on the fence container in `highlighted-pre.tsx` (highlighted and fallback paths). Measure `document.documentElement.scrollWidth - innerWidth` → 0 at 375 px on `/weekly-review` and `/`; `Tab` focuses the fence.
 - [ ] T5 — Dark comment contrast (GAP-014): `THEMES.dark = "github-dark-default"`. Measure computed comment color vs fence background in dark ≥ 4.5:1 on `/weekly-review`; light unchanged.
