@@ -16,7 +16,12 @@ export async function main(args: string[]): Promise<void> {
     await dev(rest);
     return;
   }
-  if (command === "build" || command === "preview") {
+  if (command === "build") {
+    const { build } = await import("./commands/build.js");
+    await build(rest);
+    return;
+  }
+  if (command === "preview") {
     console.error(`biac ${command}: not implemented yet (see docs/backlog.md)`);
     process.exit(1);
   }

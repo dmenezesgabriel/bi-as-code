@@ -7,3 +7,4 @@ test-results/
 .playwright-cli/
 storybook-static/
 .stryker-tmp/
+build/

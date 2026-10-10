@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { main } from "./main.js";
 
-const { dev } = vi.hoisted(() => ({ dev: vi.fn() }));
+const { dev, build } = vi.hoisted(() => ({ dev: vi.fn(), build: vi.fn() }));
 vi.mock("./commands/dev.js", () => ({ dev }));
+vi.mock("./commands/build.js", () => ({ build }));
 
 function mockExit() {
   return vi.spyOn(process, "exit").mockImplementation(() => {
@@ -25,7 +26,7 @@ describe("main", () => {
     exit.mockRestore();
   });
 
-  it.each(["build", "preview"])(
+  it.each(["preview"])(
     "rejects unimplemented command %s with exit 1",
     async (command) => {
       const error = vi
@@ -48,5 +49,13 @@ describe("main", () => {
     await main(["dev", "site", "--port", "0"]);
 
     expect(dev).toHaveBeenCalledWith(["site", "--port", "0"]);
+  });
+
+  it("routes build to the build command with its remaining args", async () => {
+    build.mockResolvedValue(undefined);
+
+    await main(["build", "site"]);
+
+    expect(build).toHaveBeenCalledWith(["site"]);
   });
 });

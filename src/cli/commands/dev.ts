@@ -1,16 +1,7 @@
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createServer } from "vite";
 import { pagesPlugin } from "../../engine/pages-plugin.js";
-
-// Both src/ and dist/ sit three levels below the repo root, so this one
-// literal finds the web config from the source tree and the compiled CLI
-// alike. The path is passed to vite, not imported — dep-cruise forbids
-// cli -> web module imports.
-const WEB_CONFIG = fileURLToPath(
-  new URL("../../../src/web/vite.config.ts", import.meta.url),
-);
+import { resolveProjectRoot, WEB_CONFIG } from "./web-project.js";
 
 export interface DevOptions {
   /** Directory containing `pages/`; defaults to the current directory. */
@@ -25,11 +16,6 @@ export function parseDevArgs(args: string[]): DevOptions {
     allowPositionals: true,
     options: { port: { type: "string" } },
   });
-  if (positionals.length > 1) {
-    throw new Error(
-      `biac dev takes at most one project directory, got: ${positionals.join(", ")}`,
-    );
-  }
   const port = values.port === undefined ? undefined : Number(values.port);
   if (
     port !== undefined &&
@@ -40,7 +26,7 @@ export function parseDevArgs(args: string[]): DevOptions {
     );
   }
   return {
-    projectRoot: resolve(positionals[0] ?? process.cwd()),
+    projectRoot: resolveProjectRoot("dev", positionals),
     port,
   };
 }
