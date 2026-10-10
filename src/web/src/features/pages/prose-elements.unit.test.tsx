@@ -7,8 +7,10 @@ import {
   ProseH4,
   ProseH5,
   ProseH6,
+  ProseLink,
   ProseParagraph,
 } from "./prose-elements";
+import { renderWithRouter } from "../chrome/router-harness";
 
 const headings = [
   [1, ProseH1],
@@ -65,5 +67,59 @@ describe("prose paragraph", () => {
     expect(paragraph).toHaveTextContent("Order volume.");
     expect(paragraph?.className.split(" ")).toContain("mb-0");
     expect(paragraph?.className).not.toContain("mb-[1.2em]");
+  });
+});
+
+describe("prose link", () => {
+  it("routes an absolute-path href through the client router", async () => {
+    // Arrange / Act
+    await renderWithRouter(
+      <ProseLink href="/nested/page">region detail</ProseLink>,
+      ["/", "/nested/page"],
+      "/",
+    );
+
+    // Assert
+    expect(screen.getByRole("link", { name: "region detail" })).toHaveAttribute(
+      "href",
+      "/nested/page",
+    );
+  });
+
+  it("renders an external href as a plain anchor", () => {
+    render(<ProseLink href="https://example.com">docs</ProseLink>);
+
+    expect(screen.getByRole("link", { name: "docs" })).toHaveAttribute(
+      "href",
+      "https://example.com",
+    );
+  });
+
+  it("styles internal and external links alike, underlined", async () => {
+    await renderWithRouter(
+      <>
+        <ProseLink href="/nested/page">internal</ProseLink>
+        <ProseLink href="https://example.com">external</ProseLink>
+      </>,
+      ["/", "/nested/page"],
+      "/",
+    );
+
+    const internal = screen.getByRole("link", { name: "internal" });
+    const external = screen.getByRole("link", { name: "external" });
+    expect(internal.className.split(" ")).toContain("underline");
+    expect(external.className).toBe(internal.className);
+  });
+
+  it("merges a caller class over its own", () => {
+    render(
+      <ProseLink href="https://example.com" className="no-underline">
+        docs
+      </ProseLink>,
+    );
+
+    const classes = screen.getByRole("link").className.split(" ");
+    expect(classes).toContain("no-underline");
+    expect(classes).not.toContain("underline");
   });
 });

@@ -1,4 +1,5 @@
-import type { HTMLAttributes } from "react";
+import { Link } from "@tanstack/react-router";
+import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
 
 type ProseTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p";
@@ -40,3 +41,28 @@ export const ProseH6 = proseElement("h6", cn(HEADING, "mt-6 mb-2 text-base"));
 // The last paragraph drops its margin so a callout or details body ends
 // flush with the widget's own padding.
 export const ProseParagraph = proseElement("p", "mb-[1.2em] last:mb-0");
+
+// Underlined as well as colored: WCAG 1.4.1 rejects color as the only cue,
+// and each color clears 3:1 against the body text of its theme.
+const LINK =
+  "rounded-sm text-blue-600 underline underline-offset-2 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500 dark:text-blue-500";
+
+/**
+ * The markdown `a` override: an absolute-path href goes through the client
+ * router so page-to-page navigation never reloads the SPA; any other href
+ * stays a plain anchor. Both look the same.
+ *
+ * @example
+ * <ProseLink href="/nested/page">region detail</ProseLink>;
+ */
+export function ProseLink({
+  href = "",
+  className,
+  ...rest
+}: AnchorHTMLAttributes<HTMLAnchorElement>) {
+  const classes = cn(LINK, className);
+  if (href.startsWith("/")) {
+    return <Link to={href} className={classes} {...rest} />;
+  }
+  return <a href={href} className={classes} {...rest} />;
+}

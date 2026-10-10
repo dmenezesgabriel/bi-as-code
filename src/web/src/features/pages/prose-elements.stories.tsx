@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, userEvent } from "storybook/test";
+import { withMemoryRouter } from "../../../.storybook/decorators";
 import {
   ProseH1,
   ProseH2,
@@ -7,6 +8,7 @@ import {
   ProseH4,
   ProseH5,
   ProseH6,
+  ProseLink,
   ProseParagraph,
 } from "./prose-elements";
 
@@ -70,5 +72,32 @@ export const Paragraphs: Story = {
       parseFloat(getComputedStyle(first).marginBottom),
     ).toBeGreaterThan(0);
     await expect(getComputedStyle(last).marginBottom).toBe("0px");
+  },
+};
+
+/** An internal (client-routed) and an external link read apart from the
+ * paragraph: underlined, colored, and outlined when tabbed to. */
+export const Links: Story = {
+  decorators: [withMemoryRouter(["/", "/nested/page"], "/")],
+  render: () => (
+    <ProseParagraph>
+      See the <ProseLink href="/nested/page">region detail</ProseLink> or the{" "}
+      <ProseLink href="https://duckdb.org/docs/">DuckDB docs</ProseLink>.
+    </ProseParagraph>
+  ),
+  play: async ({ canvas }) => {
+    const paragraph = canvas.getByText(/See the/);
+    const links = canvas.getAllByRole("link");
+
+    for (const link of links) {
+      await expect(getComputedStyle(link).textDecorationLine).toBe("underline");
+      await expect(getComputedStyle(link).color).not.toBe(
+        getComputedStyle(paragraph).color,
+      );
+    }
+    const internal = canvas.getByRole("link", { name: "region detail" });
+    await userEvent.tab();
+    await expect(internal).toHaveFocus();
+    await expect(getComputedStyle(internal).outlineStyle).toBe("solid");
   },
 };

@@ -1,5 +1,5 @@
-import { Link, useSearch } from "@tanstack/react-router";
-import { useState, type AnchorHTMLAttributes } from "react";
+import { useSearch } from "@tanstack/react-router";
+import { useState } from "react";
 import { browserFilterUrlPort } from "../filters/filter-url-port";
 import { FiltersProvider } from "../filters/page-filters-context";
 import { NavToc } from "../chrome/nav-toc";
@@ -37,6 +37,7 @@ import {
   ProseH4,
   ProseH5,
   ProseH6,
+  ProseLink,
   ProseParagraph,
 } from "./prose-elements";
 import { QueryRegistryProvider } from "./query-registry";
@@ -46,7 +47,7 @@ import { useDocumentTitle } from "./use-document-title";
 
 /**
  * MDX element overrides. `h1`–`h6` and `p` give markdown text the page type
- * scale; `a` routes absolute-path links through the client
+ * scale; `a` styles links and routes absolute-path ones through the client
  * router so page-to-page navigation never reloads the SPA; `pre` hands
  * fenced code blocks to shiki and pairs named sql fences with their query
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
@@ -69,7 +70,7 @@ const mdxComponents: MdxComponentMap = {
   h5: ProseH5,
   h6: ProseH6,
   p: ProseParagraph,
-  a: MarkdownLink,
+  a: ProseLink,
   pre: SqlBlockPre,
   Table,
   BigValue,
@@ -101,16 +102,6 @@ const mdxComponents: MdxComponentMap = {
   Row,
   Stack,
 };
-
-function MarkdownLink({
-  href = "",
-  ...rest
-}: AnchorHTMLAttributes<HTMLAnchorElement>) {
-  if (href.startsWith("/")) {
-    return <Link to={href} {...rest} />;
-  }
-  return <a href={href} {...rest} />;
-}
 
 /**
  * Renders one compiled page module: the resolved title is applied to the
