@@ -22,8 +22,9 @@ export async function main(args: string[]): Promise<void> {
     return;
   }
   if (command === "preview") {
-    console.error(`biac ${command}: not implemented yet (see docs/backlog.md)`);
-    process.exit(1);
+    const { preview } = await import("./commands/preview.js");
+    await preview(rest);
+    return;
   }
   process.stdout.write(USAGE);
   process.exit(command === undefined || command === "--help" ? 0 : 1);

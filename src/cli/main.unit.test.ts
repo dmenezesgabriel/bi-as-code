@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { main } from "./main.js";
 
-const { dev, build } = vi.hoisted(() => ({ dev: vi.fn(), build: vi.fn() }));
+const { dev, build, preview } = vi.hoisted(() => ({
+  dev: vi.fn(),
+  build: vi.fn(),
+  preview: vi.fn(),
+}));
 vi.mock("./commands/dev.js", () => ({ dev }));
 vi.mock("./commands/build.js", () => ({ build }));
+vi.mock("./commands/preview.js", () => ({ preview }));
 
 function mockExit() {
   return vi.spyOn(process, "exit").mockImplementation(() => {
@@ -26,22 +31,19 @@ describe("main", () => {
     exit.mockRestore();
   });
 
-  it.each(["preview"])(
-    "rejects unimplemented command %s with exit 1",
-    async (command) => {
-      const error = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
-      const exit = mockExit();
+  it("prints usage and exits 1 for an unknown command", async () => {
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const exit = mockExit();
 
-      await expect(main([command])).rejects.toThrow("exit");
-      expect(error).toHaveBeenCalledWith(expect.stringContaining(command));
-      expect(exit).toHaveBeenCalledWith(1);
+    await expect(main(["deploy"])).rejects.toThrow("exit");
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
+    expect(exit).toHaveBeenCalledWith(1);
 
-      error.mockRestore();
-      exit.mockRestore();
-    },
-  );
+    write.mockRestore();
+    exit.mockRestore();
+  });
 
   it("routes dev to the dev command with its remaining args", async () => {
     dev.mockResolvedValue(undefined);
@@ -57,5 +59,13 @@ describe("main", () => {
     await main(["build", "site"]);
 
     expect(build).toHaveBeenCalledWith(["site"]);
+  });
+
+  it("routes preview to the preview command with its remaining args", async () => {
+    preview.mockResolvedValue(undefined);
+
+    await main(["preview", "site", "--port", "0"]);
+
+    expect(preview).toHaveBeenCalledWith(["site", "--port", "0"]);
   });
 });

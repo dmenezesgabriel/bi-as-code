@@ -36,10 +36,7 @@ export interface DevServer {
 }
 
 /**
- * Spawns `bin/biac dev <projectRoot> --port 0` and resolves once vite prints
- * its `➜ Local:` block. Port 0 binds an OS-assigned ephemeral port, so the
- * advertised URL is the only reliable way to learn it — and proves the
- * user-facing output is truthful.
+ * Spawns `bin/biac dev <projectRoot> --port 0`; see {@link startBiacServer}.
  *
  * @example
  * const server = await startDevServer(projectRoot);
@@ -47,9 +44,27 @@ export interface DevServer {
  * await server.stop();
  */
 export function startDevServer(projectRoot: string): Promise<DevServer> {
+  return startBiacServer("dev", projectRoot);
+}
+
+/**
+ * Spawns `bin/biac <command> <projectRoot> --port 0` and resolves once vite
+ * prints its `➜ Local:` block. Port 0 binds an OS-assigned ephemeral port, so
+ * the advertised URL is the only reliable way to learn it — and proves the
+ * user-facing output is truthful.
+ *
+ * @example
+ * const server = await startBiacServer("preview", projectRoot);
+ * await fetch(`${server.url}weekly-review`); // 200
+ * await server.stop();
+ */
+export function startBiacServer(
+  command: "dev" | "preview",
+  projectRoot: string,
+): Promise<DevServer> {
   const child = spawn(process.execPath, [
     join(repoRoot, "bin/biac"),
-    "dev",
+    command,
     projectRoot,
     "--port",
     "0",
@@ -69,7 +84,9 @@ export function startDevServer(projectRoot: string): Promise<DevServer> {
     child.stdout.on("data", onData);
     child.stderr.on("data", onData);
     child.once("exit", (code) =>
-      reject(new Error(`biac dev exited ${code} before serving:\n${output}`)),
+      reject(
+        new Error(`biac ${command} exited ${code} before serving:\n${output}`),
+      ),
     );
   });
 }

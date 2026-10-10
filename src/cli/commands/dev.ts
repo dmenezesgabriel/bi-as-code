@@ -1,7 +1,12 @@
 import { parseArgs } from "node:util";
 import { createServer } from "vite";
 import { pagesPlugin } from "../../engine/pages-plugin.js";
-import { resolveProjectRoot, WEB_CONFIG } from "./web-project.js";
+import {
+  closeOnExitSignals,
+  parsePort,
+  resolveProjectRoot,
+  WEB_CONFIG,
+} from "./web-project.js";
 
 export interface DevOptions {
   /** Directory containing `pages/`; defaults to the current directory. */
@@ -16,18 +21,9 @@ export function parseDevArgs(args: string[]): DevOptions {
     allowPositionals: true,
     options: { port: { type: "string" } },
   });
-  const port = values.port === undefined ? undefined : Number(values.port);
-  if (
-    port !== undefined &&
-    (!Number.isInteger(port) || port < 0 || port > 65535)
-  ) {
-    throw new Error(
-      `--port must be an integer in 0..65535, got "${values.port}"`,
-    );
-  }
   return {
     projectRoot: resolveProjectRoot("dev", positionals),
-    port,
+    port: parsePort(values.port),
   };
 }
 
@@ -49,9 +45,5 @@ export async function dev(args: string[]): Promise<void> {
   await server.listen();
   console.log(`biac dev — serving ${projectRoot}`);
   server.printUrls();
-  const shutdown = () => {
-    void server.close().then(() => process.exit(0));
-  };
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
+  closeOnExitSignals(server);
 }
