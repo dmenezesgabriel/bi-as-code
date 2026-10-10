@@ -194,6 +194,22 @@ describe("buildPageRouter", () => {
     expect(document.title).toBe("Error");
   });
 
+  it("re-renders a hot-swapped page module in place when the router is invalidated", async () => {
+    let current = textPage("old body", "Old");
+    const router = renderRouter(
+      [pageEntry("/", async () => current)],
+      "/?region=West",
+    );
+    await screen.findByText("old body");
+
+    current = textPage("new body", "New");
+    await router.invalidate();
+
+    expect(await screen.findByText("new body")).toBeInTheDocument();
+    expect(screen.queryByText("old body")).not.toBeInTheDocument();
+    expect(router.state.location.searchStr).toBe("?region=West");
+  });
+
   it("keeps the scroll position when a filter write replaces only the search params", async () => {
     const scrollTo = vi.spyOn(window, "scrollTo");
     const router = renderRouter(pages, "/");

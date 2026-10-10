@@ -51,7 +51,7 @@ function emptyProjectFallback(): Plugin {
     load(id) {
       if (!armed) return;
       if (id === "\0biac:empty-pages") {
-        return 'export const pages = [];\nexport const navTree = {"rootPages":[],"directories":[]};\n';
+        return 'export const pages = [];\nexport const navTree = {"rootPages":[],"directories":[]};\nexport function subscribePageUpdates() {\n  return () => {};\n}\n';
       }
       if (id === "\0biac:empty-config") {
         return 'export const config = {"title":"biac","theme":"system","nav":{"sidebar":true},"sqlTables":{}};\n';

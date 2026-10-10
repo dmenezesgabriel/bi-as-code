@@ -114,33 +114,60 @@ export function MarkdownPage({
 }) {
   useDocumentTitle(page.title, siteTitle);
   const [article, setArticle] = useState<HTMLElement | null>(null);
-  const params = useSearch({ strict: false });
-  const Content = page.default;
   return (
     <div className="mx-auto flex max-w-6xl gap-8 px-6 py-10">
       <main
         ref={setArticle}
         className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20"
       >
-        <FiltersProvider port={browserFilterUrlPort}>
-          {/* A page with no named ```sql blocks mounts no registry, so it never
-              downloads the wasm bundle. */}
-          {page.sqlBlocks.length > 0 ? (
-            <QueryRegistryProvider
-              sqlBlocks={page.sqlBlocks}
-              sqlTables={page.sqlTables}
-              params={params}
-            >
-              <Content components={mdxComponents} />
-            </QueryRegistryProvider>
-          ) : (
-            <Content components={mdxComponents} />
-          )}
-        </FiltersProvider>
+        <PageBody page={page} />
       </main>
       {page.frontmatter.table_of_contents !== false && article && (
         <NavToc article={article} />
       )}
     </div>
+  );
+}
+
+/**
+ * A hot-swapped page module brings a new MDX component, so its widgets
+ * remount. Under a surviving filter scope their render-time `ensure` would
+ * re-configure live filters — republishing a slider's silent bounds
+ * correction in the middle of a render. Each page version gets a fresh
+ * scope instead, re-seeded from the URL, so `?region=` survives the swap.
+ */
+const pageVersions = new WeakMap<object, number>();
+let lastPageVersion = 0;
+
+function pageVersion(content: object): number {
+  const known = pageVersions.get(content);
+  if (known !== undefined) return known;
+  pageVersions.set(content, ++lastPageVersion);
+  return lastPageVersion;
+}
+
+/**
+ * The registry sits outside the filter scope so a page swap re-runs only
+ * the fences whose SQL changed.
+ */
+function PageBody({ page }: { page: CompiledPageModule }) {
+  const params = useSearch({ strict: false });
+  const Content = page.default;
+  const scoped = (
+    <FiltersProvider key={pageVersion(Content)} port={browserFilterUrlPort}>
+      <Content components={mdxComponents} />
+    </FiltersProvider>
+  );
+  // A page with no named ```sql blocks mounts no registry, so it never
+  // downloads the wasm bundle.
+  if (page.sqlBlocks.length === 0) return scoped;
+  return (
+    <QueryRegistryProvider
+      sqlBlocks={page.sqlBlocks}
+      sqlTables={page.sqlTables}
+      params={params}
+    >
+      {scoped}
+    </QueryRegistryProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,6 +11,7 @@ import { Layer } from "effect";
 import { DuckDb, type DuckDbService } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
+import { usePageFilters } from "../filters/page-filters-context";
 import { MarkdownPage } from "./markdown-page";
 import { useQueryResults } from "./query-registry";
 import type { CompiledPageModule } from "./types";
@@ -36,6 +38,29 @@ function renderPage(
       app
     ),
   );
+}
+
+/**
+ * Renders `first` inside a router and returns a swap that replaces the page
+ * module in place — what the router does when a page module hot-swaps.
+ */
+function renderSwappablePage(first: CompiledPageModule, db: DuckDbService) {
+  const handle: { swap?: (next: CompiledPageModule) => void } = {};
+  function SwappablePage() {
+    const [current, setCurrent] = useState(first);
+    handle.swap = setCurrent;
+    return <MarkdownPage page={current} siteTitle="biac" />;
+  }
+  const router = createRouter({
+    routeTree: createRootRoute({ component: SwappablePage }),
+    history: createMemoryHistory(),
+  });
+  render(
+    <DataRuntimeProvider layer={Layer.succeed(DuckDb, db)}>
+      <RouterProvider router={router} />
+    </DataRuntimeProvider>,
+  );
+  return (next: CompiledPageModule) => act(() => handle.swap?.(next));
 }
 
 function page(partial: Partial<CompiledPageModule>): CompiledPageModule {
@@ -154,6 +179,30 @@ describe("MarkdownPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("status")).toHaveTextContent("success"),
     );
+    expect(db.queries.map((q) => q.sql)).toEqual(["select * from orders"]);
+  });
+
+  it("gives a hot-swapped page a fresh filter scope and keeps unchanged query results", async () => {
+    const db = new FakeDuckDb();
+    const scopes = new Set<unknown>();
+    const version = (label: string) =>
+      page({
+        sqlBlocks: [{ name: "orders", sql: "select * from orders" }],
+        default: function Probe() {
+          scopes.add(usePageFilters());
+          const status = useQueryResults().orders?.status ?? "none";
+          return <p data-testid="status">{`${label} ${status}`}</p>;
+        },
+      });
+    const swap = renderSwappablePage(version("v1"), db);
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("v1 success"),
+    );
+
+    await swap(version("v2"));
+
+    expect(screen.getByTestId("status")).toHaveTextContent("v2 success");
+    expect(scopes.size).toBe(2);
     expect(db.queries.map((q) => q.sql)).toEqual(["select * from orders"]);
   });
 

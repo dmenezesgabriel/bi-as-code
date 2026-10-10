@@ -1,7 +1,8 @@
 // Types the page manifest module served by the engine's vite plugin —
 // `virtual:` ids have no real file for tsc to resolve, so the contract is
 // declared here. The manifest regenerates on page add/remove/rename and on
-// front-matter edits (`title`/`sidebar_position` feed `navTree`).
+// nav front-matter edits (`title`/`sidebar_position` feed `navTree`); any
+// other page edit hot-swaps the page module behind its entry's `load`.
 declare module "virtual:biac-pages" {
   export const pages: import("./features/pages/types").ManifestPageEntry[];
 
@@ -29,4 +30,11 @@ declare module "virtual:biac-pages" {
   }
 
   export const navTree: NavTree;
+
+  /**
+   * Calls `listener` after a page module was hot-swapped in dev — every
+   * entry's `load` already resolves to the new module by then. A no-op in a
+   * production build. Returns the unsubscribe function.
+   */
+  export function subscribePageUpdates(listener: () => void): () => void;
 }

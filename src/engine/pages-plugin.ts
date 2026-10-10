@@ -5,14 +5,16 @@ import type { Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { discoverPages } from "./discover-pages.js";
-import { buildNavTree } from "./nav-tree.js";
+import {
+  manifestModuleSource,
+  VIRTUAL_PAGE_PREFIX,
+} from "./manifest-module.js";
 import { pageSourceEndpoint } from "./page-source-endpoint.js";
 import { serveDataDir } from "./serve-data-dir.js";
-import type { BiacConfig, PageManifestEntry } from "./types.js";
+import type { BiacConfig } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = `\0${VIRTUAL_MANIFEST_ID}`;
-const VIRTUAL_PAGE_PREFIX = "virtual:biac-page/";
 const VIRTUAL_CONFIG_ID = "virtual:biac-config";
 const RESOLVED_CONFIG_ID = `\0${VIRTUAL_CONFIG_ID}`;
 const CONFIG_FILE = "biac.config.ts";
@@ -22,9 +24,12 @@ const CONFIG_FILE = "biac.config.ts";
  * page compiles to an MDX module through {@link compilePage} (compile errors
  * surface in the vite overlay), and `virtual:biac-pages` serves the page
  * manifest the SPA builds its routes from. Because pages are real modules,
- * edits hot-reload through vite's normal HMR propagation; page additions and
- * removals invalidate the manifest module, which no importer accepts —
- * propagation dead-ends into a full reload and the route tree rebuilds.
+ * edits hot-update through vite's normal HMR propagation: the manifest
+ * accepts every page module, so a content edit swaps the page in place.
+ * An edit that changes the manifest itself — a page added or removed, a nav
+ * front-matter field edited — invalidates the manifest module, which no
+ * importer accepts: propagation dead-ends into a full reload and the route
+ * tree rebuilds.
  *
  * @example
  * const server = await createServer({
@@ -43,6 +48,9 @@ export function pagesPlugin(projectRoot: string): Plugin {
   // config is memoized and dropped when the watcher reports an edit.
   let configPromise: Promise<BiacConfig> | undefined;
   const getConfig = () => (configPromise ??= loadBiacConfig(root));
+  // The manifest last handed to vite — a page change that regenerates the
+  // same source is content-only and must not invalidate it.
+  let servedManifest: string | undefined;
 
   return {
     name: "biac:pages",
@@ -75,7 +83,8 @@ export function pagesPlugin(projectRoot: string): Plugin {
         return configModuleSource(await getConfig());
       }
       if (id !== RESOLVED_MANIFEST_ID) return;
-      return manifestModuleSource(discoverPages(root));
+      servedManifest = manifestModuleSource(discoverPages(root));
+      return servedManifest;
     },
     async transform(code, id) {
       if (!isPageFile(id, pagesDirPosix)) return;
@@ -142,10 +151,9 @@ export function pagesPlugin(projectRoot: string): Plugin {
         ];
       }
       if (!isPageFile(file, pagesDirPosix)) return;
-      // Every page change — edits included, since front-matter feeds the
-      // manifest's nav fields — invalidates the manifest. Neither the page
-      // nor the manifest module has an accepting importer upstream, so
-      // propagation dead-ends into a full reload and the route tree rebuilds.
+      if (!manifestChanged(root, servedManifest)) return;
+      // The manifest has no accepting importer upstream, so propagation
+      // dead-ends into a full reload and the route tree rebuilds.
       const graph = this.environment.moduleGraph;
       const manifest = graph.getModuleById(RESOLVED_MANIFEST_ID);
       if (!manifest) return;
@@ -170,27 +178,20 @@ function configModuleSource(config: BiacConfig): string {
   return `export const config = ${JSON.stringify(config)};\n`;
 }
 
-function manifestModuleSource(entries: PageManifestEntry[]): string {
-  const rows = entries.map((entry) => {
-    const nav = [
-      entry.title === undefined
-        ? null
-        : `title: ${JSON.stringify(entry.title)}`,
-      entry.sidebarPosition === undefined
-        ? null
-        : `sidebarPosition: ${JSON.stringify(entry.sidebarPosition)}`,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    return `  { route: ${JSON.stringify(entry.route)}, file: ${JSON.stringify(
-      entry.file,
-    )}, isIndex: ${entry.isIndex}${nav ? `, ${nav}` : ""}, load: () => import(${JSON.stringify(
-      VIRTUAL_PAGE_PREFIX + entry.file,
-    )}) }`;
-  });
-  return `export const pages = [\n${rows.join(",\n")}\n];\nexport const navTree = ${JSON.stringify(
-    buildNavTree(entries),
-  )};\n`;
+/**
+ * True when a page change alters what `virtual:biac-pages` would serve. A
+ * page whose front-matter no longer parses counts as changed: the reload
+ * re-runs discovery and surfaces the error in the overlay.
+ */
+function manifestChanged(
+  root: string,
+  servedManifest: string | undefined,
+): boolean {
+  try {
+    return manifestModuleSource(discoverPages(root)) !== servedManifest;
+  } catch {
+    return true;
+  }
 }
 
 const VITE_INTERNAL_QUERY_PARAMS = new Set(["import", "t", "v"]);

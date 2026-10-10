@@ -231,13 +231,15 @@ describe("file watching", () => {
     expect(await loadManifest(dev)).not.toContain("/@fs");
   });
 
-  it("invalidates the page module when a page is edited", async () => {
+  it("invalidates only the page module when a page's body is edited", async () => {
     const root = makeProject();
     const pagePath = join(root, "pages/index.md");
     writeFile("pages/index.md", "# Old heading\n");
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "index.md");
+    await loadManifest(dev);
     await dev.transformRequest(`/@fs${pagePath}`);
+    const manifestTimestamp = manifestModule(dev)!.lastInvalidationTimestamp;
 
     await expectInvalidated(pageModule(dev, pagePath), () =>
       writeFile("pages/index.md", "# New heading\n"),
@@ -245,6 +247,55 @@ describe("file watching", () => {
 
     const result = await dev.transformRequest(`/@fs${pagePath}`);
     expect(result?.code).toContain("New heading");
+    expect(manifestModule(dev)!.lastInvalidationTimestamp).toBe(
+      manifestTimestamp,
+    );
+  });
+
+  it("makes the manifest the HMR boundary for every page module", async () => {
+    const root = makeProject();
+    const pagePath = join(root, "pages/index.md");
+    writeFile("pages/index.md", "# Hi\n");
+    const dev = await makeServer(root);
+    await loadManifest(dev);
+
+    const accepted = [...manifestModule(dev)!.acceptedHmrDeps];
+
+    expect(accepted.map((mod) => mod.file)).toEqual([pagePath]);
+  });
+
+  it("keeps the manifest when a non-nav front-matter field is edited", async () => {
+    const root = makeProject();
+    const pagePath = join(root, "pages/index.md");
+    writeFile("pages/index.md", "---\ntitle: Same\n---\n# Hi\n");
+    const dev = await makeServer(root);
+    await waitForWatch(dev, join(root, "pages"), "index.md");
+    await loadManifest(dev);
+    await dev.transformRequest(`/@fs${pagePath}`);
+    const manifestTimestamp = manifestModule(dev)!.lastInvalidationTimestamp;
+
+    await expectInvalidated(pageModule(dev, pagePath), () =>
+      writeFile(
+        "pages/index.md",
+        "---\ntitle: Same\ntable_of_contents: false\n---\n# Hi\n",
+      ),
+    );
+
+    expect(manifestModule(dev)!.lastInvalidationTimestamp).toBe(
+      manifestTimestamp,
+    );
+  });
+
+  it("invalidates the manifest when an edit breaks a page's front-matter", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "---\ntitle: Ok\n---\n# Hi\n");
+    const dev = await makeServer(root);
+    await waitForWatch(dev, join(root, "pages"), "index.md");
+    await loadManifest(dev);
+
+    await expectInvalidated(manifestModule(dev), () =>
+      writeFile("pages/index.md", "---\ntitle: [unclosed\n---\n# Hi\n"),
+    );
   });
 
   it("invalidates the manifest when a page's front-matter is edited", async () => {

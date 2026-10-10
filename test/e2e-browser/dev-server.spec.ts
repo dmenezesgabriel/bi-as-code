@@ -1,6 +1,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import {
+  collectConsoleErrors,
+  expect,
+  openOrderMixRow,
+  test,
+} from "./dev-server.fixture.js";
 
 test("renders the index page: title, prose, gfm table, highlighted sql fence", async ({
   page,
@@ -94,6 +99,61 @@ test("updates on page edit and serves a page added while running", async ({
     );
   }).toPass({ timeout: 20_000 });
 
+  expect(errors).toEqual([]);
+});
+
+test("a content edit swaps the page in place: no reload, filters kept", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review?region=West`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Weekly review" }),
+  ).toBeVisible({ timeout: 20_000 });
+  // Edit only once every widget settled: the Amount slider then holds its
+  // silent bounds correction, which a swap must not publish into the
+  // Region dropdown it narrows.
+  expect(await openOrderMixRow(page, "Page 1 of 2 · 13 rows")).toEqual([
+    "1",
+    "West",
+    "4",
+    "175",
+  ]);
+  // A full reload discards every window property, so the marker surviving
+  // the edit proves the page updated in place.
+  await page.evaluate(() => {
+    (window as unknown as { __probe: string }).__probe = "kept";
+  });
+
+  const file = join(biacDev.projectDir, "pages/weekly-review.md");
+  const original = readFileSync(file, "utf8");
+  await expect(async () => {
+    writeFileSync(
+      file,
+      original.replace("# Weekly review", "# Weekly review, edited"),
+    );
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Weekly review, edited" }),
+    ).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 20_000 });
+
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __probe?: string }).__probe,
+    ),
+  ).toBe("kept");
+  expect(new URL(page.url()).searchParams.get("region")).toBe("West");
+  await expect(page.getByRole("combobox", { name: "Region" })).toContainText(
+    "West",
+  );
+  expect(await openOrderMixRow(page, "Page 1 of 2 · 13 rows")).toEqual([
+    "1",
+    "West",
+    "4",
+    "175",
+  ]);
   expect(errors).toEqual([]);
 });
 

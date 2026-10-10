@@ -41,6 +41,9 @@ describe("biac build", () => {
     expect(html).toContain("__BIAC_THEME__");
     expect(html).toContain('id="root"');
     expect(assetsContaining(outDir, PAGE_MARKER)).toHaveLength(1);
+    // The manifest's dev-only HMR accept list spells page ids out as
+    // literals; their absence proves the `import.meta.hot` block was dropped.
+    expect(assetsContaining(outDir, "virtual:biac-page/")).toEqual([]);
   }, 120_000);
 
   it("copies data/ byte-identical into build/data, nested dirs included", async () => {
