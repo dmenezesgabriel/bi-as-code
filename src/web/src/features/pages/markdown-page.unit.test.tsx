@@ -124,6 +124,28 @@ describe("MarkdownPage", () => {
     });
   });
 
+  it("styles markdown headings and paragraphs through the map", async () => {
+    renderPage(
+      page({
+        default: ({ components }) => {
+          // A missing map entry falls back to the intrinsic, unstyled tag.
+          const H2 = components?.h2 ?? "h2";
+          const P = components?.p ?? "p";
+          return (
+            <>
+              <H2>Orders</H2>
+              <P>Order volume.</P>
+            </>
+          );
+        },
+      }),
+    );
+
+    const heading = await screen.findByRole("heading", { level: 2 });
+    expect(heading.className).not.toBe("");
+    expect(screen.getByText("Order volume.").className).not.toBe("");
+  });
+
   it("sets document.title to the page title", async () => {
     renderPage(page({ title: "Quarterly results" }));
 

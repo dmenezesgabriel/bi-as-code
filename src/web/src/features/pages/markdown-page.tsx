@@ -30,13 +30,23 @@ import { BigValue } from "../widgets/value/big-value";
 import { Delta } from "../widgets/value/delta";
 import { Sparkline } from "../widgets/value/sparkline-widget";
 import { Value } from "../widgets/value/value";
+import {
+  ProseH1,
+  ProseH2,
+  ProseH3,
+  ProseH4,
+  ProseH5,
+  ProseH6,
+  ProseParagraph,
+} from "./prose-elements";
 import { QueryRegistryProvider } from "./query-registry";
 import { SqlBlockPre } from "./sql-block";
 import type { CompiledPageModule, MdxComponentMap } from "./types";
 import { useDocumentTitle } from "./use-document-title";
 
 /**
- * MDX element overrides. `a` routes absolute-path links through the client
+ * MDX element overrides. `h1`–`h6` and `p` give markdown text the page type
+ * scale; `a` routes absolute-path links through the client
  * router so page-to-page navigation never reloads the SPA; `pre` hands
  * fenced code blocks to shiki and pairs named sql fences with their query
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
@@ -52,6 +62,13 @@ import { useDocumentTitle } from "./use-document-title";
  * that files exporting components export only components.
  */
 const mdxComponents: MdxComponentMap = {
+  h1: ProseH1,
+  h2: ProseH2,
+  h3: ProseH3,
+  h4: ProseH4,
+  h5: ProseH5,
+  h6: ProseH6,
+  p: ProseParagraph,
   a: MarkdownLink,
   pre: SqlBlockPre,
   Table,
