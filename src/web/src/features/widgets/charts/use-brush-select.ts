@@ -131,7 +131,10 @@ export const BRUSH_OPTION = {
  * can bind the axis of the currently rendered model. `optionApplied` runs
  * after every `setOption`: it re-arms the `lineX` cursor (a repaint
  * rebuilds the brush model) and re-dispatches the held area so the brush
- * visual survives `notMerge` repaints — mosaic's `init()` restore.
+ * visual survives `notMerge` repaints — mosaic's `init()` restore. Brush
+ * events emitted during that restore are echoes, not gestures: re-arming
+ * flushes the rebuilt model's empty `brushSelected`, which would otherwise
+ * clear the held area and its clause before the area is re-dispatched.
  *
  * @example
  * const brush = useBrushSelect(client);
@@ -145,8 +148,10 @@ export function useBrushSelect(client: QueryClient): {
   const { clauseOptions, publish } = useChartPublish(client);
   const extentRef = useRef<unknown>(undefined);
   const areaRef = useRef<ChartBrushArea | undefined>(undefined);
+  const restoringRef = useRef(false);
   const publishAreas = useCallback(
     (areas: readonly ChartBrushArea[] | undefined, axis: BrushAxis) => {
+      if (restoringRef.current) return;
       const area = areas?.find(
         (candidate) => candidate.brushType === "lineX" && candidate.coordRange,
       );
@@ -169,13 +174,18 @@ export function useBrushSelect(client: QueryClient): {
     [publishAreas],
   );
   const optionApplied = useCallback((instance: EChartsType) => {
-    instance.dispatchAction({
-      type: "takeGlobalCursor",
-      key: "brush",
-      brushOption: { brushType: "lineX", brushMode: "single" },
-    });
-    const area = areaRef.current;
-    if (area) instance.dispatchAction({ type: "brush", areas: [area] });
+    restoringRef.current = true;
+    try {
+      instance.dispatchAction({
+        type: "takeGlobalCursor",
+        key: "brush",
+        brushOption: { brushType: "lineX", brushMode: "single" },
+      });
+      const area = areaRef.current;
+      if (area) instance.dispatchAction({ type: "brush", areas: [area] });
+    } finally {
+      restoringRef.current = false;
+    }
   }, []);
   return { selected, ended, optionApplied };
 }

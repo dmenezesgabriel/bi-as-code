@@ -7,6 +7,7 @@ import {
 } from "../../../../.storybook/decorators";
 import { Table } from "../table/table";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
+import { BarChart } from "./bar-chart";
 import { Histogram } from "./histogram-chart";
 import {
   AMOUNT_ROWS,
@@ -19,7 +20,7 @@ import {
   dbWith,
   readyHost,
 } from "./series-chart.fixture";
-import type { HistogramChartProps } from "./types";
+import type { EChartHostElement, HistogramChartProps } from "./types";
 
 const meta = {
   title: "Widgets/Charts/Histogram",
@@ -155,5 +156,47 @@ export const SelectCrossfilterBrush: Story = {
 
     brushMarks(host, undefined);
     await waitFor(() => expect(bodyRows()).toBe(3));
+  },
+};
+
+/** The consumer's brushed re-query never lands — the chart stays pending. */
+function dbHoldingBrushedRequery(): ReturnType<typeof dbSelectable> {
+  const db = dbSelectable("amount", AMOUNT_ROWS);
+  db.holdWhen = (sql) =>
+    sql.includes("amount BETWEEN") ? new Promise(() => {}) : null;
+  return db;
+}
+
+/**
+ * A consumer chart whose cross-filter re-query is in flight keeps its last
+ * painted bars, dimmed and `aria-busy`, instead of swapping in the loading
+ * pulse — so a drag repaints progressively and the canvas never remounts.
+ */
+export const ConsumerKeepsChartWhilePending: Story = {
+  args: { select: "crossfilter" },
+  decorators: [
+    withQueryData([ORDER_AMOUNTS, OPTS], dbHoldingBrushedRequery()),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  render: (args) => (
+    <>
+      <Histogram {...args} />
+      <BarChart data="opts" x="region" y="amount" filters="amount" />
+    </>
+  ),
+  play: async ({ canvasElement }) => {
+    const hosts = () =>
+      canvasElement.querySelectorAll<EChartHostElement>("[data-echarts-ready]");
+    await waitFor(() => expect(hosts()).toHaveLength(2));
+    const [publisher, consumer] = [...hosts()];
+    if (!publisher || !consumer) throw new Error("expected two chart hosts");
+
+    brushMarks(publisher, [1, 2]);
+
+    await waitFor(() =>
+      expect(consumer.parentElement).toHaveAttribute("aria-busy", "true"),
+    );
+    expect(consumer.isConnected).toBe(true);
+    expect(canvasElement.querySelector("[role=status]")).toBeNull();
   },
 };

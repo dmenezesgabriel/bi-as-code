@@ -16,6 +16,16 @@ import { usePageFilters } from "./page-filters-context";
 
 /** Id-list key separator — NUL cannot appear in a filter id. */
 const IDS_SEPARATOR = "\u0000";
+const LOADING: QueryResult = { status: "loading" };
+
+/** What a filtered consumer reads: see `useFilteredQueryClient`. */
+interface FilteredQueryRead {
+  result: QueryResult | undefined;
+  settled: QueryResult | undefined;
+  pending: boolean;
+  client: QueryClient;
+  filtered: boolean;
+}
 
 const idsFromKey = (key: string): string[] =>
   key ? key.split(IDS_SEPARATOR) : [];
@@ -77,7 +87,12 @@ export function useFilteredQueryRows(
  * the client. `shape` replaces the plain wrap for coordinator re-queries
  * (read through a ref: a fresh closure per render never reconnects), and
  * `filtered` says which rows came back — the shaped re-query's (`true`) or
- * the registry's unfiltered fence rows (`false`).
+ * the registry's unfiltered fence rows (`false`). `result` reads `loading`
+ * while a re-query is in flight; `settled` is the last result that landed
+ * and `pending` says a newer one is on its way — kept apart because the
+ * coordinator delivers a queued publish in the task the previous query
+ * settles in, so a result and the next `queryPending` render together and a
+ * single state would lose the result to `loading`.
  *
  * @example
  * const { result, client } = useFilteredQueryClient(data, filters);
@@ -89,7 +104,7 @@ export function useFilteredQueryClient(
   filters: FilterIds | undefined,
   owner?: string,
   shape: QueryShape = wrappedQuery,
-): { result: QueryResult | undefined; client: QueryClient; filtered: boolean } {
+): FilteredQueryRead {
   const registryResult = useQueryResults()[name];
   const { interpolated, registered } = useQuerySource();
   const pageFilters = usePageFilters();
@@ -100,9 +115,8 @@ export function useFilteredQueryClient(
   // a client callback, so the selections themselves force the re-render that
   // re-evaluates the registry-vs-filtered choice.
   const [, forceRender] = useReducer((count: number) => count + 1, 0);
-  const [filteredResult, setFilteredResult] = useState<QueryResult>({
-    status: "loading",
-  });
+  const [filteredResult, setFilteredResult] = useState<QueryResult>(LOADING);
+  const [pending, setPending] = useState(false);
 
   const blockRef = useRef(block);
   const shapeRef = useRef(shape);
@@ -117,10 +131,15 @@ export function useFilteredQueryClient(
       if (!current || current.errors.length > 0) return undefined;
       return shapeRef.current(current, predicate);
     },
-    queryPending: () => setFilteredResult({ status: "loading" }),
-    queryResult: (rows) =>
-      setFilteredResult({ status: "success", rows: [...rows] }),
-    queryError: (message) => setFilteredResult({ status: "error", message }),
+    queryPending: () => setPending(true),
+    queryResult: (rows) => {
+      setFilteredResult({ status: "success", rows: [...rows] });
+      setPending(false);
+    },
+    queryError: (message) => {
+      setFilteredResult({ status: "error", message });
+      setPending(false);
+    },
   };
   const client = clientRef.current;
 
@@ -158,18 +177,31 @@ export function useFilteredQueryClient(
     };
   }, [pageFilters, idsKey, block, registered, runtime, owner, client]);
 
-  if (registryResult === undefined) {
-    return { result: undefined, client, filtered: false };
-  }
-  if (!pageFilters || !block || block.errors.length > 0) {
-    return { result: registryResult, client, filtered: false };
-  }
+  const unfiltered = unfilteredRead(registryResult, client);
+  if (!pageFilters || !block || block.errors.length > 0) return unfiltered;
   const predicate = composeAnd(
     selections
       .map((selection) => selection.predicate(client))
       .filter((p): p is FilterPredicate => p !== undefined),
   );
-  return predicate
-    ? { result: filteredResult, client, filtered: true }
-    : { result: registryResult, client, filtered: false };
+  // React's "adjust state while rendering" pattern: once no clause narrows,
+  // the filtered result is forgotten, so a later clause never resurfaces
+  // rows an earlier one narrowed to while it re-queries.
+  if (!predicate && filteredResult !== LOADING) setFilteredResult(LOADING);
+  if (!predicate || registryResult === undefined) return unfiltered;
+  return {
+    result: pending ? LOADING : filteredResult,
+    settled: filteredResult,
+    pending,
+    client,
+    filtered: true,
+  };
+}
+
+/** The registry's own result — never pending: the coordinator never ran it. */
+function unfilteredRead(
+  result: QueryResult | undefined,
+  client: QueryClient,
+): FilteredQueryRead {
+  return { result, settled: result, pending: false, client, filtered: false };
 }

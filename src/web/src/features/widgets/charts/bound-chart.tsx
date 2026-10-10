@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import { cn } from "../../../lib/cn";
 import { useThemeMode } from "../../chrome/theme-mode";
 import type { Row } from "../../data/types";
 import type { FilterIds } from "../../filters/filter-ids";
@@ -63,6 +64,8 @@ interface BoundChartProps<M> {
  * The frame every registry-bound chart widget shares: resolve `data` against
  * the page's query registry, render the state face (alert / loading / empty)
  * at chart height, else project rows through `model` and paint `option`.
+ * A cross-filter re-query in flight keeps the painted chart, dimmed and
+ * `aria-busy`, until its rows land (ADR-0007).
  * The projection runs inside `ChartResult`'s callback so its typed errors
  * (ColumnError/FormatError) land on the chart's error face.
  * `select="crossfilter"` wires the gestures the bound fields support —
@@ -74,7 +77,7 @@ interface BoundChartProps<M> {
  * <BoundChart data="orders" select="crossfilter" pointField="region" brushAxis={(m) => seriesBrushAxis(m.xType, "region", m.xDomain)} model={(r) => toScatterSeries(r, spec)} option={(m) => toScatterOption(m, props)} />
  */
 export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
-  const { result, height, client, filtered } = useChartRows(
+  const { result, height, client, filtered, pending } = useChartRows(
     props.data,
     props.height,
     props.filters,
@@ -123,48 +126,53 @@ export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
   }, [rows, mode]);
   /* eslint-enable react-doctor/exhaustive-deps */
   return (
-    <ChartResult name={props.data} result={result} height={height}>
-      {() => {
-        if (painted === undefined) return <ChartEmpty height={height} />;
-        if ("error" in painted) throw painted.error;
-        const { model, axis, legendTarget, option } = painted;
-        if (props.isEmpty?.(model)) return <ChartEmpty height={height} />;
-        // The events bag rebuilds per render, binding the current model's
-        // axis/targets — no ref, no render-phase mutation. `optionApplied`
-        // composes every interactor's restore so a notMerge repaint keeps
-        // the brush extent, the point dim, and the held legend toggles.
-        const events: EChartEvents | undefined =
-          point.click || axis || legendTarget
-            ? {
-                click: point.click,
-                ...(axis
-                  ? {
-                      brushSelected: (params) => brush.selected(params, axis),
-                      brushEnd: (params) => brush.ended(params, axis),
-                    }
-                  : {}),
-                ...(legendTarget
-                  ? {
-                      legendSelectChanged: (params) =>
-                        legend.changed(params, legendTarget),
-                    }
-                  : {}),
-                optionApplied: (instance) => {
-                  if (axis) brush.optionApplied(instance);
-                  point.optionApplied(instance);
-                  legend.optionApplied(instance);
-                },
-              }
-            : undefined;
-        return (
-          <EChart
-            option={option}
-            height={height}
-            renderer={props.renderer}
-            events={events}
-          />
-        );
-      }}
-    </ChartResult>
+    <div
+      aria-busy={pending || undefined}
+      className={cn("transition-opacity", pending && "opacity-60")}
+    >
+      <ChartResult name={props.data} result={result} height={height}>
+        {() => {
+          if (painted === undefined) return <ChartEmpty height={height} />;
+          if ("error" in painted) throw painted.error;
+          const { model, axis, legendTarget, option } = painted;
+          if (props.isEmpty?.(model)) return <ChartEmpty height={height} />;
+          // The events bag rebuilds per render, binding the current model's
+          // axis/targets — no ref, no render-phase mutation. `optionApplied`
+          // composes every interactor's restore so a notMerge repaint keeps
+          // the brush extent, the point dim, and the held legend toggles.
+          const events: EChartEvents | undefined =
+            point.click || axis || legendTarget
+              ? {
+                  click: point.click,
+                  ...(axis
+                    ? {
+                        brushSelected: (params) => brush.selected(params, axis),
+                        brushEnd: (params) => brush.ended(params, axis),
+                      }
+                    : {}),
+                  ...(legendTarget
+                    ? {
+                        legendSelectChanged: (params) =>
+                          legend.changed(params, legendTarget),
+                      }
+                    : {}),
+                  optionApplied: (instance) => {
+                    if (axis) brush.optionApplied(instance);
+                    point.optionApplied(instance);
+                    legend.optionApplied(instance);
+                  },
+                }
+              : undefined;
+          return (
+            <EChart
+              option={option}
+              height={height}
+              renderer={props.renderer}
+              events={events}
+            />
+          );
+        }}
+      </ChartResult>
+    </div>
   );
 }

@@ -18,10 +18,12 @@ export interface WorkerRequestRecord {
 }
 
 /**
- * One finished chart paint, labelled by the `h2` above the chart. A
- * re-query swaps the chart for its loading face and mounts a fresh echarts
- * instance on the result (`BoundChart` → `ChartResult`), so a paint is a
- * host gaining `data-echarts-ready`, not a `setOption` call.
+ * One chart paint — an option applied to a mounted echarts instance —
+ * labelled by the `h2` above the chart. A fresh host paints at mount
+ * (`mountChart` applies the option before the host exposes the instance);
+ * a kept host paints on every later `setOption`. `data-echarts-ready` is no
+ * measure of this: it lands on echarts' `finished`, which waits out the
+ * entry animation, so results arriving faster than the animation never set it.
  */
 export interface ChartPaintRecord {
   readonly chart: string;
@@ -47,8 +49,9 @@ interface ProbeWindow {
  * Installs the probe before any page script runs: wraps
  * `Worker.prototype.postMessage` (keeping the request types that bound a
  * query's lifetime), `history.replaceState` (every filter publish writes
- * the URL) and observes `data-echarts-ready` (every finished paint). Call
- * before the first `page.goto`.
+ * the URL) and the `echartsInstance` assignment every chart host receives
+ * (its mount paint, then each `setOption`). Call before the first
+ * `page.goto`.
  *
  * @example
  * await installCrossfilterProbe(page);
@@ -78,19 +81,30 @@ export async function installCrossfilterProbe(page: Page): Promise<void> {
       );
       return headings.at(-1)?.textContent?.trim().toLowerCase() ?? "";
     };
-    new MutationObserver((mutations) => {
-      for (const m of mutations)
-        if (
-          m.target instanceof Element &&
-          m.target.hasAttribute("data-echarts-ready")
-        )
-          probe.__xfPaints.push({
-            chart: chartOf(m.target),
-            t: performance.now(),
-          });
-    }).observe(document, {
-      subtree: true,
-      attributeFilter: ["data-echarts-ready"],
+    const paint = (host: Element) =>
+      probe.__xfPaints.push({ chart: chartOf(host), t: performance.now() });
+    interface ProbedChart {
+      setOption(...args: unknown[]): unknown;
+    }
+    // `delete el.echartsInstance` on dispose misses a prototype accessor,
+    // so a disposed host keeps reading its old instance — harmless here:
+    // only a theme or renderer flip re-inits, and that assigns afresh.
+    const instances = new WeakMap<Element, ProbedChart | undefined>();
+    Object.defineProperty(HTMLElement.prototype, "echartsInstance", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return instances.get(this);
+      },
+      set(this: HTMLElement, chart: ProbedChart | undefined) {
+        instances.set(this, chart);
+        if (!chart) return;
+        paint(this);
+        const setOption = chart.setOption.bind(chart);
+        chart.setOption = (...args: unknown[]) => {
+          paint(this);
+          return setOption(...args);
+        };
+      },
     });
     const original = Worker.prototype.postMessage;
     Worker.prototype.postMessage = function (this: Worker, ...args: unknown[]) {

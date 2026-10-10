@@ -3,6 +3,7 @@ import type { FilterIds } from "../../filters/filter-ids";
 import type { QueryResult } from "../../pages/types";
 import type { QueryClient, QueryShape } from "../../crossfilter/types";
 import { DEFAULT_CHART_HEIGHT } from "./echart";
+import { useSettledChartResult } from "./use-settled-chart-result";
 
 /**
  * The lookup every chart widget shares: `data` resolves against the page's
@@ -15,6 +16,7 @@ import { DEFAULT_CHART_HEIGHT } from "./echart";
  * (`select="crossfilter"`) stamps it into `clause.clients` so its own
  * clause never narrows its own rows. `shape` replaces the plain filtered
  * wrap; `filtered` says the rows are its result rather than the registry's.
+ * A re-query in flight keeps the last painted result, flagged `pending`.
  */
 export function useChartRows(
   data: string,
@@ -26,12 +28,19 @@ export function useChartRows(
   height: number;
   client: QueryClient;
   filtered: boolean;
+  pending: boolean;
 } {
-  const { result, client, filtered } = useFilteredQueryClient(
-    data,
-    filters,
-    undefined,
-    shape,
+  const live = useFilteredQueryClient(data, filters, undefined, shape);
+  const { result, filtered, pending } = useSettledChartResult(
+    live.settled,
+    live.filtered,
+    live.pending,
   );
-  return { result, height: height ?? DEFAULT_CHART_HEIGHT, client, filtered };
+  return {
+    result,
+    height: height ?? DEFAULT_CHART_HEIGHT,
+    client: live.client,
+    filtered,
+    pending,
+  };
 }

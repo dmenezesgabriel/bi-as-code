@@ -197,6 +197,68 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   expect(errors).toEqual([]);
 });
 
+/** How many brush areas chart host `index` holds in its echarts model. */
+function brushAreaCount(page: Page, index: number): Promise<number> {
+  return page.evaluate((i) => {
+    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
+      i
+    ];
+    const chart = (
+      host as unknown as {
+        echartsInstance?: {
+          getModel(): {
+            getComponent(type: string): { areas?: unknown[] } | undefined;
+          };
+        };
+      }
+    ).echartsInstance;
+    if (!chart) throw new Error(`chart host ${i} has no echartsInstance`);
+    return chart.getModel().getComponent("brush")?.areas?.length ?? 0;
+  }, index);
+}
+
+test("a held histogram brush survives the histogram's own re-query when a region is picked", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await openWeeklyReviewCharts(page, biacDev.url);
+  const tables = orderDetailTables(page);
+  await expect(tables.nth(1)).toContainText("· 355 rows");
+  // Bins 12–13 hold 60 of West's 140 orders and nothing else — the
+  // brushed amount clause is what tells the West counts apart.
+  await chartHosts(page).nth(2).scrollIntoViewIfNeeded();
+  const from = await chartPoint(page, 2, [12, 60]);
+  const to = await chartPoint(page, 2, [13, 60]);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await page.mouse.up();
+  await expect(tables.nth(1)).toContainText("· 60 rows");
+  // Tag the host: a remount (the loading face swapped in) drops the tag.
+  await chartHosts(page)
+    .nth(2)
+    .evaluate((host) => host.setAttribute("data-kept", ""));
+
+  await page.getByRole("combobox", { name: "Region" }).click();
+  await page.getByRole("option", { name: "West" }).click();
+
+  // The region-filtered histogram repaints West's 140 orders on the same
+  // mounted canvas; its brush stays held, so order_detail keeps the clause.
+  await expect(page).toHaveURL(/region=West/);
+  await expect
+    .poll(async () =>
+      (await optionAt(page, 2)).series
+        .flatMap((s) => s.data ?? [])
+        .reduce<number>((sum, n) => sum + Number(n), 0),
+    )
+    .toBe(140);
+  await expect(chartHosts(page).nth(2)).toHaveAttribute("data-kept", "");
+  await expect(tables.nth(1)).toContainText("· 60 rows");
+  expect(await brushAreaCount(page, 2)).toBe(1);
+  expect(errors).toEqual([]);
+});
+
 test("a scatter legend toggle cross-filters the region consumers while the scatter holds its series", async ({
   page,
   biacDev,

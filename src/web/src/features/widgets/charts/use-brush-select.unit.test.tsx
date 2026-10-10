@@ -52,6 +52,27 @@ function brushSelected(
   };
 }
 
+/**
+ * An echarts instance double whose `takeGlobalCursor` dispatch flushes the
+ * `brushSelected` a `notMerge` repaint left pending — the rebuilt brush
+ * model has no areas, so the real chart emits an empty batch right there.
+ */
+class CursorFlushingChart {
+  readonly dispatched: unknown[] = [];
+
+  constructor(private readonly flushPendingBrushSelected: () => void) {}
+
+  asEChart(): EChartsType {
+    return {
+      dispatchAction: (action: { type: string }) => {
+        this.dispatched.push(action);
+        if (action.type === "takeGlobalCursor")
+          this.flushPendingBrushSelected();
+      },
+    } as unknown as EChartsType;
+  }
+}
+
 function renderBrushSelect() {
   return renderInteractor("brush", () => useBrushSelect(CLIENT));
 }
@@ -190,6 +211,24 @@ describe("useBrushSelect", () => {
         ],
       },
     ]);
+  });
+
+  it("keeps the held area and clause when re-arming flushes the repaint's empty brushSelected", () => {
+    const { result } = renderBrushSelect();
+    const { filters, brush } = result.current;
+    act(() => brush.ended(brushEnd([10, 20]), VALUE_AXIS));
+    const held = filters.selection("amount").clauses[0];
+    const instance = new CursorFlushingChart(() =>
+      brush.selected(brushSelected(), VALUE_AXIS),
+    );
+
+    act(() => brush.optionApplied(instance.asEChart()));
+
+    expect(instance.dispatched.at(-1)).toEqual({
+      type: "brush",
+      areas: [{ brushType: "lineX", coordRange: [10, 20], panelId: "grid--0" }],
+    });
+    expect(filters.selection("amount").clauses[0]).toBe(held);
   });
 
   it("arms without restoring when no brush is held", () => {
