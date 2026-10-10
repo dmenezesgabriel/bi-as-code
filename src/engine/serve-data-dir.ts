@@ -1,7 +1,8 @@
 import { createReadStream, statSync, type Stats } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { extname, resolve, sep } from "node:path";
+import { extname } from "node:path";
 import type { Connect } from "vite";
+import { decodePathname, resolveContained } from "./contained-path.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".csv": "text/csv",
@@ -20,29 +21,16 @@ const CONTENT_TYPES: Record<string, string> = {
  * server.middlewares.use("/data", serveDataDir(join(root, "data")));
  */
 export function serveDataDir(dataDir: string): Connect.NextHandleFunction {
-  const root = resolve(dataDir);
   return (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
     const pathname = decodePathname(req.url);
     if (pathname === null) return writeStatus(res, 400);
-    const file = resolve(root, `.${pathname}`);
-    if (file !== root && !file.startsWith(`${root}${sep}`)) {
-      return writeStatus(res, 403);
-    }
+    const file = resolveContained(dataDir, pathname);
+    if (file === null) return writeStatus(res, 403);
     const stats = statFile(file);
     if (stats === null) return writeStatus(res, 404);
     sendFile(req, res, file, stats.size);
   };
-}
-
-/** `null` on malformed escapes (`%zz`) — the request itself is bad. */
-function decodePathname(url: string | undefined): string | null {
-  const raw = (url ?? "/").split(/[?#]/, 1)[0]!;
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
 }
 
 /** `null` covers missing entries and directories alike — both are 404 here. */

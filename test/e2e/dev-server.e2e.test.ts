@@ -41,4 +41,22 @@ describe("biac dev", () => {
 
     expect(await server.stop()).toBe(0);
   }, 60_000);
+
+  it("reads and writes page source through /__biac/page-source/", async () => {
+    server = await startDevServer(projectRoot!);
+    const url = `${server.url}__biac/page-source/index.md`;
+
+    const before = await fetch(url);
+    const saved = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "# Saved\n" }),
+    });
+    const after = await fetch(url);
+
+    expect(await before.text()).toContain("# Hi");
+    expect(saved.status).toBe(204);
+    expect(await after.text()).toBe("# Saved\n");
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
 });

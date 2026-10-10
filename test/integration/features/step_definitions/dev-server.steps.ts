@@ -4,7 +4,13 @@ import {
   spawn,
   type ChildProcessWithoutNullStreams,
 } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +24,7 @@ const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
 // would produce `//@id/…`, miss vite's module route and hit the SPA
 // fallback instead.
 const MANIFEST_URL = "@id/virtual:biac-pages";
+const NESTED_PAGE_SOURCE_URL = "__biac/page-source/nested/page.md";
 
 let projectRoot: string | undefined;
 let child: ChildProcessWithoutNullStreams | undefined;
@@ -109,6 +116,25 @@ Then("the page manifest serves the new route", async () => {
   await eventually(async () =>
     (await getOk(`${base}${MANIFEST_URL}`)).includes('"/added"'),
   );
+});
+
+When("I save {string} as the nested page's source", async (heading: string) => {
+  const res = await fetch(`${base}${NESTED_PAGE_SOURCE_URL}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source: `${heading}\n` }),
+  });
+  assert.equal(res.status, 204);
+});
+
+Then("the nested page file on disk reads {string}", (heading: string) => {
+  const onDisk = readFileSync(join(projectRoot!, "pages/nested/page.md"));
+  assert.equal(onDisk.toString(), `${heading}\n`);
+});
+
+Then("the nested page module compiles {string}", async (text: string) => {
+  const url = `${base}@fs${projectRoot}/pages/nested/page.md?import`;
+  await eventually(async () => (await getOk(url)).includes(text));
 });
 
 Then("the dev server exits cleanly on SIGINT", async () => {

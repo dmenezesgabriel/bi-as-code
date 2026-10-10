@@ -6,6 +6,7 @@ import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { discoverPages } from "./discover-pages.js";
 import { buildNavTree } from "./nav-tree.js";
+import { pageSourceEndpoint } from "./page-source-endpoint.js";
 import { serveDataDir } from "./serve-data-dir.js";
 import type { BiacConfig, PageManifestEntry } from "./types.js";
 
@@ -102,6 +103,12 @@ export function pagesPlugin(projectRoot: string): Plugin {
       // sql: sources resolve to /data/<path> — served from the real
       // directory so dev and the copied build/data/ stay identical.
       server.middlewares.use("/data", serveDataDir(dataDir));
+      // The editor's write path into pages/. configureServer runs for the
+      // dev server only — `vite build` and `vite preview` never mount it.
+      server.middlewares.use(
+        "/__biac/page-source",
+        pageSourceEndpoint(pagesDir),
+      );
       server.watcher.add(pagesDir);
       server.watcher.add(configFile);
       server.watcher.add(dataDir);

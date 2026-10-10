@@ -11,3 +11,11 @@ Feature: biac dev serves a project's pages directory over HTTP
     When I add a page file to the project
     Then the page manifest serves the new route
     And the dev server exits cleanly on SIGINT
+
+  Scenario: save a page's source through the dev page-source endpoint
+    Given a project with an index page and a nested page
+    When I start the dev server
+    And I save "# Saved from the browser" as the nested page's source
+    Then the nested page file on disk reads "# Saved from the browser"
+    And the nested page module compiles "Saved from the browser"
+    And the dev server exits cleanly on SIGINT
