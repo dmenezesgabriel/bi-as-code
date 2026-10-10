@@ -135,6 +135,24 @@ test("a deep-link reload of crossfilter-scale renders through the SPA fallback",
   expect(errors).toEqual([]);
 });
 
+test("the static build offers no page editor, even on ?edit", async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const heading = page.getByRole("heading", { level: 1 });
+  const editLink = page.getByRole("link", { name: "Edit", exact: true });
+
+  await page.goto(`${preview.url}weekly-review`);
+  await expect(heading).toHaveCount(1, { timeout: 30_000 });
+  await expect(editLink).toHaveCount(0);
+
+  await page.goto(`${preview.url}weekly-review?edit`);
+  await expect(heading).toHaveCount(1, { timeout: 30_000 });
+  await expect(editLink).toHaveCount(0);
+  await expect(page.locator(".cm-editor")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("an unknown route renders the not-found page inside the app shell", async ({
   page,
 }) => {

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { build } from "@/cli/commands/build.js";
@@ -19,12 +19,19 @@ afterEach(() => {
   cleanupProjects();
 });
 
+/** Every file under `outDir`, however deep, whose bytes contain `needle`. */
+function buildFilesContaining(outDir: string, needle: string): string[] {
+  return readdirSync(outDir, { recursive: true, encoding: "utf8" }).filter(
+    (name) => {
+      const file = join(outDir, name);
+      return statSync(file).isFile() && readFileSync(file).includes(needle);
+    },
+  );
+}
+
 function assetsContaining(outDir: string, needle: string): string[] {
-  const assets = join(outDir, "assets");
-  return readdirSync(assets).filter(
-    (name) =>
-      name.endsWith(".js") &&
-      readFileSync(join(assets, name), "utf8").includes(needle),
+  return buildFilesContaining(join(outDir, "assets"), needle).filter((name) =>
+    name.endsWith(".js"),
   );
 }
 
@@ -44,6 +51,23 @@ describe("biac build", () => {
     // The manifest's dev-only HMR accept list spells page ids out as
     // literals; their absence proves the `import.meta.hot` block was dropped.
     expect(assetsContaining(outDir, "virtual:biac-page/")).toEqual([]);
+  }, 120_000);
+
+  it("ships no page editor and no page-source client", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", `# ${PAGE_MARKER}\n`);
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await build([root]);
+
+    // The editor and its write path exist only under `biac dev`: a static
+    // host has no endpoint to save to, so neither CodeMirror's bytes nor
+    // the endpoint's URL may reach the output. vitest runs with
+    // NODE_ENV=test, so this build has `import.meta.env.DEV` true — the
+    // exclusion must not depend on it.
+    const outDir = join(root, "build");
+    expect(buildFilesContaining(outDir, "codemirror")).toEqual([]);
+    expect(buildFilesContaining(outDir, "/__biac/page-source/")).toEqual([]);
   }, 120_000);
 
   it("copies data/ byte-identical into build/data, nested dirs included", async () => {

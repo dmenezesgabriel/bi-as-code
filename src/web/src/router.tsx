@@ -3,9 +3,10 @@ import { config } from "virtual:biac-config";
 import { pageSourceClient } from "./features/editor/page-source-client";
 import { buildPageRouter } from "./features/pages/page-router";
 
-// Only the dev server mounts the page-source endpoint; a production build
-// folds this to `undefined`, so `?edit` is inert there.
-const pageSource = import.meta.env.DEV
+// Only the dev server mounts the page-source endpoint, and only the dev
+// server defines `import.meta.hot`; every build folds this to `undefined`
+// whatever NODE_ENV says, so `?edit` is inert there.
+const pageSource = import.meta.hot
   ? pageSourceClient((url, init) => fetch(url, init))
   : undefined;
 

@@ -3,9 +3,12 @@ import { useSearch } from "@tanstack/react-router";
 import { isEditSearch } from "../editor/edit-search";
 import type { PageSourcePort } from "../editor/types";
 
-// Folded to `null` in a production build, which drops the dynamic import —
-// and with it every byte of the editor — from the bundle.
-const LazyPageEditor = import.meta.env.DEV
+// vite defines `import.meta.hot` only while its dev server serves the module
+// and replaces it with `undefined` in every build, so the dynamic import —
+// and with it every byte of the editor — never reaches a bundle.
+// `import.meta.env.DEV` would not do: it follows NODE_ENV, and a build run
+// with NODE_ENV=development shipped the editor chunk.
+const LazyPageEditor = import.meta.hot
   ? lazy(async () => ({
       default: (await import("../editor/page-editor")).PageEditor,
     }))
