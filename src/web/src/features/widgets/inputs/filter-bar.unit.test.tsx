@@ -24,7 +24,7 @@ describe("FilterBar", () => {
     expect(el).toHaveTextContent("filter field");
     for (const cls of [
       "sticky",
-      "top-16",
+      "top-(--dock-top,4rem)",
       "z-10",
       "flex",
       "flex-row",
@@ -49,8 +49,8 @@ describe("FilterBar", () => {
     expect(sentinel).toHaveAttribute("aria-hidden", "true");
     for (const cls of [
       "pointer-events-none",
-      "-mt-16",
-      "mb-16",
+      "-mt-(--dock-top,4rem)",
+      "mb-(--dock-top,4rem)",
       "h-0",
       "w-0",
     ]) {

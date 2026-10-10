@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 import { Breadcrumbs } from "./features/chrome/breadcrumbs";
+import { EditPageLink } from "./features/chrome/edit-page-link";
 import { SidebarNav } from "./features/chrome/sidebar-nav";
 import {
   readDesktopOpen,
@@ -24,8 +25,17 @@ const MOBILE_QUERY = "(max-width: 1023px)";
  * Escape dismisses it); at `lg` and above it sits beside the content, and
  * only an explicit toggle — persisted to sessionStorage — hides it there.
  * `nav.sidebar: false` in `biac.config.ts` removes the chrome entirely.
+ * `editable` (true only under `biac dev`) adds the header's Edit link.
  */
-export function AppShell({ tree, site }: { tree: NavTree; site: BiacConfig }) {
+export function AppShell({
+  tree,
+  site,
+  editable = false,
+}: {
+  tree: NavTree;
+  site: BiacConfig;
+  editable?: boolean;
+}) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   // Applied here, above the `nav.sidebar: false` early return, so a
   // chrome-free project still honours its configured theme.
@@ -103,6 +113,7 @@ export function AppShell({ tree, site }: { tree: NavTree; site: BiacConfig }) {
               <span aria-hidden>☰</span>
             </button>
             <Breadcrumbs tree={tree} />
+            {editable && <EditPageLink />}
             <ThemeToggle mode={theme.mode} onToggle={theme.toggle} />
           </header>
           <Outlet />

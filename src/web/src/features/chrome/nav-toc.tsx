@@ -92,7 +92,10 @@ export function NavToc({ article }: { article: HTMLElement }) {
   if (headings.length < 2) return null;
 
   return (
-    <aside className="sticky top-16 hidden max-h-[calc(100vh-4rem)] w-56 shrink-0 self-start overflow-y-auto xl:block">
+    // 59rem of page content: the 62rem a 1280px viewport leaves beside the
+    // 18rem sidebar, less the page's 3rem of side padding — enough for the
+    // 14rem rail plus a readable article.
+    <aside className="sticky top-(--dock-top,4rem) hidden max-h-[calc(100vh-4rem)] w-56 shrink-0 self-start overflow-y-auto @min-[59rem]:block">
       <nav aria-label={TOC_LABEL}>
         <p className="pb-2 text-xs font-medium tracking-wide text-neutral-500 dark:text-neutral-400">
           {TOC_LABEL}

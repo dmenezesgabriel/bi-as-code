@@ -8,6 +8,8 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AppShell } from "../../App";
+import type { PageSourcePort } from "../editor/types";
+import { EditablePage } from "./editable-page";
 import { MarkdownPage } from "./markdown-page";
 import { NotFoundPage } from "./not-found-page";
 import { PageError } from "./page-error";
@@ -22,6 +24,8 @@ import type { NavTree } from "virtual:biac-pages";
  * for modules that fail to load or render. `site` carries `biac.config.ts`
  * into chrome consumers — the title becomes the document-title fallback and
  * `nav.sidebar` gates the sidebar; `navTree` feeds the sidebar nav.
+ * `pageSource` — passed only by `biac dev` — lets `?edit` open a page in the
+ * source editor.
  *
  * @example
  * // src/web/src/router.tsx
@@ -34,13 +38,20 @@ export function buildPageRouter(
   site: BiacConfig,
   navTree: NavTree,
   history?: RouterHistory,
+  pageSource?: PageSourcePort,
 ) {
   const rootRoute = createRootRoute({
-    component: () => <AppShell tree={navTree} site={site} />,
+    component: () => (
+      <AppShell
+        tree={navTree}
+        site={site}
+        editable={pageSource !== undefined}
+      />
+    ),
     notFoundComponent: NotFoundPage,
   });
   const routeTree = rootRoute.addChildren(
-    pages.map((entry) => pageRoute(rootRoute, entry, site)),
+    pages.map((entry) => pageRoute(rootRoute, entry, site, pageSource)),
   );
   // Filter inputs persist through `history.replaceState`, which the router's
   // history wrapper reports as a REPLACE navigation — and every committed
@@ -68,6 +79,7 @@ function pageRoute(
   rootRoute: AnyRootRoute,
   entry: ManifestPageEntry,
   site: BiacConfig,
+  pageSource: PageSourcePort | undefined,
 ): AnyRoute {
   const route = createRoute({
     getParentRoute: () => rootRoute,
@@ -86,7 +98,9 @@ function pageRoute(
         [site.sqlTables, mod.sqlTables],
       );
       return (
-        <MarkdownPage page={{ ...mod, sqlTables }} siteTitle={site.title} />
+        <EditablePage file={entry.file} pageSource={pageSource}>
+          <MarkdownPage page={{ ...mod, sqlTables }} siteTitle={site.title} />
+        </EditablePage>
       );
     },
   });

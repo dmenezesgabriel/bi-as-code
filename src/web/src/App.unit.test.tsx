@@ -34,9 +34,12 @@ async function renderShell(
   initialPath: string,
   config: BiacConfig = site,
   navTree: NavTree = tree,
+  editable = false,
 ) {
   const rootRoute = createRootRoute({
-    component: () => <AppShell tree={navTree} site={config} />,
+    component: () => (
+      <AppShell tree={navTree} site={config} editable={editable} />
+    ),
   });
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -72,6 +75,24 @@ afterEach(() => {
 });
 
 describe("AppShell", () => {
+  it("offers an Edit link in the header when pages are editable", async () => {
+    // Arrange / Act
+    await renderShell("/nested/page", site, tree, true);
+
+    // Assert
+    expect(screen.getByRole("banner")).toContainElement(
+      screen.getByRole("link", { name: "Edit" }),
+    );
+  });
+
+  it("has no Edit link when pages are not editable", async () => {
+    // Arrange / Act
+    await renderShell("/nested/page");
+
+    // Assert
+    expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
+  });
+
   it("renders the outlet content of the matched route", async () => {
     await renderShell("/");
 

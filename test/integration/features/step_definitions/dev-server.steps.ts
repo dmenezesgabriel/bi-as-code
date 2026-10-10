@@ -145,3 +145,18 @@ Then("the dev server exits cleanly on SIGINT", async () => {
   });
   assert.equal(code, 0);
 });
+
+Then("the nested page's edit URL serves the SPA shell", async () => {
+  assert.match(await getOk(`${base}nested/page?edit=true`), /id="root"/);
+});
+
+Then("the dev server compiles the page editor module", async () => {
+  // Served from the vite root (src/web): the editor loads lazily on `?edit`,
+  // so this is the request the browser makes when the editor opens.
+  const editor = await getOk(`${base}src/features/editor/page-editor.tsx`);
+  assert.match(editor, /export function PageEditor/);
+  assert.match(editor, /from "\/src\/features\/editor\/code-editor\.tsx"/);
+  // CodeMirror reaches the browser as a vite-optimized dependency.
+  const codeEditor = await getOk(`${base}src/features/editor/code-editor.tsx`);
+  assert.match(codeEditor, /\/node_modules\/\.vite\/deps\/codemirror\.js/);
+});

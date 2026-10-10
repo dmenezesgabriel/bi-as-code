@@ -5,13 +5,14 @@ import { NavToc } from "./nav-toc";
 
 /**
  * NavToc reads headings from the rendered article DOM, so the story mounts
- * the same `ref` pattern `MarkdownPage` uses. The rail is `hidden xl:block`
- * — narrower than xl the iframe shows nothing, which is the real behavior.
+ * the same `ref` pattern `MarkdownPage` uses. The rail shows only inside a
+ * size container at least 59rem wide — narrower, the iframe shows nothing,
+ * which is the real behavior.
  */
 function ArticleWithToc() {
   const [article, setArticle] = useState<HTMLElement | null>(null);
   return (
-    <div className="flex gap-8">
+    <div className="@container flex gap-8">
       <main ref={setArticle} className="w-full max-w-2xl">
         <h1>Quarterly report</h1>
         <h2 id="orders">Orders</h2>

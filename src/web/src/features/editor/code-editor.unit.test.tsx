@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { EditorView, runScopeHandlers } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { ThemeModeProvider } from "../chrome/theme-mode";
 import type { ThemeMode } from "../chrome/theme";
 import { CodeEditor } from "./code-editor";
+import { mountedView, pressModS } from "./editor-test-view";
 import type { CodeEditorProps } from "./types";
 
 const LABEL = "Page source";
@@ -21,18 +22,6 @@ function editorUnder(mode: ThemeMode, props: Partial<CodeEditorProps> = {}) {
   );
 }
 
-/** The live view behind the rendered editable region. */
-function mountedView(): EditorView {
-  const view = EditorView.findFromDOM(screen.getByRole("textbox"));
-  if (!view) throw new Error(`no EditorView behind textbox "${LABEL}"`);
-  return view;
-}
-
-function pressModS(view: EditorView): void {
-  const event = new KeyboardEvent("keydown", { key: "s", ctrlKey: true });
-  runScopeHandlers(view, event, "editor");
-}
-
 describe("CodeEditor", () => {
   it("shows the initial document in a labelled editable region", () => {
     // Arrange / Act
@@ -41,7 +30,7 @@ describe("CodeEditor", () => {
     // Assert
     const textbox = screen.getByRole("textbox", { name: LABEL });
     expect(textbox).toHaveTextContent("# Orders");
-    expect(mountedView().state.doc.toString()).toBe("# Orders\n");
+    expect(mountedView(LABEL).state.doc.toString()).toBe("# Orders\n");
   });
 
   it("reports every edit through onChange with the whole document", () => {
@@ -50,7 +39,7 @@ describe("CodeEditor", () => {
     render(editorUnder("light", { onChange }));
 
     // Act
-    mountedView().dispatch({ changes: { from: 0, insert: "x" } });
+    mountedView(LABEL).dispatch({ changes: { from: 0, insert: "x" } });
 
     // Assert
     expect(onChange).toHaveBeenCalledExactlyOnceWith("x# Orders\n");
@@ -61,14 +50,14 @@ describe("CodeEditor", () => {
     const firstSave = vi.fn();
     const latestSave = vi.fn();
     const { rerender } = render(editorUnder("light", { onSave: firstSave }));
-    const viewBefore = mountedView();
+    const viewBefore = mountedView(LABEL);
 
     // Act
     rerender(editorUnder("light", { onSave: latestSave, doc: "ignored" }));
-    pressModS(mountedView());
+    pressModS(mountedView(LABEL));
 
     // Assert
-    expect(mountedView()).toBe(viewBefore);
+    expect(mountedView(LABEL)).toBe(viewBefore);
     expect(firstSave).not.toHaveBeenCalled();
     expect(latestSave).toHaveBeenCalledExactlyOnceWith("# Orders\n");
   });
@@ -76,14 +65,14 @@ describe("CodeEditor", () => {
   it("follows the theme mode without losing the buffer", () => {
     // Arrange
     const { rerender } = render(editorUnder("light"));
-    const viewBefore = mountedView();
+    const viewBefore = mountedView(LABEL);
     viewBefore.dispatch({ changes: { from: 0, insert: "edited " } });
 
     // Act
     rerender(editorUnder("dark"));
 
     // Assert
-    const view = mountedView();
+    const view = mountedView(LABEL);
     expect(view).toBe(viewBefore);
     expect(view.state.facet(EditorView.darkTheme)).toBe(true);
     expect(view.state.doc.toString()).toBe("edited # Orders\n");
@@ -94,6 +83,6 @@ describe("CodeEditor", () => {
     render(editorUnder("light"));
 
     // Assert
-    expect(mountedView().state.facet(EditorView.darkTheme)).toBe(false);
+    expect(mountedView(LABEL).state.facet(EditorView.darkTheme)).toBe(false);
   });
 });

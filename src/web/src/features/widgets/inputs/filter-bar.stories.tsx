@@ -33,7 +33,13 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   play: async ({ canvas }) => {
     const bar = canvas.getByText("Region").parentElement!;
-    for (const cls of ["sticky", "top-16", "flex-row", "items-end", "gap-4"]) {
+    for (const cls of [
+      "sticky",
+      "top-(--dock-top,4rem)",
+      "flex-row",
+      "items-end",
+      "gap-4",
+    ]) {
       await expect(bar.className).toContain(cls);
     }
     await expect(bar.className).toContain("border-transparent");

@@ -115,7 +115,9 @@ export function MarkdownPage({
   useDocumentTitle(page.title, siteTitle);
   const [article, setArticle] = useState<HTMLElement | null>(null);
   return (
-    <div className="mx-auto flex max-w-6xl gap-8 px-6 py-10">
+    // A size container: the ToC rail shows by the width this page has, not
+    // the viewport's — the editor's preview pane is half the screen.
+    <div className="@container mx-auto flex max-w-6xl gap-8 px-6 py-10">
       <main
         ref={setArticle}
         className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20"

@@ -13,6 +13,9 @@ import type { BiacConfig } from "virtual:biac-config";
 import { DuckDb, type DuckDbService } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
+import { mountedView } from "../editor/editor-test-view";
+import { FakePageSourcePort } from "../editor/fake-page-source-port";
+import type { PageSourcePort } from "../editor/types";
 import { buildPageRouter } from "./page-router";
 import type { CompiledPageModule, ManifestPageEntry } from "./types";
 
@@ -82,12 +85,14 @@ function renderRouter(
   tree: NavTree = navTree,
   siteConfig: BiacConfig = site,
   db?: DuckDbService,
+  pageSource?: PageSourcePort,
 ) {
   const router = buildPageRouter(
     entries,
     siteConfig,
     tree,
     createMemoryHistory({ initialEntries: [initialPath] }),
+    pageSource,
   );
   const app = <RouterProvider router={router} />;
   render(
@@ -238,5 +243,60 @@ describe("buildPageRouter", () => {
     expect(scrollTo).toHaveBeenCalledWith(
       expect.objectContaining({ top: 0, left: 0 }),
     );
+  });
+});
+
+describe("buildPageRouter edit mode", () => {
+  const editorPort = () => new FakePageSourcePort({ source: "# Home\n" });
+
+  it.each(["/?edit", "/?edit=true"])(
+    "opens %s in the split-pane editor beside the live page",
+    async (path) => {
+      // Arrange / Act
+      renderRouter(pages, path, navTree, site, undefined, editorPort());
+
+      // Assert
+      await screen.findByRole("textbox", { name: "Page source" });
+      expect(mountedView("Page source").state.doc.toString()).toBe("# Home\n");
+      expect(
+        screen.getByRole("region", { name: "Live preview" }),
+      ).toHaveTextContent("home body");
+    },
+  );
+
+  it.each([
+    ["no page-source port (a production build)", "/?edit", undefined],
+    ["edit=false", "/?edit=false", editorPort()],
+  ])("renders the plain page with %s", async (_case, path, port) => {
+    // Arrange / Act
+    renderRouter(pages, path, navTree, site, undefined, port);
+
+    // Assert
+    expect(await screen.findByText(/home body/)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Live preview" })).toBeNull();
+  });
+
+  it("keeps the editor's view when the hot-swapped page re-renders", async () => {
+    // Arrange
+    let current = textPage("old body", "Old");
+    const router = renderRouter(
+      [pageEntry("/", async () => current)],
+      "/?region=West&edit=true",
+      navTree,
+      site,
+      undefined,
+      editorPort(),
+    );
+    await screen.findByRole("textbox", { name: "Page source" });
+    const viewBefore = mountedView("Page source");
+
+    // Act
+    current = textPage("new body", "New");
+    await router.invalidate();
+
+    // Assert
+    expect(await screen.findByText("new body")).toBeInTheDocument();
+    expect(mountedView("Page source")).toBe(viewBefore);
+    expect(router.state.location.searchStr).toBe("?region=West&edit=true");
   });
 });

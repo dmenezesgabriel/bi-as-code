@@ -84,3 +84,16 @@ export const NoSidebar: Story = {
     ).toBeNull();
   },
 };
+
+/** Under `biac dev` the header carries the page's Edit link. */
+export const Editable: Story = {
+  args: { editable: true },
+  decorators: [
+    withMemoryRouter(["/", "/weekly-review"], "/weekly-review?region=West"),
+  ],
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("banner")).toContainElement(
+      canvas.getByRole("link", { name: "Edit" }),
+    );
+  },
+};

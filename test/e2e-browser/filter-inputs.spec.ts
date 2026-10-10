@@ -416,9 +416,9 @@ test("the FilterBar docks at 64px, floats past its sentinel and inputs keep writ
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
 
-  // The bar is a `div.sticky.top-16` — the TOC shares the convention but
-  // is an `aside`, so the element scoping pins the bar alone.
-  const bar = page.locator("div.sticky.top-16");
+  // The bar is the sticky `div` holding the inputs — the TOC is sticky too
+  // but is an `aside`, so the element scoping pins the bar alone.
+  const bar = page.locator("div.sticky", { hasText: "Region" });
   await expect(bar).toBeVisible({ timeout: 30_000 });
   await expect(bar).toContainText("Region");
 
@@ -426,8 +426,8 @@ test("the FilterBar docks at 64px, floats past its sentinel and inputs keep writ
   await expect(bar).toHaveClass(/border-transparent/);
   await expect(bar).not.toHaveClass(/bg-white/);
 
-  // Past the sentinel the bar docks 64px under the viewport top (the
-  // `top-16` line below the `h-12` header) and gains the card face.
+  // Past the sentinel the bar docks 64px under the viewport top (its
+  // default 4rem dock line, below the `h-12` header) and gains the card face.
   await page.evaluate(() => window.scrollTo(0, 600));
   await expect(bar).toHaveClass(/bg-white/);
   await expect(bar).toHaveClass(/shadow/);
