@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # Runs a command inside a resource-capped systemd user scope so one repo's
 # test run can't starve a host shared with other repos' runs:
-#   - nice 10, CPUQuota and MemoryHigh/MemoryMax cap what the run may take;
+#   - nice 10 and CPUWeight let the run use every idle core but yield to
+#     interactive work under contention (a weight, unlike a quota, never
+#     idles a free host); MemoryHigh/MemoryMax cap what it may take;
 #   - RuntimeMaxSec kills a hung run instead of letting it linger;
 #   - the scope is stopped on exit (and Ctrl-C), which kills every process
 #     still in it — dev servers, browsers and esbuild services a dying test
 #     worker never got to tear down.
-# Overrides: BIAC_CPU_QUOTA (default 400% = 4 cores), BIAC_MEMORY_HIGH
+# Overrides: BIAC_CPU_WEIGHT (default 30, systemd's own background.slice
+# weight against app.slice's 100), BIAC_MEMORY_HIGH
 # (default 6G), BIAC_MEMORY_MAX (default 8G), BIAC_RUNTIME_MAX (default
 # 45m — a unit both systemd and coreutils `timeout` parse). Without a
 # systemd user manager (CI containers, macOS) it falls back to `nice` +
@@ -29,7 +32,7 @@ if [[ -n "${BIAC_CAPPED:-}" ]]; then
 fi
 export BIAC_CAPPED=1
 
-cpu_quota=${BIAC_CPU_QUOTA:-400%}
+cpu_weight=${BIAC_CPU_WEIGHT:-30}
 memory_high=${BIAC_MEMORY_HIGH:-6G}
 memory_max=${BIAC_MEMORY_MAX:-8G}
 runtime_max=${BIAC_RUNTIME_MAX:-45m}
@@ -47,8 +50,10 @@ trap 'exit 130' INT TERM
 
 # MemoryHigh throttles (reclaims) before MemoryMax OOM-kills, so a run
 # under pressure slows down rather than dying outright.
-systemd-run --user --scope --quiet --unit="$unit" \
-  -p CPUQuota="$cpu_quota" \
+# --slice-inherit: started inside another capped unit (a devjob job), the
+# scope stays in that unit's slice instead of escaping to app.slice.
+systemd-run --user --scope --slice-inherit --quiet --unit="$unit" \
+  -p CPUWeight="$cpu_weight" \
   -p MemoryHigh="$memory_high" \
   -p MemoryMax="$memory_max" \
   -p RuntimeMaxSec="$runtime_max" \
