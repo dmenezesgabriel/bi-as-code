@@ -88,13 +88,17 @@ describe("pickActiveHeadingId", () => {
     expect(pickActiveHeadingId(headings, "", 768)).toBe("b");
   });
 
-  it("returns null when every heading is below the center", () => {
+  it("lights the first heading while every heading is still below the center", () => {
     const headings = [
       { id: "a", top: 700 },
       { id: "b", top: 900 },
     ];
 
-    expect(pickActiveHeadingId(headings, "", 768)).toBeNull();
+    expect(pickActiveHeadingId(headings, "", 768)).toBe("a");
+  });
+
+  it("returns null when the page has no headings", () => {
+    expect(pickActiveHeadingId([], "", 768)).toBeNull();
   });
 
   it("prefers the hash-matched heading sitting within 40px of the top", () => {

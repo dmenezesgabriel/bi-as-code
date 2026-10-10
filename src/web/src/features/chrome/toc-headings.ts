@@ -70,12 +70,15 @@ function slugifyHeading(text: string): string {
  * semantics: a `location.hash` match wins while its heading sits just below
  * the viewport top (0–40px); otherwise the lowest heading still above the
  * viewport's vertical center is current — so scrolling back up re-lights
- * earlier sections. `headings` are document-ordered with their current
- * `getBoundingClientRect().top`.
+ * earlier sections. Until the first heading crosses the center (a page
+ * whose intro fills the top half), the first section is current, so the
+ * rail always shows where a reader is. `headings` are document-ordered with
+ * their current `getBoundingClientRect().top`.
  *
  * @example
  * pickActiveHeadingId([{id: "a", top: -5}, {id: "b", top: 120}], "", 768);
  * // → "b"
+ * pickActiveHeadingId([{id: "a", top: 500}], "", 768); // → "a"
  */
 export function pickActiveHeadingId(
   headings: readonly HeadingTop[],
@@ -89,5 +92,5 @@ export function pickActiveHeadingId(
   const current = [...headings]
     .reverse()
     .find((h) => h.top < viewportHeight * 0.5);
-  return current?.id ?? null;
+  return current?.id ?? headings[0]?.id ?? null;
 }
