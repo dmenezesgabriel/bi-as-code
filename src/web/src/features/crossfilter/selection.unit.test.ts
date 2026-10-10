@@ -274,3 +274,81 @@ describe("Selection subscribe", () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 });
+
+/** A listener whose every call stays pending until the test releases it. */
+class HeldListener {
+  readonly seen: unknown[] = [];
+  readonly #release: Array<() => void> = [];
+
+  constructor(readonly selection: Selection) {}
+
+  readonly listener = (): Promise<void> => {
+    this.seen.push(this.selection.active?.value);
+    return new Promise((resolve) => this.#release.push(resolve));
+  };
+
+  /** Release the oldest pending call, then let the next delivery run. */
+  async release(): Promise<void> {
+    this.#release.shift()?.();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+}
+
+describe("Selection dispatch while a listener is pending", () => {
+  it("resolves predicates against the delivered clause, not the queued one", () => {
+    const selection = new Selection();
+    selection.subscribe(new HeldListener(selection).listener);
+    selection.update(clausePoint("region", "West", { source: sourceA }));
+
+    selection.update(clausePoint("region", "East", { source: sourceA }));
+
+    expect(selection.active?.value).toBe("West");
+    expect(selection.predicate()?.params).toEqual(["West"]);
+  });
+
+  it("delivers only the latest queued update without cross", async () => {
+    const selection = new Selection();
+    const held = new HeldListener(selection);
+    selection.subscribe(held.listener);
+    selection.update(clausePoint("region", "West", { source: sourceA }));
+
+    selection.update(clausePoint("channel", "Web", { source: sourceB }));
+    selection.update(clausePoint("region", "East", { source: sourceA }));
+    await held.release();
+
+    expect(held.seen).toEqual(["West", "East"]);
+    expect(selection.clauses.map((clause) => clause.value)).toEqual([
+      "Web",
+      "East",
+    ]);
+  });
+
+  it("under cross collapses one source's queued updates and keeps another's", async () => {
+    const selection = Selection.crossfilter();
+    const held = new HeldListener(selection);
+    selection.subscribe(held.listener);
+    selection.update(clausePoint("region", "West", { source: sourceA }));
+
+    selection.update(clausePoint("region", "East", { source: sourceA }));
+    selection.update(clausePoint("channel", "Web", { source: sourceB }));
+    selection.update(clausePoint("region", "North", { source: sourceA }));
+    await held.release();
+    await held.release();
+
+    expect(held.seen).toEqual(["West", "Web", "North"]);
+  });
+
+  it("queues a reset behind the pending delivery", async () => {
+    const selection = new Selection();
+    const held = new HeldListener(selection);
+    selection.subscribe(held.listener);
+    selection.update(clausePoint("region", "West", { source: sourceA }));
+
+    selection.reset();
+    expect(selection.clauses).toHaveLength(1);
+    await held.release();
+
+    expect(selection.clauses).toEqual([]);
+    expect(held.seen).toHaveLength(2);
+  });
+});

@@ -47,7 +47,8 @@ function subscribeAll(
  * The hook's `QueryClient` connects to each declared filter's `Selection`;
  * every publish re-queries the wrapped block (`select * from
  * (<interpolated>) where <preds>` — predicates bind `?` args, never
- * text-interpolated (ADR-0005)), cancelling in-flight work, and a clause
+ * text-interpolated (ADR-0005)) — a publish arriving mid-query waits for it
+ * and only the latest one runs — and a clause
  * that names this client skips it. `owner` is the publishing input's own
  * filter id: the options/bounds query of `<Dropdown id="region" …
  * filters={["region"]}>` registers so its own pick never narrows its own

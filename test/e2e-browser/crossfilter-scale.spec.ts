@@ -139,8 +139,12 @@ test("a slider drag over 200k rows settles every histogram on the released range
   expect(new Set(totals).size).toBe(1);
   expect(totals[0]).toBeGreaterThan(0);
   expect(totals[0]).toBeLessThan(FLIGHTS);
-  for (const label of CHARTS)
+  // Latest-wins dispatch: a publish waits for the in-flight re-queries
+  // instead of cancelling them, so every issued query completes.
+  for (const label of CHARTS) {
     expect(report.queries[label]?.issued).toBeGreaterThan(0);
+    expect(report.queries[label]?.cancelled).toBe(0);
+  }
   expect(errors).toEqual([]);
 });
 

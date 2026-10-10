@@ -127,33 +127,51 @@ export function readProbe(page: Page): Promise<{
   });
 }
 
+/** In-page: no query open and nothing requested or painted for `quiet` ms. */
+function isQuiet(quiet: number): boolean {
+  const probe = window as unknown as ProbeWindow;
+  const open = new Set<unknown>();
+  for (const r of probe.__xfRequests) {
+    const conn = Array.isArray(r.data) ? r.data[0] : r.data;
+    if (r.type === "DISCONNECT") open.delete(conn);
+    else if (r.type !== "CANCEL_PENDING_QUERY") open.add(conn);
+  }
+  const last = Math.max(
+    0,
+    ...probe.__xfRequests.map((r) => r.t),
+    ...probe.__xfPaints.map((p) => p.t),
+  );
+  return open.size === 0 && performance.now() - last > quiet;
+}
+
+/** Requests plus paints recorded so far — any growth is fresh activity. */
+function activityCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const probe = window as unknown as ProbeWindow;
+    return probe.__xfRequests.length + probe.__xfPaints.length;
+  });
+}
+
 /**
- * Resolves once no query is open and no chart has painted for `quietMs` —
- * the point a gesture has settled.
+ * Resolves once no query is open and no chart has painted for `quietMs`,
+ * and that still holds a macrotask later — the point a gesture has
+ * settled. The re-check exists because a selection delivers its queued
+ * publish only after the in-flight queries settle, and that delivery's
+ * first worker request can land a task later: a main-thread stall longer
+ * than `quietMs` just before it would otherwise read as settled.
  *
  * @example
  * await waitForSettled(page);
  */
 export async function waitForSettled(page: Page, quietMs = 750): Promise<void> {
-  await page.waitForFunction(
-    (quiet) => {
-      const probe = window as unknown as ProbeWindow;
-      const open = new Set<unknown>();
-      for (const r of probe.__xfRequests) {
-        const conn = Array.isArray(r.data) ? r.data[0] : r.data;
-        if (r.type === "DISCONNECT") open.delete(conn);
-        else if (r.type !== "CANCEL_PENDING_QUERY") open.add(conn);
-      }
-      const last = Math.max(
-        0,
-        ...probe.__xfRequests.map((r) => r.t),
-        ...probe.__xfPaints.map((p) => p.t),
-      );
-      return open.size === 0 && performance.now() - last > quiet;
-    },
-    quietMs,
-    { timeout: 60_000 },
-  );
+  for (;;) {
+    await page.waitForFunction(isQuiet, quietMs, { timeout: 60_000 });
+    const before = await activityCount(page);
+    await page.evaluate(
+      () => new Promise((resolve) => setTimeout(resolve, 100)),
+    );
+    if ((await activityCount(page)) === before) return;
+  }
 }
 
 interface QueryLifetime {

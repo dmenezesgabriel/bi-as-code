@@ -20,9 +20,12 @@ interface ClientEntry {
 /**
  * The cross-filter broker, the port of mosaic's `Coordinator` stripped to
  * what a page needs: it owns no connector — clients carry their own runner
- * (runtime + registered block) at connect — and no queue, cache or
- * preaggregation (SL-015 measures those). A publish re-queries each client
- * in the published selection's group under its composed predicate; a clause
+ * (runtime + registered block) at connect — and no result cache, query
+ * consolidation or preaggregation (ADR-0004). A publish re-queries each
+ * client in the published selection's group under its composed predicate,
+ * and the selection holds its next publish until every one of those
+ * queries settles — latest-wins, so a drag that publishes faster than the
+ * group can query still paints each completed result; a clause
  * that names a client skips it (no query), and a client whose selections
  * compose no predicate gets none either — the bridge serves the unfiltered
  * registry result in that case.
@@ -96,6 +99,8 @@ export class Coordinator {
     const existing = this.#groups.get(selection);
     if (existing) return existing;
     const clients = new Set<QueryClient>();
+    // Returning the group's settle promise is what serializes the
+    // selection's deliveries (see `Selection`).
     const unsubscribe = selection.subscribe(() =>
       this.#updateSelection(selection),
     );
@@ -104,11 +109,12 @@ export class Coordinator {
     return group;
   }
 
-  #updateSelection(selection: Selection): void {
+  #updateSelection(selection: Selection): Promise<unknown> | undefined {
     const group = this.#groups.get(selection);
-    if (!group) return;
-    for (const client of [...group.clients])
-      void this.#updateClient(client, selection);
+    if (!group) return undefined;
+    return Promise.allSettled(
+      [...group.clients].map((client) => this.#updateClient(client, selection)),
+    );
   }
 
   async #updateClient(
@@ -122,6 +128,10 @@ export class Coordinator {
     if (!predicate) return;
     const query = client.query(predicate);
     if (!query) return;
+    // A selection never overlaps its own re-queries, so this abort only
+    // fires across paths: connect or `requestQuery` racing a publish, or a
+    // second selection of the same client — the newer query composes every
+    // selection's current clauses, so the older result is already stale.
     entry.controller?.abort();
     const controller = new AbortController();
     entry.controller = controller;

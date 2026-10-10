@@ -274,22 +274,63 @@ describe("Coordinator", () => {
     expect(client.asked[2]).toEqual({ sql: "amount >= ?", params: [10] });
   });
 
-  it("aborts an in-flight query when a newer publish arrives", async () => {
+  it("runs only the latest publish once the in-flight re-query settles", async () => {
     const { db, held, selection, client, source } = await heldClient();
-    expect(db.queries).toHaveLength(1);
-    expect(client.results).toEqual([]);
 
     selection.update(clausePoint("region", "East", { source }));
+    selection.update(clausePoint("region", "North", { source }));
     await tick();
-    expect(db.queries).toHaveLength(2);
-
-    held.get("East")?.([{ n: 2 }]);
-    await vi.waitFor(() => expect(client.results).toEqual([[{ n: 2 }]]));
+    expect(db.queries).toHaveLength(1);
 
     held.get("West")?.([{ n: 1 }]);
-    await tick();
-    expect(client.results).toEqual([[{ n: 2 }]]);
+    await vi.waitFor(() => expect(db.queries).toHaveLength(2));
+    held.get("North")?.([{ n: 3 }]);
+
+    await vi.waitFor(() =>
+      expect(client.results).toEqual([[{ n: 1 }], [{ n: 3 }]]),
+    );
+    expect(db.queries[1]?.params).toEqual(["North"]);
     expect(client.errors).toEqual([]);
+  });
+
+  it("holds the next publish until every client in the group settles", async () => {
+    const { db, coordinator, run } = makeHarness();
+    const selection = new Selection();
+    const fast = connectClient(coordinator, run, [selection]);
+    const slow = connectClient(coordinator, run, [selection]);
+    const source = {};
+    await publish(selection, clausePoint("region", "West", { source }), () => {
+      expect(fast.results).toHaveLength(1);
+      expect(slow.results).toHaveLength(1);
+    });
+
+    db.holdWhen = (_sql, params) =>
+      params[0] === "East" ? new Promise<Row[]>(() => {}) : null;
+    selection.update(clausePoint("region", "East", { source }));
+    await tick();
+    selection.update(clausePoint("region", "North", { source }));
+    await tick();
+
+    expect(db.queries.filter((q) => q.params[0] === "North")).toEqual([]);
+  });
+
+  it("aborts a client's in-flight query when another selection re-queries it", async () => {
+    const { db, held } = holdingDb();
+    const { coordinator, run } = makeHarness(db);
+    const region = new Selection();
+    const channel = new Selection();
+    const client = connectClient(coordinator, run, [region, channel]);
+    region.update(clausePoint("region", "West", { source: {} }));
+    await tick();
+
+    channel.update(clausePoint("channel", "Web", { source: {} }));
+    await tick();
+    held.get("West")?.([{ n: 2 }]);
+    held.get("Web")?.([{ n: 1 }]);
+    await tick();
+
+    expect(db.queries).toHaveLength(2);
+    expect(client.results).toEqual([[{ n: 2 }]]);
   });
 
   it("reports a failing query through queryError", async () => {

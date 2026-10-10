@@ -1,3 +1,4 @@
+import { AsyncDispatch, type QueueKeep } from "./async-dispatch";
 import { composeAnd, composeOr } from "./clause";
 import type {
   ClauseSource,
@@ -31,12 +32,25 @@ const resetSource = (source: ClauseSource) => {
   (source as { reset?: () => void }).reset?.();
 };
 
+/** A selection listener; a returned promise holds later deliveries until it settles. */
+type SelectionListener = () => void | Promise<unknown>;
+
+/** Resolved clauses plus the clause that produced them — one delivery's state. */
+interface ClauseSnapshot {
+  readonly clauses: readonly SelectionClause[];
+  readonly active: SelectionClause | undefined;
+}
+
 /**
  * A dynamic set of selection clauses resolved into one query predicate —
  * the port of mosaic's `Selection`/`SelectionResolver` over bound
  * fragments (ADR-0004): clauses replace by source identity, a null
  * predicate clears its source, and `cross` skips a clause on the clients
- * that published it.
+ * that published it. Listeners returning a promise serialize delivery
+ * (mosaic's `AsyncDispatch`): updates arriving while one is pending queue,
+ * the readers (`clauses`, `active`, `predicate`) keep the delivered state,
+ * and only the latest queued update delivers — under `cross`, the latest
+ * per source, so another widget's clause queued behind a drag survives.
  *
  * @example
  * const selection = Selection.crossfilter();
@@ -48,10 +62,15 @@ export class Selection {
   readonly #empty: boolean;
   readonly #union: boolean;
   readonly #single: boolean;
-  #clauses: SelectionClause[] = [];
-  #active: SelectionClause | undefined;
+  /** The resolved state every update builds on, delivered or not. */
+  #latest: ClauseSnapshot = { clauses: [], active: undefined };
+  /** The state the last delivery published — what readers resolve against. */
+  #delivered: ClauseSnapshot = this.#latest;
   readonly #relay = new Set<Selection>();
-  readonly #listeners = new Set<() => void>();
+  readonly #listeners = new Set<SelectionListener>();
+  readonly #dispatch = new AsyncDispatch<ClauseSnapshot>((snapshot) =>
+    this.#deliver(snapshot),
+  );
 
   constructor({
     cross = false,
@@ -89,12 +108,12 @@ export class Selection {
 
   /** Current clauses, one per surviving source. */
   get clauses(): readonly SelectionClause[] {
-    return this.#clauses;
+    return this.#delivered.clauses;
   }
 
   /** The most recently updated clause, if any. */
   get active(): SelectionClause | undefined {
-    return this.#active;
+    return this.#delivered.active;
   }
 
   /**
@@ -105,10 +124,9 @@ export class Selection {
    * selection.update(clausePoint("region", "West", { source: filter }));
    */
   update(clause: SelectionClause): this {
-    this.#clauses = this.#resolve(this.#clauses, clause, true);
-    this.#active = clause;
+    const clauses = this.#resolve(this.#latest.clauses, clause, true);
     for (const downstream of this.#relay) downstream.update(clause);
-    this.#notify();
+    this.#emit({ clauses, active: clause });
     return this;
   }
 
@@ -126,8 +144,11 @@ export class Selection {
       union: this.#union,
       single: this.#single,
     });
-    clone.#clauses = this.#resolve(this.#clauses, sourceMarker(source), false);
-    clone.#active = sourceMarker(source);
+    clone.#latest = {
+      clauses: this.#resolve(this.#latest.clauses, sourceMarker(source), false),
+      active: sourceMarker(source),
+    };
+    clone.#delivered = clone.#latest;
     return clone;
   }
 
@@ -139,12 +160,13 @@ export class Selection {
    * selection.reset(); // clear everything
    */
   reset(clauses?: readonly SelectionClause[]): this {
-    const removed = clauses ?? this.#clauses;
-    const dropped = new Set(removed);
+    const dropped = new Set(clauses ?? this.#latest.clauses);
     for (const clause of dropped) resetSource(clause.source);
-    this.#clauses = this.#clauses.filter((clause) => !dropped.has(clause));
     for (const downstream of this.#relay) downstream.reset([...dropped]);
-    this.#notify();
+    this.#emit({
+      clauses: this.#latest.clauses.filter((clause) => !dropped.has(clause)),
+      active: this.#latest.active,
+    });
     return this;
   }
 
@@ -155,7 +177,7 @@ export class Selection {
    * selection.valueFor(regionFilter); // "West" | undefined
    */
   valueFor(source: ClauseSource): unknown {
-    return this.#clauses.find((clause) => clause.source === source)?.value;
+    return this.clauses.find((clause) => clause.source === source)?.value;
   }
 
   /**
@@ -183,11 +205,12 @@ export class Selection {
    * client.query(selection.predicate(client));
    */
   predicate(client?: QueryClient | null): FilterPredicate | undefined {
-    if (this.#empty && this.#clauses.length === 0) {
+    const { clauses, active } = this.#delivered;
+    if (this.#empty && clauses.length === 0) {
       return { sql: "false", params: [] };
     }
-    if (this.skip(client, this.#active)) return undefined;
-    const predicates = this.#clauses
+    if (this.skip(client, active)) return undefined;
+    const predicates = clauses
       .filter((clause) => !this.skip(client, clause))
       .map((clause) => clause.predicate)
       .filter((predicate): predicate is FilterPredicate => predicate !== null);
@@ -196,11 +219,12 @@ export class Selection {
 
   /**
    * Observe updates and resets; pairs with React's `useSyncExternalStore`.
+   * A listener's returned promise holds the next delivery until it settles.
    *
    * @example
    * const unsubscribe = selection.subscribe(() => requery(client));
    */
-  subscribe(listener: () => void): () => void {
+  subscribe(listener: SelectionListener): () => void {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
   }
@@ -221,7 +245,22 @@ export class Selection {
     return clauses;
   }
 
-  #notify() {
-    for (const listener of this.#listeners) listener();
+  /** Record the latest state and dispatch it; `cross` keeps other sources' queued updates. */
+  #emit(snapshot: ClauseSnapshot): void {
+    this.#latest = snapshot;
+    const source = snapshot.active?.source;
+    const keep: QueueKeep<ClauseSnapshot> | undefined = this.#cross
+      ? (queued) => queued.active?.source !== source
+      : undefined;
+    this.#dispatch.emit(snapshot, keep);
+  }
+
+  /** Publish the snapshot; the delivery is pending only while some listener's promise is. */
+  #deliver(snapshot: ClauseSnapshot): Promise<unknown> | undefined {
+    this.#delivered = snapshot;
+    const settling = [...this.#listeners]
+      .map((listener) => listener())
+      .filter((returned) => returned instanceof Promise);
+    return settling.length > 0 ? Promise.allSettled(settling) : undefined;
   }
 }
