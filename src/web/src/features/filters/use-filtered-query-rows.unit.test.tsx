@@ -12,7 +12,11 @@ import { FakeFilterUrlPort } from "./fake-url-port";
 import type { FilterIds } from "./filter-ids";
 import type { Filters } from "./filters";
 import { FiltersProvider, usePageFilters } from "./page-filters-context";
-import { useFilteredQueryRows } from "./use-filtered-query-rows";
+import type { QueryShape } from "../crossfilter/types";
+import {
+  useFilteredQueryClient,
+  useFilteredQueryRows,
+} from "./use-filtered-query-rows";
 
 const ORDERS_BLOCK: SqlBlock = { name: "orders", sql: "select * from orders" };
 const OPTS_BLOCK: SqlBlock = { name: "opts", sql: "select * from opts" };
@@ -22,20 +26,31 @@ function FilteredProbe({
   name,
   filters,
   owner,
+  shape,
   onEmit,
   onFilters,
 }: {
   name: string;
   filters: FilterIds | undefined;
   owner?: string;
-  onEmit: (result: QueryResult | undefined) => void;
+  shape?: QueryShape;
+  onEmit: (result: QueryResult | undefined, filtered: boolean) => void;
   onFilters: (filters: Filters | undefined) => void;
 }) {
   const pageFilters = usePageFilters();
-  const result = useFilteredQueryRows(name, filters, owner);
+  // A fresh closure every render — the hook must not reconnect on it.
+  const freshShape: QueryShape | undefined = shape
+    ? (block, predicate) => shape(block, predicate)
+    : undefined;
+  const { result, filtered } = useFilteredQueryClient(
+    name,
+    filters,
+    owner,
+    freshShape,
+  );
   useEffect(() => {
-    onEmit(result);
-  }, [result, onEmit]);
+    onEmit(result, filtered);
+  }, [result, filtered, onEmit]);
   useEffect(() => {
     onFilters(pageFilters);
   }, [pageFilters, onFilters]);
@@ -51,6 +66,7 @@ function renderFiltered({
   name = "orders",
   filters = ["region"],
   owner,
+  shape,
 }: {
   blocks?: SqlBlock[];
   tables?: SqlTableMap;
@@ -60,8 +76,10 @@ function renderFiltered({
   name?: string;
   filters?: FilterIds;
   owner?: string;
+  shape?: QueryShape;
 } = {}) {
   const emitted: (QueryResult | undefined)[] = [];
+  const filteredFlags: boolean[] = [];
   const filtersRef: { current: Filters | undefined } = { current: undefined };
   const tree = (
     <DataRuntimeProvider layer={Layer.succeed(DuckDb, db)}>
@@ -75,8 +93,10 @@ function renderFiltered({
             name={name}
             filters={filters}
             owner={owner}
-            onEmit={(result) => {
+            shape={shape}
+            onEmit={(result, filtered) => {
               emitted.push(result);
+              filteredFlags.push(filtered);
             }}
             onFilters={(filters) => {
               filtersRef.current = filters;
@@ -93,6 +113,7 @@ function renderFiltered({
     filtersRef,
     unmount: view.unmount,
     latest: () => emitted[emitted.length - 1],
+    latestFiltered: () => filteredFlags[filteredFlags.length - 1],
   };
 }
 
@@ -412,5 +433,56 @@ describe("useFilteredQueryRows", () => {
     expect(wrappedOptsQueries(db)).toEqual([]);
     expect(latestOpts()).toEqual({ status: "success", rows: [{ n: 1 }] });
     expect(latestOrders()?.status).toBe("success");
+  });
+});
+
+describe("useFilteredQueryClient query shape", () => {
+  const COUNTED =
+    "select count(*) as n from (select * from orders) where region = ?";
+  const countShape: QueryShape = (block, predicate) => ({
+    sql: `select count(*) as n from (${block.sql}) where ${predicate.sql}`,
+    params: [...block.params, ...predicate.params],
+    errors: [],
+  });
+
+  it("runs the widget's shape in place of the plain wrap", async () => {
+    const db = new FakeDuckDb();
+    const { latest, latestFiltered } = renderFiltered({
+      db,
+      url: "?region=West",
+      blocks: [ORDERS_BLOCK],
+      shape: countShape,
+    });
+
+    await waitFor(() => expect(latest()?.status).toBe("success"));
+
+    expect(db.queries).toContainEqual({ sql: COUNTED, params: ["West"] });
+    expect(db.queries.map((q) => q.sql)).not.toContain(WRAPPED);
+    expect(latestFiltered()).toBe(true);
+  });
+
+  it("flags the registry result as unfiltered", async () => {
+    const { latest, latestFiltered } = renderFiltered({
+      blocks: [ORDERS_BLOCK],
+      shape: countShape,
+    });
+
+    await waitFor(() => expect(latest()?.status).toBe("success"));
+
+    expect(latestFiltered()).toBe(false);
+  });
+
+  it("issues the shaped query once although the shape closure is fresh each render", async () => {
+    const db = new FakeDuckDb();
+    const { latest } = renderFiltered({
+      db,
+      url: "?region=West",
+      blocks: [ORDERS_BLOCK],
+      shape: countShape,
+    });
+
+    await waitFor(() => expect(latest()?.status).toBe("success"));
+
+    expect(db.queries.filter((q) => q.sql === COUNTED)).toHaveLength(1);
   });
 });

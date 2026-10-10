@@ -68,6 +68,17 @@ export interface QueryClient {
 }
 
 /**
+ * How a consumer turns its fence and the composed predicate into the query
+ * the coordinator runs — the plain wrap returns the fence's filtered rows; a
+ * widget that only needs an aggregate (a histogram's bin counts) supplies
+ * its own so the re-query never ships raw rows.
+ */
+export type QueryShape = (
+  block: InterpolatedQuery,
+  predicate: FilterPredicate,
+) => InterpolatedQuery;
+
+/**
  * Runs one wrapped query to completion — the data boundary the coordinator
  * hands each client's query to; the bridge binds it to the page's runtime
  * and registered block (`runBlock`).

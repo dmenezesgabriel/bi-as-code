@@ -1,14 +1,17 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { useQueryResults, useQuerySource } from "../pages/query-registry";
 import { runBlock } from "../pages/run-block";
-import type { InterpolatedQuery } from "../pages/interpolate";
 import type { QueryResult } from "../pages/types";
 import { useDataRuntime } from "../data/runtime";
 import type { FilterIds } from "./filter-ids";
 import { toFilterIds } from "./filter-ids";
 import { composeAnd } from "../crossfilter/clause";
 import type { Selection } from "../crossfilter/selection";
-import type { FilterPredicate, QueryClient } from "../crossfilter/types";
+import type {
+  FilterPredicate,
+  QueryClient,
+  QueryShape,
+} from "../crossfilter/types";
 import { usePageFilters } from "./page-filters-context";
 
 /** Id-list key separator — NUL cannot appear in a filter id. */
@@ -17,16 +20,13 @@ const IDS_SEPARATOR = "\u0000";
 const idsFromKey = (key: string): string[] =>
   key ? key.split(IDS_SEPARATOR) : [];
 
-function wrappedQuery(
-  block: InterpolatedQuery,
-  predicate: FilterPredicate,
-): InterpolatedQuery {
+const wrappedQuery: QueryShape = (block, predicate) => {
   return {
     sql: `select * from (${block.sql}) where ${predicate.sql}`,
     params: [...block.params, ...predicate.params],
     errors: [],
   };
-}
+};
 
 /** One cleanup unsubscribing `listener` from every selection. */
 function subscribeAll(
@@ -74,17 +74,22 @@ export function useFilteredQueryRows(
  * consumption client a widget needs when it also publishes clauses — its
  * clauses stamp `clients: {client}` so cross-filtering skips the publisher.
  * Widgets that only read use `useFilteredQueryRows`, the same hook without
- * the client.
+ * the client. `shape` replaces the plain wrap for coordinator re-queries
+ * (read through a ref: a fresh closure per render never reconnects), and
+ * `filtered` says which rows came back — the shaped re-query's (`true`) or
+ * the registry's unfiltered fence rows (`false`).
  *
  * @example
  * const { result, client } = useFilteredQueryClient(data, filters);
+ * const { result, filtered } = useFilteredQueryClient(data, filters, undefined, binCounts);
  * selection(field).update(clausePoint(field, x, { source, clients: new Set([client]) }));
  */
 export function useFilteredQueryClient(
   name: string,
   filters: FilterIds | undefined,
   owner?: string,
-): { result: QueryResult | undefined; client: QueryClient } {
+  shape: QueryShape = wrappedQuery,
+): { result: QueryResult | undefined; client: QueryClient; filtered: boolean } {
   const registryResult = useQueryResults()[name];
   const { interpolated, registered } = useQuerySource();
   const pageFilters = usePageFilters();
@@ -100,15 +105,17 @@ export function useFilteredQueryClient(
   });
 
   const blockRef = useRef(block);
+  const shapeRef = useRef(shape);
   useEffect(() => {
     blockRef.current = block;
+    shapeRef.current = shape;
   });
   const clientRef = useRef<QueryClient | undefined>(undefined);
   clientRef.current ??= {
     query: (predicate) => {
       const current = blockRef.current;
       if (!current || current.errors.length > 0) return undefined;
-      return wrappedQuery(current, predicate);
+      return shapeRef.current(current, predicate);
     },
     queryPending: () => setFilteredResult({ status: "loading" }),
     queryResult: (rows) =>
@@ -151,14 +158,18 @@ export function useFilteredQueryClient(
     };
   }, [pageFilters, idsKey, block, registered, runtime, owner, client]);
 
-  if (registryResult === undefined) return { result: undefined, client };
+  if (registryResult === undefined) {
+    return { result: undefined, client, filtered: false };
+  }
   if (!pageFilters || !block || block.errors.length > 0) {
-    return { result: registryResult, client };
+    return { result: registryResult, client, filtered: false };
   }
   const predicate = composeAnd(
     selections
       .map((selection) => selection.predicate(client))
       .filter((p): p is FilterPredicate => p !== undefined),
   );
-  return { result: predicate ? filteredResult : registryResult, client };
+  return predicate
+    ? { result: filteredResult, client, filtered: true }
+    : { result: registryResult, client, filtered: false };
 }

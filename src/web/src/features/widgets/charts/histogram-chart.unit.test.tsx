@@ -5,6 +5,7 @@ import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { renderWithRegistry } from "../value/registry-harness";
 import { Table } from "../table/table";
 import { Histogram } from "./histogram-chart";
+import { histogramQuery } from "./histogram-sql";
 import {
   AMOUNT_ROWS,
   OPTS,
@@ -63,17 +64,28 @@ describe("<Histogram>", () => {
     expect(option.series.map((s) => s.name)).toEqual(["North", "South"]);
   });
 
-  it("wraps the fence with the declared filter's bound predicate", async () => {
+  it("re-queries bin counts over the fence's full extent under a filter", async () => {
     const db = new FakeDuckDb();
+    // One bin row per non-empty (bin, series) pair — never the raw rows.
     db.rowsWhen = (sql) =>
-      sql.includes("where region = ?")
-        ? AMOUNT_ROWS.filter((row) => row.region === "North")
+      sql.startsWith("with base as")
+        ? [
+            {
+              lo: 0,
+              bin_width: 10,
+              bin_count: 3,
+              bin_index: 1,
+              series: "North",
+              first_seen: 1n,
+              frequency: 12n,
+            },
+          ]
         : AMOUNT_ROWS;
+    const spec = { value: "amount", series: "region" };
     renderWithRegistry(
       <Histogram
         data="order_amounts"
-        value="amount"
-        series="region"
+        {...spec}
         filters="region"
         renderer="svg"
       />,
@@ -81,11 +93,17 @@ describe("<Histogram>", () => {
     );
 
     const option = await appliedOption<AppliedOption>(document, 15000);
+
     expect(option.series.map((s) => s.name)).toEqual(["North"]);
-    const counts = option.series[0]?.data as number[];
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(12);
+    expect(option.series[0]?.data).toEqual([0, 12, 0]);
+    expect(option.xAxis[0]?.data).toHaveLength(3);
+    const block = {
+      sql: "select amount, region from orders",
+      params: [],
+      errors: [],
+    };
     expect(db.queries).toContainEqual({
-      sql: "select * from (select amount, region from orders) where region = ?",
+      sql: histogramQuery(block, { sql: "region = ?", params: [] }, spec).sql,
       params: ["North"],
     });
   });

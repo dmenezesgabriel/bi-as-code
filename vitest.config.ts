@@ -61,7 +61,12 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
-          include: ["test/integration/**/*.integration.test.ts"],
+          // SPA modules checked against a real engine (duckdb-wasm's node
+          // bindings) colocate with the code they cover.
+          include: [
+            "test/integration/**/*.integration.test.ts",
+            "src/web/src/**/*.integration.test.ts",
+          ],
         },
       },
       {

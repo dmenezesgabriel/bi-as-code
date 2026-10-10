@@ -81,21 +81,45 @@ export const ExplicitBinCount: Story = {
   },
 };
 
-/** `filters="region"` wraps the fence's sql with the page filter's bound
- * predicate — `?region=North` seeds the filter, North's 12 orders bin. */
+/**
+ * North's bin counts as the cross-filtered re-query returns them: the domain
+ * is the fence's full extent (12–98, rice-rule six bins over all 24 orders)
+ * and North's 12 orders land two per bin.
+ */
+const NORTH_BINS = Array.from({ length: 6 }, (_, binIndex) => ({
+  lo: 12,
+  bin_width: 86 / 6,
+  bin_count: 6,
+  bin_index: binIndex,
+  series: "North",
+  first_seen: 1,
+  frequency: 2,
+}));
+
+/** `filters="region"` re-queries the fence under the page filter's bound
+ * predicate — `?region=North` seeds the filter — as bin counts in SQL, over
+ * the fence's full extent: six bins, not the five North's own extent would
+ * give. */
 export const Filtered: Story = {
   args: { series: "region", filters: "region" },
   decorators: [
-    withFilteredData([ORDER_AMOUNTS], AMOUNT_ROWS, "region", "North"),
+    withFilteredData(
+      [ORDER_AMOUNTS],
+      AMOUNT_ROWS,
+      "region",
+      "North",
+      NORTH_BINS,
+    ),
   ],
   play: async ({ canvasElement }) => {
     await readyHost(canvasElement);
     const option = await appliedOption<{
       series?: { name?: string; data?: unknown[] }[];
+      xAxis?: { data?: unknown[] }[];
     }>(canvasElement);
     expect(option.series?.map((s) => s.name)).toEqual(["North"]);
-    const counts = option.series?.[0]?.data as number[];
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(12);
+    expect(option.series?.[0]?.data).toEqual([2, 2, 2, 2, 2, 2]);
+    expect(option.xAxis?.[0]?.data).toHaveLength(6);
   },
 };
 

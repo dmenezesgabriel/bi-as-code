@@ -3,6 +3,7 @@ import {
   type AsyncDuckDB,
   type AsyncDuckDBConnection,
 } from "@duckdb/duckdb-wasm";
+import { identifier } from "./sql-identifier";
 
 /** The insert options of the real connection — not exported at the root. */
 type ArrowInsertOptions = Parameters<
@@ -62,11 +63,6 @@ export async function registerSource(
   await connection.query(
     `CREATE OR REPLACE TABLE ${identifier(name)} AS FROM ${stringLiteral(source)}`,
   );
-}
-
-/** `"orders"` — embedded `"` doubled per SQL identifier quoting. */
-function identifier(name: string): string {
-  return `"${name.replaceAll('"', '""')}"`;
 }
 
 /** `'data/…'` — embedded `'` doubled per SQL string quoting. */

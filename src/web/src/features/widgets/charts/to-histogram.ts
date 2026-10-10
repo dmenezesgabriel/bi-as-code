@@ -1,6 +1,7 @@
 import type { Row } from "../../data/types";
 import { assertColumns, seriesKey, seriesValuesOf, toY } from "./to-series";
 import type {
+  BinRule,
   HistogramBin,
   HistogramModel,
   HistogramSeries,
@@ -42,6 +43,55 @@ export function toHistogram(
   };
 }
 
+/**
+ * Projects `histogramQuery`'s bin-count rows into the same dense model
+ * `toHistogram` builds from raw rows: the geometry columns every row carries
+ * (`lo`, `bin_width`, `bin_count`) rebuild the domain, each row's
+ * `frequency` lands at its `bin_index`, and series order by `first_seen`
+ * (first appearance, the raw path's convention). No rows — the predicate
+ * kept nothing — is the empty model.
+ *
+ * @example
+ * fromHistogramBins([{ lo: 0, bin_width: 10, bin_count: 2, bin_index: 1, frequency: 3n }], { value: "amount" })
+ * // { bins: [{start: 0, end: 10}, {start: 10, end: 20}], series: [{ name: "Frequency", counts: [0, 3] }] }
+ */
+export function fromHistogramBins(
+  rows: readonly Row[],
+  spec: HistogramSpec,
+): HistogramModel {
+  const first = rows[0];
+  if (first === undefined) return { bins: [], series: [] };
+  const count = toY(first.bin_count) ?? 1;
+  const ordered = [...rows].sort(
+    (a, b) => (toY(a.first_seen) ?? 0) - (toY(b.first_seen) ?? 0),
+  );
+  const seriesColumn = spec.series === undefined ? undefined : "series";
+  return {
+    bins: binDomain(toY(first.lo) ?? 0, toY(first.bin_width) ?? 1, count),
+    series: scatterBinCounts(ordered, seriesColumn, count),
+    ...seriesValuesOf(ordered, seriesColumn, [spec.value]),
+  };
+}
+
+/** Per-series count vectors from bin rows, in the rows' order. */
+function scatterBinCounts(
+  rows: readonly Row[],
+  seriesColumn: string | undefined,
+  count: number,
+): HistogramSeries[] {
+  const groups = new Map<string, number[]>();
+  for (const row of rows) {
+    const key = seriesKey(row, seriesColumn);
+    const counts = groups.get(key) ?? new Array<number>(count).fill(0);
+    groups.set(key, counts);
+    counts[toY(row.bin_index) ?? 0] = toY(row.frequency) ?? 0;
+  }
+  return [...groups.entries()].map(([key, counts]) => ({
+    name: seriesColumn === undefined ? "Frequency" : key,
+    counts,
+  }));
+}
+
 function collectCells(rows: readonly Row[], spec: HistogramSpec): ValuedCell[] {
   const cells: ValuedCell[] = [];
   for (const row of rows) {
@@ -74,13 +124,28 @@ function resolveBins(
   n: number,
   spec: HistogramSpec,
 ): { width: number; count: number } {
-  const binWidth = positive(spec.binWidth);
+  const { binWidth, binCount } = binRule(spec);
   if (min === max) return { width: binWidth ?? 1, count: 1 };
   if (binWidth !== undefined) {
     return { width: binWidth, count: Math.ceil((max - min) / binWidth) };
   }
-  const count = positiveCount(spec.binCount) ?? riceCount(n);
+  const count = binCount ?? riceCount(n);
   return { width: (max - min) / count, count };
+}
+
+/**
+ * The usable geometry props of `spec`: a non-positive or non-finite
+ * `binWidth`/`binCount` is ignored, `binCount` floors to a whole count, and
+ * `binWidth` drops `binCount` when both survive.
+ *
+ * @example
+ * binRule({ value: "amount", binCount: 12.7, binWidth: 5 }); // → { binWidth: 5 }
+ */
+export function binRule(spec: HistogramSpec): BinRule {
+  const binWidth = positive(spec.binWidth);
+  if (binWidth !== undefined) return { binWidth };
+  const binCount = positiveCount(spec.binCount);
+  return binCount === undefined ? {} : { binCount };
 }
 
 function positive(v: number | undefined): number | undefined {

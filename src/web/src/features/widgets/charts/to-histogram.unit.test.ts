@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ColumnError } from "../value/types";
-import { toHistogram } from "./to-histogram";
+import { binRule, fromHistogramBins, toHistogram } from "./to-histogram";
 
 describe("toHistogram", () => {
   it("returns an empty model for no rows", () => {
@@ -138,5 +138,110 @@ describe("toHistogram", () => {
       value: "amount",
     });
     expect(model.series[0]?.name).toBe("Frequency");
+  });
+});
+
+describe("binRule", () => {
+  it("keeps binWidth and drops binCount when both are usable", () => {
+    const rule = binRule({ value: "amount", binCount: 12, binWidth: 5 });
+
+    expect(rule).toEqual({ binWidth: 5 });
+  });
+
+  it("floors binCount and ignores a non-positive binWidth", () => {
+    const rule = binRule({ value: "amount", binCount: 12.7, binWidth: -1 });
+
+    expect(rule).toEqual({ binCount: 12 });
+  });
+
+  it("resolves to the rice rule when neither prop is usable", () => {
+    const rule = binRule({ value: "amount", binCount: Number.NaN });
+
+    expect(rule).toEqual({});
+  });
+});
+
+describe("fromHistogramBins", () => {
+  const geometry = { lo: 0, bin_width: 10, bin_count: 4 };
+
+  it("returns an empty model for no bin rows", () => {
+    const model = fromHistogramBins([], { value: "amount" });
+
+    expect(model).toEqual({ bins: [], series: [] });
+  });
+
+  it("rebuilds the dense domain and zero-fills bins the rows skip", () => {
+    const rows = [
+      { ...geometry, bin_index: 0, frequency: 3n },
+      { ...geometry, bin_index: 3, frequency: 1n },
+    ];
+
+    const model = fromHistogramBins(rows, { value: "amount" });
+
+    expect(model.bins).toEqual([
+      { start: 0, end: 10 },
+      { start: 10, end: 20 },
+      { start: 20, end: 30 },
+      { start: 30, end: 40 },
+    ]);
+    expect(model.series).toEqual([{ name: "Frequency", counts: [3, 0, 0, 1] }]);
+    expect(model.seriesValues).toBeUndefined();
+  });
+
+  it("orders series by first appearance and maps legend names to cells", () => {
+    const rows = [
+      {
+        ...geometry,
+        bin_index: 0,
+        series: "West",
+        first_seen: 7n,
+        frequency: 2n,
+      },
+      {
+        ...geometry,
+        bin_index: 1,
+        series: null,
+        first_seen: 9n,
+        frequency: 1n,
+      },
+      {
+        ...geometry,
+        bin_index: 2,
+        series: "East",
+        first_seen: 1n,
+        frequency: 4n,
+      },
+    ];
+
+    const model = fromHistogramBins(rows, {
+      value: "amount",
+      series: "region",
+    });
+
+    expect(model.series).toEqual([
+      { name: "East", counts: [0, 0, 4, 0] },
+      { name: "West", counts: [2, 0, 0, 0] },
+      { name: "Unknown", counts: [0, 1, 0, 0] },
+    ]);
+    expect([...(model.seriesValues ?? [])]).toEqual([
+      ["East", "East"],
+      ["West", "West"],
+      ["Unknown", null],
+    ]);
+  });
+
+  it("matches toHistogram over the same rows when no filter applies", () => {
+    const raw = [0, 4, 9, 11, 25, 39, 40].map((amount) => ({ amount }));
+    const expected = toHistogram(raw, { value: "amount", binCount: 4 });
+    const rows = [
+      { lo: 0, bin_width: 10, bin_count: 4, bin_index: 0, frequency: 3n },
+      { lo: 0, bin_width: 10, bin_count: 4, bin_index: 1, frequency: 1n },
+      { lo: 0, bin_width: 10, bin_count: 4, bin_index: 2, frequency: 1n },
+      { lo: 0, bin_width: 10, bin_count: 4, bin_index: 3, frequency: 2n },
+    ];
+
+    const model = fromHistogramBins(rows, { value: "amount", binCount: 4 });
+
+    expect(model).toEqual(expected);
   });
 });

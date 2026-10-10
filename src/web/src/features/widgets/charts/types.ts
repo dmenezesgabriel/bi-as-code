@@ -1,4 +1,6 @@
 import type { EChartsCoreOption, EChartsType } from "echarts/core";
+import type { QueryShape } from "../../crossfilter/types";
+import type { Row } from "../../data/types";
 import type { FilterIds } from "../../filters/filter-ids";
 
 /**
@@ -110,6 +112,17 @@ export type ChartLegendSelectHandler = (
 export interface LegendTarget {
   readonly field: string;
   readonly values: ReadonlyMap<string, unknown>;
+}
+
+/**
+ * A chart whose cross-filtered re-query aggregates in SQL: `query` shapes
+ * the coordinator's re-query (aggregate rows, not the fence's raw rows) and
+ * `model` projects those rows into the same model the raw-row `model`
+ * builds from the registry's unfiltered fence.
+ */
+export interface ChartAggregate<M> {
+  readonly query: QueryShape;
+  readonly model: (rows: readonly Row[]) => M;
 }
 
 /**
@@ -344,6 +357,16 @@ export interface HistogramSpec {
   readonly series?: string;
   readonly binCount?: number;
   readonly binWidth?: number;
+}
+
+/**
+ * The bin geometry rule a `HistogramSpec` resolves to: a usable `binWidth`
+ * wins, else a usable `binCount`, else neither (the rice rule). Both the
+ * client-side binning and the SQL binning read the same rule.
+ */
+export interface BinRule {
+  readonly binWidth?: number;
+  readonly binCount?: number;
 }
 
 /**

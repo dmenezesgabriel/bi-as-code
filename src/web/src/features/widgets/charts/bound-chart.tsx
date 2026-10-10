@@ -7,6 +7,7 @@ import { ChartEmpty, ChartResult } from "./states";
 import { BRUSH_OPTION } from "./use-brush-select";
 import type {
   BrushAxis,
+  ChartAggregate,
   ChartOption,
   ChartRenderer,
   EChartEvents,
@@ -45,6 +46,12 @@ interface BoundChartProps<M> {
   legendTarget?: (model: M) => LegendTarget | undefined;
   model: (rows: readonly Row[]) => M;
   /**
+   * Aggregate the cross-filtered re-query in SQL instead of re-fetching the
+   * fence's raw rows — `aggregate.model` projects those rows; the
+   * registry's unfiltered rows still go through `model`.
+   */
+  aggregate?: ChartAggregate<M>;
+  /**
    * When the projected model carries nothing to draw — e.g. a histogram of
    * an all-non-numeric column — show the empty face rather than bare axes.
    */
@@ -67,10 +74,11 @@ interface BoundChartProps<M> {
  * <BoundChart data="orders" select="crossfilter" pointField="region" brushAxis={(m) => seriesBrushAxis(m.xType, "region", m.xDomain)} model={(r) => toScatterSeries(r, spec)} option={(m) => toScatterOption(m, props)} />
  */
 export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
-  const { result, height, client } = useChartRows(
+  const { result, height, client, filtered } = useChartRows(
     props.data,
     props.height,
     props.filters,
+    props.aggregate?.query,
   );
   const point = usePointSelect(
     props.select === "crossfilter" ? props.pointField : undefined,
@@ -92,11 +100,16 @@ export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
      rows+mode on purpose: the projection props are pure closures over
      static MDX bindings, fresh each render — every real input reaches
      this memo through rows identity (a re-query) or a theme flip, and
-     depending on the closures themselves would re-run every render. */
+     depending on the closures themselves would re-run every render.
+     `filtered` never flips without the rows object changing with it:
+     registry rows and re-query rows are distinct results. */
   const painted = useMemo(() => {
     if (!rows?.length) return undefined;
     try {
-      const model = props.model(rows);
+      const model =
+        filtered && props.aggregate
+          ? props.aggregate.model(rows)
+          : props.model(rows);
       const selecting = props.select === "crossfilter";
       const axis = selecting ? props.brushAxis?.(model) : undefined;
       const legendTarget = selecting ? props.legendTarget?.(model) : undefined;
