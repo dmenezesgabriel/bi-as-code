@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import {
@@ -43,6 +43,39 @@ function windowMarker(page: Page) {
   return page.evaluate(
     () => (window as unknown as { __probe?: string }).__probe,
   );
+}
+
+function livePreview(page: Page) {
+  return page.getByRole("region", { name: "Live preview", exact: true });
+}
+
+/**
+ * The preview shows `location` as the page's compile error while the app
+ * around it stands: no vite overlay over the editor, and no full reload.
+ */
+async function expectCompileErrorInPreview(page: Page, location: RegExp) {
+  const alert = livePreview(page).getByRole("alert");
+  await expect(alert).toContainText("This page failed to compile", {
+    timeout: 20_000,
+  });
+  await expect(alert).toContainText(location);
+  await expect(page.locator("vite-error-overlay")).toHaveCount(0);
+  await expect(sourceEditor(page)).toBeVisible();
+  expect(await windowMarker(page)).toBe("kept");
+}
+
+async function expectPageBackInPreview(page: Page) {
+  await expect(
+    livePreview(page).getByRole("heading", { level: 1, name: "Weekly review" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(livePreview(page).getByRole("alert")).toHaveCount(0);
+  expect(await windowMarker(page)).toBe("kept");
+}
+
+async function eraseTyped(page: Page, text: string) {
+  for (let typed = text.length; typed > 0; typed--) {
+    await page.keyboard.press("Backspace");
+  }
 }
 
 async function openEditorFromHeader(page: Page, url: string) {
@@ -185,14 +218,87 @@ test("the panes sit side by side at desktop width and stack on a phone", async (
   );
   expect(narrow.source.width).toBe(narrow.preview.width);
   // Stacked, the window scrolls again under the 3rem header, so the filter
-  // bar docks 1rem below the header as on any page — not behind it.
-  const barTopInViewport = await page.evaluate(async () => {
-    const bar = document.querySelector('[role="combobox"]')?.closest(".sticky");
-    if (!bar) throw new Error("no filter bar");
-    window.scrollTo(0, 4000);
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    return bar.getBoundingClientRect().top;
+  // bar docks 1rem below the header as on any page — not behind it. Polled:
+  // the bar transitions every property, its dock offset included, so for
+  // 150ms after the viewport crosses `lg` it is still sliding into place.
+  const barTopInViewport = () =>
+    page.evaluate(() => {
+      const bar = document
+        .querySelector('[role="combobox"]')
+        ?.closest(".sticky");
+      if (!bar) throw new Error("no filter bar");
+      window.scrollTo(0, 4000);
+      return bar.getBoundingClientRect().top;
+    });
+  await expect.poll(barTopInViewport).toBe(64);
+  expect(errors).toEqual([]);
+});
+
+test("a broken tag shows its compile error in the preview, and the fix renders the page again", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await openEditorFromHeader(page, biacDev.url);
+
+  await appendToLine(page, "# Weekly review", "\n<Callout");
+  await saveWithModS(page);
+
+  await expectCompileErrorInPreview(page, /pages\/weekly-review\.md:\d+:\d+/);
+
+  await eraseTyped(page, "\n<Callout");
+  await expect(editorStatus(page)).toHaveText("Unsaved changes");
+  await saveWithModS(page);
+
+  await expectPageBackInPreview(page);
+  expect(errors).toEqual([]);
+});
+
+test("broken front-matter shows its error in the preview instead of taking the app down", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await openEditorFromHeader(page, biacDev.url);
+
+  // A second `:` on the line is a nested mapping YAML rejects; brackets and
+  // quotes would be auto-closed by the editor into valid YAML.
+  await appendToLine(page, "title: Weekly review", ": x");
+  await saveWithModS(page);
+
+  await expectCompileErrorInPreview(page, /pages\/weekly-review\.md/);
+
+  await eraseTyped(page, ": x");
+  await saveWithModS(page);
+
+  await expectPageBackInPreview(page);
+  expect(errors).toEqual([]);
+});
+
+test("a page already broken on disk still opens in the editor", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const file = join(biacDev.projectDir, PAGE_FILE);
+  writeFileSync(
+    file,
+    readFileSync(file, "utf8").replace(
+      "# Weekly review\n",
+      "# Weekly review\n<Callout\n",
+    ),
+  );
+
+  await page.goto(`${biacDev.url}weekly-review?edit`);
+
+  await expect(sourceEditor(page)).toContainText("<Callout", {
+    timeout: 20_000,
   });
-  expect(barTopInViewport).toBe(64);
+  await expect(livePreview(page).getByRole("alert")).toContainText(
+    "This page failed to compile",
+  );
+  await expect(page.locator("vite-error-overlay")).toHaveCount(0);
   expect(errors).toEqual([]);
 });

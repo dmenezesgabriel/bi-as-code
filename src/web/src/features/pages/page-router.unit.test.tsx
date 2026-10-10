@@ -17,11 +17,15 @@ import { mountedView } from "../editor/editor-test-view";
 import { FakePageSourcePort } from "../editor/fake-page-source-port";
 import type { PageSourcePort } from "../editor/types";
 import { buildPageRouter } from "./page-router";
-import type { CompiledPageModule, ManifestPageEntry } from "./types";
+import type {
+  CompiledPageModule,
+  ManifestPageEntry,
+  PageModule,
+} from "./types";
 
 function pageEntry(
   route: string,
-  load: () => Promise<CompiledPageModule>,
+  load: () => Promise<PageModule>,
 ): ManifestPageEntry {
   return {
     route,
@@ -38,6 +42,12 @@ function textPage(text: string, title: string | null): CompiledPageModule {
     title,
     sqlBlocks: [],
     sqlTables: {},
+  };
+}
+
+function failedPage(message: string): PageModule {
+  return {
+    compileError: { file: "pages/index.md", message, line: 7, column: 1 },
   };
 }
 
@@ -199,6 +209,21 @@ describe("buildPageRouter", () => {
     expect(document.title).toBe("Error");
   });
 
+  it("renders a page that failed to compile as its compile error", async () => {
+    // Arrange / Act
+    renderRouter(
+      [pageEntry("/", async () => failedPage("Unexpected `<`"))],
+      "/",
+    );
+
+    // Assert
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("This page failed to compile");
+    expect(alert).toHaveTextContent("pages/index.md:7:1");
+    expect(alert).toHaveTextContent("Unexpected `<`");
+    expect(document.title).toBe("Error");
+  });
+
   it("re-renders a hot-swapped page module in place when the router is invalidated", async () => {
     let current = textPage("old body", "Old");
     const router = renderRouter(
@@ -274,6 +299,34 @@ describe("buildPageRouter edit mode", () => {
     // Assert
     expect(await screen.findByText(/home body/)).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Live preview" })).toBeNull();
+  });
+
+  it("keeps the editor beside a compile error and renders the page again once it compiles", async () => {
+    // Arrange
+    let current: PageModule = failedPage("Unexpected `<`");
+    const router = renderRouter(
+      [pageEntry("/", async () => current)],
+      "/?edit=true",
+      navTree,
+      site,
+      undefined,
+      editorPort(),
+    );
+    await screen.findByRole("textbox", { name: "Page source" });
+    const viewBefore = mountedView("Page source");
+    const preview = screen.getByRole("region", { name: "Live preview" });
+    expect(within(preview).getByRole("alert")).toHaveTextContent(
+      "Unexpected `<`",
+    );
+
+    // Act
+    current = textPage("fixed body", "Fixed");
+    await router.invalidate();
+
+    // Assert
+    expect(await within(preview).findByText("fixed body")).toBeInTheDocument();
+    expect(within(preview).queryByRole("alert")).toBeNull();
+    expect(mountedView("Page source")).toBe(viewBefore);
   });
 
   it("keeps the editor's view when the hot-swapped page re-renders", async () => {

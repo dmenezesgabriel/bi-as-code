@@ -104,17 +104,33 @@ describe("page transform", () => {
     expect(result?.code).toBe("# Not a page\n");
   });
 
-  it("surfaces compile errors instead of serving a broken page", async () => {
+  it("serves a page that fails to compile as a module carrying the error", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "# Hi\n\n<Callout\n");
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Unexpected end of file[^\n]*"line":4,"column":1\};\n$/,
+    );
+  });
+
+  it("serves a page with unparseable front-matter as a compile error", async () => {
     const root = makeProject();
     writeFile("pages/index.md", "---\ntitle: [unclosed\n---\n");
     const dev = await makeServer(root);
 
-    await expect(
-      dev.transformRequest(`/@fs${join(root, "pages/index.md")}`),
-    ).rejects.toThrow();
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(/^export const compileError = .*index\.md/);
   });
 
-  it("rejects a page whose sql: table name collides with biac.config.ts", async () => {
+  it("reports a page whose sql: table name collides with biac.config.ts", async () => {
     const root = makeProject();
     writeFile(
       "biac.config.ts",
@@ -126,9 +142,13 @@ describe("page transform", () => {
     );
     const dev = await makeServer(root);
 
-    await expect(
-      dev.transformRequest(`/@fs${join(root, "pages/index.md")}`),
-    ).rejects.toThrow(/pages\/index\.md.*sql\.orders.*biac\.config\.ts/);
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = .*pages\/index\.md.*sql\.orders.*biac\.config\.ts/,
+    );
   });
 
   it("re-checks a page against a config edit so a new collision surfaces", async () => {
@@ -147,8 +167,9 @@ describe("page transform", () => {
       ),
     );
 
-    await expect(dev.transformRequest(`/@fs${pagePath}`)).rejects.toThrow(
-      /biac\.config\.ts/,
+    const result = await dev.transformRequest(`/@fs${pagePath}`);
+    expect(result?.code).toMatch(
+      /^export const compileError = .*biac\.config\.ts/,
     );
   });
 });
@@ -286,15 +307,24 @@ describe("file watching", () => {
     );
   });
 
-  it("invalidates the manifest when an edit breaks a page's front-matter", async () => {
+  it("keeps the manifest when an edit breaks a page's front-matter, so the page reports it", async () => {
     const root = makeProject();
+    const pagePath = join(root, "pages/index.md");
     writeFile("pages/index.md", "---\ntitle: Ok\n---\n# Hi\n");
     const dev = await makeServer(root);
     await waitForWatch(dev, join(root, "pages"), "index.md");
     await loadManifest(dev);
+    await dev.transformRequest(`/@fs${pagePath}`);
+    const manifestTimestamp = manifestModule(dev)!.lastInvalidationTimestamp;
 
-    await expectInvalidated(manifestModule(dev), () =>
+    await expectInvalidated(pageModule(dev, pagePath), () =>
       writeFile("pages/index.md", "---\ntitle: [unclosed\n---\n# Hi\n"),
+    );
+
+    const result = await dev.transformRequest(`/@fs${pagePath}`);
+    expect(result?.code).toMatch(/^export const compileError = /);
+    expect(manifestModule(dev)!.lastInvalidationTimestamp).toBe(
+      manifestTimestamp,
     );
   });
 

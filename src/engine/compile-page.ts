@@ -46,6 +46,11 @@ export async function compilePage(
 ): Promise<CompiledPage> {
   const file = new VFile({ path: filePath, value: markdown });
   matter(file, { strip: true });
+  // Stripping the front-matter block would shift every position the compiler
+  // reports up by the block's height. Blank lines put the body back on its
+  // own lines of the file, so an error names the line its author sees.
+  const body = String(file.value);
+  file.value = "\n".repeat(lineBreaks(markdown) - lineBreaks(body)) + body;
   const frontmatter = pageFrontmatter(file);
 
   const metadata: PageMetadata = {
@@ -68,6 +73,10 @@ export async function compilePage(
     sqlTables,
   };
   return { code: `${compiled}\n${metadataExports(page)}\n`, ...page };
+}
+
+function lineBreaks(text: string): number {
+  return text.split("\n").length - 1;
 }
 
 const remarkPageMetadata: Plugin<[PageMetadata], Root> =

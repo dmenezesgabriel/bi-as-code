@@ -3,9 +3,9 @@ import { useDocumentTitle } from "./use-document-title";
 
 /**
  * Route error boundary body: a page whose module fails to load or whose MDX
- * component throws gets an in-page error instead of a blank screen — vite's
- * overlay already covers compile-time failures, so this surfaces runtime
- * ones.
+ * component throws gets an in-page error instead of a blank screen. These
+ * are runtime failures; a page that does not compile never reaches this
+ * boundary — the dev server serves its error as the page's module.
  */
 export function PageError({ error }: ErrorComponentProps) {
   useDocumentTitle("Error");

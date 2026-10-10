@@ -9,9 +9,13 @@ import {
   manifestModuleSource,
   VIRTUAL_PAGE_PREFIX,
 } from "./manifest-module.js";
+import {
+  compileErrorModuleSource,
+  pageCompileError,
+} from "./page-compile-error.js";
 import { pageSourceEndpoint } from "./page-source-endpoint.js";
 import { serveDataDir } from "./serve-data-dir.js";
-import type { BiacConfig } from "./types.js";
+import type { BiacConfig, SqlTableMap } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = `\0${VIRTUAL_MANIFEST_ID}`;
@@ -21,9 +25,12 @@ const CONFIG_FILE = "biac.config.ts";
 
 /**
  * Vite plugin that puts `pages/**\/*.{md,mdx}` inside the module graph: every
- * page compiles to an MDX module through {@link compilePage} (compile errors
- * surface in the vite overlay), and `virtual:biac-pages` serves the page
- * manifest the SPA builds its routes from. Because pages are real modules,
+ * page compiles to an MDX module through {@link compilePage}, and
+ * `virtual:biac-pages` serves the page manifest the SPA builds its routes
+ * from. A page that fails to compile fails `vite build`; the dev server
+ * instead serves a module carrying the error, which the SPA renders where
+ * the page would be — an author mid-edit keeps the app, and the next good
+ * save hot-updates like any other. Because pages are real modules,
  * edits hot-update through vite's normal HMR propagation: the manifest
  * accepts every page module, so a content edit swaps the page in place.
  * An edit that changes the manifest itself — a page added or removed, a nav
@@ -51,6 +58,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
   // The manifest last handed to vite — a page change that regenerates the
   // same source is content-only and must not invalidate it.
   let servedManifest: string | undefined;
+  let isDevServer = false;
 
   return {
     name: "biac:pages",
@@ -69,6 +77,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
       // root allowed — without it every page module 403s outside the vite
       // workspace root.
       config.server.fs.allow.push(root);
+      isDevServer = config.command === "serve";
     },
     resolveId(id) {
       if (id === VIRTUAL_MANIFEST_ID) return RESOLVED_MANIFEST_ID;
@@ -90,8 +99,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (!isPageFile(id, pagesDirPosix)) return;
       const file = `pages/${toPosix(id).slice(pagesDirPosix.length + 1)}`;
       const { sqlTables } = await getConfig();
-      const page = await compilePage(code, file, sqlTables);
-      return { code: page.code, map: null };
+      const moduleSource = isDevServer
+        ? await compiledOrErrorModule(code, file, sqlTables)
+        : (await compilePage(code, file, sqlTables)).code;
+      return { code: moduleSource, map: null };
     },
     // The inline theme script in index.html runs before any module loads,
     // so the `virtual:biac-config` default reaches it as a plain global.
@@ -174,14 +185,34 @@ async function copyDataDir(dataDir: string, outDataDir: string): Promise<void> {
   await cp(dataDir, outDataDir, { recursive: true, dereference: true });
 }
 
+/**
+ * The page's compiled module, or — when it does not compile — the module
+ * that carries the error to the SPA. Throwing here would make vite answer
+ * the module request with a 500 and cover the whole app, the page's own
+ * source editor included, with its error overlay.
+ */
+async function compiledOrErrorModule(
+  markdown: string,
+  file: string,
+  configTables: SqlTableMap,
+): Promise<string> {
+  try {
+    return (await compilePage(markdown, file, configTables)).code;
+  } catch (error) {
+    return compileErrorModuleSource(pageCompileError(error, file));
+  }
+}
+
 function configModuleSource(config: BiacConfig): string {
   return `export const config = ${JSON.stringify(config)};\n`;
 }
 
 /**
- * True when a page change alters what `virtual:biac-pages` would serve. A
- * page whose front-matter no longer parses counts as changed: the reload
- * re-runs discovery and surfaces the error in the overlay.
+ * True when a page change alters what `virtual:biac-pages` would serve. An
+ * edit that breaks discovery (front-matter that no longer parses) counts as
+ * unchanged: reloading would re-run discovery, fail the manifest module and
+ * leave the browser with no app at all. The served manifest stays, and the
+ * edited page's own module reports the error.
  */
 function manifestChanged(
   root: string,
@@ -190,7 +221,7 @@ function manifestChanged(
   try {
     return manifestModuleSource(discoverPages(root)) !== servedManifest;
   } catch {
-    return true;
+    return false;
   }
 }
 

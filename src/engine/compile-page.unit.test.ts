@@ -271,6 +271,14 @@ describe("markdown constructs", () => {
     expect(page.code).toContain("BigValue");
   });
 
+  it("reports a body error at its line in the file, front-matter included", async () => {
+    const markdown = "---\ntitle: T\n---\n\n# Hi\n\n<Callout\n";
+
+    const failure = await compile(markdown).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({ line: 8, column: 1 });
+  });
+
   it("rejects malformed mdx expressions", async () => {
     await expect(compile("broken {unclosed\n")).rejects.toThrow();
   });

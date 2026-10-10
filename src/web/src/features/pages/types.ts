@@ -17,8 +17,32 @@ export interface ManifestPageEntry {
   title?: string;
   /** Front-matter `sidebar_position`, when the page declares a number. */
   sidebarPosition?: number;
-  /** Lazily imports the compiled page module — invoked on route match. */
-  load: () => Promise<CompiledPageModule>;
+  /** Lazily imports the page's module — invoked on route match. */
+  load: () => Promise<PageModule>;
+}
+
+/**
+ * What a page's module resolves to: the compiled page, or — on the dev
+ * server only — the reason it did not compile. A build fails on the first
+ * page that does not compile, so a built site never serves the second.
+ */
+export type PageModule = CompiledPageModule | FailedPageModule;
+
+/** The module the dev server serves for a page that failed to compile. */
+export interface FailedPageModule {
+  compileError: PageCompileError;
+}
+
+/**
+ * Why a page failed to compile. `line`/`column` are 1-based positions in
+ * the page file and exist only when the failure points at one.
+ */
+export interface PageCompileError {
+  /** Page file relative to the project root, e.g. "pages/nested/page.md". */
+  file: string;
+  message: string;
+  line?: number;
+  column?: number;
 }
 
 /**

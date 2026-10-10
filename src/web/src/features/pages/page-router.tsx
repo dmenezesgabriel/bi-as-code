@@ -9,19 +9,22 @@ import {
 } from "@tanstack/react-router";
 import { AppShell } from "../../App";
 import type { PageSourcePort } from "../editor/types";
+import { CompileErrorPage } from "./compile-error-page";
 import { EditablePage } from "./editable-page";
 import { MarkdownPage } from "./markdown-page";
 import { NotFoundPage } from "./not-found-page";
 import { PageError } from "./page-error";
-import type { ManifestPageEntry } from "./types";
+import type { CompiledPageModule, ManifestPageEntry } from "./types";
 import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 
 /**
  * Builds the SPA router from the page manifest: one code-based route per
- * manifest entry whose loader lazily imports the compiled page module, a
- * shared not-found page for unmatched paths, and an in-page error boundary
- * for modules that fail to load or render. `site` carries `biac.config.ts`
+ * manifest entry whose loader lazily imports the page's module, a shared
+ * not-found page for unmatched paths, and an in-page error boundary for
+ * modules that fail to load or render. A page the dev server could not
+ * compile renders its compile error in the page's place — inside the editor
+ * when `?edit` is on. `site` carries `biac.config.ts`
  * into chrome consumers — the title becomes the document-title fallback and
  * `nav.sidebar` gates the sidebar; `navTree` feeds the sidebar nav.
  * `pageSource` — passed only by `biac dev` — lets `?edit` open a page in the
@@ -86,23 +89,37 @@ function pageRoute(
     path: entry.route,
     loader: () => entry.load(),
     component: function PageRoute() {
-      // The loader resolves to the compiled page module, so named exports
-      // (title, sqlBlocks) reach the renderer alongside the MDX component.
       const mod = route.useLoaderData();
-      // Config-level tables merge under the page's own — a name collision
-      // between the two is already a compile error, so spread order is safe.
-      // Memoized: the registry effect keys on this object, and an unstable
-      // identity would re-run every query on any re-render.
-      const sqlTables = useMemo(
-        () => ({ ...site.sqlTables, ...mod.sqlTables }),
-        [site.sqlTables, mod.sqlTables],
-      );
       return (
         <EditablePage file={entry.file} pageSource={pageSource}>
-          <MarkdownPage page={{ ...mod, sqlTables }} siteTitle={site.title} />
+          {"compileError" in mod ? (
+            <CompileErrorPage error={mod.compileError} />
+          ) : (
+            <CompiledPage mod={mod} site={site} />
+          )}
         </EditablePage>
       );
     },
   });
   return route;
+}
+
+type CompiledPageProps = {
+  /** The compiled page module the route's loader resolved to. */
+  mod: CompiledPageModule;
+  site: BiacConfig;
+};
+
+function CompiledPage({ mod, site }: CompiledPageProps) {
+  // The loader resolves to the compiled page module, so named exports
+  // (title, sqlBlocks) reach the renderer alongside the MDX component.
+  // Config-level tables merge under the page's own — a name collision
+  // between the two is already a compile error, so spread order is safe.
+  // Memoized: the registry effect keys on this object, and an unstable
+  // identity would re-run every query on any re-render.
+  const sqlTables = useMemo(
+    () => ({ ...site.sqlTables, ...mod.sqlTables }),
+    [site.sqlTables, mod.sqlTables],
+  );
+  return <MarkdownPage page={{ ...mod, sqlTables }} siteTitle={site.title} />;
 }

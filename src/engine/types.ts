@@ -105,3 +105,17 @@ export interface CompiledPage {
   /** Validated `sql:` front-matter — table name → `data/` file path. */
   sqlTables: SqlTableMap;
 }
+
+/**
+ * Why a page failed to compile, in the shape the SPA renders in place of the
+ * page. `line`/`column` are 1-based positions in the page file and exist only
+ * when the failure points at one (an MDX syntax error does; a front-matter
+ * rule does not).
+ */
+export interface PageCompileError {
+  /** Page file relative to the project root, e.g. "pages/nested/page.md". */
+  file: string;
+  message: string;
+  line?: number;
+  column?: number;
+}

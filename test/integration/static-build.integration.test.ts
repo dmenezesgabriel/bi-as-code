@@ -62,6 +62,15 @@ describe("biac build", () => {
     );
   }, 120_000);
 
+  it("fails on a page that does not compile, naming the page", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", "# Hi\n\n<Callout\n");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(build([root])).rejects.toThrow(/pages\/index\.md/);
+    expect(existsSync(join(root, "build", "index.html"))).toBe(false);
+  }, 120_000);
+
   it("builds without a data/ directory and emits no build/data", async () => {
     const root = makeTempProject();
     writeProjectFile(root, "pages/index.md", "# No data\n");
