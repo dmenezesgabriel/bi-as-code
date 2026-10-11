@@ -1,31 +1,62 @@
 import { describe, expect, it } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { useEffect, useState } from "react";
+import { act, screen, waitFor } from "@testing-library/react";
+import { renderWithRouter } from "../chrome/router-harness";
 import { ThemeModeProvider } from "../chrome/theme-mode";
 import { mountedView, pressModS } from "./editor-test-view";
 import {
   FakePageSourcePort,
   type FakePageSourceScript,
 } from "./fake-page-source-port";
+import { FakeLeaveConfirm } from "./fake-leave-confirm";
 import { PageEditor } from "./page-editor";
 
 const FILE = "pages/weekly-review.md";
 const SOURCE_LABEL = "Page source";
 
-function editorFor(port: FakePageSourcePort, preview = "Rendered page") {
-  return (
-    <ThemeModeProvider mode="light">
-      <PageEditor file={FILE} port={port}>
-        <p>{preview}</p>
-      </PageEditor>
-    </ThemeModeProvider>
+/** Swaps the preview's text from the test, as a hot update swaps the page. */
+type PreviewSwap = { show: (text: string) => void };
+
+type EditorHarness = {
+  swap: PreviewSwap;
+  router: Awaited<ReturnType<typeof renderWithRouter>>;
+};
+
+/** Mounts the editor on its page's `?edit` URL, as the app routes it. */
+async function renderEditor(
+  port: FakePageSourcePort,
+  leave = new FakeLeaveConfirm(true),
+): Promise<EditorHarness> {
+  const swap: PreviewSwap = { show: () => {} };
+  function Host() {
+    const [preview, setPreview] = useState("Rendered page");
+    useEffect(() => {
+      swap.show = setPreview;
+    }, []);
+    return (
+      <ThemeModeProvider mode="light">
+        <PageEditor file={FILE} port={port} confirmLeave={leave.confirm}>
+          <p>{preview}</p>
+        </PageEditor>
+      </ThemeModeProvider>
+    );
+  }
+  const router = await renderWithRouter(
+    <Host />,
+    ["/weekly-review", "/orders"],
+    "/weekly-review?edit",
   );
+  return { swap, router };
 }
 
-async function renderLoaded(script: FakePageSourceScript = {}) {
+async function renderLoaded(
+  script: FakePageSourceScript = {},
+  leave?: FakeLeaveConfirm,
+) {
   const port = new FakePageSourcePort({ source: "# Weekly\n", ...script });
-  const view = render(editorFor(port));
+  const harness = await renderEditor(port, leave);
   await screen.findByRole("textbox", { name: SOURCE_LABEL });
-  return { port, ...view };
+  return { port, ...harness };
 }
 
 function typeAtStart(text: string): void {
@@ -35,9 +66,9 @@ function typeAtStart(text: string): void {
 }
 
 describe("PageEditor loading", () => {
-  it("reports loading until the source arrives", () => {
+  it("reports loading until the source arrives", async () => {
     // Arrange / Act
-    render(editorFor(new FakePageSourcePort({ hangRead: true })));
+    await renderEditor(new FakePageSourcePort({ hangRead: true }));
 
     // Assert
     expect(screen.getByRole("status")).toHaveTextContent("Loading source…");
@@ -59,7 +90,7 @@ describe("PageEditor loading", () => {
 
   it("shows the read failure instead of an editor", async () => {
     // Arrange / Act
-    render(editorFor(new FakePageSourcePort({ readError: "HTTP 404" })));
+    await renderEditor(new FakePageSourcePort({ readError: "HTTP 404" }));
 
     // Assert
     expect(await screen.findByRole("status")).toHaveTextContent("HTTP 404");
@@ -120,12 +151,12 @@ describe("PageEditor saving", () => {
 describe("PageEditor live preview", () => {
   it("re-renders a new preview without rebuilding the editor", async () => {
     // Arrange
-    const { port, rerender } = await renderLoaded();
+    const { swap } = await renderLoaded();
     const viewBefore = mountedView(SOURCE_LABEL);
     typeAtStart("x");
 
     // Act
-    rerender(editorFor(port, "Re-rendered page"));
+    act(() => swap.show("Re-rendered page"));
 
     // Assert
     expect(
@@ -133,5 +164,22 @@ describe("PageEditor live preview", () => {
     ).toHaveTextContent("Re-rendered page");
     expect(mountedView(SOURCE_LABEL)).toBe(viewBefore);
     expect(viewBefore.state.doc.toString()).toBe("x# Weekly\n");
+  });
+});
+
+describe("PageEditor leaving", () => {
+  it("asks before navigating away from an unsaved edit, and stays", async () => {
+    // Arrange
+    const leave = new FakeLeaveConfirm(false);
+    const { router } = await renderLoaded({}, leave);
+    typeAtStart("x");
+
+    // Act — a blocked navigation never settles, so it is not awaited
+    void router.navigate({ to: "/orders" });
+
+    // Assert
+    await waitFor(() => expect(leave.asked).toHaveLength(1));
+    expect(router.state.location.pathname).toBe("/weekly-review");
+    expect(mountedView(SOURCE_LABEL).state.doc.toString()).toBe("x# Weekly\n");
   });
 });

@@ -1,6 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Link } from "@tanstack/react-router";
 import { expect, userEvent, waitFor } from "storybook/test";
-import { withThemeMode } from "../../../.storybook/decorators";
+import {
+  withMemoryRouter,
+  withThemeMode,
+} from "../../../.storybook/decorators";
+import { FakeLeaveConfirm } from "./fake-leave-confirm";
 import {
   FakePageSourcePort,
   type FakePageSourceScript,
@@ -49,6 +54,10 @@ function editorWith(script: FakePageSourceScript) {
 const meta: Meta<typeof PageEditor> = {
   title: "Editor/PageEditor",
   component: PageEditor,
+  // The editor guards navigation through the router, as on its `?edit` URL.
+  decorators: [
+    withMemoryRouter(["/weekly-review", "/orders"], "/weekly-review?edit"),
+  ],
 };
 
 export default meta;
@@ -114,6 +123,37 @@ export const SaveKeybinding: Story = {
     );
     await expect(saving.port.saves.at(-1)?.source).toMatch(
       /^# Weekly review \(draft\)\n/,
+    );
+  },
+};
+
+const declined = new FakeLeaveConfirm(false);
+const dirtyPort = new FakePageSourcePort({ source: SOURCE });
+
+/** An unsaved edit: a link away asks first, and declining keeps the text. */
+export const Dirty: Story = {
+  render: () => (
+    <>
+      <Link to="/orders">Orders overview</Link>
+      <PageEditor file={FILE} port={dirtyPort} confirmLeave={declined.confirm}>
+        <RenderedPage />
+      </PageEditor>
+    </>
+  ),
+  play: async ({ canvas }) => {
+    const textbox = await canvas.findByRole("textbox", { name: "Page source" });
+    await userEvent.click(textbox);
+    await userEvent.keyboard("{Control>}{Home}{/Control}{End} zz");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Unsaved changes",
+    );
+    await userEvent.click(
+      canvas.getByRole("link", { name: "Orders overview" }),
+    );
+    await waitFor(() => expect(declined.asked).toHaveLength(1));
+    await expect(textbox).toHaveTextContent("# Weekly review zz");
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      "Unsaved changes",
     );
   },
 };

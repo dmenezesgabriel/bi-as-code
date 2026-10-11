@@ -9,11 +9,14 @@ import {
 import { CodeEditor } from "./code-editor";
 import { nextEditorStatus } from "./editor-status";
 import type { EditorStatus, EditorStatusEvent, PageSourcePort } from "./types";
+import { useUnsavedChangesGuard } from "./use-unsaved-changes-guard";
 
 type PageEditorProps = {
   /** The page's project-relative file, e.g. "pages/weekly-review.md". */
   file: string;
   port: PageSourcePort;
+  /** Asks whether to leave with unsaved changes; true leaves. */
+  confirmLeave?: (message: string) => boolean;
   /** The live rendered page — hot-swapped in place after every save. */
   children: ReactNode;
 };
@@ -32,6 +35,7 @@ type PageEditorProps = {
 export function PageEditor({
   file,
   port,
+  confirmLeave = askBrowser,
   children,
 }: PageEditorProps): ReactElement {
   return (
@@ -42,7 +46,7 @@ export function PageEditor({
         aria-label="Source editor"
         className="flex h-[60vh] min-w-0 flex-col border-b border-neutral-200 lg:h-full lg:border-r lg:border-b-0 dark:border-neutral-800"
       >
-        <SourcePane file={file} port={port} />
+        <SourcePane file={file} port={port} confirmLeave={confirmLeave} />
       </section>
       {/* From `lg` the pane scrolls on its own with no header above it, so
           sticky page chrome docks near its top edge instead of 4rem down.
@@ -57,8 +61,13 @@ export function PageEditor({
   );
 }
 
-function SourcePane({ file, port }: Omit<PageEditorProps, "children">) {
+function SourcePane({
+  file,
+  port,
+  confirmLeave,
+}: Required<Omit<PageEditorProps, "children">>) {
   const [status, dispatch] = useReducer(nextEditorStatus, { kind: "loading" });
+  useUnsavedChangesGuard(status, confirmLeave);
   const source = useInitialSource(file, port, dispatch);
   async function save(doc: string) {
     dispatch({ type: "saveStarted" });
@@ -136,6 +145,10 @@ function statusText(status: EditorStatus): string {
     case "saveFailed":
       return status.message;
   }
+}
+
+function askBrowser(message: string): boolean {
+  return window.confirm(message);
 }
 
 function errorMessage(error: unknown): string {

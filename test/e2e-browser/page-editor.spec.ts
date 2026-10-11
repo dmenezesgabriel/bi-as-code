@@ -72,6 +72,37 @@ async function expectPageBackInPreview(page: Page) {
   expect(await windowMarker(page)).toBe("kept");
 }
 
+/**
+ * Answers every dialog the page raises — `confirm` and `beforeunload` alike —
+ * with `accept`, and logs each as `"<type>: <message>"` in `seen`.
+ */
+function answerDialogs(page: Page) {
+  const dialogs = { seen: [] as string[], accept: false };
+  page.on("dialog", async (dialog) => {
+    dialogs.seen.push(`${dialog.type()}: ${dialog.message()}`);
+    await (dialogs.accept ? dialog.accept() : dialog.dismiss());
+  });
+  return dialogs;
+}
+
+function sidebarLink(page: Page, name: string) {
+  return page
+    .getByRole("navigation", { name: "Site navigation" })
+    .getByRole("link", { name });
+}
+
+const LEAVE_ASK =
+  "confirm: Leave this page? Your unsaved changes will be lost.";
+
+/** Opens the editor and types ` zz` on the heading, unsaved. */
+async function openWithUnsavedEdit(page: Page, url: string) {
+  await openEditorFromHeader(page, url);
+  const dialogs = answerDialogs(page);
+  await appendToLine(page, "# Weekly review", " zz");
+  await expect(editorStatus(page)).toHaveText("Unsaved changes");
+  return dialogs;
+}
+
 async function eraseTyped(page: Page, text: string) {
   for (let typed = text.length; typed > 0; typed--) {
     await page.keyboard.press("Backspace");
@@ -300,5 +331,76 @@ test("a page already broken on disk still opens in the editor", async ({
     "This page failed to compile",
   );
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("leaving an editor with unsaved changes asks first; a filter change does not", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  const file = join(biacDev.projectDir, PAGE_FILE);
+  const onDisk = readFileSync(file, "utf8");
+  const dialogs = await openWithUnsavedEdit(page, biacDev.url);
+
+  await sidebarLink(page, "Orders overview").click();
+  await expect.poll(() => dialogs.seen).toEqual([LEAVE_ASK]);
+  expect(new URL(page.url()).pathname).toBe("/weekly-review");
+  expect(new URL(page.url()).searchParams.get("edit")).toBe("true");
+  await expect(sourceEditor(page)).toContainText("# Weekly review zz");
+  await expect(editorStatus(page)).toHaveText("Unsaved changes");
+
+  await page.getByRole("combobox", { name: "Region" }).click();
+  await page.getByRole("option", { name: "North" }).click();
+  await expect(page).toHaveURL(/region=North/);
+  expect(dialogs.seen).toHaveLength(1);
+
+  const done = page.getByRole("banner").getByRole("link", { name: "Done" });
+  await done.click();
+  await expect.poll(() => dialogs.seen).toHaveLength(2);
+  await expect(sourceEditor(page)).toContainText("# Weekly review zz");
+
+  dialogs.accept = true;
+  await done.click();
+  await expect(livePreview(page)).toHaveCount(0);
+  const url = new URL(page.url());
+  expect(url.searchParams.has("edit")).toBe(false);
+  expect(url.searchParams.get("region")).toBe("North");
+  expect(dialogs.seen).toEqual([LEAVE_ASK, LEAVE_ASK, LEAVE_ASK]);
+  expect(readFileSync(file, "utf8")).toBe(onDisk);
+  expect(errors).toEqual([]);
+});
+
+test("reloading an unsaved buffer raises the browser's leave prompt", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  const dialogs = await openWithUnsavedEdit(page, biacDev.url);
+
+  // Dismissing the prompt cancels the reload, so there is no load to await.
+  await page.evaluate(() => location.reload());
+
+  await expect.poll(() => dialogs.seen).toEqual(["beforeunload: "]);
+  await expect(sourceEditor(page)).toContainText("# Weekly review zz");
+  expect(await windowMarker(page)).toBe("kept");
+  expect(errors).toEqual([]);
+});
+
+test("a saved buffer leaves the editor without asking", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  const dialogs = await openWithUnsavedEdit(page, biacDev.url);
+  await saveWithModS(page);
+
+  await sidebarLink(page, "Orders overview").click();
+
+  await expect(page).toHaveURL(`${biacDev.url}`);
+  expect(dialogs.seen).toEqual([]);
   expect(errors).toEqual([]);
 });

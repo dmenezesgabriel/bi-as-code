@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextEditorStatus } from "./editor-status";
+import { hasUnsavedChanges, nextEditorStatus } from "./editor-status";
 import type { EditorStatus, EditorStatusEvent } from "./types";
 
 function replay(events: EditorStatusEvent[]): EditorStatus {
@@ -100,5 +100,23 @@ describe("nextEditorStatus while saving", () => {
 
     // Assert
     expect(status).toEqual({ kind: "saveFailed", message: "HTTP 403" });
+  });
+});
+
+describe("hasUnsavedChanges", () => {
+  it.each<[EditorStatus, boolean]>([
+    [{ kind: "loading" }, false],
+    [{ kind: "loadFailed", message: "HTTP 404" }, false],
+    [{ kind: "clean" }, false],
+    [{ kind: "dirty" }, true],
+    [{ kind: "saving", editedDuringSave: false }, true],
+    [{ kind: "saved" }, false],
+    [{ kind: "saveFailed", message: "HTTP 403" }, true],
+  ])("reads %o as unsaved: %s", (status, expected) => {
+    // Arrange / Act
+    const unsaved = hasUnsavedChanges(status);
+
+    // Assert
+    expect(unsaved).toBe(expected);
   });
 });

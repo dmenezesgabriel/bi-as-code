@@ -30,3 +30,18 @@ export function nextEditorStatus(
         : { kind: "saved" };
   }
 }
+
+/**
+ * True while the buffer holds text the file on disk lacks: an edit not yet
+ * saved, a save still in flight (it may fail), or a save that failed.
+ *
+ * @example
+ * hasUnsavedChanges({ kind: "saveFailed", message: "HTTP 403" }); // → true
+ */
+export function hasUnsavedChanges(status: EditorStatus): boolean {
+  return (
+    status.kind === "dirty" ||
+    status.kind === "saving" ||
+    status.kind === "saveFailed"
+  );
+}
