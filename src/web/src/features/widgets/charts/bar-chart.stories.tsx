@@ -4,6 +4,7 @@ import {
   withFilteredData,
   withPageFilters,
   withQueryData,
+  withThemeMode,
 } from "../../../../.storybook/decorators";
 import { Table } from "../table/table";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
@@ -129,6 +130,23 @@ export const SelectCrossfilterBrush: Story = {
   },
 };
 
+/** In dark mode the labels above the bars take the theme's muted text
+ * color — a light glyph on the dark surface, with no outline. */
+export const LabeledDark: Story = {
+  args: { labels: true },
+  decorators: [
+    withQueryData([ORDERS_REGIONAL], dbWith(REGIONAL_ROWS)),
+    withThemeMode("dark"),
+  ],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { label?: { color?: string; textBorderWidth?: number } }[];
+    }>(canvasElement);
+    expect(option.series?.[0]?.label?.color).toBe("#a3a3a3");
+    expect(option.series?.[0]?.label?.textBorderWidth).toBeUndefined();
+  },
+};
+
 /** `series` + `stacked` piles each week's regions into one column. */
 export const Stacked: Story = {
   args: {
@@ -145,5 +163,23 @@ export const Stacked: Story = {
     }>(canvasElement);
     expect(option.series?.every((s) => s.type === "bar")).toBe(true);
     expect(option.series?.every((s) => s.stack === "total")).toBe(true);
+  },
+};
+
+/** A stacked bar's labels sit inside their segments, so they stay white on
+ * the series fill rather than taking the theme's page-contrast color. */
+export const StackedLabeled: Story = {
+  args: { ...Stacked.args, labels: true },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { label?: { position?: string; color?: string } }[];
+    }>(canvasElement);
+    expect(option.series?.every((s) => s.label?.position === "inside")).toBe(
+      true,
+    );
+    expect(option.series?.every((s) => s.label?.color === "#ffffff")).toBe(
+      true,
+    );
   },
 };

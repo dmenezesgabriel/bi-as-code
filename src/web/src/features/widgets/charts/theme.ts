@@ -73,7 +73,16 @@ export function themeTokens(mode: ThemeMode): ModeTokens {
   return TOKENS[mode];
 }
 
-function buildTheme(t: ModeTokens): Record<string, unknown> {
+/**
+ * The echarts theme object registered for `mode`: palette, text, axis and
+ * tooltip colors, and the data-label color of the marks that label outside
+ * themselves.
+ *
+ * @example
+ * registerTheme(themeName("dark"), chartTheme("dark"));
+ */
+export function chartTheme(mode: ThemeMode): Record<string, unknown> {
+  const t = TOKENS[mode];
   const axis = {
     axisLine: { lineStyle: { color: t.axisLine } },
     axisTick: { lineStyle: { color: t.axisLine } },
@@ -81,6 +90,11 @@ function buildTheme(t: ModeTokens): Record<string, unknown> {
     splitLine: { lineStyle: { color: t.splitLine } },
     nameTextStyle: { color: t.textMuted },
   };
+  // A label with no color of its own gets the engine's fallback: a dark
+  // glyph inside a white outline, whatever the mode — unreadable on the dark
+  // surface. An explicit fill also drops that outline. Heatmap is left out:
+  // its labels sit on the ramp's cells, not on the page.
+  const outsideLabel = { label: { color: t.textMuted } };
   return {
     color: [...SERIES_COLORS],
     textStyle: { color: t.text },
@@ -93,6 +107,9 @@ function buildTheme(t: ModeTokens): Record<string, unknown> {
     valueAxis: axis,
     timeAxis: axis,
     logAxis: axis,
+    bar: outsideLabel,
+    line: outsideLabel,
+    scatter: outsideLabel,
     tooltip: {
       backgroundColor: t.tooltipBg,
       borderColor: t.tooltipBorder,
@@ -103,5 +120,5 @@ function buildTheme(t: ModeTokens): Record<string, unknown> {
 
 // Self-registers on module load — `themeName` consumers always find the
 // themes registered, no init ordering to get wrong.
-registerTheme(themeName("light"), buildTheme(TOKENS.light));
-registerTheme(themeName("dark"), buildTheme(TOKENS.dark));
+registerTheme(themeName("light"), chartTheme("light"));
+registerTheme(themeName("dark"), chartTheme("dark"));

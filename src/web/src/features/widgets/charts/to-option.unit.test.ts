@@ -89,6 +89,7 @@ interface SeriesProbe {
   label?: {
     show?: boolean;
     position?: string;
+    color?: string;
     formatter?: (params: { value?: unknown }) => string;
   };
   labelLayout?: { hideOverlap?: boolean };
@@ -319,6 +320,22 @@ describe("toChartOption labels", () => {
   it("labels stacked bar segments inside the band", () => {
     const option = probe(TWO_SERIES, { stacked: true, labels: true });
     expect(option.series?.[0]?.label?.position).toBe("inside");
+  });
+
+  it("pins a label inside a stacked bar to white", () => {
+    const option = probe(TWO_SERIES, { stacked: true, labels: true });
+
+    const color = option.series?.[0]?.label?.color;
+
+    expect(color).toBe("#ffffff");
+  });
+
+  it("leaves a label outside its mark to the theme's color", () => {
+    const option = probe(CATEGORIES, { labels: true });
+
+    const label = option.series?.[0]?.label;
+
+    expect(label).not.toHaveProperty("color");
   });
 
   it("labels a 100% stack with the percentage unless labelsFmt says otherwise", () => {

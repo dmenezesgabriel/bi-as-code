@@ -304,16 +304,22 @@ export function labelOption(
 ): Record<string, unknown> {
   const fmt =
     props.labelsFmt ?? (props.stacked === "100%" ? "pct0" : props.yFmt);
+  const position = labelPosition(type, props.stacked);
   return {
     label: {
       show: true,
-      position: labelPosition(type, props.stacked),
+      position,
+      ...(position === "inside" ? { color: INSIDE_LABEL_COLOR } : {}),
       formatter: (p: { value?: unknown }) =>
         safeFormat(yOf(p.value), fmt, yRange),
     },
     labelLayout: { hideOverlap: true },
   };
 }
+
+// A label inside a mark sits on the series fill, not on the page, so it
+// opts out of the theme's page-contrast label color in both modes.
+const INSIDE_LABEL_COLOR = "#ffffff";
 
 function labelPosition(
   type: SeriesChartType | "scatter",

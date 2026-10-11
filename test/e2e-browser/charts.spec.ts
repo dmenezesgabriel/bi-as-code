@@ -266,6 +266,9 @@ test("the theme toggle repaints every chart in the other palette", async ({
   const posts = await workerPosts(page);
   const lightRamp = (await optionAt(page, 5)).visualMap?.[0]?.inRange
     ?.color?.[0];
+  // The Regional split's bar labels take each mode's muted text color from
+  // the registered theme — neutral-600 on white, neutral-400 on near-black.
+  expect((await optionAt(page, 0)).series[0]?.label?.color).toBe("#525252");
 
   await toggleTheme(page, "dark");
   const probes = await page.evaluate(() =>
@@ -292,6 +295,7 @@ test("the theme toggle repaints every chart in the other palette", async ({
   const darkRamp = (await optionAt(page, 5)).visualMap?.[0]?.inRange
     ?.color?.[0];
   expect(darkRamp).not.toBe(lightRamp);
+  expect((await optionAt(page, 0)).series[0]?.label?.color).toBe("#a3a3a3");
 
   await toggleTheme(page, "light");
 

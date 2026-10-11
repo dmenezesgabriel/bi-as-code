@@ -12,7 +12,7 @@ export interface AppliedOption {
     type?: string;
     stack?: string;
     areaStyle?: unknown;
-    label?: { show?: boolean };
+    label?: { show?: boolean; color?: string };
     data?: unknown[];
     symbolSize?: unknown;
     barCategoryGap?: unknown;
