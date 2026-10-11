@@ -77,11 +77,10 @@ async function legendItemPoint(
 }
 
 /**
- * The two order_id tables — the `order_detail` fence preview (always
- * unfiltered) then the `<Table>` widget — same shape as
- * `filter-inputs.spec.ts`'s helper.
+ * The order_id table — the `order_detail` `<Table>` widget; its fence opts
+ * into no `display` — same shape as `filter-inputs.spec.ts`'s helper.
  */
-function orderDetailTables(page: Page) {
+function orderDetailTable(page: Page) {
   return page
     .locator("div.overflow-x-auto", {
       has: page.getByRole("columnheader", { name: "order_id" }),
@@ -97,12 +96,11 @@ test("a bar click cross-filters the region consumers while the bar chart holds i
   await openWeeklyReviewCharts(page, biacDev.url);
   const posts = await workerPosts(page);
 
-  // Baseline: three bars; four pagers read "39 rows" — the region_week
-  // and weekly_trend fence previews (always unfiltered) plus their two
-  // <Table>s — and the weekly_revenue preview already reads "13 rows".
+  // Baseline: three bars; two pagers read "39 rows" — the region_week
+  // and weekly_trend <Table>s — and none reads "13 rows" yet.
   expect((await optionAt(page, 0)).series[0]?.data).toHaveLength(3);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
-  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(1);
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
+  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(0);
 
   await chartHosts(page).nth(0).scrollIntoViewIfNeeded();
   const westBar = await chartPoint(page, 0, [0, 3000]);
@@ -110,8 +108,9 @@ test("a bar click cross-filters the region consumers while the bar chart holds i
 
   // The publisher's own clause skips it — all three bars hold — while
   // every filters={["region"]} consumer re-queries: the scatter keeps
-  // only West's 13 weeks, the keepMounted region_week <Table> joins the
-  // "13 rows" pagers, and order_detail pages down to West's 140 rows.
+  // only West's 13 weeks, the keepMounted region_week <Table> pages "13
+  // rows", and order_detail pages down to West's 140 rows; the unfiltered
+  // weekly_trend <Table> keeps its 39.
   const bar = await optionAt(page, 0);
   expect(bar.xAxis[0]?.data).toEqual(["West", "North", "South"]);
   expect(bar.series[0]?.data).toHaveLength(3);
@@ -119,8 +118,8 @@ test("a bar click cross-filters the region consumers while the bar chart holds i
     .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
     .toEqual(["West"]);
   expect((await optionAt(page, 1)).series[0]?.data).toHaveLength(13);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(3);
-  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(2);
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(1);
+  await expect(page.getByText("Page 1 of 2 · 13 rows")).toHaveCount(1);
   await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(1);
 
   // Session state — the URL stays bare — and the consumers' re-query did
@@ -133,7 +132,7 @@ test("a bar click cross-filters the region consumers while the bar chart holds i
   await expect
     .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
     .toEqual(["North", "South", "West"]);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
   await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(0);
   // The Amount slider's seed followed West's narrower bounds without
   // publishing, so it widens back with them — no stale 43–44 window.
@@ -153,13 +152,12 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   await openWeeklyReviewCharts(page, biacDev.url);
   const posts = await workerPosts(page);
 
-  // Baseline: 15 bins over amounts 38..44; both order_detail tables page
+  // Baseline: 15 bins over amounts 38..44; the order_detail <Table> pages
   // all 355 orders.
   expect((await optionAt(page, 2)).xAxis[0]?.data).toHaveLength(15);
-  const tables = orderDetailTables(page);
-  await expect(tables).toHaveCount(2);
-  await expect(tables.nth(0)).toContainText("· 355 rows");
-  await expect(tables.nth(1)).toContainText("· 355 rows");
+  const table = orderDetailTable(page);
+  await expect(table).toHaveCount(1);
+  await expect(table).toContainText("· 355 rows");
 
   // Drag center-of-bin-0 → center-of-bin-3: the clause spans the covered
   // edges [38, 39.6], narrowing order_detail to the 95 orders under $40.
@@ -173,9 +171,8 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
 
   // The publisher's own clause skips it — all 15 bins hold — while the
   // amount-filtered order_detail re-queries to the covered rows; the
-  // unfiltered preview and the region-filtered scatter are untouched.
-  await expect(tables.nth(1)).toContainText("· 95 rows");
-  await expect(tables.nth(0)).toContainText("· 355 rows");
+  // region-filtered scatter is untouched.
+  await expect(table).toContainText("· 95 rows");
   expect((await optionAt(page, 2)).xAxis[0]?.data).toHaveLength(15);
   expect((await optionAt(page, 1)).series.map((s) => s.name)).toEqual([
     "North",
@@ -192,7 +189,7 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   // unfiltered.
   const clear = await chartPoint(page, 2, [10, 60]);
   await page.mouse.click(clear.x, clear.y);
-  await expect(tables.nth(1)).toContainText("· 355 rows");
+  await expect(table).toContainText("· 355 rows");
 
   expect(errors).toEqual([]);
 });
@@ -223,8 +220,8 @@ test("a held histogram brush survives the histogram's own re-query when a region
 }) => {
   const errors = collectConsoleErrors(page);
   await openWeeklyReviewCharts(page, biacDev.url);
-  const tables = orderDetailTables(page);
-  await expect(tables.nth(1)).toContainText("· 355 rows");
+  const table = orderDetailTable(page);
+  await expect(table).toContainText("· 355 rows");
   // Bins 12–13 hold 60 of West's 140 orders and nothing else — the
   // brushed amount clause is what tells the West counts apart.
   await chartHosts(page).nth(2).scrollIntoViewIfNeeded();
@@ -234,7 +231,7 @@ test("a held histogram brush survives the histogram's own re-query when a region
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 8 });
   await page.mouse.up();
-  await expect(tables.nth(1)).toContainText("· 60 rows");
+  await expect(table).toContainText("· 60 rows");
   // Tag the host: a remount (the loading face swapped in) drops the tag.
   await chartHosts(page)
     .nth(2)
@@ -254,7 +251,7 @@ test("a held histogram brush survives the histogram's own re-query when a region
     )
     .toBe(140);
   await expect(chartHosts(page).nth(2)).toHaveAttribute("data-kept", "");
-  await expect(tables.nth(1)).toContainText("· 60 rows");
+  await expect(table).toContainText("· 60 rows");
   expect(await brushAreaCount(page, 2)).toBe(1);
   expect(errors).toEqual([]);
 });
@@ -266,17 +263,17 @@ test("a scatter legend toggle cross-filters the region consumers while the scatt
   const errors = collectConsoleErrors(page);
   await openWeeklyReviewCharts(page, biacDev.url);
   const posts = await workerPosts(page);
-  const tables = orderDetailTables(page);
+  const table = orderDetailTable(page);
 
-  // Baseline: the scatter plots all three regions; four pagers read
+  // Baseline: the scatter plots all three regions; two pagers read
   // "39 rows" and the order_detail <Table> pages all 355 orders.
   expect((await optionAt(page, 1)).series.map((s) => s.name)).toEqual([
     "North",
     "South",
     "West",
   ]);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
-  await expect(tables.nth(1)).toContainText("· 355 rows");
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
+  await expect(table).toContainText("· 355 rows");
 
   // North off → `region IN ('South', 'West')`: the keepMounted region_week
   // <Table> drops to 26 weeks and order_detail to 235 orders, while the
@@ -285,8 +282,8 @@ test("a scatter legend toggle cross-filters the region consumers while the scatt
   const north = await legendItemPoint(page, 1, "North");
   await page.mouse.click(north.x, north.y);
   await expect(page.getByText("Page 1 of 3 · 26 rows")).toHaveCount(1);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(3);
-  await expect(tables.nth(1)).toContainText("· 235 rows");
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(1);
+  await expect(table).toContainText("· 235 rows");
   const scatter = await optionAt(page, 1);
   expect(scatter.series.map((s) => s.name)).toEqual(["North", "South", "West"]);
   expect(scatter.legend[0]?.selected?.North).toBe(false);
@@ -299,8 +296,8 @@ test("a scatter legend toggle cross-filters the region consumers while the scatt
   // North back on enables every name: the clause clears and every
   // consumer re-queries unfiltered.
   await page.mouse.click(north.x, north.y);
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
-  await expect(tables.nth(1)).toContainText("· 355 rows");
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
+  await expect(table).toContainText("· 355 rows");
   expect((await optionAt(page, 1)).legend[0]?.selected?.North).toBe(true);
 
   expect(errors).toEqual([]);

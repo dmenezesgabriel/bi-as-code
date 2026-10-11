@@ -26,7 +26,8 @@ test("index page runs the named sql block and renders its live result", async ({
   const start = Date.now();
   await page.goto(biacDev.url);
 
-  // Highlighted source stays visible above the result.
+  // The `echo` fence shows its highlighted source; the `<Table>` reading
+  // `orders` is the page's only live table.
   const fence = page.locator("pre.shiki");
   await expect(fence).toContainText("select region");
   await expect(fence).toContainText("{{params.region}}");
@@ -91,27 +92,23 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const results = resultTables(page);
-  // Live tables in document order: kpi, orders, region_share, region_week,
-  // the <Table> widget in the Order-mix tabs, order_amounts, order_detail
-  // (fence), the order_detail <Table> widget, weekly_trend (fence),
-  // weekly_revenue, then the <Table> widget in Quarter detail.
-  // The fence result renders the shared table core: 39 rows paginate at
-  // pageSize 10, so the DOM holds the first page plus the pager caption.
-  await expect(results.nth(8).getByRole("row")).toHaveCount(11, {
+  // Live tables in document order: region_share (the one fence opting into
+  // `display`), the <Table> widget in the Order-mix tabs, the order_detail
+  // <Table> widget, then the weekly_trend <Table> widget in Quarter detail.
+  // The trend's 39 rows paginate at pageSize 10, so the DOM holds the
+  // first page plus the pager caption.
+  await expect(results.nth(3).getByRole("row")).toHaveCount(11, {
     timeout: 30_000,
   });
-  // The caption appears four times: the region_week fence, the tab
-  // <Table data="region_week" /> of the same fence, the weekly_trend
-  // fence's own result, and the <Table data="weekly_trend" /> widget in
-  // Quarter detail — all rendering the same 39-row core.
-  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(4);
-  // orders (region rollup) and region_share ({{orders}} + pct_of_total).
-  await expect(results.nth(1).getByRole("row")).toHaveCount(4);
-  await expect(results.nth(2).getByRole("row")).toHaveCount(4);
-  await expect(results.nth(2)).toContainText("pct_of_total");
+  // The caption appears twice: the tab <Table data="region_week" /> and
+  // the <Table data="weekly_trend" /> — the fences behind them stay hidden.
+  await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
+  // region_share composes {{orders}} + pct_of_total.
+  await expect(results.nth(0).getByRole("row")).toHaveCount(4);
+  await expect(results.nth(0)).toContainText("pct_of_total");
   expect(
     await results
-      .nth(2)
+      .nth(0)
       .locator("tbody tr")
       .first()
       .locator("td")
@@ -121,7 +118,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   // Deterministic order by week, region — week 1 opens North/South/West.
   expect(
     await results
-      .nth(8)
+      .nth(3)
       .locator("tbody tr")
       .first()
       .locator("td")
@@ -129,17 +126,15 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   ).toEqual(["1", "North", "14"]);
 
   // The fences stay raw under the param — the widgets that declare
-  // filters=["region"] are the filters spec's subject: `orders` keeps its
-  // three regions and `region_share` composes them, while `weekly_trend`
-  // keeps its 39 rows either way.
+  // filters=["region"] are the filters spec's subject: region_share still
+  // composes all three regions out of `orders`.
   await page.goto(`${biacDev.url}weekly-review?region=West`);
-  await expect(results.nth(1).getByRole("row")).toHaveCount(4, {
+  await expect(results.nth(0).getByRole("row")).toHaveCount(4, {
     timeout: 30_000,
   });
-  await expect(results.nth(2).getByRole("row")).toHaveCount(4);
   expect(
     await results
-      .nth(2)
+      .nth(0)
       .locator("tbody tr")
       .first()
       .locator("td")

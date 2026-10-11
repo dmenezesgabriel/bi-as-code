@@ -2,6 +2,7 @@ import type { Page, TestInfo } from "@playwright/test";
 import {
   collectConsoleErrors,
   expect,
+  resultTables,
   sliderThumbBox,
   test,
 } from "./dev-server.fixture.js";
@@ -115,6 +116,22 @@ async function recordGesture(
   });
   return report;
 }
+
+test("the helper fences render nothing while their histograms draw every row", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await openScalePage(page, biacDev.url);
+
+  // Named fences without `echo`/`display` still run and feed the slider
+  // and histograms, but put neither code nor a result table on the page.
+  expect(await barTotals(page)).toEqual([FLIGHTS, FLIGHTS, FLIGHTS]);
+  await expect(page.locator("pre.shiki")).toHaveCount(0);
+  await expect(resultTables(page)).toHaveCount(0);
+  await expect(page.getByText(/^Page 1 of/)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
 
 test("a slider drag over 200k rows settles every histogram on the released range", async ({
   page,

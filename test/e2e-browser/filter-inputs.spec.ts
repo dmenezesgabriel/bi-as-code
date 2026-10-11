@@ -129,14 +129,14 @@ test("picking channels in the multi-select chips the field, filters the table an
     page.getByRole("button", { name: "Remove Marketplace" }),
   ).toBeVisible();
 
-  // The fence's own preview keeps all three channels; the <Table>
-  // declaring `filters="channel"` narrows to the two picked rows.
+  // The <Table> declaring `filters="channel"` narrows to the two picked
+  // rows; its fence opts into no `display`, so it is the page's one table.
   const results = resultTables(page);
-  await expect(results.nth(0).getByRole("row")).toHaveCount(4);
-  await expect(results.nth(1).getByRole("row")).toHaveCount(3);
-  await expect(results.nth(1)).toContainText("Direct");
-  await expect(results.nth(1)).toContainText("Marketplace");
-  await expect(results.nth(1)).not.toContainText("Partner");
+  await expect(results).toHaveCount(1);
+  await expect(results.nth(0).getByRole("row")).toHaveCount(3);
+  await expect(results.nth(0)).toContainText("Direct");
+  await expect(results.nth(0)).toContainText("Marketplace");
+  await expect(results.nth(0)).not.toContainText("Partner");
 
   await page.reload();
   await expect(page.getByRole("button", { name: "Remove Direct" })).toBeVisible(
@@ -145,19 +145,18 @@ test("picking channels in the multi-select chips the field, filters the table an
   await expect(
     page.getByRole("button", { name: "Remove Marketplace" }),
   ).toBeVisible();
-  await expect(resultTables(page).nth(1).getByRole("row")).toHaveCount(3);
+  await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(3);
   expect(urlParam(page, "channel")).toBe('["Direct","Marketplace"]');
   expect(errors).toEqual([]);
 });
 
 /**
- * The two live tables over `order_detail`, in DOM order: `nth(0)` is the
- * sql fence's own preview (the registry's raw result — `{{params.*}}`
- * interpolations reach it, `filters` predicates never do), `nth(1)` the
- * `<Table>` widget (both). Both render the same `div.py-2` shell, so the
- * widget root — the scroll container's parent — is what carries the pager.
+ * The live table over `order_detail` — the `<Table>` widget, its fence
+ * opting into no `display`. Both `{{params.*}}` interpolations and
+ * `filters` predicates reach it. The widget root — the scroll container's
+ * parent — is what carries the pager.
  */
-function orderDetailTables(page: Page): Locator {
+function orderDetailTable(page: Page): Locator {
   return page
     .locator("div.overflow-x-auto", {
       has: page.getByRole("columnheader", { name: "order_id" }),
@@ -201,11 +200,9 @@ test("the Amount slider writes a range param and narrows order_detail", async ({
 
   await minimum.press("ArrowRight");
   expect(urlParam(page, "amount")).toBe("39 - 44");
-  // 39..44 keeps South's 39s, all North 40s and all West — 350 of 355 in
-  // the widget; the fence's own preview stays raw (no `filters` on it).
-  const tables = orderDetailTables(page);
-  await expect(tables.nth(1)).toContainText("· 350 rows");
-  await expect(tables.nth(0)).toContainText("· 355 rows");
+  // 39..44 keeps South's 39s, all North 40s and all West — 350 of 355.
+  const table = orderDetailTable(page);
+  await expect(table).toContainText("· 350 rows");
 
   await page.reload();
   await expect(page.getByRole("slider", { name: "Minimum" })).toHaveAttribute(
@@ -308,9 +305,8 @@ test("the Ordered date range persists the expression and narrows order_detail", 
   await page.locator("#ordered").click();
   await page.getByRole("button", { name: "Last 30 Days" }).click();
   await expect.poll(() => urlParam(page, "ordered")).toBe("last 30 days");
-  const tables = orderDetailTables(page);
-  await expect(tables.nth(0)).toContainText("· 355 rows");
-  await expect(tables.nth(1)).not.toContainText("· 355 rows");
+  const table = orderDetailTable(page);
+  await expect(table).not.toContainText("· 355 rows");
 
   await page.reload();
   await expect(page.locator("#ordered")).toContainText("Last 30 Days", {
@@ -329,8 +325,7 @@ test("the Ordered date range persists the expression and narrows order_detail", 
   await page.getByLabel("Start date").fill(start);
   await page.getByLabel("End date").fill(end);
   await expect.poll(() => urlParam(page, "ordered")).toBe(`${start} to ${end}`);
-  await expect(tables.nth(1)).toContainText(`· ${expected} rows`);
-  await expect(tables.nth(0)).toContainText("· 355 rows");
+  await expect(table).toContainText(`· ${expected} rows`);
   expect(errors).toEqual([]);
 });
 
@@ -346,19 +341,16 @@ test("the q text input and large_orders toggle re-query order_detail", async ({
   await expect(q).toBeEnabled({ timeout: 30_000 });
   await q.fill("west");
   // The commit lands after ~300ms of quiet — poll past the debounce. The
-  // `{{params.q}}` interpolation narrows the fence itself, so the preview
-  // and the widget agree row for row.
+  // `{{params.q}}` interpolation narrows the fence the widget reads.
   await expect.poll(() => urlParam(page, "q")).toBe("west");
-  const tables = orderDetailTables(page);
-  await expect(tables.nth(0)).toContainText("· 140 rows");
-  await expect(tables.nth(1)).toContainText("· 140 rows");
+  const table = orderDetailTable(page);
+  await expect(table).toContainText("· 140 rows");
 
   // The label activates the switch's hidden checkbox natively.
   await page.locator("label[for='large_orders-face']").click();
   await expect.poll(() => urlParam(page, "large_orders")).toBe("true");
   // q=west ∩ amount >= 44 — West's 80 top-bracket orders.
-  await expect(tables.nth(0)).toContainText("· 80 rows");
-  await expect(tables.nth(1)).toContainText("· 80 rows");
+  await expect(table).toContainText("· 80 rows");
 
   await page.reload();
   await expect(page.getByLabel("Search regions")).toHaveValue("west", {
@@ -369,7 +361,7 @@ test("the q text input and large_orders toggle re-query order_detail", async ({
   await expect(
     page.getByRole("switch", { name: "Large orders only" }),
   ).toBeChecked();
-  await expect(tables.nth(1)).toContainText("· 80 rows");
+  await expect(table).toContainText("· 80 rows");
   expect(errors).toEqual([]);
 });
 
@@ -395,16 +387,16 @@ test("the Channel button group picks Direct, syncs the multi-select and persists
   ).toBeVisible();
 
   const results = resultTables(page);
-  await expect(results.nth(1).getByRole("row")).toHaveCount(2);
-  await expect(results.nth(1)).toContainText("Direct");
-  await expect(results.nth(1)).not.toContainText("Partner");
+  await expect(results.nth(0).getByRole("row")).toHaveCount(2);
+  await expect(results.nth(0)).toContainText("Direct");
+  await expect(results.nth(0)).not.toContainText("Partner");
 
   await page.reload();
   await expect(page.getByRole("button", { name: "Remove Direct" })).toBeVisible(
     { timeout: 30_000 },
   );
   await expect(direct).toHaveAttribute("aria-pressed", "true");
-  await expect(resultTables(page).nth(1).getByRole("row")).toHaveCount(2);
+  await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(2);
   expect(errors).toEqual([]);
 });
 

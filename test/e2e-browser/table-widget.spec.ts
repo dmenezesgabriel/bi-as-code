@@ -140,10 +140,11 @@ test("?region=Atlantis empties the index page's <Table> with its fence", async (
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}?region=Atlantis`);
 
-  // The param re-runs `orders` to zero rows: the fence's inline result,
-  // the `<Table data="orders" />` and the `<BarChart>`'s empty face each
-  // render the shared empty state, and no live table remains on the page.
-  await expect(page.getByText("0 rows", { exact: true })).toHaveCount(3, {
+  // The param re-runs `orders` to zero rows: the `<Table data="orders" />`
+  // and the `<BarChart>`'s empty face each render the shared empty state —
+  // the fence opts into `echo` only, so it adds none — and no live table
+  // remains on the page.
+  await expect(page.getByText("0 rows", { exact: true })).toHaveCount(2, {
     timeout: 30_000,
   });
   await expect(resultTables(page)).toHaveCount(0);

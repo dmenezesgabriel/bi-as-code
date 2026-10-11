@@ -16,7 +16,7 @@ brushing the evening hours shifts the delay distribution right.
   <Slider id="distance" data="distance_bounds" valueColumn="distance" range title="Distance" />
 </FilterBar>
 
-```sql distance_bounds echo display
+```sql distance_bounds
 -- the slider only needs the extent: distinct values, not 200k rows
 select distinct distance
 from flights
@@ -24,7 +24,7 @@ from flights
 
 ## Delay
 
-```sql delays echo display
+```sql delays
 -- delay histogram
 select delay, distance, time
 from flights
@@ -34,7 +34,7 @@ from flights
 
 ## Distance
 
-```sql distances echo display
+```sql distances
 -- distance histogram
 select delay, distance, time
 from flights
@@ -44,7 +44,7 @@ from flights
 
 ## Time
 
-```sql times echo display
+```sql times
 -- time histogram
 select delay, distance, time
 from flights

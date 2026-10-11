@@ -19,7 +19,7 @@ page's widgets; for a per-region breakdown see the
 The West leads on revenue at <Value data="orders" column="revenue" fmt="usd0" />
 this quarter.
 
-```sql orders echo display
+```sql orders echo
 select region, count(*) as orders, sum(amount) as revenue
 from orders
 where {{params.region}} is null or region = {{params.region}}

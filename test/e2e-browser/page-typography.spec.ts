@@ -157,7 +157,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     // Token spans carry shiki's inline colors; the .line wrapper only
     // inherits the fence foreground.
     const comment = page
-      .locator("main pre.shiki span[style]", { hasText: /^-- varchar/ })
+      .locator("main pre.shiki span[style]", { hasText: /^-- composes/ })
       .first();
     await expect(comment).toBeVisible({ timeout: 20_000 });
 
