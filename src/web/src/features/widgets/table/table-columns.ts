@@ -2,11 +2,12 @@ import type { Row } from "../../data/types";
 import { formatValue } from "../value/format";
 import { numericRange } from "../value/numeric-range";
 import { ColumnError } from "../value/types";
+import { formatTitle } from "./format-title";
 import type { ColumnProps, TableColumn } from "./types";
 
 /**
- * Every column of the result, in query order, each cell formatted by
- * `defaultCellText`.
+ * Every column of the result, in query order, titled by `formatTitle` and
+ * each cell formatted by `defaultCellText`.
  *
  * @example
  * defaultTableColumns([{ region: "West", revenue: 6100 }])
@@ -15,7 +16,7 @@ import type { ColumnProps, TableColumn } from "./types";
 export function defaultTableColumns(rows: readonly Row[]): TableColumn[] {
   return Object.keys(rows[0] ?? {}).map((id) => ({
     id,
-    title: id,
+    title: formatTitle(id),
     format: defaultCellText,
   }));
 }
@@ -38,7 +39,7 @@ export function resolveTableColumns(
   return specs.map((spec) => {
     const column = {
       id: spec.id,
-      title: spec.title ?? spec.id,
+      title: spec.title ?? formatTitle(spec.id),
       format: cellFormatter(rows, spec),
     };
     assertColumnRenders(rows, column);

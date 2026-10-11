@@ -75,7 +75,7 @@ describe("SqlBlockPre", () => {
     const table = await screen.findByRole("table");
     expect(
       screen.getAllByRole("columnheader").map((th) => th.textContent),
-    ).toEqual(["region", "orders"]);
+    ).toEqual(["Region", "Orders"]);
     expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "140" })).toBeInTheDocument();
     expect(table).toHaveTextContent("North");
@@ -105,9 +105,9 @@ describe("SqlBlockPre", () => {
     renderFence({ db });
 
     const header = await screen.findByRole("columnheader", {
-      name: /orders/,
+      name: "Orders",
     });
-    fireEvent.click(screen.getByRole("button", { name: /orders/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
 
     await waitFor(() =>
       expect(header).toHaveAttribute("aria-sort", "descending"),

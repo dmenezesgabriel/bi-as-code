@@ -58,8 +58,8 @@ export const EchoAndDisplay: Story = {
     ).toBeInTheDocument();
 
     // The fence result is the shared interactive table — headers sort.
-    const header = canvas.getByRole("columnheader", { name: /orders/ });
-    const sortButton = canvas.getByRole("button", { name: /orders/ });
+    const header = canvas.getByRole("columnheader", { name: "Orders" });
+    const sortButton = canvas.getByRole("button", { name: "Orders" });
     await expect(header).toHaveAttribute("aria-sort", "none");
     await userEvent.click(sortButton);
     await expect(header).toHaveAttribute("aria-sort", "descending");

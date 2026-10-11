@@ -83,7 +83,7 @@ async function legendItemPoint(
 function orderDetailTable(page: Page) {
   return page
     .locator("div.overflow-x-auto", {
-      has: page.getByRole("columnheader", { name: "order_id" }),
+      has: page.getByRole("columnheader", { name: "Order ID" }),
     })
     .locator("..");
 }

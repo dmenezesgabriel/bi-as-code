@@ -15,8 +15,7 @@ const visibleWeeks = () =>
     .slice(1)
     .map((tr) => (tr as HTMLTableRowElement).cells[0]?.textContent);
 
-const header = (name: string) =>
-  screen.getByRole("columnheader", { name: new RegExp(name) });
+const header = (name: string) => screen.getByRole("columnheader", { name });
 
 describe("DataTable", () => {
   it("renders one columnheader per key of the first row", () => {
@@ -24,7 +23,7 @@ describe("DataTable", () => {
 
     expect(
       screen.getAllByRole("columnheader").map((th) => th.textContent),
-    ).toEqual(["region", "orders"]);
+    ).toEqual(["Region", "Orders"]);
   });
 
   it("renders the empty state when there are no rows", () => {
@@ -82,8 +81,8 @@ describe("DataTable", () => {
       { week: "w3", orders: 1 },
     ];
     render(<DataTable rows={unsorted} pageSize={10} />);
-    const orders = header("orders");
-    const button = screen.getByRole("button", { name: /orders/ });
+    const orders = header("Orders");
+    const button = screen.getByRole("button", { name: "Orders" });
 
     expect(orders).toHaveAttribute("aria-sort", "none");
 
@@ -103,11 +102,11 @@ describe("DataTable", () => {
   it("moves the sort to a newly clicked column, restarting at desc", () => {
     render(<DataTable rows={ROWS.slice(0, 3)} pageSize={10} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /orders/ }));
-    fireEvent.click(screen.getByRole("button", { name: /week/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
+    fireEvent.click(screen.getByRole("button", { name: "Week" }));
 
-    expect(header("orders")).toHaveAttribute("aria-sort", "none");
-    expect(header("week")).toHaveAttribute("aria-sort", "descending");
+    expect(header("Orders")).toHaveAttribute("aria-sort", "none");
+    expect(header("Week")).toHaveAttribute("aria-sort", "descending");
     expect(visibleWeeks()).toEqual(["w3", "w2", "w1"]);
   });
 
@@ -116,7 +115,7 @@ describe("DataTable", () => {
     fireEvent.click(screen.getByRole("button", { name: "Last page" }));
     expect(screen.getByText("Page 4 of 4 · 39 rows")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /orders/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
 
     expect(screen.getByText("Page 1 of 4 · 39 rows")).toBeInTheDocument();
   });
@@ -159,7 +158,7 @@ describe("DataTable", () => {
     render(<DataTable rows={rows} columns={columns} />);
 
     const headers = screen.getAllByRole("columnheader");
-    expect(headers.map((th) => th.textContent)).toEqual(["Share", "region"]);
+    expect(headers.map((th) => th.textContent)).toEqual(["Share", "Region"]);
     const cells = screen.getAllByRole("cell").map((td) => td.textContent);
     expect(cells).toEqual(["39.4%", "West"]);
   });
@@ -176,7 +175,7 @@ describe("DataTable", () => {
     ]);
     render(<DataTable rows={rows} columns={columns} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Revenue/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Revenue" }));
 
     expect(header("Revenue")).toHaveAttribute("aria-sort", "descending");
     expect(visibleWeeks()).toEqual(["w2", "w3", "w1"]);

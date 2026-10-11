@@ -57,7 +57,7 @@ describe("Table", () => {
     expect(await screen.findByRole("table")).toBeInTheDocument();
     expect(
       screen.getAllByRole("columnheader").map((th) => th.textContent),
-    ).toEqual(["region", "orders"]);
+    ).toEqual(["Region", "Orders"]);
     expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
   });
 
@@ -149,7 +149,7 @@ describe("Table", () => {
     renderTable({ db });
 
     await screen.findByText("Page 1 of 2 · 12 rows");
-    fireEvent.click(screen.getByRole("button", { name: "n" }));
+    fireEvent.click(screen.getByRole("button", { name: "N" }));
     fireEvent.click(screen.getByRole("button", { name: "Next page" }));
 
     expect(screen.getByText("Page 2 of 2 · 12 rows")).toBeVisible();
@@ -186,7 +186,7 @@ describe("Table", () => {
       await screen.findByRole("table");
       expect(
         screen.getAllByRole("columnheader").map((th) => th.textContent),
-      ).toEqual(["Share", "region"]);
+      ).toEqual(["Share", "Region"]);
       expect(screen.getAllByRole("cell").map((td) => td.textContent)).toEqual([
         "39.4%",
         "West",

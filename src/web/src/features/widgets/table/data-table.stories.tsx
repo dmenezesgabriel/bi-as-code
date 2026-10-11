@@ -31,8 +31,8 @@ export const Paginated: Story = {
 /** Header clicks cycle none → desc → asc → none with `aria-sort` tracking. */
 export const SortCycle: Story = {
   play: async ({ canvas }) => {
-    const header = canvas.getByRole("columnheader", { name: /orders/ });
-    const button = canvas.getByRole("button", { name: /orders/ });
+    const header = canvas.getByRole("columnheader", { name: "Orders" });
+    const button = canvas.getByRole("button", { name: "Orders" });
     await expect(header).toHaveAttribute("aria-sort", "none");
 
     await userEvent.click(button);
@@ -111,5 +111,34 @@ export const ChosenColumns: Story = {
     ]);
     await expect(canvas.getByRole("cell", { name: "$4k" })).toBeVisible();
     await expect(canvas.getByRole("cell", { name: "39.4%" })).toBeVisible();
+  },
+};
+
+/** Without `columns`, snake_case result names read as title-cased words
+ * (`id` upper-cased), and a capitalized SQL alias is kept as written. The
+ * sort button is named by the same text. */
+export const HumanizedHeaders: Story = {
+  args: {
+    rows: [
+      {
+        order_id: 1,
+        order_date: "2026-07-06",
+        pct_of_total: 0.4,
+        "Revenue (USD)": 40,
+      },
+    ],
+  },
+  play: async ({ canvas }) => {
+    const headers = canvas.getAllByRole("columnheader");
+    await expect(headers.map((th) => th.textContent)).toEqual([
+      "Order ID",
+      "Order Date",
+      "Pct of Total",
+      "Revenue (USD)",
+    ]);
+    await userEvent.click(canvas.getByRole("button", { name: "Order ID" }));
+    await expect(
+      canvas.getByRole("columnheader", { name: "Order ID" }),
+    ).toHaveAttribute("aria-sort", "descending");
   },
 };

@@ -105,7 +105,10 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
   // region_share composes {{orders}} + pct_of_total.
   await expect(results.nth(0).getByRole("row")).toHaveCount(4);
-  await expect(results.nth(0)).toContainText("pct_of_total");
+  // Result headers read humanized: `pct_of_total` → "Pct of Total".
+  await expect(
+    results.nth(0).getByRole("columnheader", { name: "Pct of Total" }),
+  ).toBeVisible();
   expect(
     await results
       .nth(0)

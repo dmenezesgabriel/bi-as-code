@@ -23,8 +23,9 @@ import type { Sort, TableColumn } from "./types";
  * returns to the first page. Consumers with a `QueryResult` union handle
  * loading/error themselves through `./states`; `rows` empty renders the
  * shared empty state here. `columns` picks, orders, titles and formats
- * what shows; without it every column shows with numbers as `num0`. Sort
- * always compares the raw values, never the formatted text.
+ * what shows; without it every column shows under its humanized name with
+ * numbers as `num0`. Sort always compares the raw values, never the
+ * formatted text.
  *
  * @example
  * <DataTable rows={result.rows} pageSize={25} />

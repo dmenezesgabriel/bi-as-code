@@ -14,14 +14,12 @@ const cellsOf = (
 ) => columns.map((column) => column.format(row[column.id]));
 
 describe("defaultTableColumns", () => {
-  it("lists every key of the first row, titled by its name", () => {
-    const columns = defaultTableColumns(ROWS);
+  it("lists every key of the first row, titled by its humanized name", () => {
+    const columns = defaultTableColumns([{ order_id: 1, pct_of_total: 0.4 }]);
 
     expect(columns.map((c) => [c.id, c.title])).toEqual([
-      ["region", "region"],
-      ["orders", "orders"],
-      ["revenue", "revenue"],
-      ["share", "share"],
+      ["order_id", "Order ID"],
+      ["pct_of_total", "Pct of Total"],
     ]);
   });
 
@@ -63,13 +61,13 @@ describe("resolveTableColumns", () => {
     expect(columns.map((c) => c.id)).toEqual(["revenue", "region"]);
   });
 
-  it("titles a column by its title prop, else its id", () => {
+  it("titles a column by its title prop verbatim, else its humanized id", () => {
     const columns = resolveTableColumns(ROWS, [
       { id: "share", title: "Share of total" },
       { id: "region" },
     ]);
 
-    expect(columns.map((c) => c.title)).toEqual(["Share of total", "region"]);
+    expect(columns.map((c) => c.title)).toEqual(["Share of total", "Region"]);
   });
 
   it("formats a fixed code on each value", () => {

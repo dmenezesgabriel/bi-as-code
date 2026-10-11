@@ -159,7 +159,7 @@ test("picking channels in the multi-select chips the field, filters the table an
 function orderDetailTable(page: Page): Locator {
   return page
     .locator("div.overflow-x-auto", {
-      has: page.getByRole("columnheader", { name: "order_id" }),
+      has: page.getByRole("columnheader", { name: "Order ID" }),
     })
     .locator("..");
 }
