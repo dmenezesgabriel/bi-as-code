@@ -11,7 +11,7 @@ import {
 } from "./to-option";
 import { SERIES_COLORS, themeTokens } from "./theme";
 import type { ChartOption, HeatmapChartProps, HeatmapModel } from "./types";
-import { numericRange } from "./value-range";
+import { numericRange } from "../value/numeric-range";
 
 /**
  * Assembles the `setOption` payload for a heatmap model: two category axes

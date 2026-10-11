@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { Accordion as AccordionPrimitive } from "../../../components/accordion";
 import { ChevronDownIcon } from "../../../components/icons";
 import { cn } from "../../../lib/cn";
-import { collectItemChildren } from "./collect-children";
+import { requireItemChildren } from "./collect-children";
 import { WidgetError } from "./states";
 import type {
   AccordionItemProps,
@@ -49,10 +49,11 @@ export function Accordion({
       />
     );
   }
-  const items = collectItemChildren<AccordionItemProps>(
+  const items = requireItemChildren<AccordionItemProps>(
     children,
     AccordionItem,
     "AccordionItem",
+    "title",
   );
   if (typeof items === "string") {
     return <WidgetError name="Accordion" message={items} />;

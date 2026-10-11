@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent } from "storybook/test";
 import type { Row } from "../../data/types";
 import { DataTable } from "./data-table";
+import { resolveTableColumns } from "./table-columns";
 
 const ROWS: Row[] = Array.from({ length: 39 }, (_, i) => ({
   week: `w${i + 1}`,
@@ -71,5 +72,44 @@ export const Empty: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText("0 rows")).toBeVisible();
     await expect(canvas.queryByRole("table")).toBeNull();
+  },
+};
+
+const REVENUE: Row[] = [
+  { region: "West", revenue: 6100, share: 0.394, note: null },
+  { region: "North", revenue: 4800, share: 0.31, note: "flat" },
+  { region: "South", revenue: 3700, share: 0.296, note: null },
+];
+
+/** Without `columns`, numbers render `num0` — grouped, no decimals — and
+ * nulls render empty. */
+export const FormattedNumbers: Story = {
+  args: { rows: REVENUE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("cell", { name: "6,100" })).toBeVisible();
+    await expect(canvas.getAllByRole("cell", { name: "0" })).toHaveLength(3);
+  },
+};
+
+/** `columns` picks, orders, titles and formats; `usd` scales against the
+ * column's range so every cell reads in thousands. */
+export const ChosenColumns: Story = {
+  args: {
+    rows: REVENUE,
+    columns: resolveTableColumns(REVENUE, [
+      { id: "revenue", fmt: "usd", title: "Revenue" },
+      { id: "share", fmt: "pct1", title: "Share" },
+      { id: "region", title: "Region" },
+    ]),
+  },
+  play: async ({ canvas }) => {
+    const headers = canvas.getAllByRole("columnheader");
+    await expect(headers.map((th) => th.textContent)).toEqual([
+      "Revenue",
+      "Share",
+      "Region",
+    ]);
+    await expect(canvas.getByRole("cell", { name: "$4k" })).toBeVisible();
+    await expect(canvas.getByRole("cell", { name: "39.4%" })).toBeVisible();
   },
 };

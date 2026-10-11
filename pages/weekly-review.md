@@ -182,7 +182,8 @@ steady grind upward rather than a step change, which is consistent with
 gradual account expansion rather than a promotion or seasonality effect.
 
 ```sql weekly_trend
-select week, region, count(*) as orders
+select week, region, count(*) as orders,
+  count(*) / sum(count(*)) over (partition by week) as share
 from orders
 group by week, region
 order by week, region
@@ -222,7 +223,12 @@ the first six weeks before the West overtook it. The South has been
 flat-to-slightly-down all quarter, which makes this week's zero-change
 reading part of a pattern rather than noise.
 
-<Table data="weekly_trend" />
+<Table data="weekly_trend">
+  <Column id="region" title="Region" />
+  <Column id="week" title="Week" />
+  <Column id="orders" fmt="num0" title="Orders" />
+  <Column id="share" fmt="pct1" title="Share of week" />
+</Table>
 
 ## Takeaways
 

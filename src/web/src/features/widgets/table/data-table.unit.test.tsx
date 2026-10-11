@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { Row } from "../../data/types";
 import { DataTable } from "./data-table";
+import { resolveTableColumns } from "./table-columns";
 
 const ROWS: Row[] = Array.from({ length: 39 }, (_, i) => ({
   week: `w${i + 1}`,
@@ -140,5 +141,44 @@ describe("DataTable", () => {
     expect(screen.getByRole("cell", { name: "x" })).not.toHaveClass(
       "text-right",
     );
+  });
+
+  it("renders numbers num0 and nulls empty by default", () => {
+    render(<DataTable rows={[{ region: "West", revenue: 6100, gap: null }]} />);
+
+    const cells = screen.getAllByRole("cell").map((td) => td.textContent);
+    expect(cells).toEqual(["West", "6,100", ""]);
+  });
+
+  it("shows the given columns in their order, titles and formats", () => {
+    const rows = [{ region: "West", revenue: 6100, share: 0.394 }];
+    const columns = resolveTableColumns(rows, [
+      { id: "share", fmt: "pct1", title: "Share" },
+      { id: "region" },
+    ]);
+    render(<DataTable rows={rows} columns={columns} />);
+
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers.map((th) => th.textContent)).toEqual(["Share", "region"]);
+    const cells = screen.getAllByRole("cell").map((td) => td.textContent);
+    expect(cells).toEqual(["39.4%", "West"]);
+  });
+
+  it("sorts a titled column by its raw values, not its text", () => {
+    const rows = [
+      { week: "w1", revenue: 900 },
+      { week: "w2", revenue: 12000 },
+      { week: "w3", revenue: 4500 },
+    ];
+    const columns = resolveTableColumns(rows, [
+      { id: "week" },
+      { id: "revenue", fmt: "usd", title: "Revenue" },
+    ]);
+    render(<DataTable rows={rows} columns={columns} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Revenue/ }));
+
+    expect(header("Revenue")).toHaveAttribute("aria-sort", "descending");
+    expect(visibleWeeks()).toEqual(["w2", "w3", "w1"]);
   });
 });

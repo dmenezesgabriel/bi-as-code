@@ -32,7 +32,7 @@ test("?region=West narrows the filter-declaring widgets while their fences stay 
   // The fences the widgets filter keep their raw reads: region_share
   // composes all three regions out of the hidden `orders` fence.
   await expect(results.nth(0).getByRole("row")).toHaveCount(4);
-  expect(await firstRowCells(results.nth(0))).toEqual(["West", "140", "39.4"]);
+  expect(await firstRowCells(results.nth(0))).toEqual(["West", "140", "39"]);
   // Only the weekly_trend <Table>, which declares no filter, keeps 39 rows;
   // the order_detail <Table> narrows to West's 140.
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(1);

@@ -7,6 +7,7 @@ import {
   withFilteredData,
   withQueryData,
 } from "../../../../.storybook/decorators";
+import { Column } from "./column";
 import { Table } from "./table";
 import type { TableProps } from "./types";
 import type { SqlBlock } from "../../pages/types";
@@ -135,5 +136,55 @@ export const SmallPageSize: Story = {
     ).toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Next page" }));
     await expect(canvas.getByText("Page 2 of 2 · 6 rows")).toBeVisible();
+  },
+};
+
+const REVENUE: Row[] = [
+  { region: "West", revenue: 6100, share: 0.394 },
+  { region: "North", revenue: 4800, share: 0.31 },
+  { region: "South", revenue: 3700, share: 0.296 },
+];
+
+/** `<Column>` children show only the listed columns, in listed order, each
+ * with its `fmt` and `title` — the column `region` is left out. */
+export const ColumnChildren: Story = {
+  args: {
+    children: [
+      <Column key="share" id="share" fmt="pct1" title="Share" />,
+      <Column key="revenue" id="revenue" fmt="usd" title="Revenue" />,
+    ],
+  },
+  decorators: [withQueryData([ORDERS], fakeDb(REVENUE))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toBeVisible();
+    const headers = canvas.getAllByRole("columnheader");
+    await expect(headers.map((th) => th.textContent)).toEqual([
+      "Share",
+      "Revenue",
+    ]);
+    await expect(canvas.getByRole("cell", { name: "$6k" })).toBeVisible();
+    await expect(canvas.queryByRole("cell", { name: "West" })).toBeNull();
+  },
+};
+
+/** A `<Column id>` the result lacks renders one alert naming the columns
+ * that do exist. */
+export const UnknownColumn: Story = {
+  args: { children: [<Column key="revnue" id="revnue" />] },
+  decorators: [withQueryData([ORDERS], fakeDb(REVENUE))],
+  play: async ({ canvas }) => {
+    const alert = await canvas.findByRole("alert");
+    await expect(alert).toHaveTextContent("available: region, revenue, share");
+    await expect(canvas.queryByRole("table")).toBeNull();
+  },
+};
+
+/** A `fmt` the column's values cannot take renders the format error inline. */
+export const BadFormat: Story = {
+  args: { children: [<Column key="region" id="region" fmt="usd" />] },
+  decorators: [withQueryData([ORDERS], fakeDb(REVENUE))],
+  play: async ({ canvas }) => {
+    const alert = await canvas.findByRole("alert");
+    await expect(alert).toHaveTextContent('fmt="usd"');
   },
 };

@@ -44,13 +44,13 @@ test("index page runs the named sql block and renders its live result", async ({
   expect(await result.locator("tbody td").allTextContents()).toEqual([
     "West",
     "140",
-    "6100",
+    "6,100",
     "North",
     "120",
-    "4800",
+    "4,800",
     "South",
     "95",
-    "3700",
+    "3,700",
   ]);
 
   // The wasm module actually shipped over the wire this page load.
@@ -75,7 +75,7 @@ test("{{params.region}} binds the URL search param through a prepared arg", asyn
   expect(await result.locator("tbody td").allTextContents()).toEqual([
     "West",
     "140",
-    "6100",
+    "6,100",
   ]);
 
   // Param absent → NULL → the authored `is null or …` baseline returns all rows.
@@ -113,9 +113,10 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
       .first()
       .locator("td")
       .allTextContents(),
-  ).toEqual(["West", "140", "39.4"]);
+  ).toEqual(["West", "140", "39"]);
 
-  // Deterministic order by week, region — week 1 opens North/South/West.
+  // Deterministic order by week, region — week 1 opens North/South/West;
+  // the <Column> children list region before week and format share pct1.
   expect(
     await results
       .nth(3)
@@ -123,7 +124,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
       .first()
       .locator("td")
       .allTextContents(),
-  ).toEqual(["1", "North", "14"]);
+  ).toEqual(["North", "1", "14", "53.8%"]);
 
   // The fences stay raw under the param — the widgets that declare
   // filters=["region"] are the filters spec's subject: region_share still
@@ -139,7 +140,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
       .first()
       .locator("td")
       .allTextContents(),
-  ).toEqual(["West", "140", "39.4"]);
+  ).toEqual(["West", "140", "39"]);
   expect(errors).toEqual([]);
 });
 

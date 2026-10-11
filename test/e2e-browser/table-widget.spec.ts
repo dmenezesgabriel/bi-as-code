@@ -45,11 +45,11 @@ test("weekly-review's <Table> sorts client-side through the 3-state cycle", asyn
   await expect(table.getByRole("row")).toHaveCount(11, { timeout: 30_000 });
 
   const ordersHeader = widget.locator("th", {
-    has: page.getByRole("button", { name: "orders" }),
+    has: page.getByRole("button", { name: "Orders" }),
   });
   await expect(ordersHeader).toHaveAttribute("aria-sort", "none");
   // Authored `order by week, region` — week 1 opens North/South/West.
-  expect(await firstRowCells(table)).toEqual(["1", "North", "14"]);
+  expect(await firstRowCells(table)).toEqual(["North", "1", "14", "53.8%"]);
 
   const postsBefore = await workerPosts(page);
 
@@ -63,8 +63,8 @@ test("weekly-review's <Table> sorts client-side through the 3-state cycle", asyn
     if (!tbody) throw new Error("widget tbody not found");
     const button = [
       ...tbody.closest("table")!.querySelectorAll("th button"),
-    ].find((b) => b.textContent?.startsWith("orders"));
-    if (!button) throw new Error("orders header button not found");
+    ].find((b) => b.textContent?.startsWith("Orders"));
+    if (!button) throw new Error("Orders header button not found");
     const t0 = performance.now();
     return new Promise<number>((resolve) => {
       new MutationObserver(() => resolve(performance.now() - t0)).observe(
@@ -81,20 +81,43 @@ test("weekly-review's <Table> sorts client-side through the 3-state cycle", asyn
 
   await expect(ordersHeader).toHaveAttribute("aria-sort", "descending");
   // Desc by orders: week 13 West (22) tops the set.
-  expect(await firstRowCells(table)).toEqual(["13", "West", "22"]);
+  expect(await firstRowCells(table)).toEqual(["West", "13", "22", "64.7%"]);
 
-  await widget.getByRole("button", { name: "orders" }).click();
+  await widget.getByRole("button", { name: "Orders" }).click();
   await expect(ordersHeader).toHaveAttribute("aria-sort", "ascending");
   // Asc: week 1 West (4) is the minimum.
-  expect(await firstRowCells(table)).toEqual(["1", "West", "4"]);
+  expect(await firstRowCells(table)).toEqual(["West", "1", "4", "15.4%"]);
 
-  await widget.getByRole("button", { name: "orders" }).click();
+  await widget.getByRole("button", { name: "Orders" }).click();
   await expect(ordersHeader).toHaveAttribute("aria-sort", "none");
   // Third click restores the authored query order.
-  expect(await firstRowCells(table)).toEqual(["1", "North", "14"]);
+  expect(await firstRowCells(table)).toEqual(["North", "1", "14", "53.8%"]);
 
   // Sorting never touched the engine: zero messages reached the worker.
   expect(await workerPosts(page)).toBe(postsBefore);
+  expect(errors).toEqual([]);
+});
+
+test("weekly-review's <Column> children order, title and format the table", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const table = tableRegions(page).last().locator("table");
+  await expect(table.getByRole("row")).toHaveCount(11, { timeout: 30_000 });
+
+  // The fence selects week, region, orders, share; the <Column> list puts
+  // region first and titles every header.
+  expect(await table.locator("th").allTextContents()).toEqual([
+    "Region",
+    "Week",
+    "Orders",
+    "Share of week",
+  ]);
+  // `share` is a 0–1 ratio; fmt="pct1" renders it with one decimal.
+  expect(await firstRowCells(table)).toEqual(["North", "1", "14", "53.8%"]);
   expect(errors).toEqual([]);
 });
 
@@ -116,20 +139,20 @@ test("the widget pager walks the 39 rows in pages of 10", async ({
   await widget.getByRole("button", { name: "Next page" }).click();
   await expect(widget).toContainText("Page 2 of 4 · 39 rows");
   // Row 11 of the authored order: week 4's middle row (South).
-  expect(await firstRowCells(table)).toEqual(["4", "South", "7"]);
+  expect(await firstRowCells(table)).toEqual(["South", "4", "7", "28.0%"]);
 
   await widget.getByRole("button", { name: "Last page" }).click();
   await expect(widget).toContainText("Page 4 of 4 · 39 rows");
   // Rows 31–39: 9 data rows + the header row.
   await expect(table.getByRole("row")).toHaveCount(10);
-  expect(await firstRowCells(table)).toEqual(["11", "North", "7"]);
+  expect(await firstRowCells(table)).toEqual(["North", "11", "7", "24.1%"]);
   await expect(
     widget.getByRole("button", { name: "Next page" }),
   ).toBeDisabled();
 
   await widget.getByRole("button", { name: "First page" }).click();
   await expect(widget).toContainText("Page 1 of 4 · 39 rows");
-  expect(await firstRowCells(table)).toEqual(["1", "North", "14"]);
+  expect(await firstRowCells(table)).toEqual(["North", "1", "14", "53.8%"]);
   expect(errors).toEqual([]);
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ChartSeries } from "./types";
-import { numericRange, seriesValueRange } from "./value-range";
+import { seriesValueRange } from "./value-range";
 
 const NORTH_SOUTH: readonly ChartSeries[] = [
   {
@@ -18,25 +18,6 @@ const NORTH_SOUTH: readonly ChartSeries[] = [
     ],
   },
 ];
-
-describe("numericRange", () => {
-  it("spans the smallest and largest number", () => {
-    const range = numericRange([4800, 3700, 6100]);
-
-    expect(range).toEqual({ min: 3700, max: 6100 });
-  });
-
-  it("skips nulls, strings, dates and non-finite numbers", () => {
-    const range = numericRange([null, "North", new Date(0), NaN, Infinity, 7]);
-
-    expect(range).toEqual({ min: 7, max: 7 });
-  });
-
-  it("is undefined when no value is a number", () => {
-    expect(numericRange([])).toBeUndefined();
-    expect(numericRange(["North", null])).toBeUndefined();
-  });
-});
 
 describe("seriesValueRange", () => {
   it("spans every series' y when the series sit side by side", () => {

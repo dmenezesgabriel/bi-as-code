@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { Tabs as TabsPrimitive } from "../../../components/tabs";
 import { cn } from "../../../lib/cn";
-import { collectItemChildren } from "./collect-children";
+import { requireItemChildren } from "./collect-children";
 import { WidgetError } from "./states";
 import type { TabProps, TabsProps, TabsVariant } from "./types";
 
@@ -65,7 +65,7 @@ function indicatorClasses(variant: TabsVariant): string {
 function collectTabs(
   children: TabsProps["children"],
 ): ReactElement<TabProps>[] | string {
-  const tabs = collectItemChildren<TabProps>(children, Tab, "Tab");
+  const tabs = requireItemChildren<TabProps>(children, Tab, "Tab", "title");
   if (typeof tabs === "string") return tabs;
   if (tabs.filter((tab) => tab.props.default).length > 1) {
     return "only one <Tab> may set default";

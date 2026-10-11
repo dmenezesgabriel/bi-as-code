@@ -12,7 +12,8 @@ import type {
   StackedMode,
   XAxisKind,
 } from "./types";
-import { numericRange, seriesValueRange } from "./value-range";
+import { numericRange } from "../value/numeric-range";
+import { seriesValueRange } from "./value-range";
 
 /**
  * The echarts params one hovered point contributes to an axis tooltip: the

@@ -16,7 +16,8 @@ import type {
   HistogramModel,
   HistogramSeries,
 } from "./types";
-import { numericRange, seriesValueRange } from "./value-range";
+import { numericRange } from "../value/numeric-range";
+import { seriesValueRange } from "./value-range";
 
 /**
  * Assembles the `setOption` payload for a histogram model: a dense category

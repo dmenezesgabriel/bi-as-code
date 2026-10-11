@@ -3,6 +3,7 @@ import { useState } from "react";
 import { browserFilterUrlPort } from "../filters/filter-url-port";
 import { FiltersProvider } from "../filters/page-filters-context";
 import { NavToc } from "../chrome/nav-toc";
+import { Column } from "../widgets/table/column";
 import { Table } from "../widgets/table/table";
 import { AreaChart } from "../widgets/charts/area-chart";
 import { BarChart } from "../widgets/charts/bar-chart";
@@ -53,7 +54,7 @@ import { useDocumentTitle } from "./use-document-title";
  * scale; `table`, `th` and `td` pad and rule GFM tables; `a` styles links
  * and routes absolute-path ones through the client router so page-to-page navigation never reloads the SPA; `pre` hands
  * fenced code blocks to shiki and pairs named sql fences with their query
- * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
+ * results; the widgets (`Table` with its `Column` carrier, `BigValue`, `Value`, `Delta`, `Sparkline`,
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
  * `Heatmap`) resolve `data` against that same registry; the input widgets
  * (`Dropdown`, `MultiSelect`, `Slider`, `ButtonGroup`, `TextInput`,
@@ -79,6 +80,7 @@ const mdxComponents: MdxComponentMap = {
   a: ProseLink,
   pre: SqlBlockPre,
   Table,
+  Column,
   BigValue,
   Value,
   Delta,

@@ -1,11 +1,13 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Effect } from "effect";
+import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import type { FilterIds } from "../../filters/filter-ids";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
+import { Column } from "./column";
 import { Table } from "./table";
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
@@ -24,6 +26,7 @@ function renderTable({
   provider = true,
   filters,
   url,
+  children,
 }: {
   db?: FakeDuckDb;
   blocks?: SqlBlock[];
@@ -32,9 +35,12 @@ function renderTable({
   provider?: boolean;
   filters?: FilterIds;
   url?: string;
+  children?: ReactNode;
 } = {}) {
   return renderWithRegistry(
-    <Table data={data} pageSize={pageSize} filters={filters} />,
+    <Table data={data} pageSize={pageSize} filters={filters}>
+      {children}
+    </Table>,
     { db, blocks, provider, url },
   );
 }
@@ -154,5 +160,65 @@ describe("Table", () => {
         "descending",
       ),
     );
+  });
+
+  describe("with <Column> children", () => {
+    const REVENUE = [
+      { region: "West", revenue: 6100, share: 0.394 },
+      { region: "North", revenue: 4800, share: 0.31 },
+    ];
+
+    // MDX emits carrier children as a bare array, which is what these mimic.
+    const columnEls = (...specs: Parameters<typeof Column>[0][]) =>
+      specs.map((spec) => <Column key={spec.id} {...spec} />);
+
+    it("shows only the listed columns, in order, with their fmt and title", async () => {
+      const db = new FakeDuckDb();
+      db.rows = REVENUE;
+      renderTable({
+        db,
+        children: columnEls(
+          { id: "share", fmt: "pct1", title: "Share" },
+          { id: "region" },
+        ),
+      });
+
+      await screen.findByRole("table");
+      expect(
+        screen.getAllByRole("columnheader").map((th) => th.textContent),
+      ).toEqual(["Share", "region"]);
+      expect(screen.getAllByRole("cell").map((td) => td.textContent)).toEqual([
+        "39.4%",
+        "West",
+        "31.0%",
+        "North",
+      ]);
+    });
+
+    it("alerts, naming the available columns, for an id the result lacks", async () => {
+      const db = new FakeDuckDb();
+      db.rows = REVENUE;
+      renderTable({ db, children: columnEls({ id: "revnue" }) });
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        'orders: column "revnue" is not in the result — available: region, revenue, share',
+      );
+    });
+
+    it("alerts for a fmt the column cannot take", async () => {
+      const db = new FakeDuckDb();
+      db.rows = REVENUE;
+      renderTable({ db, children: columnEls({ id: "region", fmt: "usd" }) });
+
+      expect(await screen.findByRole("alert")).toHaveTextContent('fmt="usd"');
+    });
+
+    it("alerts for a child that is not a <Column>", () => {
+      renderTable({ children: [<p key="p">stray</p>] });
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "orders: only accepts <Column> children",
+      );
+    });
   });
 });

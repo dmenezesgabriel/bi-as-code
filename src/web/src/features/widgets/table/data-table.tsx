@@ -12,7 +12,8 @@ import { cn } from "../../../lib/cn";
 import type { Row } from "../../data/types";
 import { nextSort, sortRows } from "./sort-rows";
 import { TableEmpty } from "./states";
-import type { Sort } from "./types";
+import { defaultTableColumns } from "./table-columns";
+import type { Sort, TableColumn } from "./types";
 
 /**
  * The table's presentational core: renders already-materialized `rows`
@@ -21,17 +22,22 @@ import type { Sort } from "./types";
  * component-local — sort and page reset on reload, and a sort change
  * returns to the first page. Consumers with a `QueryResult` union handle
  * loading/error themselves through `./states`; `rows` empty renders the
- * shared empty state here.
+ * shared empty state here. `columns` picks, orders, titles and formats
+ * what shows; without it every column shows with numbers as `num0`. Sort
+ * always compares the raw values, never the formatted text.
  *
  * @example
  * <DataTable rows={result.rows} pageSize={25} />
+ * <DataTable rows={result.rows} columns={resolveTableColumns(result.rows, specs)} />
  */
 export function DataTable({
   rows,
   pageSize = 10,
+  columns,
 }: {
   rows: readonly Row[];
   pageSize?: number;
+  columns?: readonly TableColumn[];
 }) {
   const [sort, setSort] = useState<Sort | null>(null);
   const [page, setPage] = useState(0);
@@ -42,7 +48,7 @@ export function DataTable({
 
   if (rows.length === 0) return <TableEmpty />;
 
-  const columns = Object.keys(rows[0] ?? {});
+  const shown = columns ?? defaultTableColumns(rows);
   const pageCount = Math.ceil(rows.length / pageSize);
   // `page` can outlive the data: when a `{{params}}` re-run shrinks `rows`,
   // the view clamps to the last available page instead of rendering nothing.
@@ -60,9 +66,9 @@ export function DataTable({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              {columns.map((column) => (
+              {shown.map((column) => (
                 <SortableHeader
-                  key={column}
+                  key={column.id}
                   column={column}
                   sort={sort}
                   onSort={onSort}
@@ -77,11 +83,11 @@ export function DataTable({
               // set re-renders wholesale on every new QueryResult.
               // eslint-disable-next-line react-doctor/no-array-index-as-key
               <tr key={index}>
-                {columns.map((column) => {
-                  const value = row[column];
+                {shown.map((column) => {
+                  const value = row[column.id];
                   return (
                     <td
-                      key={column}
+                      key={column.id}
                       className={cn(
                         "border-b border-neutral-200 py-1 pr-4 dark:border-neutral-800",
                         (typeof value === "number" ||
@@ -89,7 +95,7 @@ export function DataTable({
                           "text-right",
                       )}
                     >
-                      {value == null ? "" : String(value)}
+                      {column.format(value)}
                     </td>
                   );
                 })}
@@ -115,11 +121,11 @@ function SortableHeader({
   sort,
   onSort,
 }: {
-  column: string;
+  column: TableColumn;
   sort: Sort | null;
   onSort: (column: string) => void;
 }) {
-  const active = sort?.column === column ? sort.direction : null;
+  const active = sort?.column === column.id ? sort.direction : null;
   return (
     <th
       aria-sort={ariaSortValue(active)}
@@ -127,10 +133,10 @@ function SortableHeader({
     >
       <button
         type="button"
-        onClick={() => onSort(column)}
+        onClick={() => onSort(column.id)}
         className="flex items-center gap-1"
       >
-        {column}
+        {column.title}
         <SortGlyph direction={active} />
       </button>
     </th>
