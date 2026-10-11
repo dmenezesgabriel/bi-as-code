@@ -1,4 +1,5 @@
 import { formatValue } from "../value/format";
+import type { FormatRange } from "../value/types";
 import { toPercentageStack } from "./stack";
 import type {
   ChartOption,
@@ -11,6 +12,7 @@ import type {
   StackedMode,
   XAxisKind,
 } from "./types";
+import { numericRange, seriesValueRange } from "./value-range";
 
 /**
  * The echarts params one hovered point contributes to an axis tooltip: the
@@ -31,7 +33,9 @@ export interface TooltipParam {
  * stacked/normalized series, axis tooltip, legend, title and the aria
  * description. `props.stacked === "100%"` normalizes the model here —
  * `toSeries` always emits raw values so tooltips keep the un-normalized
- * number on the point's third slot.
+ * number on the point's third slot. Ticks and point labels format against
+ * one range per axis so they share a unit; the tooltip keeps each value's
+ * own magnitude — a hover wants the exact number.
  *
  * `x`/`y`/`series` in `props` feed only the generated aria description —
  * the model already carries the resolved data.
@@ -48,11 +52,12 @@ export function toChartOption(
   const percentage = props.stacked === "100%";
   const series = percentage ? toPercentageStack(model.series) : model.series;
   const legend = props.legend ?? series.length > 1;
+  const yRange = seriesValueRange(series, props.stacked);
   return {
     grid: gridOption(props, legend),
     xAxis: xAxisOption(model, props),
-    yAxis: yAxisOption(props, percentage),
-    series: series.map((s) => seriesOption(s, type, props)),
+    yAxis: yAxisOption(props, percentage, yRange),
+    series: series.map((s) => seriesOption(s, type, props, yRange)),
     ...chartChromeOption(props, legend),
     tooltip: {
       trigger: "axis",
@@ -134,11 +139,16 @@ export function xSample(model: {
 /**
  * `formatValue` for render-callback sites: a probe already validated the
  * code, so a throw here means a mixed-type cell — degrade to the raw string
- * rather than breaking the chart mid-render.
+ * rather than breaking the chart mid-render. `range` is the span of the axis
+ * the value sits on, so its labels share a unit.
  */
-export function safeFormat(value: unknown, code?: string): string {
+export function safeFormat(
+  value: unknown,
+  code?: string,
+  range?: FormatRange,
+): string {
   try {
-    return formatValue(value, code);
+    return formatValue(value, code, range);
   } catch {
     return String(value);
   }
@@ -168,7 +178,7 @@ export function xAxisOption(
   model: { readonly xDomain: readonly unknown[]; readonly xType: XAxisKind },
   props: SeriesChartProps,
 ): Record<string, unknown> {
-  const formatter = xTickFormatter(model.xType, props.xFmt);
+  const formatter = xTickFormatter(model, props.xFmt);
   return {
     type: model.xType,
     ...(model.xType === "category" ? { data: [...model.xDomain] } : {}),
@@ -187,22 +197,28 @@ export function xAxisOption(
  * The x-tick formatter per axis kind: a `time` axis keeps echarts' adaptive
  * labels unless `xFmt` pins one (ticks arrive as epoch ms — re-wrapped as
  * `Date` for `formatValue`); a `value` axis always gains the numeric default
- * so raw magnitudes read `4M` not `4000000`; a `category` axis only formats
- * when the author asked (its labels are already strings).
+ * so raw magnitudes read `4M` not `4000000`, scaled by the x domain so
+ * every tick shares a unit; a `category` axis only formats when the author
+ * asked (its labels are already strings).
  */
 function xTickFormatter(
-  xType: XAxisKind,
+  model: { readonly xDomain: readonly unknown[]; readonly xType: XAxisKind },
   xFmt?: string,
 ): ((value: unknown, index: number) => string) | undefined {
-  if (xType === "value") return (v) => safeFormat(v, xFmt);
+  if (model.xType === "value") {
+    const xRange = numericRange(model.xDomain);
+    return (v) => safeFormat(v, xFmt, xRange);
+  }
   if (xFmt === undefined) return undefined;
-  if (xType === "time") return (v) => safeFormat(new Date(Number(v)), xFmt);
+  if (model.xType === "time")
+    return (v) => safeFormat(new Date(Number(v)), xFmt);
   return (v) => safeFormat(v, xFmt);
 }
 
 export function yAxisOption(
   props: { readonly yTitle?: string; readonly yFmt?: string },
   percentage: boolean,
+  yRange?: FormatRange,
 ): Record<string, unknown> {
   // On a "100%" stack the axis is fractions — pin 0–1 and format ticks as
   // percents; the author's yFmt still applies to the raw values shown in the
@@ -223,7 +239,7 @@ export function yAxisOption(
       : {}),
     axisLabel: {
       formatter: (v: unknown) =>
-        safeFormat(v, percentage ? "pct0" : props.yFmt),
+        safeFormat(v, percentage ? "pct0" : props.yFmt, yRange),
     },
   };
 }
@@ -232,6 +248,7 @@ function seriesOption(
   series: ChartSeries,
   type: SeriesChartType,
   props: SeriesChartProps,
+  yRange: FormatRange | undefined,
 ): Record<string, unknown> {
   const echartsType = type === "area" ? "line" : type;
   const lineLike = echartsType === "line";
@@ -248,7 +265,7 @@ function seriesOption(
       ? { color: props.seriesColors[series.name] }
       : {}),
     ...(lineLike ? lineOption(props.labels === true) : {}),
-    ...(props.labels ? labelOption(type, props) : {}),
+    ...(props.labels ? labelOption(type, props, yRange) : {}),
     emphasis: {
       focus: "series",
       blurScope: "coordinateSystem",
@@ -283,6 +300,7 @@ export function labelOption(
     readonly yFmt?: string;
     readonly stacked?: StackedMode;
   },
+  yRange?: FormatRange,
 ): Record<string, unknown> {
   const fmt =
     props.labelsFmt ?? (props.stacked === "100%" ? "pct0" : props.yFmt);
@@ -290,7 +308,8 @@ export function labelOption(
     label: {
       show: true,
       position: labelPosition(type, props.stacked),
-      formatter: (p: { value?: unknown }) => safeFormat(yOf(p.value), fmt),
+      formatter: (p: { value?: unknown }) =>
+        safeFormat(yOf(p.value), fmt, yRange),
     },
     labelLayout: { hideOverlap: true },
   };

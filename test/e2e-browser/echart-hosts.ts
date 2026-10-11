@@ -91,6 +91,77 @@ export function optionAt(page: Page, index: number): Promise<AppliedOption> {
   }, index);
 }
 
+/** The live-instance surface the label readers below reach through. */
+interface LabelledChart {
+  getOption(): Record<
+    string,
+    {
+      data?: unknown[];
+      axisLabel?: { formatter?: (value: number, index: number) => string };
+      label?: { formatter?: (params: { value: unknown }) => string };
+    }[]
+  >;
+  getModel(): {
+    getComponent(
+      axis: string,
+      index: number,
+    ): { axis: { scale: { getTicks(): { value: number }[] } } };
+  };
+}
+
+/**
+ * The tick texts chart host `hostIndex` paints on a value axis: the ticks
+ * the live scale settled on, run through the applied `axisLabel.formatter`
+ * — the canvas renderer leaves no DOM text to read them from.
+ */
+export function axisTickTexts(
+  page: Page,
+  hostIndex: number,
+  axis: "xAxis" | "yAxis",
+): Promise<string[]> {
+  return page.evaluate(
+    ([hi, name]) => {
+      const host = document.querySelectorAll<HTMLElement>(
+        "[data-echarts-theme]",
+      )[hi];
+      const chart = (host as unknown as { echartsInstance?: LabelledChart })
+        .echartsInstance;
+      if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
+      const formatter = chart.getOption()[name]?.[0]?.axisLabel?.formatter;
+      if (!formatter)
+        throw new Error(`chart host ${hi} ${name} has no formatter`);
+      const ticks = chart
+        .getModel()
+        .getComponent(name, 0)
+        .axis.scale.getTicks();
+      return ticks.map((tick, index) => formatter(tick.value, index));
+    },
+    [hostIndex, axis] as const,
+  );
+}
+
+/**
+ * The point-label texts of chart host `hostIndex`'s first series — each
+ * data point run through the applied `label.formatter`.
+ */
+export function pointLabelTexts(
+  page: Page,
+  hostIndex: number,
+): Promise<string[]> {
+  return page.evaluate((hi) => {
+    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
+      hi
+    ];
+    const chart = (host as unknown as { echartsInstance?: LabelledChart })
+      .echartsInstance;
+    if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
+    const series = chart.getOption()["series"]?.[0];
+    const formatter = series?.label?.formatter;
+    if (!formatter) throw new Error(`chart host ${hi} has no label formatter`);
+    return (series?.data ?? []).map((value) => formatter({ value }));
+  }, hostIndex);
+}
+
 /**
  * Opens weekly-review on the dev server at `url` and waits for its six
  * charts' first finished paint — the baseline every chart spec reads from.

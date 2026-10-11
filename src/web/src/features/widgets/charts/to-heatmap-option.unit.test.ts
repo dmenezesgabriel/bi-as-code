@@ -186,3 +186,46 @@ describe("toHeatmapOption", () => {
     },
   );
 });
+
+describe("toHeatmapOption one unit per scale", () => {
+  const WIDE_ROWS = [
+    { week: 1000, region: "North", orders: 1000 },
+    { week: 9000, region: "North", orders: 9000 },
+  ];
+
+  it("formats the colour strip's ends and ticks against the value range", () => {
+    const visualMap = option(PROPS, WIDE_ROWS).visualMap as {
+      text?: string[];
+      formatter?: (v: unknown) => string;
+    };
+
+    expect(visualMap.text).toEqual(["9k", "1k"]);
+    expect(visualMap.formatter?.(3000)).toBe("3k");
+  });
+
+  it("formats cell labels against the value range", () => {
+    const series = option({ ...PROPS, labels: true }, WIDE_ROWS).series as {
+      label?: { formatter?: (p: { value: unknown[] }) => string };
+    }[];
+
+    const text = series[0]?.label?.formatter?.({ value: [0, 0, 3700] });
+
+    expect(text).toBe("4k");
+  });
+
+  it("formats a numeric category axis against its domain when fmt is set", () => {
+    const xAxis = option({ ...PROPS, xFmt: "num" }, WIDE_ROWS).xAxis as {
+      data?: unknown[];
+    };
+
+    expect(xAxis.data).toEqual(["1k", "9k"]);
+  });
+
+  it("keeps the tooltip on the value's own magnitude", () => {
+    const html = tooltipFormatter(option(PROPS, WIDE_ROWS))({
+      value: [0, 0, 1000],
+    });
+
+    expect(html).toContain("orders: 1,000");
+  });
+});

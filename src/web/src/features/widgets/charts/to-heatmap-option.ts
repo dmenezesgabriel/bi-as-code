@@ -1,4 +1,5 @@
 import type { ThemeMode } from "../../chrome/theme";
+import type { FormatRange } from "../value/types";
 import {
   chartChromeOption,
   describeChart,
@@ -10,6 +11,7 @@ import {
 } from "./to-option";
 import { SERIES_COLORS, themeTokens } from "./theme";
 import type { ChartOption, HeatmapChartProps, HeatmapModel } from "./types";
+import { numericRange } from "./value-range";
 
 /**
  * Assembles the `setOption` payload for a heatmap model: two category axes
@@ -31,6 +33,9 @@ export function toHeatmapOption(
   const legend = props.legend ?? true;
   const tokens = themeTokens(mode);
   const grid = gridOption(props, false) as { top: number; bottom: number };
+  // The colour strip's ends, its ticks and the cell labels all read off one
+  // scale, so they format against its span and share a unit.
+  const valueSpan = numericRange([model.min, model.max]);
   return {
     grid: {
       ...grid,
@@ -48,7 +53,7 @@ export function toHeatmapOption(
       undefined,
       true,
     ),
-    series: [seriesOption(model, props, tokens.border)],
+    series: [seriesOption(model, props, tokens.border, valueSpan)],
     ...chartChromeOption(props, false),
     tooltip: {
       trigger: "item",
@@ -65,10 +70,10 @@ export function toHeatmapOption(
       itemWidth: 10,
       textStyle: { fontSize: 11, color: tokens.textMuted },
       text: [
-        safeFormat(model.max, props.valueFmt),
-        safeFormat(model.min, props.valueFmt),
+        safeFormat(model.max, props.valueFmt, valueSpan),
+        safeFormat(model.min, props.valueFmt, valueSpan),
       ],
-      formatter: (v: unknown) => safeFormat(v, props.valueFmt),
+      formatter: (v: unknown) => safeFormat(v, props.valueFmt, valueSpan),
       inRange: { color: colorRamp(props.colorScale, tokens.surface) },
     },
     aria: {
@@ -106,10 +111,11 @@ function categoryAxis(
   position: "top" | undefined,
   inverse = false,
 ): Record<string, unknown> {
+  const domainSpan = numericRange(domain);
   return {
     type: "category",
     data: domain.map((v) =>
-      fmt === undefined ? String(v) : safeFormat(v, fmt),
+      fmt === undefined ? String(v) : safeFormat(v, fmt, domainSpan),
     ),
     ...(position !== undefined ? { position } : {}),
     ...(inverse ? { inverse: true } : {}),
@@ -132,6 +138,7 @@ function seriesOption(
   model: HeatmapModel,
   props: HeatmapChartProps,
   border: string,
+  valueSpan: FormatRange | undefined,
 ): Record<string, unknown> {
   return {
     name: props.value,
@@ -144,7 +151,11 @@ function seriesOption(
           label: {
             show: true,
             formatter: (p: { value?: unknown }) =>
-              safeFormat(cellValue(p.value), props.labelsFmt ?? props.valueFmt),
+              safeFormat(
+                cellValue(p.value),
+                props.labelsFmt ?? props.valueFmt,
+                valueSpan,
+              ),
           },
           labelLayout: { hideOverlap: true },
         }

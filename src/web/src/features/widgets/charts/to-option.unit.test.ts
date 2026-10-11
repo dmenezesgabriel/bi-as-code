@@ -174,6 +174,80 @@ describe("toChartOption axes", () => {
   });
 });
 
+describe("toChartOption one unit per axis", () => {
+  it("formats every y tick against the series range, zero staying bare", () => {
+    const tick = probe(CATEGORIES).yAxis?.axisLabel?.formatter;
+
+    expect([0, 1000, 3000, 6000].map((v) => tick?.(v as never, 0))).toEqual([
+      "0",
+      "1k",
+      "3k",
+      "6k",
+    ]);
+  });
+
+  it("formats point labels against the same range as the ticks", () => {
+    const option = probe(CATEGORIES, { labels: true });
+
+    expect(label(option).formatter?.({ value: ["South", 3700] })).toBe("4k");
+  });
+
+  it("scales a stacked axis by its stack totals, not its segments", () => {
+    const model: SeriesModel = {
+      xDomain: ["W1"],
+      xType: "category",
+      series: [
+        { name: "North", data: [["W1", 2000]] },
+        { name: "South", data: [["W1", 3000]] },
+      ],
+    };
+
+    const stacked = probe(model, { stacked: true, labels: true });
+    const grouped = probe(model, { labels: true });
+
+    expect(stacked.yAxis?.axisLabel?.formatter?.(2000 as never, 0)).toBe("2k");
+    expect(label(stacked).formatter?.({ value: ["W1", 2000] })).toBe("2k");
+    expect(grouped.yAxis?.axisLabel?.formatter?.(2000 as never, 0)).toBe(
+      "2,000",
+    );
+  });
+
+  it("formats value x ticks against the x domain", () => {
+    const model: SeriesModel = {
+      xDomain: [1000, 9000],
+      xType: "value",
+      series: [
+        {
+          name: "orders",
+          data: [
+            [1000, 4],
+            [9000, 6],
+          ],
+        },
+      ],
+    };
+
+    const tick = probe(model).xAxis?.axisLabel?.formatter;
+
+    expect(tick?.(2000 as never, 0)).toBe("2k");
+  });
+
+  it("leaves an explicit preset untouched by the range", () => {
+    const tick = probe(CATEGORIES, { yFmt: "usd0" }).yAxis?.axisLabel
+      ?.formatter;
+
+    expect(tick?.(3000 as never, 0)).toBe("$3,000");
+  });
+
+  it("keeps the tooltip on the value's own magnitude", () => {
+    const html = probe(CATEGORIES).tooltip?.formatter?.([
+      { seriesName: "revenue", value: ["South", 3700] },
+    ]);
+
+    expect(html).toContain("revenue: 3,700");
+  });
+});
+
 describe("toChartOption series", () => {
   it("emits a bar series per model series with a bar width cap", () => {
     const option = probe(CATEGORIES);

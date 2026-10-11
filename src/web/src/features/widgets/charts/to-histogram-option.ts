@@ -1,3 +1,4 @@
+import type { FormatRange } from "../value/types";
 import {
   chartChromeOption,
   describeChart,
@@ -15,6 +16,7 @@ import type {
   HistogramModel,
   HistogramSeries,
 } from "./types";
+import { numericRange, seriesValueRange } from "./value-range";
 
 /**
  * Assembles the `setOption` payload for a histogram model: a dense category
@@ -38,6 +40,7 @@ export function toHistogramOption(
   // and labels so a shallow histogram never labels a fractional frequency
   // (the bare `num` preset would render a count of 4 as "4.00").
   const countFmt = props.yFmt ?? "num0";
+  const countRange = stackedCountRange(model.series);
   return {
     grid: gridOption(props, legend),
     xAxis: xAxisOption(model, props),
@@ -45,12 +48,15 @@ export function toHistogramOption(
       ...yAxisOption(
         { yTitle: props.yTitle ?? "Frequency", yFmt: countFmt },
         false,
+        countRange,
       ),
       // Counts are integers — pin tick granularity so a shallow histogram
       // never labels a fractional frequency.
       minInterval: 1,
     },
-    series: model.series.map((s) => seriesOption(s, props, countFmt)),
+    series: model.series.map((s) =>
+      seriesOption(s, props, countFmt, countRange),
+    ),
     ...chartChromeOption(props, legend),
     tooltip: {
       trigger: "axis",
@@ -80,15 +86,31 @@ function assertFormats(
   probeFormat(props.labelsFmt, 0);
 }
 
+/**
+ * The per-bin totals across every series — series always stack, so the
+ * count axis reaches the total and its ticks and labels scale by it.
+ */
+function stackedCountRange(
+  series: readonly HistogramSeries[],
+): FormatRange | undefined {
+  const binned = series.map((s) => ({
+    data: s.counts.map((count, bin) => [bin, count]),
+  }));
+  return seriesValueRange(binned, true);
+}
+
 function xAxisOption(
   model: HistogramModel,
   props: HistogramChartProps,
 ): Record<string, unknown> {
+  // Edges format against the bins' whole span so the axis reads in one
+  // unit — `0 2k 4k`, never `2,000` beside `4k`.
+  const span = numericRange([model.bins[0]?.start, model.bins.at(-1)?.end]);
   return {
     type: "category",
     // One label per bin, its `valueFmt`-formatted start edge — at ~20 bins
     // echarts' overlap thinning keeps the axis readable.
-    data: model.bins.map((b) => safeFormat(b.start, props.valueFmt)),
+    data: model.bins.map((b) => safeFormat(b.start, props.valueFmt, span)),
     // Bars draw inside category bands; no outer padding, so the first and
     // last bins sit flush with the plot edge like a continuous axis.
     boundaryGap: false,
@@ -104,6 +126,7 @@ function seriesOption(
   series: HistogramSeries,
   props: HistogramChartProps,
   countFmt: string,
+  countRange: FormatRange | undefined,
 ): Record<string, unknown> {
   return {
     name: series.name,
@@ -118,7 +141,11 @@ function seriesOption(
       ? { color: props.seriesColors[series.name] }
       : {}),
     ...(props.labels
-      ? labelOption("bar", { ...props, stacked: true, yFmt: countFmt })
+      ? labelOption(
+          "bar",
+          { ...props, stacked: true, yFmt: countFmt },
+          countRange,
+        )
       : {}),
     emphasis: { focus: "series", blurScope: "coordinateSystem" },
   };

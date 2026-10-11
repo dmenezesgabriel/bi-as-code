@@ -1,3 +1,4 @@
+import type { FormatRange } from "../value/types";
 import {
   cellSample,
   chartChromeOption,
@@ -18,6 +19,7 @@ import type {
   ScatterModel,
   ScatterSeries,
 } from "./types";
+import { seriesValueRange } from "./value-range";
 
 /**
  * Uniform point size when no `size` column is bound (or every bound cell is
@@ -52,11 +54,12 @@ export function toScatterOption(
   const legend = props.legend ?? model.series.length > 1;
   const maxSize = maxSizeValue(model.series);
   const yByName = new Map(model.series.map((s) => [s.name, s.y]));
+  const yRange = seriesValueRange(model.series);
   return {
     grid: gridOption(props, legend),
     xAxis: xAxisOption(model, props),
-    yAxis: yAxisOption(props, false),
-    series: model.series.map((s) => seriesOption(s, props, maxSize)),
+    yAxis: yAxisOption(props, false, yRange),
+    series: model.series.map((s) => seriesOption(s, props, maxSize, yRange)),
     ...chartChromeOption(props, legend),
     tooltip: {
       trigger: "item",
@@ -101,6 +104,7 @@ function seriesOption(
   series: ScatterSeries,
   props: ScatterChartProps,
   maxSize: number | undefined,
+  yRange: FormatRange | undefined,
 ): Record<string, unknown> {
   return {
     name: series.name,
@@ -115,7 +119,7 @@ function seriesOption(
     ...(props.seriesColors?.[series.name] !== undefined
       ? { color: props.seriesColors[series.name] }
       : {}),
-    ...(props.labels ? labelOption("scatter", props) : {}),
+    ...(props.labels ? labelOption("scatter", props, yRange) : {}),
     emphasis: { focus: "series" },
   };
 }

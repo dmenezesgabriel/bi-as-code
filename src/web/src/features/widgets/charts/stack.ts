@@ -43,6 +43,6 @@ function normalizePoint(
  * Totals key by instant for `Date` x (series may carry distinct instances
  * of the same instant) and by value for everything else.
  */
-function xKey(x: unknown): unknown {
+export function xKey(x: unknown): unknown {
   return x instanceof Date ? x.getTime() : x;
 }

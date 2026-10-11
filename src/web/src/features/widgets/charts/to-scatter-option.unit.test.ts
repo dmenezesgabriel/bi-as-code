@@ -194,3 +194,47 @@ describe("toScatterOption", () => {
     },
   );
 });
+
+describe("toScatterOption one unit per axis", () => {
+  const WIDE_ROWS = [
+    { orders: 1000, revenue: 500 },
+    { orders: 9000, revenue: 7000 },
+  ];
+  interface AxisProbe {
+    axisLabel?: { formatter?: (value: unknown, index: number) => string };
+  }
+  interface LabelProbe {
+    label?: { formatter?: (params: { value?: unknown }) => string };
+  }
+
+  function wideOption(props: { labels?: boolean; yFmt?: string } = {}) {
+    return toScatterOption(
+      toScatterSeries(WIDE_ROWS, { x: "orders", y: "revenue" }),
+      { ...PROPS, ...props },
+    );
+  }
+
+  it("formats x and y ticks against each axis' own range", () => {
+    const option = wideOption();
+
+    const xTick = (option.xAxis as AxisProbe).axisLabel?.formatter;
+    const yTick = (option.yAxis as AxisProbe).axisLabel?.formatter;
+
+    expect(xTick?.(2000, 0)).toBe("2k");
+    expect(yTick?.(3000, 0)).toBe("3k");
+  });
+
+  it("formats point labels against the y range", () => {
+    const series = wideOption({ labels: true }).series as LabelProbe[];
+
+    const text = series[0]?.label?.formatter?.({ value: [1000, 3700] });
+
+    expect(text).toBe("4k");
+  });
+
+  it("leaves an explicit preset untouched by the range", () => {
+    const yAxis = wideOption({ yFmt: "usd0" }).yAxis as AxisProbe;
+
+    expect(yAxis.axisLabel?.formatter?.(3000, 0)).toBe("$3,000");
+  });
+});

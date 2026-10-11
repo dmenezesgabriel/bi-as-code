@@ -183,3 +183,41 @@ describe("toHistogramOption", () => {
     },
   );
 });
+
+describe("toHistogramOption one unit per axis", () => {
+  it("formats every bin edge against the bins' whole span", () => {
+    // min 0, max 8000; binCount 4 → edges 0, 2000, 4000, 6000
+    const rows = [0, 2500, 4500, 8000].map((amount) => ({ amount }));
+
+    const option = toHistogramOption(
+      toHistogram(rows, { value: "amount", binCount: 4 }),
+      PROPS,
+    );
+
+    expect((option.xAxis as { data?: unknown[] }).data).toEqual([
+      "0",
+      "2k",
+      "4k",
+      "6k",
+    ]);
+  });
+
+  it("scales a bare-num count axis by the stacked bin totals", () => {
+    // One bin holds 60 North + 60 South — the stack reaches 120, where bare
+    // `num` drops its decimal; either series alone (60) would keep one.
+    const crowd = ["North", "South"].flatMap((region) =>
+      Array.from({ length: 60 }, () => ({ amount: 5, region })),
+    );
+    const rows = [...crowd, { amount: 10, region: "North" }];
+
+    const option = toHistogramOption(
+      toHistogram(rows, { value: "amount", series: "region", binCount: 2 }),
+      { ...PROPS, series: "region", yFmt: "num" },
+    );
+    const yAxis = option.yAxis as {
+      axisLabel?: { formatter?: (v: unknown) => string };
+    };
+
+    expect(yAxis.axisLabel?.formatter?.(50)).toBe("50");
+  });
+});

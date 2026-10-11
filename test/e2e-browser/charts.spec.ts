@@ -8,9 +8,11 @@ import {
   workerPosts,
 } from "./dev-server.fixture.js";
 import {
+  axisTickTexts,
   chartHosts,
   openWeeklyReviewCharts,
   optionAt,
+  pointLabelTexts,
   readyCharts,
 } from "./echart-hosts.js";
 
@@ -89,6 +91,23 @@ test("weekly-review renders the six charts bound to their fences", async ({
   const posts = await workerPosts(page);
   expect(await workerPosts(page)).toBe(posts);
   expect(errors).toEqual([]);
+});
+
+test("the Regional split's ticks and bar labels read in one unit", async ({
+  page,
+  biacDev,
+}) => {
+  await openWeeklyReviewCharts(page, biacDev.url);
+
+  const ticks = await axisTickTexts(page, 0, "yAxis");
+  const labels = await pointLabelTexts(page, 0);
+
+  // Revenue tops out past 6,000, so the whole axis scales to thousands —
+  // no `3,000` beside `6k` — and the baseline stays a bare zero.
+  expect(ticks[0]).toBe("0");
+  expect(ticks.length).toBeGreaterThan(2);
+  for (const tick of ticks.slice(1)) expect(tick).toMatch(/^\d+k$/);
+  expect(labels).toEqual(["6k", "5k", "4k"]);
 });
 
 test("the scatter, histogram and heatmap apply their own option shapes", async ({
