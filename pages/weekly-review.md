@@ -58,7 +58,7 @@ kind, but it also means the trend is sensitive to churn in a small number
 of active accounts — the regional split below shows how concentrated the
 week was.
 
-```sql kpi
+```sql kpi echo display
 select
   sum(amount) as revenue,
   count(*) as orders,
@@ -99,7 +99,7 @@ with the other two regions.
 | North  |    120 |  $4,800 |         0% |
 | South  |     95 |  $3,700 |         0% |
 
-```sql orders
+```sql orders echo display
 select region, count(*) as orders, sum(amount) as revenue
 from orders
 group by region
@@ -108,7 +108,7 @@ order by revenue desc
 
 <BarChart data="orders" x="region" y="revenue" labels filters={["region"]} select="crossfilter" />
 
-```sql region_share
+```sql region_share echo display
 select region, orders,
   round(orders * 100.0 / sum(orders) over (), 1) as pct_of_total
 from {{orders}}
@@ -128,7 +128,7 @@ region booked more orders are the weeks it closed more revenue, and no
 region's week reads as an outlier against that line. The mix is volume,
 not a few oversized tickets carrying a region's number.
 
-```sql region_week
+```sql region_week echo display
 select week, region, count(*) as orders, sum(amount) as revenue
 from orders
 group by week, region
@@ -151,7 +151,7 @@ fits inside a few dollars around $41, so the week's lift is a volume
 story rather than a ticket-size story. A wider spread would put the
 average-order-value read above in question; this shape doesn't.
 
-```sql order_amounts
+```sql order_amounts echo display
 -- varchar: the result table would render the raw DATE as epoch ms
 select order_date::varchar as order_date, amount, region
 from orders
@@ -166,7 +166,7 @@ drag across the histogram through the same `amount` clause, `q`
 over the region name and the large-orders switch (`amount >= 44`)
 through the fence's own `{{params.*}}` clauses.
 
-```sql order_detail
+```sql order_detail echo display
 select order_id, order_date::varchar as order_date, region, amount
 from orders
 where ({{params.q}} is null or region ilike '%' || {{params.q}} || '%')
@@ -181,7 +181,7 @@ Weekly volume has climbed in four of the last five weeks. The shape is a
 steady grind upward rather than a step change, which is consistent with
 gradual account expansion rather than a promotion or seasonality effect.
 
-```sql weekly_trend
+```sql weekly_trend echo display
 select week, region, count(*) as orders
 from orders
 group by week, region
@@ -200,7 +200,7 @@ order by week, region
 
 <Heatmap data="weekly_trend" x="week" y="region" value="orders" />
 
-```sql weekly_revenue
+```sql weekly_revenue echo display
 select week, sum(amount) as revenue
 from orders
 where {{params.region}} is null or region = {{params.region}}

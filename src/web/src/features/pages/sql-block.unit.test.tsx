@@ -14,7 +14,9 @@ const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
 /**
  * Renders one fence exactly as a compiled page does: `<pre>` children come
  * from MDX, where a named sql block carries its name in the code element's
- * `meta` prop (compile-page emits it via hast `hProperties`).
+ * `meta` prop and each display flag that is on as an empty-string prop
+ * (compile-page emits them via hast `hProperties`). Both flags default on,
+ * so the result-state tests read as a fully shown block.
  */
 function renderFence({
   db = new FakeDuckDb(),
@@ -22,6 +24,8 @@ function renderFence({
   lang = "sql",
   meta = "orders",
   sql = ORDERS.sql,
+  echo = true,
+  display = true,
   provider = true,
 }: {
   db?: FakeDuckDb;
@@ -29,11 +33,18 @@ function renderFence({
   lang?: string;
   meta?: string | null;
   sql?: string;
+  echo?: boolean;
+  display?: boolean;
   provider?: boolean;
 } = {}) {
+  const flags = { ...(echo && { echo: "" }), ...(display && { display: "" }) };
   const element = (
     <SqlBlockPre>
-      <code className={`language-${lang}`} {...(meta === null ? {} : { meta })}>
+      <code
+        className={`language-${lang}`}
+        {...(meta === null ? {} : { meta })}
+        {...flags}
+      >
         {sql}
       </code>
     </SqlBlockPre>
@@ -142,7 +153,7 @@ describe("SqlBlockPre", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("renders a named fence as code only outside a query registry", async () => {
+  it("renders an echoed named fence as code only outside a query registry", async () => {
     renderFence({ provider: false });
 
     expect(screen.queryByRole("table")).toBeNull();
@@ -169,5 +180,66 @@ describe("SqlBlockPre", () => {
     expect(document.querySelector("pre")).toHaveTextContent("x = 1");
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  describe("display flags", () => {
+    it("renders nothing for a named fence with no flags, yet runs its query", async () => {
+      const db = new FakeDuckDb();
+      db.rows = [{ n: 1 }];
+      renderFence({ db, echo: false, display: false });
+
+      await waitFor(() => expect(db.queries).toHaveLength(1));
+      expect(document.querySelector("pre")).toBeNull();
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("renders only the code when the fence sets echo", async () => {
+      const db = new FakeDuckDb();
+      db.rows = [{ n: 1 }];
+      renderFence({ db, display: false });
+
+      await waitFor(() => expect(db.queries).toHaveLength(1));
+      expect(document.querySelector("pre")).toHaveTextContent(
+        "select * from orders",
+      );
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("renders only the result table when the fence sets display", async () => {
+      const db = new FakeDuckDb();
+      db.rows = [{ region: "West" }];
+      renderFence({ db, echo: false });
+
+      expect(await screen.findByRole("table")).toHaveTextContent("West");
+      expect(document.querySelector("pre")).toBeNull();
+    });
+
+    it("renders no skeleton for a hidden fence while its query is in flight", async () => {
+      const db = new FakeDuckDb();
+      db.holdWhen = () => new Promise<Row[]>(() => {});
+      renderFence({ db, echo: false, display: false });
+
+      await waitFor(() => expect(db.queries).toHaveLength(1));
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("still shows the inline error of a hidden fence whose query fails", async () => {
+      const db = new FakeDuckDb();
+      db.failWhen = () => "Catalog Error: Table orders does not exist";
+      renderFence({ db, echo: false, display: false });
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("orders");
+      expect(alert).toHaveTextContent("Table orders does not exist");
+      expect(document.querySelector("pre")).toBeNull();
+    });
+
+    it("renders nothing for a named fence without echo outside a query registry", () => {
+      renderFence({ provider: false, echo: false });
+
+      expect(document.querySelector("pre")).toBeNull();
+    });
   });
 });

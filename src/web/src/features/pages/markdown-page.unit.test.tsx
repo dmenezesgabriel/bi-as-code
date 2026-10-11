@@ -268,7 +268,7 @@ describe("MarkdownPage", () => {
           const Pre = components?.pre ?? "pre";
           return (
             <Pre>
-              <code className="language-sql" {...{ meta: "q" }}>
+              <code className="language-sql" {...{ meta: "q", display: "" }}>
                 select * from orders
               </code>
             </Pre>

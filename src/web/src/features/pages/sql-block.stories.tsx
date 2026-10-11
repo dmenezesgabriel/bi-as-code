@@ -9,13 +9,33 @@ import type { SqlBlock } from "./types";
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
 
-function sqlFence(name: string, sql = ORDERS.sql) {
+type FenceFlags = { echo?: boolean; display?: boolean };
+
+/** A named sql fence's code child as compile-page emits it: each flag that
+ * is on arrives as an empty-string prop, an off flag is absent. */
+function sqlFence(
+  name: string,
+  { echo = true, display = true }: FenceFlags = {},
+) {
+  const flags = { ...(echo && { echo: "" }), ...(display && { display: "" }) };
   return (
-    <code className="language-sql" {...{ meta: name }}>
-      {sql}
+    <code className="language-sql" {...{ meta: name, ...flags }}>
+      {ORDERS.sql}
     </code>
   );
 }
+
+const ordersDb = () =>
+  FakeDuckDb.withRows([
+    { region: "West", orders: 140 },
+    { region: "North", orders: 120 },
+  ]);
+
+const failingDb = () => {
+  const db = new FakeDuckDb();
+  db.failWhen = () => "Catalog Error: Table orders does not exist";
+  return db;
+};
 
 const meta: Meta<typeof SqlBlockPre> = {
   title: "Pages/SqlBlockPre",
@@ -26,23 +46,11 @@ export default meta;
 
 type Story = StoryObj<typeof SqlBlockPre>;
 
-/** A named sql fence whose query succeeded — highlighted code on top, the
- * sortable result table underneath. */
-export const Success: Story = {
+/** ` ```sql orders echo display ` whose query succeeded — highlighted code
+ * on top, the sortable result table underneath. */
+export const EchoAndDisplay: Story = {
   args: { children: sqlFence("orders") },
-  decorators: [
-    withQueryData(
-      [ORDERS],
-      (() => {
-        const db = new FakeDuckDb();
-        db.rows = [
-          { region: "West", orders: 140 },
-          { region: "North", orders: 120 },
-        ];
-        return db;
-      })(),
-    ),
-  ],
+  decorators: [withQueryData([ORDERS], ordersDb())],
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole("table")).toBeVisible();
     await expect(
@@ -83,16 +91,7 @@ export const Loading: Story = {
 /** The query failed — the error names the block inline, under the code. */
 export const QueryError: Story = {
   args: { children: sqlFence("orders") },
-  decorators: [
-    withQueryData(
-      [ORDERS],
-      (() => {
-        const db = new FakeDuckDb();
-        db.failWhen = () => "Catalog Error: Table orders does not exist";
-        return db;
-      })(),
-    ),
-  ],
+  decorators: [withQueryData([ORDERS], failingDb())],
   play: async ({ canvas }) => {
     const alert = await canvas.findByRole("alert");
     await expect(alert).toHaveTextContent("orders");
@@ -116,6 +115,52 @@ export const Empty: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByText("0 rows")).toBeVisible();
     await expect(canvas.queryByRole("table")).toBeNull();
+  },
+};
+
+/** ` ```sql orders ` with no flags — the query runs for its widgets, the
+ * fence itself renders nothing. */
+export const Hidden: Story = {
+  args: { children: sqlFence("orders", { echo: false, display: false }) },
+  decorators: [withQueryData([ORDERS], ordersDb())],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvasElement.querySelector("pre")).toBeNull();
+    await expect(canvas.queryByRole("table")).toBeNull();
+    await expect(canvas.queryByRole("status")).toBeNull();
+  },
+};
+
+/** ` ```sql orders echo ` — the code shows, the result table does not. */
+export const EchoOnly: Story = {
+  args: { children: sqlFence("orders", { display: false }) },
+  decorators: [withQueryData([ORDERS], ordersDb())],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvasElement.querySelector("pre")).toHaveTextContent(
+      ORDERS.sql,
+    );
+    await expect(canvas.queryByRole("table")).toBeNull();
+  },
+};
+
+/** ` ```sql orders display ` — the result table shows, the code does not. */
+export const DisplayOnly: Story = {
+  args: { children: sqlFence("orders", { echo: false }) },
+  decorators: [withQueryData([ORDERS], ordersDb())],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByRole("table")).toBeVisible();
+    await expect(canvasElement.querySelector("pre")).toBeNull();
+  },
+};
+
+/** A hidden fence whose query failed still shows its inline error — hiding
+ * a block never hides a failure. */
+export const HiddenError: Story = {
+  args: { children: sqlFence("orders", { echo: false, display: false }) },
+  decorators: [withQueryData([ORDERS], failingDb())],
+  play: async ({ canvas, canvasElement }) => {
+    const alert = await canvas.findByRole("alert");
+    await expect(alert).toHaveTextContent("Table orders does not exist");
+    await expect(canvasElement.querySelector("pre")).toBeNull();
   },
 };
 

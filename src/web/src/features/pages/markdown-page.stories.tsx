@@ -60,7 +60,8 @@ export const PlainPage: Story = {
 };
 
 /** A page whose module declares a named sql block mounts the registry —
- * the fence renders its query result inline under the highlighted code. */
+ * the fence (` ```sql orders echo display `) renders its query result
+ * inline under the highlighted code. */
 export const PageWithQuery: Story = {
   args: {
     page: pageModule({
@@ -70,7 +71,10 @@ export const PageWithQuery: Story = {
         const Pre = components?.pre ?? "pre";
         return (
           <Pre>
-            <code className="language-sql" {...{ meta: "orders" }}>
+            <code
+              className="language-sql"
+              {...{ meta: "orders", echo: "", display: "" }}
+            >
               select * from orders
             </code>
           </Pre>

@@ -14,7 +14,7 @@ the file name and the document title to the first heading.
 | Marketplace |   32% |    113 |
 | Partner     |   22% |     79 |
 
-```sql channel_mix
+```sql channel_mix echo display
 select channel, share, orders
 from channels
 order by orders desc
