@@ -172,7 +172,7 @@ describe("front-matter", () => {
     writeProjectFile(root, "pages/bad.md", "---\ntitle: [unclosed\n---\n");
 
     expect(() => discoverPages(root)).toThrow(
-      /Invalid front-matter in pages\/bad\.md/,
+      /^Invalid front-matter in pages\/bad\.md:2:17: Flow sequence[^]* must be sufficiently indented and end with a \]:\n/,
     );
   });
 });

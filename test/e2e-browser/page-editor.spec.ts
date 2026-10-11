@@ -268,7 +268,7 @@ test("broken front-matter shows its error in the preview instead of taking the a
   await appendToLine(page, "title: Weekly review", ": x");
   await saveWithModS(page);
 
-  await expectCompileErrorInPreview(page, /pages\/weekly-review\.md/);
+  await expectCompileErrorInPreview(page, /pages\/weekly-review\.md:2:\d+/);
 
   await eraseTyped(page, ": x");
   await saveWithModS(page);

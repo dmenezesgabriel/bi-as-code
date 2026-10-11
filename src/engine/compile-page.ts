@@ -5,8 +5,7 @@ import remarkGfm from "remark-gfm";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
-import { matter } from "vfile-matter";
-import { pageFrontmatter } from "./page-frontmatter.js";
+import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
 import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
 import type {
@@ -46,7 +45,7 @@ export async function compilePage(
   configTables: SqlTableMap = {},
 ): Promise<CompiledPage> {
   const file = new VFile({ path: filePath, value: markdown });
-  matter(file, { strip: true });
+  parseFrontmatterBlock(file, { strip: true });
   // Stripping the front-matter block would shift every position the compiler
   // reports up by the block's height. Blank lines put the body back on its
   // own lines of the file, so an error names the line its author sees.

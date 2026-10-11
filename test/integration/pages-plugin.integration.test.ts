@@ -127,7 +127,9 @@ describe("page transform", () => {
       `/@fs${join(root, "pages/index.md")}`,
     );
 
-    expect(result?.code).toMatch(/^export const compileError = .*index\.md/);
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md".*"line":2,"column":17\};\n$/,
+    );
   });
 
   it("reports a page whose sql: table name collides with biac.config.ts", async () => {

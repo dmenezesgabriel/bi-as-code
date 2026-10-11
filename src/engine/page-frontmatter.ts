@@ -8,7 +8,7 @@ import type { PageFrontmatter } from "./types.js";
  * the manifest builder's view of the page. `displayPath` (the
  * project-relative `pages/...` path) names the file in errors so discovery
  * failures read like compile failures. A file with no front-matter yields
- * `{}`; malformed YAML throws naming the file.
+ * `{}`; malformed YAML throws naming the file, line and column.
  *
  * @example
  * readPageFrontmatter("/site/pages/a.md", "pages/a.md");
@@ -23,15 +23,73 @@ export function readPageFrontmatter(
     value: readFileSync(absolutePath, "utf-8"),
   });
   try {
-    matter(file);
+    parseFrontmatterBlock(file);
   } catch (error) {
     throw new Error(
-      `Invalid front-matter in ${displayPath}: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      `Invalid front-matter in ${frontmatterErrorText(error, displayPath)}`,
     );
   }
   return pageFrontmatter(file);
+}
+
+function frontmatterErrorText(error: unknown, displayPath: string): string {
+  if (error instanceof FrontmatterSyntaxError) {
+    return `${displayPath}:${error.line}:${error.column}: ${error.message}`;
+  }
+  return `${displayPath}: ${error instanceof Error ? error.message : String(error)}`;
+}
+
+/**
+ * A YAML syntax error in a page's front-matter, positioned in the page file
+ * rather than in the YAML block, so it reads like a page-body compile error.
+ */
+class FrontmatterSyntaxError extends Error {
+  constructor(
+    message: string,
+    readonly line: number,
+    readonly column: number,
+  ) {
+    super(message);
+    this.name = "FrontmatterSyntaxError";
+  }
+}
+
+/**
+ * Splits and parses a page's YAML front-matter into `file.data.matter`
+ * (vfile-matter's `matter`), rethrowing a YAML syntax error as a
+ * {@link FrontmatterSyntaxError} at its line and column in the file.
+ *
+ * @example
+ * parseFrontmatterBlock(new VFile("---\ntitle: a: b\n---\n"));
+ * // throws FrontmatterSyntaxError { line: 2, column: 8 }
+ */
+export function parseFrontmatterBlock(
+  file: VFile,
+  options?: { strip?: boolean },
+): void {
+  try {
+    matter(file, options);
+  } catch (error) {
+    throw fileTrueSyntaxError(error);
+  }
+}
+
+// yaml's YAMLParseError (vfile-matter's parser) carries `linePos`, 1-based
+// and counted from the start of the YAML block. vfile-matter matches the
+// opening fence with `^---(?:\r?\n|\r)`, so the block starts on file line 2.
+function fileTrueSyntaxError(error: unknown): unknown {
+  if (!(error instanceof Error)) return error;
+  const { linePos } = error as {
+    linePos?: [{ line?: unknown; col?: unknown }];
+  };
+  const start = linePos?.[0];
+  if (typeof start?.line !== "number" || typeof start.col !== "number") {
+    return error;
+  }
+  // The block-relative " at line N, column M" would contradict the file
+  // position; the snippet and caret after it hold for the file too.
+  const message = error.message.replace(/ at line \d+, column \d+(?=:)/, "");
+  return new FrontmatterSyntaxError(message, start.line + 1, start.col);
 }
 
 /**

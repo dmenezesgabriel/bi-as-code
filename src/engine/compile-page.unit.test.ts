@@ -56,6 +56,15 @@ describe("front-matter", () => {
     await expect(compile("---\ntitle: [unclosed\n---\n")).rejects.toThrow();
   });
 
+  it("rejects invalid YAML at its line and column in the file", async () => {
+    const failure = await compile("---\ntitle: Weekly review: x\n---\n").catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toMatchObject({ line: 2, column: 8 });
+    expect((failure as Error).message).not.toMatch(/ at line 1/);
+  });
+
   it("rejects front-matter that is not a YAML mapping", async () => {
     await expect(compile("---\n- a\n- b\n---\n")).rejects.toThrow(
       /expected a YAML mapping/,
