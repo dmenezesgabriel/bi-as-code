@@ -59,6 +59,34 @@ describe("HighlightedPre", () => {
     expect(container.querySelector("pre")).toHaveTextContent("x = 1");
   });
 
+  it("wraps a highlighted fence in a keyboard-focusable horizontal scroller", async () => {
+    const { container } = render(
+      <HighlightedPre>
+        <code className="language-sql">select 1</code>
+      </HighlightedPre>,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("pre.shiki")).not.toBeNull();
+    });
+    const scroller = container.querySelector("pre.shiki")?.parentElement;
+    expect(scroller).toHaveAttribute("tabindex", "0");
+    expect(scroller).toHaveClass("overflow-x-auto");
+  });
+
+  it("makes an unhighlighted pre its own keyboard-focusable horizontal scroller", async () => {
+    const { container } = render(
+      <HighlightedPre>
+        <code className="language-not-a-real-lang">x = 1</code>
+      </HighlightedPre>,
+    );
+
+    await flushHighlight();
+    const pre = container.querySelector("pre");
+    expect(pre).toHaveAttribute("tabindex", "0");
+    expect(pre).toHaveClass("overflow-x-auto");
+  });
+
   it("passes through non-element children", async () => {
     const { container } = render(<HighlightedPre>just text</HighlightedPre>);
 

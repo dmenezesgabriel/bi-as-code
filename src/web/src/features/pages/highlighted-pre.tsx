@@ -8,6 +8,19 @@ import {
 } from "react";
 import { highlightFence } from "./shiki-highlighter";
 
+// A fence wider than the page scrolls inside itself, never the page
+// (WCAG 1.4.10 Reflow), and a scrolling region must be reachable by
+// keyboard (axe `scrollable-region-focusable`,
+// https://dequeuniversity.com/rules/axe/4.10/scrollable-region-focusable),
+// so it takes `tabIndex={0}` and the inputs' focus-visible outline.
+const FENCE_SCROLLER_CLASS =
+  "overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500";
+
+// Shiki paints the fence background on its own `pre`; without this the
+// `pre` stays as wide as the scroller and the background ends where the
+// first screenful of code does once the fence is scrolled sideways.
+const SHIKI_PRE_FILLS_SCROLL_CLASS = "[&>pre]:min-w-fit";
+
 interface Fence {
   lang: string;
   code: string;
@@ -34,7 +47,8 @@ function fenceFromChildren(children: ReactNode): Fence | null {
  * into a generated `<pre>` tree (shiki escapes the code text itself, so
  * the injected markup carries no author HTML). While highlighting is in
  * flight — and for non-fence or unknown-language `pre`s — the original
- * elements render unchanged.
+ * elements render unchanged. Either way the block scrolls sideways inside
+ * itself and takes keyboard focus.
  */
 export function HighlightedPre({
   children,
@@ -59,7 +73,17 @@ export function HighlightedPre({
   }, [fence, key]);
 
   if (highlighted && highlighted.key === key) {
-    return <div dangerouslySetInnerHTML={{ __html: highlighted.html }} />;
+    return (
+      <div
+        className={`${FENCE_SCROLLER_CLASS} ${SHIKI_PRE_FILLS_SCROLL_CLASS}`}
+        tabIndex={0}
+        dangerouslySetInnerHTML={{ __html: highlighted.html }}
+      />
+    );
   }
-  return <pre {...preProps}>{children}</pre>;
+  return (
+    <pre {...preProps} className={FENCE_SCROLLER_CLASS} tabIndex={0}>
+      {children}
+    </pre>
+  );
 }

@@ -218,3 +218,48 @@ test("the Table widget keeps its own header cells beside markdown tables", async
     fontWeight: "500",
   });
 });
+
+interface FenceScroll {
+  pageOverflow: number;
+  scrollWidth: number;
+  clientWidth: number;
+  preWidth: number;
+}
+
+function fenceScroll(scroller: Locator): Promise<FenceScroll> {
+  return scroller.evaluate((node) => ({
+    pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
+    scrollWidth: node.scrollWidth,
+    clientWidth: node.clientWidth,
+    preWidth: (node.firstElementChild as HTMLElement).offsetWidth,
+  }));
+}
+
+for (const route of ["/", "/weekly-review"]) {
+  test(`${route} scrolls a wide code fence inside itself on a phone`, async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(`${biacDev.url}${route}`);
+    // The highlighted fence's scroller is the parent of shiki's `pre`.
+    const scroller = page.locator("main :has(> pre.shiki):visible").first();
+    await expect(scroller).toBeVisible({ timeout: 20_000 });
+
+    const scroll = await fenceScroll(scroller);
+    await scroller.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("ArrowRight");
+
+    expect(scroll.pageOverflow).toBe(0);
+    expect(scroll.scrollWidth).toBeGreaterThan(scroll.clientWidth);
+    expect(scroll.preWidth).toBe(scroll.scrollWidth);
+    await expect(scroller).toBeFocused();
+    await expect
+      .poll(() => scroller.evaluate((node) => node.scrollLeft))
+      .toBeGreaterThan(0);
+    expect(errors).toEqual([]);
+  });
+}
