@@ -7,6 +7,7 @@ import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { matter } from "vfile-matter";
 import { pageFrontmatter } from "./page-frontmatter.js";
+import { parseSqlFenceMeta } from "./sql-fence-meta.js";
 import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
 import type {
   CompiledPage,
@@ -81,30 +82,47 @@ function lineBreaks(text: string): number {
 
 const remarkPageMetadata: Plugin<[PageMetadata], Root> =
   (metadata) => (tree) => {
-    visit(tree, "code", (node: Code) => {
-      if (node.lang !== "sql") return;
-      const name = node.meta?.trim();
-      if (!name) return;
-      if (metadata.sqlBlocks.some((block) => block.name === name)) {
-        throw new Error(
-          `Duplicate sql block name "${name}" at ${metadata.filePath}:${node.position?.start.line ?? "?"}`,
-        );
-      }
-      metadata.sqlBlocks.push({ name, sql: node.value });
-      // The block name must reach the rendered page: MDX drops mdast `meta`,
-      // so it rides hast `hProperties` into a `meta` prop on the <code>
-      // element for the web's `pre` override to read.
-      node.data = {
-        ...node.data,
-        hProperties: { ...node.data?.hProperties, meta: name },
-      };
-    });
+    visit(tree, "code", (node: Code) => registerSqlBlock(node, metadata));
     visit(tree, "heading", (node: Heading) => {
       if (node.depth !== 1 || metadata.firstHeading !== null) return;
       const text = toPlainText(node).trim();
       if (text) metadata.firstHeading = text;
     });
   };
+
+/**
+ * Records a named sql fence in the page metadata and tags its <code>
+ * element with the block's name and display flags; unnamed and non-sql
+ * fences pass through untouched.
+ *
+ * @example
+ * registerSqlBlock(codeNode, metadata); // ```sql orders echo → meta="orders" echo
+ */
+function registerSqlBlock(node: Code, metadata: PageMetadata): void {
+  if (node.lang !== "sql") return;
+  if (!node.meta?.trim()) return;
+  const location = `${metadata.filePath}:${node.position?.start.line ?? "?"}`;
+  const { name, echo, display } = parseSqlFenceMeta(node.meta, location);
+  if (metadata.sqlBlocks.some((block) => block.name === name)) {
+    throw new Error(`Duplicate sql block name "${name}" at ${location}`);
+  }
+  metadata.sqlBlocks.push({ name, sql: node.value });
+  // The block name and its display flags must reach the rendered page:
+  // MDX drops mdast `meta`, so they ride hast `hProperties` into props on
+  // the <code> element for the web's `pre` override to read. A flag is an
+  // HTML boolean attribute — present as "" when on, absent when off — since
+  // the <code> element reaches the DOM before highlighting and React rejects
+  // `true` for a non-boolean attribute.
+  node.data = {
+    ...node.data,
+    hProperties: {
+      ...node.data?.hProperties,
+      meta: name,
+      ...(echo && { echo: "" }),
+      ...(display && { display: "" }),
+    },
+  };
+}
 
 function resolveTitle(
   frontmatter: PageFrontmatter,

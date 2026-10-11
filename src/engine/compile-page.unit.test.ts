@@ -150,6 +150,44 @@ describe("sql blocks", () => {
     expect(page.code).toContain('meta: "orders"');
   });
 
+  it("registers the name without its display flags", async () => {
+    const page = await compile("```sql orders echo display\nselect 1\n```\n");
+
+    expect(page.sqlBlocks).toEqual([{ name: "orders", sql: "select 1" }]);
+  });
+
+  it("detects a duplicate on the bare name across differing flags", async () => {
+    const markdown =
+      "```sql orders echo\nselect 1\n```\n\n```sql orders\nselect 2\n```\n";
+
+    await expect(compile(markdown, "pages/dup.md")).rejects.toThrow(
+      /Duplicate sql block name "orders" at pages\/dup\.md:5/,
+    );
+  });
+
+  it("carries the flags that are on onto the rendered code element", async () => {
+    const page = await compile("```sql orders echo display\nselect 1\n```\n");
+
+    expect(page.code).toContain('meta: "orders"');
+    expect(page.code).toContain('echo: ""');
+    expect(page.code).toContain('display: ""');
+  });
+
+  it("emits no prop for a flag that is off", async () => {
+    const page = await compile("```sql orders echo=false\nselect 1\n```\n");
+
+    expect(page.code).not.toContain("echo:");
+    expect(page.code).not.toContain("display:");
+  });
+
+  it("rejects an unknown fence attribute naming the file and line", async () => {
+    const markdown = "# Orders\n\n```sql orders shwo\nselect 1\n```\n";
+
+    await expect(compile(markdown, "pages/typo.md")).rejects.toThrow(
+      /Unknown sql block attribute "shwo" at pages\/typo\.md:3/,
+    );
+  });
+
   it("emits no meta prop for an unnamed sql fence", async () => {
     const page = await compile("```sql\nselect 1\n```\n");
 
