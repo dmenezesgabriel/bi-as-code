@@ -123,7 +123,7 @@ Status: present and partial. The SL-004/SL-005/SL-006 `shipped` claims survive �
 
 ## Open decisions
 
-None open — the two owner decisions (unformatted default `num0`; `<Column>` children) are recorded above with their date. After T4 ships, record "Table column formatting follows evidence: `num0` default, `<Column>` children" as an ADR.
+None open — the two owner decisions (unformatted default `num0`; `<Column>` children) are recorded above with their date. Both are recorded in [ADR-0012](../adr/0012-table-numbers-default-to-num0-and-column-children-choose-formats.md).
 
 ## Surface
 
@@ -140,7 +140,7 @@ None open — the two owner decisions (unformatted default `num0`; `<Column>` ch
 - [x] T1 — `formatValue` takes an optional `{ min, max }` range; base codes resolve decimals + unit from the larger of `Math.abs(min)` and `Math.abs(max)`; value-only callers unchanged. Unit cases from evidence `formatValue.test.ts` range cases. No screen change.
 - [x] T2 — Every chart formats its ticks and labels against one range per axis: series and scatter value axes and point labels (stack totals when stacked), histogram bin edges and counts, heatmap colour strip and cell labels; tooltips keep per-value precision (GAP-010). Measure: `/weekly-review` Regional split ticks and labels in one unit (screenshot); `/crossfilter-scale` histogram bin edges share their decimals.
 - [x] T3 — echarts theme sets `bar`/`line`/`scatter` `label.color` per mode; a stacked bar's inside labels are pinned white; heatmap unchanged (GAP-011).
-- [ ] T4 — `<Table>` cells: numbers `num0` by default; `<Column id fmt title />` children select, order and format columns (base codes against the column range); `collect-children.ts` generalized for a required `id` (GAP-009). Measure: `/weekly-review` cell text via `eval`, `weekly_trend` demo columns; `/` orders table.
+- [x] T4 — `<Table>` cells: numbers `num0` by default; `<Column id fmt title />` children select, order and format columns (base codes against the column range); `collect-children.ts` generalized for a required `id` (GAP-009). Measure: `/weekly-review` cell text via `eval`, `weekly_trend` demo columns; `/` orders table.
 - [ ] T5 — Humanized headers through `format-title.ts`; `<Column title>` wins; sort `aria-sort` and header button names updated (GAP-012). Measure: header text + accessible names via `eval` on `/weekly-review`, `/nested/allocation`.
 - [ ] T6 — Delta text tone: light positive text darkened to pass 4.5:1, chip/arrow unchanged (GAP-013). Measure: computed `color` of every delta span in light and dark, ratio ≥ 4.5:1 against its background.
 
