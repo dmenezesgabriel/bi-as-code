@@ -18,6 +18,17 @@ export class FormatError extends Data.TaggedError("FormatError")<{
 }
 
 /**
+ * The span of values one axis or table column shows. Bare `num`/`usd`/`pct`
+ * pick decimals and unit from it instead of from each value, so every label
+ * on the axis reads in one unit — `{ min: 0, max: 7000 }` renders `3000` as
+ * `3k`, not `3,000`.
+ */
+export interface FormatRange {
+  readonly min: number;
+  readonly max: number;
+}
+
+/**
  * A `column=`/`x=`/`y=` miss against a result row: the widget renders the
  * message inline as `role=alert`, naming the absent column and listing the
  * ones the query actually returned.

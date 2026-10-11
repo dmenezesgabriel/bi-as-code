@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatValue } from "./format";
-import { FormatError } from "./types";
+import { FormatError, type FormatRange } from "./types";
 
 // Local-time fixture: 2025-03-01 15:04:05 — the date presets read its parts.
 const DATE = new Date(2025, 2, 1, 15, 4, 5);
@@ -124,6 +124,68 @@ describe("formatValue — auto-scale on bare num/usd/pct", () => {
       expect(formatValue(0, code)).toBe(expected);
     },
   );
+});
+
+describe("formatValue — auto-scale against a range", () => {
+  it.each<[string | undefined, number, FormatRange, string]>([
+    ["num", 3.14, { min: 0, max: 9 }, "3.14"],
+    ["num", 42.5, { min: 0, max: 50 }, "42.5"],
+    ["num", 42.5, { min: 0, max: 100 }, "43"],
+    ["num", 500, { min: 0, max: 1000 }, "500"],
+    ["num", 5000, { min: 0, max: 10_000 }, "5k"],
+    ["num", 1_500_000, { min: 0, max: 5_000_000 }, "1.5M"],
+    ["num", 2_500_000_000, { min: 0, max: 5_000_000_000 }, "2.5B"],
+    ["num", 2_500_000_000_000, { min: 0, max: 5_000_000_000_000 }, "2.5T"],
+    // One unit per axis/column: values below the k threshold follow the range.
+    ["num", 3000, { min: 0, max: 7000 }, "3k"],
+    ["num", 3700, { min: 0, max: 6000 }, "4k"],
+    ["num", 12, { min: 0, max: 5_000_000 }, "0.0M"],
+    // All-negative range scales by its largest magnitude, not by `max`.
+    ["num", -500, { min: -5000, max: -100 }, "-1k"],
+    ["usd", 999, { min: 0, max: 5000 }, "$1k"],
+    ["pct", 0.5, { min: 0, max: 0.05 }, "50.00%"],
+    [undefined, 3000, { min: 0, max: 7000 }, "3k"],
+  ])("fmt=%s on %s within %o → %s", (code, value, range, expected) => {
+    // Act
+    const formatted = formatValue(value, code, range);
+
+    // Assert
+    expect(formatted).toBe(expected);
+  });
+
+  it.each<[string, string]>([
+    ["num", "0"],
+    ["usd", "$0"],
+    ["pct", "0%"],
+  ])(
+    "zero under a range collapses to the %s zero preset → %s",
+    (code, expected) => {
+      expect(formatValue(0, code, { min: 0, max: 7000 })).toBe(expected);
+    },
+  );
+
+  it("an all-zero range resolves to the zero preset", () => {
+    expect(formatValue(0, "usd", { min: 0, max: 0 })).toBe("$0");
+  });
+
+  it.each<[string, number, string]>([
+    ["num0", 3000, "3,000"],
+    ["sci", 0, "0.00E0"],
+  ])(
+    "explicit preset %s on %s ignores the range → %s",
+    (code, value, expected) => {
+      expect(formatValue(value, code, { min: 0, max: 7_000_000 })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each<[unknown, string]>([
+    [DATE, "2025-03-01"],
+    ["hello", "hello"],
+  ])("a non-numeric value %s ignores the range → %s", (value, expected) => {
+    expect(formatValue(value, undefined, { min: 0, max: 7000 })).toBe(expected);
+  });
 });
 
 describe("formatValue — defaults when fmt is unset", () => {

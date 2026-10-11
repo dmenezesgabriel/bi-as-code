@@ -1,4 +1,4 @@
-import { FormatError } from "./types";
+import { FormatError, type FormatRange } from "./types";
 
 /**
  * Pinned locale — the presets encode US conventions (`$` prefix, `m/d/y`
@@ -96,18 +96,25 @@ const DATE_CODES = Object.keys(FORMAT_PRESETS).filter(
 /**
  * Formats one cell value for the value widgets — `formatValue(1234567,
  * "usd")` → `"$1.2M"`, `formatValue(date, "hms")` → `"3:04:05 PM"`. Bare
- * `num`/`usd`/`pct` auto-scale on the value's own magnitude; every other
- * code is a fixed preset. Missing cells render `–`; anything a preset cannot
- * express throws `FormatError` — there is no raw-code passthrough.
+ * `num`/`usd`/`pct` (and an unset code on a number) auto-scale on `range`
+ * when given, so an axis or column reads in one unit —
+ * `formatValue(3000, "num", { min: 0, max: 7000 })` → `"3k"` — else on the
+ * value's own magnitude; every other code is a fixed preset. Missing cells
+ * render `–`; anything a preset cannot express throws `FormatError` — there
+ * is no raw-code passthrough.
  */
-export function formatValue(value: unknown, code?: string): string {
+export function formatValue(
+  value: unknown,
+  code?: string,
+  range?: FormatRange,
+): string {
   if (value === null || value === undefined) return "–";
   if (code !== undefined) assertKnownCode(code);
 
   if (value instanceof Date) return formatDateValue(value, code);
 
   const numeric = coerceNumeric(value);
-  if (numeric !== null) return formatNumericValue(numeric, code);
+  if (numeric !== null) return formatNumericValue(numeric, code, range);
 
   if (code === undefined) return String(value);
   throw new FormatError({
@@ -167,12 +174,30 @@ function resolveAuto(base: string, abs: number): string {
 }
 
 /**
- * An explicit unit code (`usd1m`) on a zero value collapses to the base's
- * zero-decimal preset — `0` renders `$0`, never `$0.0M`.
+ * The magnitude a range scales by: the larger of `|min|` and `|max|`, so an
+ * all-negative column (`-5000 … -100`) scales to `k` like its mirror image
+ * would — scaling by `max` alone would leave it unscaled.
  */
-function resolveCode(code: string, value: number | bigint): string {
+function rangeMagnitude(range: FormatRange): number {
+  return Math.max(Math.abs(range.min), Math.abs(range.max));
+}
+
+/**
+ * A zero value collapses to the base's zero-decimal preset whatever the
+ * range or explicit unit (`usd1m`) — `0` renders `$0`, never `$0.0M` or
+ * `$0k`, so an axis baseline reads `0`.
+ */
+function resolveCode(
+  code: string,
+  value: number | bigint,
+  range: FormatRange | undefined,
+): string {
   const abs = Math.abs(Number(value));
-  if (AUTO_BASES.has(code)) return resolveAuto(code, abs);
+  if (AUTO_BASES.has(code))
+    return resolveAuto(
+      code,
+      abs === 0 || range === undefined ? abs : rangeMagnitude(range),
+    );
   if (abs === 0 && /^[a-z]{3}\d[kmbt]$/.test(code))
     return `${code.slice(0, 3)}0`;
   return code;
@@ -181,8 +206,9 @@ function resolveCode(code: string, value: number | bigint): string {
 function formatNumericValue(
   value: number | bigint,
   code: string | undefined,
+  range: FormatRange | undefined,
 ): string {
-  const resolved = resolveCode(code ?? "num", value);
+  const resolved = resolveCode(code ?? "num", value, range);
   const preset = FORMAT_PRESETS[resolved];
   if (preset === undefined || preset.kind === "date")
     throw new FormatError({
