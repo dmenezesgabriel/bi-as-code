@@ -2,7 +2,17 @@ import { Link } from "@tanstack/react-router";
 import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
 import { cn } from "../../lib/cn";
 
-type ProseTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p";
+type ProseTag =
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
+  | "p"
+  | "table"
+  | "th"
+  | "td";
 
 // Tailwind preflight zeroes heading sizes and paragraph margins, so markdown
 // would otherwise render as one run of body text. Weight, line-height and
@@ -41,6 +51,23 @@ export const ProseH6 = proseElement("h6", cn(HEADING, "mt-6 mb-2 text-base"));
 // The last paragraph drops its margin so a callout or details body ends
 // flush with the widget's own padding.
 export const ProseParagraph = proseElement("p", "mb-[1.2em] last:mb-0");
+
+// Preflight leaves a GFM table unpadded and unruled, so its header cells
+// run together. The rules, padding and size match the `<Table>` widget so
+// both read as one table style on a page. A GFM column alignment arrives
+// as an inline `text-align`, which wins over the header's `text-left`.
+export const ProseTable = proseElement(
+  "table",
+  "my-4 w-full border-collapse text-sm",
+);
+export const ProseTh = proseElement(
+  "th",
+  "border-b border-neutral-300 py-1 pr-4 text-left font-medium last:pr-0 dark:border-neutral-700",
+);
+export const ProseTd = proseElement(
+  "td",
+  "border-b border-neutral-200 py-1 pr-4 last:pr-0 dark:border-neutral-800",
+);
 
 // Underlined as well as colored: WCAG 1.4.1 rejects color as the only cue,
 // and each color clears 3:1 against the body text of its theme.

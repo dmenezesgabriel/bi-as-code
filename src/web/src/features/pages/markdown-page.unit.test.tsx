@@ -146,6 +146,36 @@ describe("MarkdownPage", () => {
     expect(screen.getByText("Order volume.").className).not.toBe("");
   });
 
+  it("pads and rules markdown tables through the map", async () => {
+    renderPage(
+      page({
+        default: ({ components }) => {
+          const TableTag = components?.table ?? "table";
+          const Th = components?.th ?? "th";
+          const Td = components?.td ?? "td";
+          return (
+            <TableTag>
+              <thead>
+                <tr>
+                  <Th>Channel</Th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <Td>Direct</Td>
+                </tr>
+              </tbody>
+            </TableTag>
+          );
+        },
+      }),
+    );
+
+    expect((await screen.findByRole("table")).className).not.toBe("");
+    expect(screen.getByRole("columnheader").className).not.toBe("");
+    expect(screen.getByRole("cell").className).not.toBe("");
+  });
+
   it("sets document.title to the page title", async () => {
     renderPage(page({ title: "Quarterly results" }));
 

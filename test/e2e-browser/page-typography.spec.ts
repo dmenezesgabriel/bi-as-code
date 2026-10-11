@@ -142,3 +142,79 @@ test("a page link shows a focus outline when reached by keyboard", async ({
   await expect(link).toBeFocused();
   expect(outline).toEqual({ style: "solid", width: "2px" });
 });
+
+interface CellLook {
+  paddingRight: number;
+  borderBottomWidth: string;
+  textAlign: string;
+  fontWeight: string;
+}
+
+function cellLook(cell: Locator): Promise<CellLook> {
+  return cell.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      paddingRight: parseFloat(style.paddingRight),
+      borderBottomWidth: style.borderBottomWidth,
+      textAlign: style.textAlign,
+      fontWeight: style.fontWeight,
+    };
+  });
+}
+
+// The rendered width of a cell's text, not of the cell box: right-aligned
+// labels that touch show up as a zero gap between these boxes.
+function textBounds(cell: Locator): Promise<{ left: number; right: number }> {
+  return cell.evaluate((node) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const { left, right } = range.getBoundingClientRect();
+    return { left, right };
+  });
+}
+
+test("a markdown table pads its header cells and rules its rows", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}/nested/allocation`);
+  const table = page.locator("main > table");
+  await expect(table).toBeVisible({ timeout: 20_000 });
+
+  const share = table.getByRole("columnheader", { name: "Share" });
+  const orders = table.getByRole("columnheader", { name: "Orders" });
+  const shareLook = await cellLook(share);
+  const gap = (await textBounds(orders)).left - (await textBounds(share)).right;
+  const rows = await table
+    .getByRole("cell")
+    .evaluateAll((cells) =>
+      cells.map((cell) => getComputedStyle(cell).borderBottomWidth),
+    );
+  const orderCount = await cellLook(table.getByRole("cell", { name: "163" }));
+
+  expect(shareLook.paddingRight).toBeGreaterThan(0);
+  expect(gap).toBeGreaterThanOrEqual(shareLook.paddingRight);
+  expect(new Set(rows)).toEqual(new Set(["1px"]));
+  expect(orderCount.textAlign).toBe("right");
+  expect(errors).toEqual([]);
+});
+
+test("the Table widget keeps its own header cells beside markdown tables", async ({
+  page,
+  biacDev,
+}) => {
+  await page.goto(`${biacDev.url}/weekly-review`);
+  // Only the widget's sortable header carries aria-sort; the page's own
+  // GFM table header does not.
+  const header = page.locator("main th[aria-sort]:visible").first();
+  await expect(header).toBeVisible({ timeout: 20_000 });
+
+  const look = await cellLook(header);
+
+  expect(look).toMatchObject({
+    paddingRight: 16,
+    borderBottomWidth: "1px",
+    fontWeight: "500",
+  });
+});

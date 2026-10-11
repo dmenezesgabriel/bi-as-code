@@ -10,6 +10,9 @@ import {
   ProseH6,
   ProseLink,
   ProseParagraph,
+  ProseTable,
+  ProseTd,
+  ProseTh,
 } from "./prose-elements";
 
 const meta: Meta<typeof ProseH1> = {
@@ -101,3 +104,54 @@ export const Links: Story = {
     await expect(getComputedStyle(internal).outlineStyle).toBe("solid");
   },
 };
+
+const CHANNELS = [
+  ["Direct", "46%", "163"],
+  ["Marketplace", "32%", "113"],
+] as const;
+
+/** A GFM table with right-aligned numeric columns: padded header cells
+ * that no longer run together, and a rule under every row. */
+export const Tables: Story = {
+  render: () => (
+    <ProseTable>
+      <thead>
+        <tr>
+          <ProseTh>Channel</ProseTh>
+          <ProseTh style={{ textAlign: "right" }}>Share</ProseTh>
+          <ProseTh style={{ textAlign: "right" }}>Orders</ProseTh>
+        </tr>
+      </thead>
+      <tbody>
+        {CHANNELS.map(([channel, share, orders]) => (
+          <tr key={channel}>
+            <ProseTd>{channel}</ProseTd>
+            <ProseTd style={{ textAlign: "right" }}>{share}</ProseTd>
+            <ProseTd style={{ textAlign: "right" }}>{orders}</ProseTd>
+          </tr>
+        ))}
+      </tbody>
+    </ProseTable>
+  ),
+  play: async ({ canvas }) => {
+    const share = canvas.getByRole("columnheader", { name: "Share" });
+    const orders = canvas.getByRole("columnheader", { name: "Orders" });
+    const cells = canvas.getAllByRole("cell");
+
+    await expect(parseFloat(getComputedStyle(share).paddingRight)).toBe(16);
+    // Right-aligned text hugs the cell's padding edge, so the gap between
+    // the two header labels is at least that padding.
+    await expect(
+      textBox(orders).left - textBox(share).right,
+    ).toBeGreaterThanOrEqual(16);
+    for (const cell of cells) {
+      await expect(getComputedStyle(cell).borderBottomWidth).toBe("1px");
+    }
+  },
+};
+
+function textBox(cell: HTMLElement): DOMRect {
+  const range = document.createRange();
+  range.selectNodeContents(cell);
+  return range.getBoundingClientRect();
+}

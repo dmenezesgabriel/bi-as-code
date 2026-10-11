@@ -39,6 +39,9 @@ import {
   ProseH6,
   ProseLink,
   ProseParagraph,
+  ProseTable,
+  ProseTd,
+  ProseTh,
 } from "./prose-elements";
 import { QueryRegistryProvider } from "./query-registry";
 import { SqlBlockPre } from "./sql-block";
@@ -47,8 +50,8 @@ import { useDocumentTitle } from "./use-document-title";
 
 /**
  * MDX element overrides. `h1`–`h6` and `p` give markdown text the page type
- * scale; `a` styles links and routes absolute-path ones through the client
- * router so page-to-page navigation never reloads the SPA; `pre` hands
+ * scale; `table`, `th` and `td` pad and rule GFM tables; `a` styles links
+ * and routes absolute-path ones through the client router so page-to-page navigation never reloads the SPA; `pre` hands
  * fenced code blocks to shiki and pairs named sql fences with their query
  * results; the widgets (`Table`, `BigValue`, `Value`, `Delta`, `Sparkline`,
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
@@ -70,6 +73,9 @@ const mdxComponents: MdxComponentMap = {
   h5: ProseH5,
   h6: ProseH6,
   p: ProseParagraph,
+  table: ProseTable,
+  th: ProseTh,
+  td: ProseTd,
   a: ProseLink,
   pre: SqlBlockPre,
   Table,

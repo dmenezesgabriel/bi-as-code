@@ -9,6 +9,9 @@ import {
   ProseH6,
   ProseLink,
   ProseParagraph,
+  ProseTable,
+  ProseTd,
+  ProseTh,
 } from "./prose-elements";
 import { renderWithRouter } from "../chrome/router-harness";
 
@@ -121,5 +124,60 @@ describe("prose link", () => {
     const classes = screen.getByRole("link").className.split(" ");
     expect(classes).toContain("no-underline");
     expect(classes).not.toContain("underline");
+  });
+});
+
+describe("prose table", () => {
+  it("renders a table with header and body cells", () => {
+    // Arrange / Act
+    render(
+      <ProseTable>
+        <thead>
+          <tr>
+            <ProseTh>Channel</ProseTh>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <ProseTd>Direct</ProseTd>
+          </tr>
+        </tbody>
+      </ProseTable>,
+    );
+
+    // Assert
+    expect(screen.getByRole("table")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Channel" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "Direct" })).toBeVisible();
+  });
+
+  it("keeps a GFM column alignment, which arrives as an inline style", () => {
+    render(
+      <table>
+        <tbody>
+          <tr>
+            <ProseTd style={{ textAlign: "right" }}>163</ProseTd>
+          </tr>
+        </tbody>
+      </table>,
+    );
+
+    expect(screen.getByRole("cell")).toHaveStyle({ textAlign: "right" });
+  });
+
+  it("merges a caller class over its own", () => {
+    render(
+      <table>
+        <thead>
+          <tr>
+            <ProseTh className="pr-8">Orders</ProseTh>
+          </tr>
+        </thead>
+      </table>,
+    );
+
+    const classes = screen.getByRole("columnheader").className.split(" ");
+    expect(classes).toContain("pr-8");
+    expect(classes).not.toContain("pr-4");
   });
 });
