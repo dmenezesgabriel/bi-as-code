@@ -113,7 +113,7 @@ No shipped ledger row claims page typography; SL-001's `shipped` stays true (it 
 - [x] T3 — GFM tables (GAP-004): `table`/`thead`/`th`/`td` in the MDX map. Measure on `/nested/allocation`: `th` padding > 0, row border width 1px, header widths no longer touching; `<Table>` widget on `/weekly-review` unchanged.
 - [x] T4 — Fences scroll in place (GAP-005): overflow + keyboard focus on the fence container in `highlighted-pre.tsx` (highlighted and fallback paths). Measure `document.documentElement.scrollWidth - innerWidth` → 0 at 375 px on `/weekly-review` and `/`; `Tab` focuses the fence.
 - [x] T5 — Dark comment contrast (GAP-014): `THEMES.dark = "github-dark-default"`. Measure computed comment color vs fence background in dark ≥ 4.5:1 on `/weekly-review`; light unchanged.
-- [ ] T6 — Re-measure all six gaps on dev and on `bin/biac build` + `bin/biac preview`, mark them closed in `docs/research/usability-audit.md`, run the Demo.
+- [x] T6 — Re-measure all six gaps on dev and on `bin/biac build` + `bin/biac preview`, mark them closed in `docs/research/usability-audit.md`, run the Demo.
 
 ## Out of scope
 
