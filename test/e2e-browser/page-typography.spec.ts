@@ -1,4 +1,4 @@
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 interface TypeMetrics {
@@ -76,33 +76,56 @@ interface LinkLook {
   decoration: string;
 }
 
-// Measures the first in-text link against its paragraph. Tailwind 4 colors
+// WCAG 2 contrast ratio of two computed CSS colors. Tailwind 4 colors
 // compute as oklch(), so each is painted on a 1×1 canvas to read back sRGB
-// before applying the WCAG 2 relative-luminance formula.
-function linkLook(link: Locator): Promise<LinkLook> {
-  return link.evaluate((anchor) => {
-    const context = document.createElement("canvas").getContext("2d", {
-      willReadFrequently: true,
-    })!;
-    const weights = [0.2126, 0.7152, 0.0722];
-    const luminance = (color: string) => {
-      context.clearRect(0, 0, 1, 1);
-      context.fillStyle = color;
-      context.fillRect(0, 0, 1, 1);
-      return Array.from(context.getImageData(0, 0, 1, 1).data)
-        .slice(0, 3)
-        .map((channel) => channel / 255)
-        .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-        .reduce((sum, c, i) => sum + c * (weights[i] ?? 0), 0);
-    };
-    const link = luminance(getComputedStyle(anchor).color);
-    const text = luminance(getComputedStyle(anchor.parentElement!).color);
-    const [lighter, darker] = [Math.max(link, text), Math.min(link, text)];
-    return {
-      contrastWithText: (lighter + 0.05) / (darker + 0.05),
-      decoration: getComputedStyle(anchor).textDecorationLine,
-    };
-  });
+// before applying the relative-luminance formula.
+function contrastRatio(
+  page: Page,
+  foreground: string,
+  background: string,
+): Promise<number> {
+  return page.evaluate(
+    (colors) => {
+      const context = document.createElement("canvas").getContext("2d", {
+        willReadFrequently: true,
+      })!;
+      const weights = [0.2126, 0.7152, 0.0722];
+      const luminance = (color: string) => {
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+        return Array.from(context.getImageData(0, 0, 1, 1).data)
+          .slice(0, 3)
+          .map((channel) => channel / 255)
+          .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+          .reduce((sum, c, i) => sum + c * (weights[i] ?? 0), 0);
+      };
+      const [first, second] = colors.map(luminance) as [number, number];
+      const [lighter, darker] = [
+        Math.max(first, second),
+        Math.min(first, second),
+      ];
+      return (lighter + 0.05) / (darker + 0.05);
+    },
+    [foreground, background],
+  );
+}
+
+// Measures the first in-text link against its paragraph.
+async function linkLook(link: Locator): Promise<LinkLook> {
+  const colors = await link.evaluate((anchor) => ({
+    link: getComputedStyle(anchor).color,
+    text: getComputedStyle(anchor.parentElement!).color,
+    decoration: getComputedStyle(anchor).textDecorationLine,
+  }));
+  return {
+    contrastWithText: await contrastRatio(
+      link.page(),
+      colors.link,
+      colors.text,
+    ),
+    decoration: colors.decoration,
+  };
 }
 
 for (const colorScheme of ["light", "dark"] as const) {
@@ -120,6 +143,34 @@ for (const colorScheme of ["light", "dark"] as const) {
     // WCAG 1.4.1 (technique G183): ≥ 3:1 against the surrounding text.
     expect(look.contrastWithText).toBeGreaterThanOrEqual(3);
     expect(look.decoration).toBe("underline");
+  });
+}
+
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`a ${colorScheme} SQL comment reads at text contrast on its fence`, async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.emulateMedia({ colorScheme });
+    await page.goto(`${biacDev.url}/weekly-review`);
+    // Token spans carry shiki's inline colors; the .line wrapper only
+    // inherits the fence foreground.
+    const comment = page
+      .locator("main pre.shiki span[style]", { hasText: /^-- varchar/ })
+      .first();
+    await expect(comment).toBeVisible({ timeout: 20_000 });
+
+    const colors = await comment.evaluate((span) => ({
+      text: getComputedStyle(span).color,
+      fence: getComputedStyle(span.closest("pre")!).backgroundColor,
+    }));
+
+    // WCAG 1.4.3: body-size text needs 4.5:1 against its background.
+    expect(
+      await contrastRatio(page, colors.text, colors.fence),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(errors).toEqual([]);
   });
 }
 

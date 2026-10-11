@@ -8,7 +8,10 @@ import {
 // Dual themes: shiki emits the light color literally plus a --shiki-dark
 // custom property per token; styles.css applies it under .dark, so
 // highlighted code follows the resolved theme without re-running shiki.
-const THEMES = { light: "github-light", dark: "github-dark" } as const;
+// github-dark-default, not github-dark: its comments read #8b949e on
+// #0d1117 (6.15:1) where github-dark's were 3.05:1, under WCAG 1.4.3's
+// 4.5:1.
+const THEMES = { light: "github-light", dark: "github-dark-default" } as const;
 
 let highlighterPromise: ReturnType<typeof createHighlighter> | null = null;
 const failedLanguages = new Set<string>();
@@ -38,7 +41,7 @@ function getHighlighter(): ReturnType<typeof createHighlighter> {
  *
  * @example
  * const html = await highlightFence("sql", "select 1");
- * // html → '<pre class="shiki shiki-themes github-light github-dark" …' or null
+ * // html → '<pre class="shiki shiki-themes github-light github-dark-default" …' or null
  */
 export async function highlightFence(
   lang: string,

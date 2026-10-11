@@ -33,6 +33,31 @@ describe("HighlightedPre", () => {
     expect(container.querySelector("pre.shiki")).toHaveTextContent("select 1");
   });
 
+  it("colors a dark SQL comment to read at text contrast on its fence", async () => {
+    const { container } = render(
+      <HighlightedPre>
+        <code className="language-sql">-- note</code>
+      </HighlightedPre>,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("pre.shiki")).not.toBeNull();
+    });
+    const pre = container.querySelector("pre.shiki");
+    const comment = container.querySelector(
+      'pre.shiki span[style*="--shiki-dark"]',
+    );
+
+    // github-dark-default: #8b949e on #0d1117 is 6.15:1 (WCAG 1.4.3 asks
+    // 4.5:1); github-dark's #6a737d on #24292e was 3.05:1.
+    expect(pre?.getAttribute("style")?.toLowerCase()).toContain(
+      "--shiki-dark-bg:#0d1117",
+    );
+    expect(comment?.getAttribute("style")?.toLowerCase()).toContain(
+      "--shiki-dark:#8b949e",
+    );
+  });
+
   it("renders a pre whose code child has no language class unchanged", async () => {
     const { container } = render(
       <HighlightedPre>
