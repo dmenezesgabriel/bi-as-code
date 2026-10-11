@@ -20,7 +20,7 @@ A PRD exists so the session that executes it **never guesses and never assumes**
 
 **Code comments follow the durable rule.** A comment states its fact so it stands alone. It may cite an ADR or a real source of truth; it must never cite a slice code (`SL-003`, `T4`) or a planning document — those do not outlive the work. Gate results go in the commit body, never in a doc.
 
-A slice is one user-visible capability crossing engine → client → UI, closed by a demo a human runs (`docs/adr/0011-vertical-slices.md` when it lands). Never cut a slice horizontally.
+A slice is one user-visible capability crossing engine → client → UI, closed by a demo a human runs (`docs/adr/0002-vertical-slices.md`). Never cut a slice horizontally.
 
 ## Token efficiency
 
