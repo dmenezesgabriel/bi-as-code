@@ -8,7 +8,7 @@ import {
   withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
-import { expectAlert } from "./input-stories.fixture";
+import { expectAlert, type StoryCanvas } from "./input-stories.fixture";
 import { Slider } from "./slider";
 import type { SliderProps } from "./types";
 
@@ -27,6 +27,18 @@ function amountDecorators(search?: string): Decorator[] {
     withQueryData([ORDERS], FakeDuckDb.withRows(AMOUNTS)),
     withPageFilters(new FakeFilterUrlPort(search)),
   ];
+}
+
+/** The one-value face: the value and its note, and no slider role. */
+async function expectPinnedReadout(
+  canvas: StoryCanvas,
+  value: string,
+): Promise<void> {
+  await expect(
+    await canvas.findByText("only one value in range"),
+  ).toBeVisible();
+  await expect(canvas.getByText(value)).toBeVisible();
+  await expect(canvas.queryByRole("slider")).toBeNull();
 }
 
 const meta = {
@@ -120,7 +132,7 @@ export const ClampedUrlValue: Story = {
 
 /** `filters` cascades another page filter into the bounds source — a
  * `?channel=web` param narrows the rows to one, collapsing the bounds to a
- * point that pins the slider disabled. */
+ * point the input states as text instead of a slider. */
 export const CascadedBounds: Story = {
   args: { filters: "channel" },
   decorators: [
@@ -133,9 +145,17 @@ export const CascadedBounds: Story = {
     withPageFilters(new FakeFilterUrlPort("?channel=web")),
   ],
   play: async ({ canvas }) => {
-    const input = await canvas.findByRole("slider");
-    await expect(input).toHaveAttribute("max", "20");
-    await expect(input).toBeDisabled();
+    await expectPinnedReadout(canvas, "20");
+  },
+};
+
+/** Author-pinned `min={40} max={40}` — equal bounds take the same readout
+ * whatever produced them. */
+export const PinnedByProps: Story = {
+  args: { data: undefined, valueColumn: undefined, min: 40, max: 40 },
+  decorators: amountDecorators(),
+  play: async ({ canvas }) => {
+    await expectPinnedReadout(canvas, "40");
   },
 };
 

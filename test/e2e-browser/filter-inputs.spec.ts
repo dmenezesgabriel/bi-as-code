@@ -219,6 +219,40 @@ test("the Amount slider writes a range param and narrows order_detail", async ({
   expect(errors).toEqual([]);
 });
 
+test("a region holding one amount states it as text, and another region brings the slider back", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  const boundsWarnings: string[] = [];
+  page.on("console", (message) => {
+    if (/max. must be greater than .min./.test(message.text())) {
+      boundsWarnings.push(message.text());
+    }
+  });
+  await page.goto(`${biacDev.url}weekly-review?region=North`);
+
+  // Every North order is $40, so the Amount bounds collapse to one value.
+  await expect(page.getByText("only one value in range")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("slider", { name: "Minimum" })).toHaveCount(0);
+
+  const region = page.getByRole("combobox", { name: "Region" });
+  await expect(region).toBeEnabled({ timeout: 30_000 });
+  await region.click();
+  await page.getByRole("option", { name: "West" }).click();
+
+  await expect(page.getByRole("slider", { name: "Minimum" })).toBeEnabled({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("slider", { name: "Maximum" })).toBeEnabled();
+  await expect(page.getByText("only one value in range")).toHaveCount(0);
+  expect(boundsWarnings).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 test("a pointer drag keeps moving the Amount slider past its first step", async ({
   page,
   biacDev,

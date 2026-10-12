@@ -238,6 +238,37 @@ function SliderField({
 }
 
 /**
+ * The one-value face — the label, the value and a note in place of a
+ * track. `min-h-16` holds `SliderField`'s 64 px footprint: the filter bar
+ * aligns its items to the bottom, so a shorter box would drop the label
+ * below its neighbours and shift the row whenever the domain collapses.
+ * Plain text, not a Base UI root: nothing can be slid.
+ */
+function PinnedSliderReadout({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: number;
+}): ReactElement {
+  return (
+    <div className="relative mb-4 min-h-16 w-64">
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <span className="truncate text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          {label}
+        </span>
+        <span className="shrink-0 text-sm font-normal text-neutral-500 dark:text-neutral-400">
+          {value}
+        </span>
+      </div>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+        only one value in range
+      </p>
+    </div>
+  );
+}
+
+/**
  * The `<Slider>` MDX widget — a numeric filter input whose value writes
  * `?id=<n>` (single) or `?id=<lo> - <hi>` (`range`) to the URL. `data` +
  * `valueColumn` derive the bounds from a ```sql fence's rows — filtered
@@ -292,15 +323,20 @@ export function Slider({
 
   // `min === max` is a degenerate window — the cascade narrowed the source
   // to one value, or the author pinned it. That's a real data state, not an
-  // error: the single legal position renders disabled.
-  const pinned = bounds.min === bounds.max;
+  // error, but nothing can be slid, and Base UI warns "Slider `max` must be
+  // greater than `min`" for any root with `min >= max`, disabled or not —
+  // so the value is stated as text instead.
+  const label = title ?? titleCase(id);
+  if (bounds.min === bounds.max) {
+    return <PinnedSliderReadout label={label} value={bounds.min} />;
+  }
   return (
     <SliderField
-      label={title ?? titleCase(id)}
+      label={label}
       bounds={bounds}
       range={range}
       held={filter?.value}
-      disabled={source.loading || !filter || pinned}
+      disabled={source.loading || !filter}
       onChange={(next) => {
         if (!filter) return;
         authored();

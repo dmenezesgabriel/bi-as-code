@@ -1,6 +1,14 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
@@ -107,6 +115,17 @@ function thumbs(): HTMLElement[] {
   return screen.getAllByRole("slider");
 }
 
+/**
+ * Asserts the one-value face: the label, `value` stated once, the note, and
+ * no slider role — nothing can be slid.
+ */
+async function expectPinnedReadout(value: string): Promise<void> {
+  expect(await screen.findByText("only one value in range")).toBeVisible();
+  expect(screen.getByText("Amount")).toBeVisible();
+  expect(screen.getAllByText(value)).toHaveLength(1);
+  expect(screen.queryByRole("slider")).toBeNull();
+}
+
 describe("Slider — bounds source", () => {
   it("derives min/max from the fence's valueColumn rows", async () => {
     renderSlider();
@@ -139,14 +158,52 @@ describe("Slider — bounds source", () => {
     );
 
     // A single-row cascade collapses the bounds to a point — the slider
-    // pins disabled at it rather than erroring.
-    await waitFor(() => expect(thumb()).toHaveAttribute("max", "99"));
+    // states the one value rather than erroring.
+    await expectPinnedReadout("99");
     expect(db.queries).toContainEqual({
       sql: "select * from (select * from orders) where region = ?",
       params: ["West"],
     });
-    expect(thumb()).toHaveAttribute("min", "99");
-    expect(thumb()).toBeDisabled();
+  });
+});
+
+describe("Slider — one-value domain", () => {
+  let warn: MockInstance<typeof console.warn>;
+  beforeEach(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+  afterEach(() => warn.mockRestore());
+
+  it("renders a readout, not a slider, for author-pinned bounds", async () => {
+    renderSlider({ data: undefined, valueColumn: undefined, min: 40, max: 40 });
+
+    await expectPinnedReadout("40");
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("states the value once in range mode", async () => {
+    renderSlider({
+      data: undefined,
+      valueColumn: undefined,
+      min: 40,
+      max: 40,
+      range: true,
+    });
+
+    await expectPinnedReadout("40");
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("seeds the pinned value silently — no URL write, no predicate", async () => {
+    const port = new FakeFilterUrlPort("");
+    const db = renderSlider(
+      { min: 40, max: 40, range: true },
+      { port, consumer: true },
+    );
+
+    await expectPinnedReadout("40");
+    await expectNoAmountPredicate(db, "where amount");
+    expect(port.written).toHaveLength(0);
   });
 });
 
