@@ -29,25 +29,32 @@ type Story = StoryObj<typeof meta>;
 
 /** The authored shape: children share one horizontal line, ends aligned,
  * no card chrome at rest — `border-transparent` keeps the border's 1px so
- * floating adds padding/color without shifting layout. */
+ * floating adds color without shifting layout — and no `Filters` trigger:
+ * at rest the bar is page content and shows every input. */
 export const Default: Story = {
+  // The bar rests only while its sentinel — one dock offset (4rem) above
+  // it — is on screen, so it needs that much page above it, as a page's
+  // title gives it; flush against the canvas top it would dock at once.
+  decorators: [
+    (Story) => (
+      <div className="pt-20">
+        <Story />
+      </div>
+    ),
+  ],
   play: async ({ canvas }) => {
-    const bar = canvas.getByText("Region").parentElement!;
-    for (const cls of [
-      "sticky",
-      "top-(--dock-top,4rem)",
-      "flex-row",
-      "items-end",
-      "gap-4",
-    ]) {
-      await expect(bar.className).toContain(cls);
+    const inputs = canvas.getByText("Region").parentElement!;
+    const bar = inputs.closest(".sticky")!;
+    await firstIntersectionReading(bar.previousElementSibling!);
+    for (const cls of ["flex-row", "items-end", "gap-4"]) {
+      await expect(inputs.className).toContain(cls);
     }
+    await expect(bar.className).toContain("top-(--dock-top,4rem)");
     await expect(bar.className).toContain("border-transparent");
     await expect(bar.className).not.toContain(" bg-white");
+    await expect(canvas.queryByRole("button", { name: "Filters" })).toBeNull();
   },
 };
-
-const scrollPort = new FakeFilterUrlPort("");
 
 /**
  * Resolves once an IntersectionObserver has delivered its first reading of
@@ -66,12 +73,9 @@ function firstIntersectionReading(target: Element): Promise<void> {
   });
 }
 
-/** The pin behavior in a real browser: past the sentinel the bar docks
- * 64px under the viewport top and gains the card face; inputs inside keep
- * writing `?id=` params; back at the top the card face drops. */
-export const FloatsOnScroll: Story = {
-  decorators: [withPageFilters(scrollPort)],
-  render: () => (
+/** A page long enough to scroll the bar past its dock line. */
+function ScrollingReport() {
+  return (
     <>
       <h1 className="mb-4 text-2xl font-semibold">Weekly review</h1>
       <p className="mb-8 max-w-prose text-sm text-neutral-600 dark:text-neutral-400">
@@ -87,25 +91,99 @@ export const FloatsOnScroll: Story = {
         Report content scrolls beneath the pinned bar.
       </div>
     </>
-  ),
-  play: async ({ canvas }) => {
-    const bar = canvas.getByLabelText("Region").closest(".sticky")!;
-    await expect(bar.className).toContain("border-transparent");
+  );
+}
 
-    await firstIntersectionReading(bar.previousElementSibling!);
-    window.scrollTo(0, 600);
-    await waitFor(() => expect(bar.className).toContain(" bg-white"));
+type Canvas = Parameters<NonNullable<Story["play"]>>[0]["canvas"];
+
+function stickyBar(canvas: Canvas): Element {
+  return canvas.getByLabelText("Region").closest(".sticky")!;
+}
+
+/** Scrolls past the sentinel and resolves once the bar shows its docked
+ * face, returning the bar. */
+async function dockBar(canvas: Canvas): Promise<Element> {
+  const bar = stickyBar(canvas);
+  await firstIntersectionReading(bar.previousElementSibling!);
+  window.scrollTo(0, 600);
+  await canvas.findByRole("button", { name: "Filters" });
+  return bar;
+}
+
+/** The pin behavior in a real browser: past the sentinel the bar docks
+ * 64px under the viewport top and gains the card face; back at the top the
+ * card face drops and the inputs are page content again. */
+export const FloatsOnScroll: Story = {
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  render: () => <ScrollingReport />,
+  play: async ({ canvas }) => {
+    await expect(stickyBar(canvas).className).toContain("border-transparent");
+
+    const bar = await dockBar(canvas);
+    await expect(bar.className).toContain(" bg-white");
     await expect(bar.className).toContain("shadow");
     expect(Math.round(bar.getBoundingClientRect().top)).toBe(64);
-
-    const toggle = canvas.getByRole("switch", { name: "Large orders" });
-    await userEvent.click(toggle);
-    await waitFor(() =>
-      expect(scrollPort.read()?.searchParams.get("large_orders")).toBe("true"),
-    );
 
     window.scrollTo(0, 0);
     await waitFor(() => expect(bar.className).toContain("border-transparent"));
     await expect(bar.className).not.toContain(" bg-white");
+    await expect(canvas.queryByRole("button", { name: "Filters" })).toBeNull();
+    await expect(canvas.getByLabelText("Region")).toBeVisible();
+  },
+};
+
+/** Docked, the bar is one `Filters` row: the inputs stay mounted but leave
+ * the accessibility tree, and the page keeps the height the bar gave up —
+ * its scroll height and scroll position do not move at the dock moment. */
+export const DockedCollapsed: Story = {
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  render: () => <ScrollingReport />,
+  play: async ({ canvas }) => {
+    const pageHeightAtRest = document.documentElement.scrollHeight;
+
+    const bar = await dockBar(canvas);
+
+    const trigger = canvas.getByRole("button", { name: "Filters" });
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(canvas.queryByRole("switch")).toBeNull();
+    await expect(canvas.getByLabelText("Region")).not.toBeVisible();
+    expect(bar.getBoundingClientRect().height).toBeLessThanOrEqual(56);
+    expect(trigger.getBoundingClientRect().height).toBeGreaterThanOrEqual(24);
+    expect(document.documentElement.scrollHeight).toBe(pageHeightAtRest);
+    expect(window.scrollY).toBe(600);
+  },
+};
+
+const openedPort = new FakeFilterUrlPort("");
+
+/** Opening the docked bar lays the inputs over the page in a card: they
+ * keep writing `?id=` params, the bar itself stays one row, and nothing in
+ * the page's flow moves. Back at rest the value is still set. */
+export const DockedOpened: Story = {
+  decorators: [withPageFilters(openedPort)],
+  render: () => <ScrollingReport />,
+  play: async ({ canvas }) => {
+    const pageHeightAtRest = document.documentElement.scrollHeight;
+    const bar = await dockBar(canvas);
+    const trigger = canvas.getByRole("button", { name: "Filters" });
+
+    await userEvent.click(trigger);
+
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const toggle = canvas.getByRole("switch", { name: "Large orders" });
+    await userEvent.click(toggle);
+    await waitFor(() =>
+      expect(openedPort.read()?.searchParams.get("large_orders")).toBe("true"),
+    );
+    expect(bar.getBoundingClientRect().height).toBeLessThanOrEqual(56);
+    expect(document.documentElement.scrollHeight).toBe(pageHeightAtRest);
+
+    window.scrollTo(0, 0);
+    await waitFor(() =>
+      expect(canvas.queryByRole("button", { name: "Filters" })).toBeNull(),
+    );
+    await expect(
+      canvas.getByRole("switch", { name: "Large orders" }),
+    ).toBeChecked();
   },
 };

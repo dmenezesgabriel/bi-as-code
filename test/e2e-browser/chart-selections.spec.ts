@@ -135,7 +135,10 @@ test("a bar click cross-filters the region consumers while the bar chart holds i
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
   await expect(page.getByText("Page 1 of 14 · 140 rows")).toHaveCount(0);
   // The Amount slider's seed followed West's narrower bounds without
-  // publishing, so it widens back with them — no stale 43–44 window.
+  // publishing, so it widens back with them — no stale 43–44 window. The
+  // page is scrolled to the chart, so the slider sits behind the docked
+  // bar's `Filters` row.
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await expect(page.getByRole("slider", { name: "Minimum" })).toHaveAttribute(
     "aria-valuenow",
     "38",
@@ -237,6 +240,9 @@ test("a held histogram brush survives the histogram's own re-query when a region
     .nth(2)
     .evaluate((host) => host.setAttribute("data-kept", ""));
 
+  // Scrolled to the histogram, the bar is docked: Region sits behind its
+  // `Filters` row.
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("combobox", { name: "Region" }).click();
   await page.getByRole("option", { name: "West" }).click();
 

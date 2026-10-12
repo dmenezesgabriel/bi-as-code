@@ -29,6 +29,10 @@ async function pickRegion(
   await page.goto(`${biacDev.url}weekly-review`);
   const region = page.getByRole("combobox", { name: "Region" });
   await expect(region).toHaveText("Select Region", { timeout: 30_000 });
+  // Disabled until its options load. A click that has to wait retries with
+  // a different scroll alignment each time, and one that lands the bar on
+  // its dock line collapses it and hides the dropdown being clicked.
+  await expect(region).toBeEnabled({ timeout: 30_000 });
   await region.click();
   await page.getByRole("option", { name }).click();
   expect(urlParam(page, "region")).toBe(name);
@@ -61,7 +65,12 @@ test("picking West in the Region dropdown filters weekly-review and survives rel
     "175",
   ]);
 
+  // The reload restores the scroll position at the Order-mix table, so the
+  // bar comes back docked and Region sits behind its `Filters` row.
   await page.reload();
+  await page
+    .getByRole("button", { name: "Filters", exact: true })
+    .click({ timeout: 30_000 });
   await expect(region).toHaveText("West", { timeout: 30_000 });
   expect(await openOrderMixRow(page, "Page 1 of 2 · 13 rows")).toEqual([
     "1",
@@ -400,7 +409,7 @@ test("the Channel button group picks Direct, syncs the multi-select and persists
   expect(errors).toEqual([]);
 });
 
-test("the FilterBar docks at 64px, floats past its sentinel and inputs keep writing while pinned", async ({
+test("the FilterBar docks at 64px as one Filters row, holds the page still and its opened inputs keep writing", async ({
   page,
   biacDev,
 }) => {
@@ -411,38 +420,70 @@ test("the FilterBar docks at 64px, floats past its sentinel and inputs keep writ
   // The bar is the sticky `div` holding the inputs — the TOC is sticky too
   // but is an `aside`, so the element scoping pins the bar alone.
   const bar = page.locator("div.sticky", { hasText: "Region" });
+  const filters = page.getByRole("button", { name: "Filters", exact: true });
+  const toggle = page.getByRole("switch", { name: "Large orders only" });
   await expect(bar).toBeVisible({ timeout: 30_000 });
   await expect(bar).toContainText("Region");
 
-  // At rest the card face is down: transparent border, no background.
+  // At rest the card face is down — transparent border, no background —
+  // and the bar is page content: every input shown, no trigger.
   await expect(bar).toHaveClass(/border-transparent/);
   await expect(bar).not.toHaveClass(/bg-white/);
+  await expect(filters).toHaveCount(0);
+  await expect(toggle).toBeVisible();
+  // The bar is in flow, so what the page keeps is its height plus the
+  // spacer after it. Read once Region's options have loaded: until then
+  // the dropdown is narrower and the row can wrap differently.
+  await expect(page.getByRole("combobox", { name: "Region" })).toBeEnabled({
+    timeout: 30_000,
+  });
+  const heightHeldInFlow = () =>
+    bar.evaluate((el) =>
+      Math.round(
+        el.getBoundingClientRect().height +
+          el.nextElementSibling!.getBoundingClientRect().height,
+      ),
+    );
+  const heightAtRest = await heightHeldInFlow();
 
   // Past the sentinel the bar docks 64px under the viewport top (its
-  // default 4rem dock line, below the `h-12` header) and gains the card face.
+  // default 4rem dock line, below the `h-12` header), gains the card face
+  // and shrinks to one `Filters` row with the inputs out of reach.
   await page.evaluate(() => window.scrollTo(0, 600));
   await expect(bar).toHaveClass(/bg-white/);
   await expect(bar).toHaveClass(/shadow/);
-  const dockOffset = await bar.evaluate((el) =>
-    Math.round(el.getBoundingClientRect().top),
-  );
-  expect(dockOffset).toBe(64);
+  await expect(filters).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toBeHidden();
+  const barBox = () =>
+    bar.evaluate((el) => {
+      const { top, height } = el.getBoundingClientRect();
+      return { top: Math.round(top), height: Math.round(height) };
+    });
+  expect((await barBox()).top).toBe(64);
+  expect((await barBox()).height).toBeLessThanOrEqual(56);
+  // The height it gave up is held, so nothing below it moved and the
+  // scroll landed where it was asked to.
+  expect(await heightHeldInFlow()).toBe(heightAtRest);
+  expect(await page.evaluate(() => window.scrollY)).toBe(600);
 
-  // Inputs keep their URL writes while pinned — a raw pointer click at the
-  // pinned switch's coordinates, the reader's real gesture (Playwright's
-  // locator click scroll-into-views the target first, which a stuck sticky
-  // bar answers with its flow position).
-  const toggle = page.getByRole("switch", { name: "Large orders only" });
+  // Opened, the inputs keep their URL writes while pinned — a raw pointer
+  // click at the pinned switch's coordinates, the reader's real gesture
+  // (Playwright's locator click scroll-into-views the target first, which
+  // a stuck sticky bar answers with its flow position).
+  await filters.click();
+  await expect(filters).toHaveAttribute("aria-expanded", "true");
   const box = await toggle.boundingBox();
   await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await expect.poll(() => urlParam(page, "large_orders")).toBe("true");
-  expect(
-    await bar.evaluate((el) => Math.round(el.getBoundingClientRect().top)),
-  ).toBe(64);
+  expect((await barBox()).top).toBe(64);
+  expect((await barBox()).height).toBeLessThanOrEqual(56);
+  expect(await heightHeldInFlow()).toBe(heightAtRest);
 
   // Back at the top the card face drops as the sentinel re-enters.
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(bar).toHaveClass(/border-transparent/);
   await expect(bar).not.toHaveClass(/bg-white/);
+  await expect(filters).toHaveCount(0);
+  await expect(toggle).toBeChecked();
   expect(errors).toEqual([]);
 });
