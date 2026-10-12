@@ -150,6 +150,7 @@ export const DockedCollapsed: Story = {
 
     const trigger = canvas.getByRole("button", { name: "Filters" });
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).not.toHaveAccessibleDescription();
     await expect(canvas.queryByRole("switch")).toBeNull();
     await expect(canvas.getByLabelText("Region")).not.toBeVisible();
     expect(bar.getBoundingClientRect().height).toBeLessThanOrEqual(56);
@@ -190,6 +191,32 @@ export const DockedOpened: Story = {
     await expect(
       canvas.getByRole("switch", { name: "Large orders" }),
     ).toBeChecked();
+  },
+};
+
+/** A collapsed row hides its inputs, not their effect: the trigger counts
+ * the inputs whose filter is applied. The count is the button's description, so
+ * its name stays `Filters`; it follows an input switched off through the
+ * opened bar and disappears at zero. */
+export const DockedActiveCount: Story = {
+  decorators: [
+    withPageFilters(new FakeFilterUrlPort("?region=West&large_orders=true")),
+  ],
+  render: () => <ScrollingReport />,
+  play: async ({ canvas }) => {
+    const bar = await dockBar(canvas);
+    const trigger = canvas.getByRole("button", { name: "Filters" });
+
+    await expect(trigger).toHaveAccessibleDescription("2 active");
+    await expect(trigger).toHaveTextContent(/· 2/);
+    expect(bar.getBoundingClientRect().height).toBeLessThanOrEqual(56);
+
+    await userEvent.click(trigger);
+    await userEvent.click(canvas.getByRole("switch", { name: "Large orders" }));
+    await expect(trigger).toHaveAccessibleDescription("1 active");
+
+    await userEvent.clear(canvas.getByLabelText("Region"));
+    await waitFor(() => expect(trigger).not.toHaveAccessibleDescription());
   },
 };
 

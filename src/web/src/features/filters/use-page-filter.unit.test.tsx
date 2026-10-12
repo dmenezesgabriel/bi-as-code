@@ -2,6 +2,8 @@ import { act, render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FakeFilterUrlPort } from "./fake-url-port";
 import type { Filter, FilterOptions } from "./filter";
+import { FilterRoster } from "./filter-roster";
+import { FilterRosterProvider } from "./filter-roster-context";
 import { FiltersProvider } from "./page-filters-context";
 import { usePageFilter } from "./use-page-filter";
 
@@ -80,5 +82,35 @@ describe("usePageFilter", () => {
     );
     expect(seen[0]!.value).toBe("West");
     expect(port.written).toHaveLength(0);
+  });
+
+  describe("inside a FilterRosterProvider", () => {
+    function renderEnlisted(search: string, roster: FilterRoster) {
+      const Probe = probe("region", undefined, []);
+      return render(
+        <FiltersProvider port={new FakeFilterUrlPort(search)}>
+          <FilterRosterProvider roster={roster}>
+            <Probe />
+          </FilterRosterProvider>
+        </FiltersProvider>,
+      );
+    }
+
+    it("enlists its filter in the roster", () => {
+      const roster = new FilterRoster();
+
+      renderEnlisted("?region=West", roster);
+
+      expect(roster.getSnapshot()).toBe(1);
+    });
+
+    it("leaves the roster on unmount", () => {
+      const roster = new FilterRoster();
+      const { unmount } = renderEnlisted("?region=West", roster);
+
+      unmount();
+
+      expect(roster.getSnapshot()).toBe(0);
+    });
   });
 });

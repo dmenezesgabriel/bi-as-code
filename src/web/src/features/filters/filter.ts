@@ -21,6 +21,7 @@ import type {
   SelectionClause,
 } from "../crossfilter/types";
 import type { FilterUrlPort } from "./filter-url-port";
+import { holdsFilterValue } from "./filter-value";
 
 export interface FilterOptions<Value = unknown> {
   /**
@@ -133,9 +134,10 @@ export class Filter<Value = unknown> {
     const serialized = this.#opts.serialize(newValue);
     const changed = serialized !== this.#lastSerialized;
     this.#lastSerialized = serialized;
+    // Publish first: a listener reads `isApplied`, which follows the clause.
     if (!Object.is(previous, newValue)) {
-      this.#notify();
       this.#publish();
+      this.#notify();
     }
     if (this.#isInitializing || !changed) return;
     this.#writeUrl(serialized);
@@ -143,7 +145,23 @@ export class Filter<Value = unknown> {
 
   /** Programmatic default: updates state, never the URL. A later echo of the same value writes nothing. */
   setDefault(newValue: Value | undefined) {
-    if (this.#setHeld(newValue)) this.#publish();
+    if (!this.#setHeld(newValue)) return;
+    this.#publish();
+    this.#notify();
+  }
+
+  /**
+   * Whether this filter changes what the page shows: a filter on a column
+   * is applied while a predicate of its own is published — a value held
+   * only for display (a silent `normalize`) filters nothing — and a filter
+   * read through `{{params.id}}` alone is applied while it holds a value.
+   *
+   * @example
+   * filters.ensure("region").isApplied; // true when the URL has ?region=West
+   */
+  get isApplied(): boolean {
+    if (this.#opts.column) return this.#lastClauseKey !== "";
+    return holdsFilterValue(this.#value);
   }
 
   /**
@@ -176,6 +194,7 @@ export class Filter<Value = unknown> {
       Object.is(valueBefore, this.#value)
     ) {
       this.#publish();
+      this.#notify();
     }
   }
 
@@ -191,7 +210,7 @@ export class Filter<Value = unknown> {
       this.value = newValue;
       return;
     }
-    this.#setHeld(newValue);
+    if (this.#setHeld(newValue)) this.#notify();
   }
 
   /** Apply a value in its URL-param form, as a user interaction. Empty/undefined clears. */
@@ -252,9 +271,7 @@ export class Filter<Value = unknown> {
     const previous = this.#value;
     this.#value = newValue;
     this.#lastSerialized = this.#opts.serialize(newValue);
-    if (Object.is(previous, newValue)) return false;
-    this.#notify();
-    return true;
+    return !Object.is(previous, newValue);
   }
 
   #writeUrl(serialized: string | undefined) {

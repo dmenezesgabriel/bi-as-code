@@ -134,3 +134,49 @@ test("at 375px the opened docked FilterBar stays open through a Region pick, fit
   await expect(region).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test("the docked Filters row counts the applied inputs and drops the count when they are cleared", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+  const filters = page.getByRole("button", { name: "Filters", exact: true });
+  const region = page.getByRole("combobox", { name: "Region" });
+  const toggle = page.getByRole("switch", { name: "Large orders only" });
+  await expect(region).toBeEnabled({ timeout: 30_000 });
+
+  // Picked at rest, where the inputs are page content and no count shows.
+  await region.click();
+  await page.getByRole("option", { name: "West" }).click();
+  await expect.poll(() => urlParam(page, "region")).toBe("West");
+
+  // Region still has focus, so the bar docks opened; its row already says
+  // one input narrows the page — as the button's description, so its name
+  // is still `Filters`.
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await expect(filters).toHaveAttribute("aria-expanded", "true");
+  await expect(filters).toHaveAccessibleDescription("1 active");
+  await expect(filters).toContainText("· 1");
+  await toggle.click();
+  await expect(filters).toHaveAccessibleDescription("2 active");
+
+  // Collapsed, the inputs are out of reach and the count is what is left
+  // of them.
+  await page.keyboard.press("Escape");
+  await expect(filters).toHaveAttribute("aria-expanded", "false");
+  await expect(region).toBeHidden();
+  await expect(filters).toHaveAccessibleDescription("2 active");
+
+  await filters.click();
+  await toggle.click();
+  await expect(filters).toHaveAccessibleDescription("1 active");
+
+  await region.click();
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect.poll(() => urlParam(page, "region")).toBeNull();
+  await expect(filters).toHaveAccessibleDescription("");
+  await expect(filters).toHaveText("Filters");
+  expect(errors).toEqual([]);
+});

@@ -1,5 +1,6 @@
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { Filter, FilterOptions } from "./filter";
+import { useFilterRoster } from "./filter-roster-context";
 import { usePageFilters } from "./page-filters-context";
 
 /**
@@ -9,7 +10,8 @@ import { usePageFilters } from "./page-filters-context";
  * caller whenever the value changes. Runs the ensure during render so a
  * URL-seeded or `initialValue` value is visible on the first paint.
  * `undefined` outside a `FiltersProvider` — callers degrade like
- * `usePageFilters`.
+ * `usePageFilters`. Inside a `FilterRosterProvider` the filter is enlisted
+ * in that roster for as long as the caller is mounted.
  *
  * @example
  * const filter = usePageFilter<string | string[]>("region", {
@@ -34,5 +36,10 @@ export function usePageFilter<Value = unknown>(
   );
   const getSnapshot = useCallback(() => filter?.getSnapshot(), [filter]);
   useSyncExternalStore(subscribe, getSnapshot);
+  const roster = useFilterRoster();
+  useEffect(
+    () => (filter && roster ? roster.enlist(filter) : undefined),
+    [filter, roster],
+  );
   return filter;
 }

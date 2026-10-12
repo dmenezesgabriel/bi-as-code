@@ -176,8 +176,9 @@ export interface ToggleProps {
  * the filter inputs (evidence's `filter_bar`): the children lay out as one
  * horizontal bar that sticks under the page header on scroll and gains a
  * floating card style once its rest position leaves the viewport. The bar
- * carries no props of its own and stores no state — children keep their
- * `?id=` writes and `filters=[...]` predicates.
+ * carries no props of its own and stores no filter value — children keep
+ * their `?id=` writes and `filters=[...]` predicates; docked, it counts the
+ * children whose filter is applied.
  */
 export interface FilterBarProps {
   readonly children?: ReactNode;

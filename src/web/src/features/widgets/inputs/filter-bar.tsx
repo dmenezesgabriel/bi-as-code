@@ -1,7 +1,17 @@
-import { useCallback, useRef, type ReactElement, type Ref } from "react";
+import {
+  useCallback,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactElement,
+  type Ref,
+} from "react";
 import { Collapsible } from "../../../components/collapsible";
 import { ChevronDownIcon } from "../../../components/icons";
 import { cn } from "../../../lib/cn";
+import { FilterRoster } from "../../filters/filter-roster";
+import { FilterRosterProvider } from "../../filters/filter-roster-context";
 import type { FilterBarProps } from "./types";
 import { useDockedDisclosure } from "./use-docked-disclosure";
 import { useDockedDismissal } from "./use-docked-dismissal";
@@ -29,9 +39,11 @@ const CARD_FACE =
  * page, so it shrinks to a single `Filters` disclosure row (WCAG 2.2 SC
  * 2.4.11: a sticky band must not hide what the reader focuses) and shows
  * the inputs on demand in a card over the page; the inputs stay mounted
- * while hidden, so their selections and option queries survive. Purely
- * visual — the bar stores nothing and children's `?id=` URL-param writes
- * are untouched.
+ * while hidden, so their selections and option queries survive. A
+ * collapsed row would otherwise hide that its inputs still narrow the
+ * page, so the trigger counts the applied ones (`Filters · 2`).
+ * Purely visual — the bar stores no filter value and children's `?id=`
+ * URL-param writes are untouched.
  *
  * @example
  * <FilterBar>
@@ -47,6 +59,7 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
   const { opened, setOpened, panelFocusProps } = useDockedDisclosure(resting);
   const restingHeight = useRestingHeight(bar, resting);
   const collapse = useCallback(() => setOpened(false), [setOpened]);
+  const { roster, activeCount } = useInputsRoster();
   useDockedDismissal({ active: !resting && opened, bar, trigger, collapse });
   return (
     <>
@@ -75,7 +88,7 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
         )}
         style={resting ? undefined : { height: DOCKED_ROW_HEIGHT }}
       >
-        {!resting && <FiltersTrigger ref={trigger} />}
+        {!resting && <FiltersTrigger ref={trigger} activeCount={activeCount} />}
         <Collapsible.Panel
           keepMounted
           {...panelFocusProps}
@@ -89,7 +102,9 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
               ),
           )}
         >
-          {children}
+          <FilterRosterProvider roster={roster}>
+            {children}
+          </FilterRosterProvider>
         </Collapsible.Panel>
       </Collapsible.Root>
       {/* A sticky bar is in flow: the height it gives up when docked is
@@ -107,18 +122,58 @@ function heightGivenUp(restingHeight: number): string {
   return `max(0px, ${restingHeight}px - ${DOCKED_ROW_HEIGHT})`;
 }
 
+/** The bar's own roster of its inputs' filters, and how many are applied. */
+function useInputsRoster(): { roster: FilterRoster; activeCount: number } {
+  const [roster] = useState(() => new FilterRoster());
+  const activeCount = useSyncExternalStore(
+    roster.subscribe,
+    roster.getSnapshot,
+  );
+  return { roster, activeCount };
+}
+
 function FiltersTrigger({
   ref,
+  activeCount,
 }: {
   ref: Ref<HTMLButtonElement>;
+  activeCount: number;
 }): ReactElement {
+  const labelId = useId();
+  const countId = useId();
+  // The count is the button's description, not part of its name: the name
+  // stays `Filters` whatever the page's state, and a screen reader still
+  // announces "2 active" after it.
   return (
     <Collapsible.Trigger
       ref={ref}
+      aria-labelledby={labelId}
+      aria-describedby={activeCount > 0 ? countId : undefined}
       className="group flex min-h-6 cursor-pointer items-center gap-0.5 text-sm text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
     >
       <ChevronDownIcon className="shrink-0 -rotate-90 transition-transform group-data-panel-open:rotate-0" />
-      Filters
+      <span id={labelId}>Filters</span>
+      {activeCount > 0 && (
+        <ActiveCount id={countId} activeCount={activeCount} />
+      )}
     </Collapsible.Trigger>
+  );
+}
+
+// Two faces of one number: the dot-separated figure for the eye, and one
+// whole phrase for the description — assistive technology joins sibling
+// inline nodes without the space between them.
+function ActiveCount({
+  id,
+  activeCount,
+}: {
+  id: string;
+  activeCount: number;
+}): ReactElement {
+  return (
+    <span id={id} className="ml-1 tabular-nums">
+      <span aria-hidden="true">· {activeCount}</span>
+      <span className="sr-only">{`${activeCount} active`}</span>
+    </span>
   );
 }
