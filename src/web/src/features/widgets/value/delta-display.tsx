@@ -23,13 +23,16 @@ export interface DeltaDisplayProps {
   readonly className?: string;
 }
 
-const GOOD_TEXT = "text-emerald-600 dark:text-emerald-400";
-const BAD_TEXT = "text-red-600 dark:text-red-400";
+// WCAG 1.4.3 needs 4.5:1 for the text, on white and on the 10% chip tint
+// alike: the light 600/500 tones measure 3.25–4.34:1 on their chips, one
+// step darker clears it. The chip tints keep the lighter 600 hue.
+const GOOD_TEXT = "text-emerald-700 dark:text-emerald-400";
+const BAD_TEXT = "text-red-700 dark:text-red-400";
 const GOOD_CHIP =
   "bg-emerald-600/10 border-emerald-600/25 dark:bg-emerald-400/10 dark:border-emerald-400/25";
 const BAD_CHIP =
   "bg-red-600/10 border-red-600/25 dark:bg-red-400/10 dark:border-red-400/25";
-const NEUTRAL_TEXT = "text-neutral-500 dark:text-neutral-400";
+const NEUTRAL_TEXT = "text-neutral-600 dark:text-neutral-400";
 const NEUTRAL_CHIP =
   "bg-neutral-100 border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700";
 

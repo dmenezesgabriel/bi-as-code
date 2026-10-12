@@ -156,3 +156,27 @@ describe("DeltaDisplay", () => {
     );
   });
 });
+
+describe("DeltaDisplay text tone", () => {
+  // WCAG 1.4.3: light tones sit one step darker than the chip tint so the
+  // text clears 4.5:1 on white and on the 10% tinted chip alike.
+  it.each([
+    { value: 0.05, light: "text-emerald-700", dark: "dark:text-emerald-400" },
+    { value: -0.05, light: "text-red-700", dark: "dark:text-red-400" },
+    { value: 0, light: "text-neutral-600", dark: "dark:text-neutral-400" },
+  ])("colors $value with $light / $dark", ({ value, light, dark }) => {
+    const { container } = render(<DeltaDisplay value={value} chip />);
+
+    const classes = container.firstElementChild!.classList;
+    expect(classes).toContain(light);
+    expect(classes).toContain(dark);
+  });
+
+  it("lets the arrow inherit the text tone", () => {
+    const { container } = render(<DeltaDisplay value={0.05} />);
+
+    const svg = container.querySelector("svg")!;
+    expect(svg.getAttribute("class")).not.toMatch(/text-/);
+    expect(svg.querySelector("path")).toHaveAttribute("fill", "currentColor");
+  });
+});

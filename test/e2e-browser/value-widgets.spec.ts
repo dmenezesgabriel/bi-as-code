@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { contrastRatio, effectiveBackground } from "./contrast.js";
 import {
   collectConsoleErrors,
   expect,
@@ -93,6 +94,31 @@ test("<Value> and <Delta> render formatted scalars inside prose", async ({
   await expect(lead).toContainText("$6,100", { timeout: 30_000 });
   expect(errors).toEqual([]);
 });
+
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`every ${colorScheme} delta reads at text contrast on its background`, async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.emulateMedia({ colorScheme });
+    await page.goto(`${biacDev.url}weekly-review`);
+    // The Quarter revenue <BigValue> chip and the inline prose <Delta>.
+    const deltas = page.locator("main span[data-status]");
+    await expect(deltas).toHaveCount(2, { timeout: 30_000 });
+
+    const ratios: number[] = [];
+    for (const delta of await deltas.all()) {
+      const text = await delta.evaluate((el) => getComputedStyle(el).color);
+      const background = await effectiveBackground(delta);
+      ratios.push(await contrastRatio(page, text, background));
+    }
+
+    // WCAG 1.4.3: body-size text needs 4.5:1, a chip's tint included.
+    for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(4.5);
+    expect(errors).toEqual([]);
+  });
+}
 
 test("standalone <Sparkline> renders the same series as a line and as bars", async ({
   page,

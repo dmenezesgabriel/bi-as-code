@@ -1,4 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
+import { contrastRatio } from "./contrast.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 interface TypeMetrics {
@@ -74,41 +75,6 @@ test("section headings step down the scale while widget text keeps its own", asy
 interface LinkLook {
   contrastWithText: number;
   decoration: string;
-}
-
-// WCAG 2 contrast ratio of two computed CSS colors. Tailwind 4 colors
-// compute as oklch(), so each is painted on a 1×1 canvas to read back sRGB
-// before applying the relative-luminance formula.
-function contrastRatio(
-  page: Page,
-  foreground: string,
-  background: string,
-): Promise<number> {
-  return page.evaluate(
-    (colors) => {
-      const context = document.createElement("canvas").getContext("2d", {
-        willReadFrequently: true,
-      })!;
-      const weights = [0.2126, 0.7152, 0.0722];
-      const luminance = (color: string) => {
-        context.clearRect(0, 0, 1, 1);
-        context.fillStyle = color;
-        context.fillRect(0, 0, 1, 1);
-        return Array.from(context.getImageData(0, 0, 1, 1).data)
-          .slice(0, 3)
-          .map((channel) => channel / 255)
-          .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-          .reduce((sum, c, i) => sum + c * (weights[i] ?? 0), 0);
-      };
-      const [first, second] = colors.map(luminance) as [number, number];
-      const [lighter, darker] = [
-        Math.max(first, second),
-        Math.min(first, second),
-      ];
-      return (lighter + 0.05) / (darker + 0.05);
-    },
-    [foreground, background],
-  );
 }
 
 // Measures the first in-text link against its paragraph.
