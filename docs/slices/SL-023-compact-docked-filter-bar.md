@@ -17,7 +17,7 @@ A reader scrolling a page keeps one compact `Filters` row docked under the heade
 7. Scroll back to the top: the bar is at rest with all inputs visible, Region still `West`.
 8. Resize to 375×812, reload, repeat steps 3–6: the collapsed docked bar is at most 56 px (434 px today); expanded, it never exceeds half the viewport height and scrolls inside itself.
 9. `Tab` from the header through the docked, collapsed bar: focus goes to `Filters`, then to page content — never into a hidden input.
-10. `/nested/allocation` and `/crossfilter-scale`: scroll, open `Filters`, drive the input; the table and charts respond.
+10. `/crossfilter-scale`: scroll, open `Filters`, drag the Distance slider; the charts respond and the row reads `Filters · 1`. `/nested/allocation` is too short to dock at 1280×720 (it does not scroll) or 375×812 (it scrolls 65 px): its bar stays at rest with no `Filters` button — click `Partner`, the second table narrows to one row.
 11. `/weekly-review?edit=true`: in the preview pane the bar docks at the pane's top edge and collapses the same way.
 12. `bin/biac build` + `bin/biac preview` (`http://localhost:4173/weekly-review`): steps 3–6 behave the same.
 13. `/weekly-review` at 1280×720, bar at rest: pick `West` in Region, scroll past the bar — the docked row reads `Filters · 1` (the button's accessible name is still `Filters`, its description `1 active`). Open `Filters`, switch `Large orders only` on: `Filters · 2`. Clear Region and switch the toggle off: the row reads `Filters` with no count.
