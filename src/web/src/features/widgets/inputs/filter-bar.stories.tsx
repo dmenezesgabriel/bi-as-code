@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactNode } from "react";
 import { expect, userEvent, waitFor } from "storybook/test";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { withPageFilters } from "../../../../.storybook/decorators";
@@ -73,8 +74,15 @@ function firstIntersectionReading(target: Element): Promise<void> {
   });
 }
 
+const TWO_INPUTS = (
+  <>
+    <TextInput id="region" title="Region" />
+    <Toggle id="large_orders" label="Large orders" />
+  </>
+);
+
 /** A page long enough to scroll the bar past its dock line. */
-function ScrollingReport() {
+function ScrollingReport({ inputs = TWO_INPUTS }: { inputs?: ReactNode }) {
   return (
     <>
       <h1 className="mb-4 text-2xl font-semibold">Weekly review</h1>
@@ -83,10 +91,7 @@ function ScrollingReport() {
         card face must appear only once the bar has actually docked, never on
         first paint.
       </p>
-      <FilterBar>
-        <TextInput id="region" title="Region" />
-        <Toggle id="large_orders" label="Large orders" />
-      </FilterBar>
+      <FilterBar>{inputs}</FilterBar>
       <div className="text-sm text-neutral-500" style={{ height: "200vh" }}>
         Report content scrolls beneath the pinned bar.
       </div>
@@ -185,5 +190,89 @@ export const DockedOpened: Story = {
     await expect(
       canvas.getByRole("switch", { name: "Large orders" }),
     ).toBeChecked();
+  },
+};
+
+/** The ways out of the opened docked bar besides its trigger: `Escape`
+ * collapses it and hands focus back to `Filters`; a press on the page
+ * around it collapses it. */
+export const DockedDismissal: Story = {
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  render: () => <ScrollingReport />,
+  play: async ({ canvas }) => {
+    await dockBar(canvas);
+    const trigger = canvas.getByRole("button", { name: "Filters" });
+
+    await userEvent.click(trigger);
+    await userEvent.click(canvas.getByLabelText("Region"));
+    await userEvent.keyboard("{Escape}");
+
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).toHaveFocus();
+
+    await userEvent.click(trigger);
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(canvas.getByText(/Report content scrolls/));
+
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  },
+};
+
+/** A reader typing in an input when the bar reaches its dock line keeps
+ * that input: the bar docks opened, focus intact, instead of collapsing
+ * over the control in use. */
+export const DocksOpenedWhileFocused: Story = {
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  render: () => <ScrollingReport />,
+  play: async ({ canvas }) => {
+    const region = canvas.getByLabelText("Region");
+    await firstIntersectionReading(stickyBar(canvas).previousElementSibling!);
+    region.focus();
+
+    window.scrollTo(0, 600);
+
+    const trigger = await canvas.findByRole("button", { name: "Filters" });
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(region).toBeVisible();
+    await expect(region).toHaveFocus();
+  },
+};
+
+const MANY_INPUTS = [
+  "Region",
+  "Channel",
+  "Segment",
+  "Product",
+  "Owner",
+  "Status",
+  "Country",
+  "Campaign",
+].map((title) => (
+  <TextInput key={title} id={title.toLowerCase()} title={title} />
+));
+
+/** More inputs than half the viewport holds, on a phone-width page: the
+ * opened docked bar stops at half the viewport and its inputs scroll
+ * inside the card, so the report below stays readable. */
+export const DockedOpenedNarrow: Story = {
+  decorators: [
+    withPageFilters(new FakeFilterUrlPort("")),
+    (Story) => (
+      <div className="max-w-[375px]">
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => <ScrollingReport inputs={MANY_INPUTS} />,
+  play: async ({ canvas }) => {
+    const bar = await dockBar(canvas);
+    await userEvent.click(canvas.getByRole("button", { name: "Filters" }));
+
+    const panel = canvas.getByLabelText("Region").closest("[data-open]")!;
+    const openedBottom = panel.getBoundingClientRect().bottom;
+    const openedHeight = openedBottom - bar.getBoundingClientRect().top;
+    expect(openedHeight).toBeLessThanOrEqual(window.innerHeight / 2);
+    expect(panel.scrollHeight).toBeGreaterThan(panel.clientHeight);
+    expect(panel.scrollWidth).toBe(panel.clientWidth);
   },
 };

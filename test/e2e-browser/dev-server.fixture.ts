@@ -50,6 +50,11 @@ export async function openOrderMixRow(
   return panel.locator("tbody tr").first().locator("td").allTextContents();
 }
 
+/** `page.url()` keeps percent-encoding; searchParams decodes it. */
+export function urlParam(page: { url(): string }, name: string): string | null {
+  return new URL(page.url()).searchParams.get(name);
+}
+
 /**
  * Console errors and page errors fail every test — a clean console is part
  * of "renders correctly", not an optional extra. Wire this before the first

@@ -1,4 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { createPortal } from "react-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubIntersectionObserver } from "../../chrome/intersection-observer.stub";
 import { stubResizeObserver } from "../../chrome/resize-observer.stub";
@@ -12,6 +14,41 @@ function renderBar() {
       <p>filter field</p>
     </FilterBar>,
   );
+}
+
+/** An input whose popup is portaled to `<body>`, as a dropdown's list is. */
+function PortaledSearch(): ReactElement {
+  return createPortal(<input aria-label="Search options" />, document.body);
+}
+
+/** Docks a bar holding a real input, opened through its trigger. */
+function renderOpenedDockedBar(): { pageContent: HTMLElement } {
+  const io = stubIntersectionObserver();
+  render(
+    <>
+      <FilterBar>
+        <input aria-label="Region" />
+        <PortaledSearch />
+      </FilterBar>
+      <p>report content</p>
+    </>,
+  );
+  act(() => io.fire(false));
+  fireEvent.click(filtersTrigger()!);
+  return { pageContent: screen.getByText("report content") };
+}
+
+/** The inputs panel of a bar rendered with the `Region` input. */
+function regionPanel(): HTMLElement {
+  return screen.getByLabelText("Region").parentElement!;
+}
+
+function expectOpened(): void {
+  expect(filtersTrigger()).toHaveAttribute("aria-expanded", "true");
+}
+
+function expectCollapsed(): void {
+  expect(filtersTrigger()).toHaveAttribute("aria-expanded", "false");
 }
 
 function inputsPanel(): HTMLElement {
@@ -297,6 +334,157 @@ describe("FilterBar", () => {
       expect(watchedAtRest).toBe(1);
       expect(watchedDocked).toBe(0);
       expect(ro.liveCount()).toBe(0);
+    });
+  });
+
+  describe("dismissal", () => {
+    it("collapses on Escape and returns focus to the Filters trigger", () => {
+      renderOpenedDockedBar();
+      screen.getByLabelText("Region").focus();
+
+      fireEvent.keyDown(screen.getByLabelText("Region"), { key: "Escape" });
+
+      expectCollapsed();
+      expect(filtersTrigger()).toHaveFocus();
+    });
+
+    it("stays opened on any other key", () => {
+      renderOpenedDockedBar();
+
+      fireEvent.keyDown(document.body, { key: "Enter" });
+
+      expectOpened();
+    });
+
+    it("stays opened on an Escape a child popup consumed before it reached the window", () => {
+      renderOpenedDockedBar();
+      const consume = (event: KeyboardEvent): void => event.stopPropagation();
+      document.addEventListener("keydown", consume);
+
+      fireEvent.keyDown(screen.getByLabelText("Search options"), {
+        key: "Escape",
+      });
+      document.removeEventListener("keydown", consume);
+
+      expectOpened();
+    });
+
+    it("leaves focus alone on Escape while collapsed", () => {
+      const { pageContent } = renderOpenedDockedBar();
+      fireEvent.click(filtersTrigger()!);
+      pageContent.tabIndex = 0;
+      pageContent.focus();
+
+      fireEvent.keyDown(pageContent, { key: "Escape" });
+
+      expect(pageContent).toHaveFocus();
+    });
+
+    it("collapses on a pointer press on the page outside the bar", () => {
+      const { pageContent } = renderOpenedDockedBar();
+
+      fireEvent.pointerDown(pageContent);
+
+      expectCollapsed();
+    });
+
+    it("stays opened on a pointer press inside the bar", () => {
+      renderOpenedDockedBar();
+
+      fireEvent.pointerDown(screen.getByLabelText("Region"));
+
+      expectOpened();
+    });
+
+    it("stays opened on a pointer press in a popup portaled outside the app root", () => {
+      renderOpenedDockedBar();
+
+      fireEvent.pointerDown(screen.getByLabelText("Search options"));
+
+      expectOpened();
+    });
+
+    it("stops listening once collapsed", () => {
+      const { pageContent } = renderOpenedDockedBar();
+      const removed = vi.spyOn(document, "removeEventListener");
+
+      fireEvent.pointerDown(pageContent);
+
+      expect(removed.mock.calls.map(([type]) => type)).toContain("pointerdown");
+    });
+  });
+
+  describe("focus at the dock moment", () => {
+    function renderRestingBar(): ReturnType<typeof stubIntersectionObserver> {
+      const io = stubIntersectionObserver();
+      render(
+        <>
+          <FilterBar>
+            <input aria-label="Region" />
+            <PortaledSearch />
+          </FilterBar>
+          <button type="button">page button</button>
+        </>,
+      );
+      return io;
+    }
+
+    it("docks opened when an input in the bar holds focus", () => {
+      const io = renderRestingBar();
+      act(() => screen.getByLabelText("Region").focus());
+
+      act(() => io.fire(false));
+
+      expectOpened();
+      expect(regionPanel()).not.toHaveAttribute("hidden");
+      expect(screen.getByLabelText("Region")).toHaveFocus();
+    });
+
+    it("docks opened when a child's portaled popup holds focus", () => {
+      const io = renderRestingBar();
+      act(() => screen.getByLabelText("Search options").focus());
+
+      act(() => io.fire(false));
+
+      expectOpened();
+    });
+
+    it("docks collapsed once focus has left the bar", () => {
+      const io = renderRestingBar();
+      act(() => screen.getByLabelText("Region").focus());
+      act(() => screen.getByRole("button", { name: "page button" }).focus());
+
+      act(() => io.fire(false));
+
+      expectCollapsed();
+    });
+
+    it("keeps the bar opened while focus moves between two of its inputs", () => {
+      const io = renderRestingBar();
+      act(() => screen.getByLabelText("Region").focus());
+      act(() => screen.getByLabelText("Search options").focus());
+
+      act(() => io.fire(false));
+
+      expectOpened();
+    });
+  });
+
+  describe("bounds", () => {
+    it("caps the opened docked inputs at half the viewport and scrolls them inside", () => {
+      renderOpenedDockedBar();
+
+      expect(regionPanel().className).toContain("max-h-[calc(50dvh-2.75rem)]");
+      expect(regionPanel().className).toContain("overflow-y-auto");
+    });
+
+    it("leaves the inputs unbounded at rest", () => {
+      stubIntersectionObserver();
+
+      renderBar();
+
+      expect(inputsPanel().className).not.toContain("max-h-");
+      expect(inputsPanel().className).not.toContain("overflow-y-auto");
     });
   });
 });

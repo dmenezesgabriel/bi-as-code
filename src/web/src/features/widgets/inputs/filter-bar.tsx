@@ -1,8 +1,10 @@
-import { useRef, useState, type ReactElement } from "react";
+import { useCallback, useRef, type ReactElement, type Ref } from "react";
 import { Collapsible } from "../../../components/collapsible";
 import { ChevronDownIcon } from "../../../components/icons";
 import { cn } from "../../../lib/cn";
 import type { FilterBarProps } from "./types";
+import { useDockedDisclosure } from "./use-docked-disclosure";
+import { useDockedDismissal } from "./use-docked-dismissal";
 import { useIsIntersecting } from "./use-is-intersecting";
 import { useRestingHeight } from "./use-resting-height";
 
@@ -10,20 +12,12 @@ import { useRestingHeight } from "./use-resting-height";
 // share of a short viewport a sticky band may cover.
 const DOCKED_ROW_HEIGHT = "2.5rem";
 
+// The opened inputs scroll inside themselves rather than cover more than
+// half the viewport: the row above them (2.5rem) and the gap (0.25rem) count.
+const OPENED_PANEL_BOUNDS = "max-h-[calc(50dvh-2.75rem)] overflow-y-auto";
+
 const CARD_FACE =
   "border-neutral-200 bg-white px-4 shadow dark:border-neutral-800 dark:bg-neutral-950";
-
-/**
- * Whether the reader has opened the docked bar's inputs. Coming back to
- * rest forgets it, so every dock starts as the one-row face.
- */
-function useDockedDisclosure(
-  resting: boolean,
-): [boolean, (opened: boolean) => void] {
-  const [opened, setOpened] = useState(false);
-  if (resting && opened) setOpened(false);
-  return [opened, setOpened];
-}
 
 /**
  * The `<FilterBar>` MDX widget — evidence's `filter_bar` ported to our
@@ -48,9 +42,12 @@ function useDockedDisclosure(
 export function FilterBar({ children }: FilterBarProps): ReactElement {
   const sentinel = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const resting = useIsIntersecting(sentinel, true);
-  const [opened, setOpened] = useDockedDisclosure(resting);
+  const { opened, setOpened, panelFocusProps } = useDockedDisclosure(resting);
   const restingHeight = useRestingHeight(bar, resting);
+  const collapse = useCallback(() => setOpened(false), [setOpened]);
+  useDockedDismissal({ active: !resting && opened, bar, trigger, collapse });
   return (
     <>
       {/* The sentinel's top sits one dock offset above the bar's rest top,
@@ -78,14 +75,16 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
         )}
         style={resting ? undefined : { height: DOCKED_ROW_HEIGHT }}
       >
-        {!resting && <FiltersTrigger />}
+        {!resting && <FiltersTrigger ref={trigger} />}
         <Collapsible.Panel
           keepMounted
+          {...panelFocusProps}
           className={cn(
             "flex flex-row flex-wrap items-end gap-4",
             !resting &&
               cn(
                 CARD_FACE,
+                OPENED_PANEL_BOUNDS,
                 "absolute -inset-x-px top-full mt-1 rounded-md border pt-3 pb-2",
               ),
           )}
@@ -108,9 +107,16 @@ function heightGivenUp(restingHeight: number): string {
   return `max(0px, ${restingHeight}px - ${DOCKED_ROW_HEIGHT})`;
 }
 
-function FiltersTrigger(): ReactElement {
+function FiltersTrigger({
+  ref,
+}: {
+  ref: Ref<HTMLButtonElement>;
+}): ReactElement {
   return (
-    <Collapsible.Trigger className="group flex min-h-6 cursor-pointer items-center gap-0.5 text-sm text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100">
+    <Collapsible.Trigger
+      ref={ref}
+      className="group flex min-h-6 cursor-pointer items-center gap-0.5 text-sm text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
+    >
       <ChevronDownIcon className="shrink-0 -rotate-90 transition-transform group-data-panel-open:rotate-0" />
       Filters
     </Collapsible.Trigger>

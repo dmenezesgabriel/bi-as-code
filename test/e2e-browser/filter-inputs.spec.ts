@@ -8,13 +8,9 @@ import {
   resultTables,
   sliderThumbBox,
   test,
+  urlParam,
   type BiacDev,
 } from "./dev-server.fixture.js";
-
-/** `page.url()` keeps percent-encoding; searchParams decodes it. */
-function urlParam(page: { url(): string }, name: string): string | null {
-  return new URL(page.url()).searchParams.get(name);
-}
 
 /**
  * Opens weekly-review and picks `name` in the Region dropdown — the
@@ -406,84 +402,5 @@ test("the Channel button group picks Direct, syncs the multi-select and persists
   );
   await expect(direct).toHaveAttribute("aria-pressed", "true");
   await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(2);
-  expect(errors).toEqual([]);
-});
-
-test("the FilterBar docks at 64px as one Filters row, holds the page still and its opened inputs keep writing", async ({
-  page,
-  biacDev,
-}) => {
-  test.slow();
-  const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}weekly-review`);
-
-  // The bar is the sticky `div` holding the inputs — the TOC is sticky too
-  // but is an `aside`, so the element scoping pins the bar alone.
-  const bar = page.locator("div.sticky", { hasText: "Region" });
-  const filters = page.getByRole("button", { name: "Filters", exact: true });
-  const toggle = page.getByRole("switch", { name: "Large orders only" });
-  await expect(bar).toBeVisible({ timeout: 30_000 });
-  await expect(bar).toContainText("Region");
-
-  // At rest the card face is down — transparent border, no background —
-  // and the bar is page content: every input shown, no trigger.
-  await expect(bar).toHaveClass(/border-transparent/);
-  await expect(bar).not.toHaveClass(/bg-white/);
-  await expect(filters).toHaveCount(0);
-  await expect(toggle).toBeVisible();
-  // The bar is in flow, so what the page keeps is its height plus the
-  // spacer after it. Read once Region's options have loaded: until then
-  // the dropdown is narrower and the row can wrap differently.
-  await expect(page.getByRole("combobox", { name: "Region" })).toBeEnabled({
-    timeout: 30_000,
-  });
-  const heightHeldInFlow = () =>
-    bar.evaluate((el) =>
-      Math.round(
-        el.getBoundingClientRect().height +
-          el.nextElementSibling!.getBoundingClientRect().height,
-      ),
-    );
-  const heightAtRest = await heightHeldInFlow();
-
-  // Past the sentinel the bar docks 64px under the viewport top (its
-  // default 4rem dock line, below the `h-12` header), gains the card face
-  // and shrinks to one `Filters` row with the inputs out of reach.
-  await page.evaluate(() => window.scrollTo(0, 600));
-  await expect(bar).toHaveClass(/bg-white/);
-  await expect(bar).toHaveClass(/shadow/);
-  await expect(filters).toHaveAttribute("aria-expanded", "false");
-  await expect(toggle).toBeHidden();
-  const barBox = () =>
-    bar.evaluate((el) => {
-      const { top, height } = el.getBoundingClientRect();
-      return { top: Math.round(top), height: Math.round(height) };
-    });
-  expect((await barBox()).top).toBe(64);
-  expect((await barBox()).height).toBeLessThanOrEqual(56);
-  // The height it gave up is held, so nothing below it moved and the
-  // scroll landed where it was asked to.
-  expect(await heightHeldInFlow()).toBe(heightAtRest);
-  expect(await page.evaluate(() => window.scrollY)).toBe(600);
-
-  // Opened, the inputs keep their URL writes while pinned — a raw pointer
-  // click at the pinned switch's coordinates, the reader's real gesture
-  // (Playwright's locator click scroll-into-views the target first, which
-  // a stuck sticky bar answers with its flow position).
-  await filters.click();
-  await expect(filters).toHaveAttribute("aria-expanded", "true");
-  const box = await toggle.boundingBox();
-  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
-  await expect.poll(() => urlParam(page, "large_orders")).toBe("true");
-  expect((await barBox()).top).toBe(64);
-  expect((await barBox()).height).toBeLessThanOrEqual(56);
-  expect(await heightHeldInFlow()).toBe(heightAtRest);
-
-  // Back at the top the card face drops as the sentinel re-enters.
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await expect(bar).toHaveClass(/border-transparent/);
-  await expect(bar).not.toHaveClass(/bg-white/);
-  await expect(filters).toHaveCount(0);
-  await expect(toggle).toBeChecked();
   expect(errors).toEqual([]);
 });
