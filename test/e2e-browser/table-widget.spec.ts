@@ -9,6 +9,7 @@ import {
   test,
   workerPosts,
 } from "./dev-server.fixture.js";
+import { expectMinTargetSize } from "./target-size.js";
 
 /**
  * A `DataTable` root — `div.py-2` wraps the scrollable table and the pager.
@@ -153,6 +154,25 @@ test("the widget pager walks the 39 rows in pages of 10", async ({
   await widget.getByRole("button", { name: "First page" }).click();
   await expect(widget).toContainText("Page 1 of 4 · 39 rows");
   expect(await firstRowCells(table)).toEqual(["North", "1", "14", "53.8%"]);
+  expect(errors).toEqual([]);
+});
+
+test("the order-grain pager's buttons are at least 24×24", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const pager = tableRegions(page).filter({ hasText: "Page 1 of 36" });
+  await expect(pager).toHaveCount(1, { timeout: 30_000 });
+  for (const name of ["First page", "Previous page", "Next page", "Last page"])
+    await expectMinTargetSize(pager.getByRole("button", { name }), 24);
+
+  await pager.getByRole("button", { name: "Next page" }).click();
+  await expect(
+    tableRegions(page).filter({ hasText: "Page 2 of 36" }),
+  ).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 

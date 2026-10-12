@@ -25,6 +25,13 @@ export const Paginated: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getAllByRole("row")).toHaveLength(11);
     await expect(canvas.getByText("Page 1 of 4 · 39 rows")).toBeVisible();
+    // WCAG 2.2 SC 2.5.8: each adjacent pager button needs a 24×24 box.
+    const pagerButtons = canvas.getAllByRole("button", { name: /page$/ });
+    await expect(pagerButtons).toHaveLength(4);
+    for (const button of pagerButtons) {
+      const { width, height } = button.getBoundingClientRect();
+      await expect({ width, height }).toEqual({ width: 24, height: 24 });
+    }
   },
 };
 
