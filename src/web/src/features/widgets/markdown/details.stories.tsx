@@ -22,6 +22,9 @@ export const Closed: Story = {
     const trigger = canvas.getByRole("button", { name: "Metric definitions" });
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await expect(canvas.queryByText(/Sales includes/)).toBeNull();
+    // WCAG 2.2 SC 2.5.8: a stacked trigger needs a 24 px tall box.
+    const { height } = trigger.getBoundingClientRect();
+    await expect(height).toBeGreaterThanOrEqual(24);
   },
 };
 

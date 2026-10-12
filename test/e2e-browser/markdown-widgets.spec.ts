@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { expectMinTargetSize } from "./target-size.js";
 
 /**
  * The Overview KPI `<Row>` — the only `flex-wrap` container holding the
@@ -70,6 +71,28 @@ test("<Details> toggles aria-expanded and reveals its panel", async ({
   await expect(
     page.getByRole("button", { name: "How the region filter works" }),
   ).toHaveAttribute("aria-expanded", "true");
+  expect(errors).toEqual([]);
+});
+
+test("the <Details> triggers are at least 24 px tall", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  // The three triggers stack with no spacing between them, so SC 2.5.8's
+  // spacing exception cannot apply: each box has to reach 24 px itself.
+  const names = [
+    "Metric definitions",
+    "How the region filter works",
+    "Mobile summary",
+  ];
+  await expect(page.getByRole("button", { name: names[0] })).toBeVisible({
+    timeout: 30_000,
+  });
+  for (const name of names)
+    await expectMinTargetSize(page.getByRole("button", { name }), 24);
   expect(errors).toEqual([]);
 });
 
