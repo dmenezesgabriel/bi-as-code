@@ -1,6 +1,6 @@
 # SL-027 — The source editor leaves a self-closed widget as typed
 
-Milestone: Phase 1 — Known debt · State: open · Depends on: — · Closes: the Known-debt "source editor appends a closing tag to a self-closed widget" row in `docs/backlog.md` (no `GAP-NNN`; the row postdates the usability audit)
+Milestone: Phase 1 — Known debt · State: partial · Depends on: — · Closes: the Known-debt "source editor appends a closing tag to a self-closed widget" row in `docs/backlog.md` (no `GAP-NNN`; the row postdates the usability audit)
 
 ## Outcome
 
@@ -117,7 +117,7 @@ None. The jsdom measurement settles which option to use, and the browser baselin
 
 One TDD unit each, one conventional commit each.
 
-- [ ] T1 — a self-closed widget is left as typed. RED in `page-source-language.unit.test.ts`: typing `<Table data="orders" />` and `<Details />` key by key leaves them unchanged; `<Details title="x">` still gains `</Details>`; `<BarChart … />` unchanged. GREEN: pin the dependency, pass `htmlTagLanguage`. Then a browser e2e in `test/e2e-browser/page-editor.spec.ts` (type the tag with `keyboard.type`, save, the preview renders without the compile-error page) and a `code-editor.stories.tsx` play story. `playwright-cli`: demo steps 2–6 at `/?edit=true`, `eval` the editor doc text after each line, screenshot the preview after each save, console clean. Gate, then rehearse the Demo end to end, delete the Known-debt row, mark the ledger row `partial` until a human runs it.
+- [x] T1 — a self-closed widget is left as typed. RED in `page-source-language.unit.test.ts`: typing `<Table data="orders" />` and `<Details />` key by key leaves them unchanged; `<Details title="x">` still gains `</Details>`; `<BarChart … />` unchanged. GREEN: pin the dependency, pass `htmlTagLanguage`. Then a browser e2e in `test/e2e-browser/page-editor.spec.ts` (type the tag with `keyboard.type`, save, the preview renders without the compile-error page) and a `code-editor.stories.tsx` play story. `playwright-cli`: demo steps 2–6 at `/?edit=true`, `eval` the editor doc text after each line, screenshot the preview after each save, console clean. Gate, then rehearse the Demo end to end, delete the Known-debt row, mark the ledger row `partial` until a human runs it.
 
 ## Out of scope
 
