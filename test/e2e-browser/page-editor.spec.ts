@@ -302,9 +302,12 @@ test("a self-closed widget typed in the editor is left as typed and the page com
   test.slow();
   const errors = collectConsoleErrors(page);
   const selfClosed = '<Table data="orders" />';
-  const tables = livePreview(page).getByRole("table");
+  // The tag is typed on the line after the heading, so its table renders as
+  // the heading's next block — counting every table on the page instead
+  // races the preview's other widgets as they mount.
+  const typedTable = livePreview(page).locator("h1 + *").getByRole("table");
   await openEditorFromHeader(page, biacDev.url);
-  const tablesBefore = await tables.count();
+  await expect(typedTable).toHaveCount(0);
 
   await appendToLine(page, "# Weekly review", `\n${selfClosed}`);
 
@@ -312,13 +315,13 @@ test("a self-closed widget typed in the editor is left as typed and the page com
     page.locator(".cm-line", { hasText: /^<Table data="orders"/ }),
   ).toHaveText(selfClosed);
   await saveWithModS(page);
-  await expect(tables).toHaveCount(tablesBefore + 1, { timeout: 20_000 });
+  await expect(typedTable).toHaveCount(1, { timeout: 20_000 });
   await expect(livePreview(page).getByRole("alert")).toHaveCount(0);
 
   await eraseTyped(page, `\n${selfClosed}`);
   await saveWithModS(page);
 
-  await expect(tables).toHaveCount(tablesBefore, { timeout: 20_000 });
+  await expect(typedTable).toHaveCount(0, { timeout: 20_000 });
   await expectPageBackInPreview(page);
   expect(errors).toEqual([]);
 });
