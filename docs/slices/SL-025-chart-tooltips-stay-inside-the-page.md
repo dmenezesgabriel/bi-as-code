@@ -126,7 +126,7 @@ Ours is **absent** for this capability. No ledger row claims it shipped. SL-006/
 
 ## Open decisions
 
-- `overflow-clip` vs `overflow-hidden` on the host: settle it in T1 by measurement (the `scrollWidth` script above, plus brush on Order size and point click on Regional split still publishing). No ADR is needed unless they differ in behavior.
+- None. `overflow-clip` vs `overflow-hidden` on the host is settled: `overflow-clip` — it keeps `scrollWidth` at 375 after the 1280 → 375 px resize, and the Regional split point click and the Order size brush still publish under it, so the two do not differ in behavior and no ADR is needed.
 
 ## Surface
 
@@ -139,7 +139,7 @@ Ours is **absent** for this capability. No ledger row claims it shipped. SL-006/
 
 ## Tasks
 
-- [ ] T1 — Every chart host clips its overflow and every tooltip is confined to its chart. RED first: a browser e2e in `test/e2e-browser/charts.spec.ts` (hover Regional split at 1280, move off, resize 375 → `scrollWidth === clientWidth`), a `chartTheme` unit assertion (`tooltip.confine === true`), an `EChart` story play asserting the host's computed `overflow`. Then GREEN in `theme.ts` and `echart.tsx`. `playwright-cli` pass: the baseline script above on `/weekly-review` (all 6 charts) and `/crossfilter-scale`, before/after `scrollWidth`, the area-chart tip inside its host at 375 px, brush and point click still publishing, console clean, then `bin/biac build` + `bin/biac preview`.
+- [x] T1 — Every chart host clips its overflow and every tooltip is confined to its chart. RED first: a browser e2e in `test/e2e-browser/charts.spec.ts` (hover Regional split at 1280, move off, resize 375 → `scrollWidth === clientWidth`), a `chartTheme` unit assertion (`tooltip.confine === true`), an `EChart` story play asserting the host's computed `overflow`. Then GREEN in `theme.ts` and `echart.tsx`. `playwright-cli` pass: the baseline script above on `/weekly-review` (all 6 charts) and `/crossfilter-scale`, before/after `scrollWidth`, the area-chart tip inside its host at 375 px, brush and point click still publishing, console clean, then `bin/biac build` + `bin/biac preview`.
 
 ## Out of scope
 
