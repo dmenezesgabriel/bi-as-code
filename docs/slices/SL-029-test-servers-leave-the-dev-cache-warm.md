@@ -128,7 +128,7 @@ None from the references. `NODE_ENV` is cleared for spawned children, not set to
 
 ## Tasks
 
-- [ ] T1 — `startBiacServer` spawns `biac` without `NODE_ENV`; regression: an e2e test starts `biac dev` from vitest, stops it within 1 s of `Local:`, and asserts the `deps_temp_*` count and `deps/_metadata.json` `configHash` are unchanged (RED today: +1 and dropped). Re-measure `test:e2e` and `test:cucumber` deltas.
+- [x] T1 — `startBiacServer` spawns `biac` without `NODE_ENV`; regression: an e2e test starts `biac dev` from vitest, stops it within 1 s of `Local:`, and asserts the `deps_temp_*` count and `deps/_metadata.json` `configHash` are unchanged (RED today: +1 and dropped). Re-measure `test:e2e` and `test:cucumber` deltas.
 - [ ] T2 — `makePagesServer` takes a `cacheDir` and its callers remove it after `close()` (per test or per file, from the open decision); regression: the integration tier leaves the count and `deps/` unchanged. Re-measure the integration delta, then run the Demo; `playwright-cli` pass over `/weekly-review` and `/?edit=true`.
 
 ## Out of scope
