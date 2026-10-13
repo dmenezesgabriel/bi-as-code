@@ -295,6 +295,41 @@ test("a broken tag shows its compile error in the preview, and the fix renders t
   expect(errors).toEqual([]);
 });
 
+test("a filter named with the editor's own URL key is a compile error at the attribute that names it", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  const reservedInput = '\n<TextInput id="edit" title="Edit" />';
+  const reservedConsumer = '\n<BarChart data="orders" filters="edit" />';
+  const alert = livePreview(page).getByRole("alert");
+  await openEditorFromHeader(page, biacDev.url);
+
+  await appendToLine(page, "# Weekly review", reservedInput);
+  await saveWithModS(page);
+
+  await expectCompileErrorInPreview(page, /pages\/weekly-review\.md:\d+:12/);
+  await expect(alert).toContainText(
+    'Reserved filter id "edit" on <TextInput id> — "edit" opens the source editor in biac dev; choose another id',
+  );
+
+  await eraseTyped(page, reservedInput);
+  await page.keyboard.type(reservedConsumer);
+  await saveWithModS(page);
+
+  await expectCompileErrorInPreview(page, /pages\/weekly-review\.md:\d+:25/);
+  await expect(alert).toContainText(
+    'Reserved filter id "edit" on <BarChart filters>',
+  );
+
+  await eraseTyped(page, reservedConsumer);
+  await saveWithModS(page);
+
+  await expectPageBackInPreview(page);
+  expect(errors).toEqual([]);
+});
+
 test("broken front-matter shows its error in the preview instead of taking the app down", async ({
   page,
   biacDev,

@@ -75,6 +75,7 @@
     "jsdom": "30.0.1",
     "knip": "5.61.3",
     "lint-staged": "15.5.1",
+    "mdast-util-mdx-jsx": "3.2.0",
     "mdast-util-to-string": "4.0.0",
     "msw": "2.15.0",
     "prettier": "3.8.3",

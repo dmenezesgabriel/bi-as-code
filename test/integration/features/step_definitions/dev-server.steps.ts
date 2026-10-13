@@ -137,6 +137,21 @@ Then("the nested page module compiles {string}", async (text: string) => {
   await eventually(async () => (await getOk(url)).includes(text));
 });
 
+Then(
+  "the nested page module reports the compile error {string}",
+  async (message: string) => {
+    const url = `${base}@fs${projectRoot}/pages/nested/page.md?import`;
+    // The module carries the error as JSON, so its quotes arrive escaped.
+    const served = JSON.stringify(message).slice(1, -1);
+    await eventually(async () => {
+      const code = await getOk(url);
+      return (
+        code.startsWith("export const compileError") && code.includes(served)
+      );
+    });
+  },
+);
+
 Then("the dev server exits cleanly on SIGINT", async () => {
   assert.ok(child, "server must be running");
   const code = await new Promise<number | null>((resolve) => {

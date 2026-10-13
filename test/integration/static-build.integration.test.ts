@@ -95,6 +95,20 @@ describe("biac build", () => {
     expect(existsSync(join(root, "build", "index.html"))).toBe(false);
   }, 120_000);
 
+  it("fails on a page naming a filter with the editor's URL key, at the attribute", async () => {
+    const root = makeTempProject();
+    const page = '# Hi\n\n<Table data="orders" filters="edit" />\n';
+    writeProjectFile(root, "pages/index.md", page);
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    const failure = await build([root]).catch((error: unknown) => error);
+
+    expect(String(failure)).toMatch(
+      /pages\/index\.md:3:22[^]*Reserved filter id "edit" on <Table filters>/,
+    );
+    expect(existsSync(join(root, "build", "index.html"))).toBe(false);
+  }, 120_000);
+
   it("builds without a data/ directory and emits no build/data", async () => {
     const root = makeTempProject();
     writeProjectFile(root, "pages/index.md", "# No data\n");

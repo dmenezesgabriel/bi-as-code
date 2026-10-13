@@ -6,6 +6,7 @@ import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
+import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
 import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
 import type {
@@ -60,7 +61,11 @@ export async function compilePage(
   };
   const compiled = await compile(file, {
     format: "mdx",
-    remarkPlugins: [remarkGfm, [remarkPageMetadata, metadata]],
+    remarkPlugins: [
+      remarkGfm,
+      [remarkPageMetadata, metadata],
+      remarkRejectReservedFilterIds,
+    ],
   });
 
   const location = `front-matter in ${filePath}`;

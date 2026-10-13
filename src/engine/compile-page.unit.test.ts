@@ -326,6 +326,18 @@ describe("markdown constructs", () => {
     expect(failure).toMatchObject({ line: 8, column: 1 });
   });
 
+  it("rejects a filter id reserved for the source editor at its line in the file", async () => {
+    const markdown = '---\ntitle: T\n---\n\n<TextInput id="edit" />\n';
+
+    const failure = await compile(markdown).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining('Reserved filter id "edit"'),
+      line: 5,
+      column: 12,
+    });
+  });
+
   it("rejects malformed mdx expressions", async () => {
     await expect(compile("broken {unclosed\n")).rejects.toThrow();
   });

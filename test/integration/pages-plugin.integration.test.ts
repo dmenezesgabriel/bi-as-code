@@ -118,6 +118,20 @@ describe("page transform", () => {
     );
   });
 
+  it("serves a page naming a filter with the editor's URL key as a compile error at the attribute", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", '# Hi\n\n<TextInput id="edit" />\n');
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Reserved filter id \\"edit\\" on <TextInput id>[^\n]*"line":3,"column":12\};\n$/,
+    );
+  });
+
   it("serves a page with unparseable front-matter as a compile error", async () => {
     const root = makeProject();
     writeFile("pages/index.md", "---\ntitle: [unclosed\n---\n");
