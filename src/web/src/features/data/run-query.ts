@@ -72,7 +72,13 @@ export function runQuery(
   }).pipe(Effect.scoped);
 }
 
-/** A fresh connection that closes when the enclosing scope does. */
+/**
+ * A fresh connection that closes when the enclosing scope does. One per
+ * query, never shared: a duckdb-wasm connection streams a single result
+ * (`WebDB::Connection::current_query_result_` in duckdb-wasm's
+ * `lib/include/duckdb/web/webdb.h`), so concurrent streamed re-queries
+ * need a connection each.
+ */
 function scopedConnection(
   db: ConnectionFactory,
   sql: string,
