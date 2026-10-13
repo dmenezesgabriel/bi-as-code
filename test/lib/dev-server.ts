@@ -80,13 +80,11 @@ export function startBiacServer(
   command: "dev" | "preview",
   projectRoot: string,
 ): Promise<DevServer> {
-  const child = spawn(process.execPath, [
-    join(repoRoot, "bin/biac"),
-    command,
-    projectRoot,
-    "--port",
-    "0",
-  ]);
+  const child = spawn(
+    process.execPath,
+    [join(repoRoot, "bin/biac"), command, projectRoot, "--port", "0"],
+    { env: environmentWithoutNodeEnv() },
+  );
   return new Promise((resolve, reject) => {
     let output = "";
     const onData = (chunk: Buffer) => {
@@ -107,6 +105,21 @@ export function startBiacServer(
       ),
     );
   });
+}
+
+/**
+ * This process's environment minus `NODE_ENV`, which vitest sets to "test".
+ * vite hashes `process.env.NODE_ENV || mode` into the dep cache's
+ * `configHash` (`getConfigHash`, vite's deps optimizer), and every project's
+ * `biac dev` shares `src/web/node_modules/.vite`. A child that inherited
+ * "test" would hash differently from a user's shell, drop the cache their
+ * next `biac dev` starts warm from, and leak a `deps_temp_*` dir when stopped
+ * mid-optimize. Unset, not "development", because unset is what a shell has.
+ */
+function environmentWithoutNodeEnv(): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+  delete environment.NODE_ENV;
+  return environment;
 }
 
 function devServer(
