@@ -63,8 +63,6 @@ class FakeConnection {
   sendImpl: () => Promise<FakeReader> = async () => {
     throw new Error("send not stubbed");
   };
-  /** What the engine does to the query in flight when it is cancelled. */
-  onCancel: () => void = () => {};
   statement = new FakeStatement(
     new FakeReader(tableFromJSON([{ ok: true }]).schema, []),
   );
@@ -77,11 +75,6 @@ class FakeConnection {
     this.calls.push("prepare");
     this.preparedSql.push(sql);
     return this.statement;
-  }
-  async cancelSent(): Promise<boolean> {
-    this.calls.push("cancelSent");
-    this.onCancel();
-    return true;
   }
   async close(): Promise<void> {
     this.calls.push("close");
@@ -133,7 +126,6 @@ async function interruptMidRead(
 ): Promise<void> {
   await vi.waitFor(() => expect(connection.calls).toContain("reader.next"));
   const interrupted = Effect.runPromise(Fiber.interrupt(fiber));
-  await vi.waitFor(() => expect(connection.calls).toContain("cancelSent"));
   await queuedCallsRun();
   expect(connection.calls).not.toContain("close");
   reader.held?.resolve(undefined);
@@ -173,22 +165,25 @@ describe("runQuery", () => {
   });
 
   describe("interrupted", () => {
-    it("cancels a query still being sent, then closes the connection", async () => {
+    it("waits out a query still being sent, reads none of it, then closes the connection", async () => {
       const connection = new FakeConnection();
       const sending = new HeldCall<FakeReader>();
       connection.sendImpl = () => sending.promise;
-      connection.onCancel = () => sending.reject(new Error("interrupted"));
 
       const fiber = Effect.runFork(
         runQuery(new FakeDb(connection), "select slow()"),
       );
       // Let connect+send reach in-flight before interrupting — an interrupt
-      // that lands earlier legitimately cancels nothing.
+      // that lands earlier has no send to wait out.
       await vi.waitFor(() => expect(connection.sentSql).toHaveLength(1));
-      await Effect.runPromise(Fiber.interrupt(fiber));
+      const interrupted = Effect.runPromise(Fiber.interrupt(fiber));
+      await queuedCallsRun();
+      expect(connection.calls).toEqual(["send"]);
+      sending.resolve(readerOf([{ n: 1 }], connection.calls));
+      await interrupted;
       await queuedCallsRun();
 
-      expect(connection.calls).toEqual(["send", "cancelSent", "close"]);
+      expect(connection.calls).toEqual(["send", "close"]);
     });
 
     it("closes the connection only after the read in flight settled, and reads no further", async () => {
@@ -204,7 +199,6 @@ describe("runQuery", () => {
       expect(connection.calls).toEqual([
         "send",
         "reader.next",
-        "cancelSent",
         "reader.next settled",
         "close",
       ]);
@@ -224,7 +218,6 @@ describe("runQuery", () => {
         "prepare",
         "statement.send",
         "reader.next",
-        "cancelSent",
         "reader.next settled",
         "statement.close",
         "close",

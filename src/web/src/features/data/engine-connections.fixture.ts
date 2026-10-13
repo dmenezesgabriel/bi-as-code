@@ -24,7 +24,6 @@ export interface EngineRequests {
     allowStreamResult: boolean,
   ): Uint8Array | null;
   pollPendingQuery(connection: number): Uint8Array | null;
-  cancelPendingQuery(connection: number): boolean;
   fetchQueryResults(connection: number): Uint8Array | null;
   createPrepared(connection: number, sql: string): number;
   sendPrepared(
@@ -134,8 +133,6 @@ function engineConnection(
   return {
     send: (sql) => sendPending(engine, id, post, sql),
     prepare: (sql) => prepareStatement(engine, id, post, sql),
-    cancelSent: () =>
-      post("CANCEL_PENDING_QUERY", () => engine.cancelPendingQuery(id)),
     close: () => post("DISCONNECT", () => engine.disconnect(id)),
   };
 }

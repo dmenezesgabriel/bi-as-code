@@ -20,7 +20,6 @@ export interface PreparedStatementLike {
 export interface QueryConnection {
   send(sql: string): Promise<ResultReader>;
   prepare(sql: string): Promise<PreparedStatementLike>;
-  cancelSent(): Promise<boolean>;
   close(): Promise<void>;
 }
 
@@ -33,15 +32,21 @@ export interface ConnectionFactory {
  * Runs one SQL statement on a fresh connection that closes when the effect
  * finishes — success, failure or interruption alike.
  *
- * `send()` is used rather than `query()` because only sent queries answer
- * `cancelSent()`: interrupting the effect cancels the pending worker query,
- * which is what cross-filter churn needs (ADR-0005 consequence). `params`
- * bind through a prepared statement as positional `?` placeholders.
+ * `send()` is used rather than `query()` because its result streams in
+ * batches, so an interrupted run stops reading at the next batch instead
+ * of materialising rows nobody will see. `params` bind through a prepared
+ * statement as positional `?` placeholders.
  *
- * An interrupted run stops reading at the next batch and is waited for
- * before the connection closes: duckdb-wasm frees a connection on
- * disconnect and checks no handle afterwards, so a fetch or a statement
- * close posted later would run on freed memory.
+ * Nothing is cancelled in the engine. duckdb-wasm's `cancelPendingQuery`
+ * acts only on a query still being polled: a prepared send executes its
+ * whole query in one request, so the cancel answers `false`, and a polled
+ * query it does cancel makes the worker `console.log` the rejection of the
+ * next poll (measured on duckdb-wasm 1.32.0).
+ *
+ * An interrupted run is waited for before the connection closes:
+ * duckdb-wasm frees a connection on disconnect and checks no handle
+ * afterwards, so a fetch or a statement close posted later would run on
+ * freed memory.
  *
  * @example
  * const table = await Effect.runPromise(runQuery(db, "select ? as n", [1]));
@@ -63,9 +68,7 @@ export function runQuery(
     return yield* Effect.tryPromise({
       try: () => reading,
       catch: (cause) => queryError(sql, cause),
-    }).pipe(
-      Effect.onInterrupt(() => stopReading(connection, abandoned, reading)),
-    );
+    }).pipe(Effect.onInterrupt(() => stopReading(abandoned, reading)));
   }).pipe(Effect.scoped);
 }
 
@@ -88,13 +91,12 @@ function scopedConnection(
  * request is posted before the scope's release posts the disconnect.
  */
 function stopReading(
-  connection: QueryConnection,
   abandoned: AbortController,
   reading: Promise<Table>,
 ): Effect.Effect<void> {
   return Effect.promise(async () => {
     abandoned.abort();
-    await Promise.allSettled([connection.cancelSent(), reading]);
+    await Promise.allSettled([reading]);
   });
 }
 

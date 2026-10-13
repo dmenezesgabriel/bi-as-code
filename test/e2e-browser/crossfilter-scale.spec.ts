@@ -7,27 +7,25 @@ import {
   sliderThumbBox,
   test,
 } from "./dev-server.fixture.js";
-import {
-  chartHosts,
-  chartPoint,
-  optionAt,
-  readyCharts,
-  type PagePoint,
-} from "./echart-hosts.js";
+import { chartHosts, chartPoint, optionAt } from "./echart-hosts.js";
 import {
   countPaints,
   installCrossfilterProbe,
   pageNow,
   readProbe,
-  requestsAfterDisconnect,
   summarizeQueries,
   waitForSettled,
 } from "./crossfilter-probe.js";
+import {
+  abandonScalePageQueries,
+  drag,
+  expectAbandonedQueriesPostedNothingLate,
+  openScalePage,
+  SCALE_PAGE_CHARTS,
+} from "./crossfilter-gestures.js";
 
-// Chart hosts in document order on /crossfilter-scale, by fence label.
-const CHARTS = ["delay", "distance", "time"] as const;
+const CHARTS = SCALE_PAGE_CHARTS;
 const FLIGHTS = 200_000;
-const ABANDON_ROUNDS = 6;
 
 // chromium-headless-shell (the project default) crashes its renderer
 // ("Target crashed") within ~4 slider publishes of 200k-row re-queries
@@ -40,14 +38,6 @@ test.beforeEach(async ({ page }) => {
   await installCrossfilterProbe(page);
 });
 
-async function openScalePage(page: Page, url: string): Promise<void> {
-  await page.goto(new URL("crossfilter-scale", url).href);
-  await expect(readyCharts(page)).toHaveCount(CHARTS.length, {
-    timeout: 30_000,
-  });
-  await waitForSettled(page);
-}
-
 /** Bar total per histogram — each bin's count summed. */
 async function barTotals(page: Page): Promise<number[]> {
   const totals: number[] = [];
@@ -56,35 +46,6 @@ async function barTotals(page: Page): Promise<number[]> {
     totals.push(counts.reduce<number>((sum, c) => sum + Number(c), 0));
   }
   return totals;
-}
-
-/**
- * `steps` pointer moves from `from` to `to`, one every `frames` animation
- * frames — a paced drag the page's own clock times, not a fixed sleep.
- */
-async function drag(
-  page: Page,
-  from: PagePoint,
-  to: PagePoint,
-  steps: number,
-  frames: number,
-): Promise<{ down: number; up: number }> {
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  const down = await pageNow(page);
-  for (let i = 1; i <= steps; i++) {
-    const k = i / steps;
-    await page.mouse.move(
-      from.x + (to.x - from.x) * k,
-      from.y + (to.y - from.y) * k,
-    );
-    await page.evaluate(async (n) => {
-      for (let f = 0; f < n; f++)
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-    }, frames);
-  }
-  await page.mouse.up();
-  return { down, up: await pageNow(page) };
 }
 
 /**
@@ -100,13 +61,14 @@ async function recordGesture(
 ) {
   await waitForSettled(page);
   const settled = await pageNow(page);
-  const { requests, paints, publishes } = await readProbe(page);
+  const probe = await readProbe(page);
+  const { paints, publishes } = probe;
   const afterRelease = paints.filter((p) => p.t > marks.up).map((p) => p.t);
   const report = {
     gesture,
     dragMs: Math.round(marks.up - marks.down),
     urlWrites: publishes.filter((t) => t >= marks.down && t <= marks.up).length,
-    queries: summarizeQueries(requests, CHARTS, marks.down, settled),
+    queries: summarizeQueries(probe, CHARTS, marks.down, settled),
     paintsDuringDrag: countPaints(paints, CHARTS, marks.down, marks.up),
     releaseToSettledMs: Math.round(
       Math.max(marks.up, ...afterRelease) - marks.up,
@@ -118,28 +80,6 @@ async function recordGesture(
     contentType: "application/json",
   });
   return report;
-}
-
-/**
- * Drags the slider's Maximum thumb to `fraction` of `track`, then leaves
- * the page while the re-queries that release started are still running,
- * and comes back.
- */
-async function abandonSliderDrag(
-  page: Page,
-  track: { start: number; end: number },
-  fraction: number,
-): Promise<void> {
-  const maximum = await sliderThumbBox(page, "Maximum");
-  const y = maximum.y + maximum.height / 2;
-  const from = { x: maximum.x + maximum.width / 2, y };
-  const to = { x: track.start + (track.end - track.start) * fraction, y };
-  await drag(page, from, to, 12, 0);
-  await page.locator('nav a[href="/weekly-review"]').click();
-  await page.goBack();
-  await expect(chartHosts(page).locator("canvas")).toHaveCount(CHARTS.length, {
-    timeout: 30_000,
-  });
 }
 
 test("the helper fences render nothing while their histograms draw every row", async ({
@@ -182,10 +122,10 @@ test("a slider drag over 200k rows settles every histogram on the released range
   expect(totals[0]).toBeGreaterThan(0);
   expect(totals[0]).toBeLessThan(FLIGHTS);
   // Latest-wins dispatch: a publish waits for the in-flight re-queries
-  // instead of cancelling them, so every issued query completes.
+  // instead of abandoning them, so every issued query completes.
   for (const label of CHARTS) {
     expect(report.queries[label]?.issued).toBeGreaterThan(0);
-    expect(report.queries[label]?.cancelled).toBe(0);
+    expect(report.queries[label]?.abandoned).toBe(0);
   }
   expect(errors).toEqual([]);
 });
@@ -222,21 +162,10 @@ test("leaving the page mid-query posts nothing for a disconnected connection", a
 }) => {
   const errors = collectConsoleErrors(page);
   const workerLines = collectWorkerConsoleLines(page);
-  await openScalePage(page, biacDev.url);
-  const track = {
-    start: (await sliderThumbBox(page, "Minimum")).x,
-    end: (await sliderThumbBox(page, "Maximum")).x,
-  };
 
-  for (let round = 0; round < ABANDON_ROUNDS; round++)
-    await abandonSliderDrag(page, track, round % 2 === 0 ? 0.3 : 0.9);
-  await waitForSettled(page);
+  await abandonScalePageQueries(page, biacDev.url);
 
-  const { requests } = await readProbe(page);
-  const abandoned = requests.filter((r) => r.type === "CANCEL_PENDING_QUERY");
-  // Without an abandoned query the assertions below would pass vacuously.
-  expect(abandoned.length).toBeGreaterThan(0);
-  expect(requestsAfterDisconnect(requests).map((r) => r.type)).toEqual([]);
+  await expectAbandonedQueriesPostedNothingLate(page);
   expect(workerLines).toEqual([]);
   expect(errors).toEqual([]);
 });

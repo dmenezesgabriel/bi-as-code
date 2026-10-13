@@ -6,13 +6,16 @@ import type { Page } from "@playwright/test";
  * filter URL write, so a spec can count publishes, queries per chart and
  * paints per drag without touching application code. Each query runs on its own connection
  * (`runQuery` in `src/web/src/features/data/run-query.ts`), so a query's
- * lifetime is its connection's: first SQL-bearing request → `DISCONNECT`,
- * with `CANCEL_PENDING_QUERY` in between when a newer publish superseded it.
+ * lifetime is its connection's: first SQL-bearing request → `DISCONNECT`.
+ * A query read to its end got an empty `QUERY_RESULT_CHUNK` answer before
+ * its disconnect; one abandoned mid-way did not.
  */
 
 /** One worker request the probe kept, timestamped with `performance.now()`. */
 export interface WorkerRequestRecord {
   readonly type: string;
+  /** The worker answers with this id as the response's `requestId`. */
+  readonly messageId: number;
   readonly data: unknown;
   readonly t: number;
 }
@@ -34,7 +37,7 @@ export interface ChartPaintRecord {
 export interface ChartQuerySummary {
   issued: number;
   completed: number;
-  cancelled: number;
+  abandoned: number;
   medianMs: number;
   maxMs: number;
 }
@@ -43,12 +46,15 @@ interface ProbeWindow {
   __xfRequests: WorkerRequestRecord[];
   __xfPaints: ChartPaintRecord[];
   __xfPublishes: number[];
+  /** `messageId`s of the fetches the worker answered with the empty chunk. */
+  __xfStreamEnds: number[];
 }
 
 /**
  * Installs the probe before any page script runs: wraps
  * `Worker.prototype.postMessage` (keeping the request types that bound a
- * query's lifetime), `history.replaceState` (every filter publish writes
+ * query's lifetime, and listening on each worker for the empty result
+ * chunk that ends a stream), `history.replaceState` (every filter publish writes
  * the URL) and the `echartsInstance` assignment every chart host receives
  * (its mount paint, then each `setOption`). Call before the first
  * `page.goto`.
@@ -73,6 +79,7 @@ export async function installCrossfilterProbe(page: Page): Promise<void> {
     probe.__xfRequests = [];
     probe.__xfPaints = [];
     probe.__xfPublishes = [];
+    probe.__xfStreamEnds = [];
     const replaceState = history.replaceState.bind(history);
     history.replaceState = (...args) => {
       probe.__xfPublishes.push(performance.now());
@@ -110,18 +117,51 @@ export async function installCrossfilterProbe(page: Page): Promise<void> {
         };
       },
     });
+    interface WorkerResponse {
+      requestId: number;
+      type: string;
+      data: unknown;
+    }
+    const recordStreamEnd = (event: MessageEvent<WorkerResponse>) => {
+      const { requestId, type, data } = event.data;
+      if (type === "QUERY_RESULT_CHUNK" && (data as Uint8Array)?.length === 0)
+        probe.__xfStreamEnds.push(requestId);
+    };
+    const listened = new WeakSet<Worker>();
     const original = Worker.prototype.postMessage;
     Worker.prototype.postMessage = function (this: Worker, ...args: unknown[]) {
-      const request = args[0] as { type?: string; data?: unknown } | undefined;
+      if (!listened.has(this)) {
+        listened.add(this);
+        this.addEventListener("message", recordStreamEnd);
+      }
+      const request = args[0] as
+        | { type?: string; messageId: number; data?: unknown }
+        | undefined;
       if (request?.type && kept.has(request.type))
         probe.__xfRequests.push({
           type: request.type,
+          messageId: request.messageId,
           data: request.data,
           t: performance.now(),
         });
       return original.apply(this, args as [unknown]);
     };
   });
+}
+
+/** Resolves once the probe has recorded a worker request of `type`. */
+export async function waitForWorkerRequest(
+  page: Page,
+  type: string,
+): Promise<void> {
+  await page.waitForFunction(
+    (wanted) =>
+      (window as unknown as ProbeWindow).__xfRequests.some(
+        (r) => r.type === wanted,
+      ),
+    type,
+    { timeout: 30_000 },
+  );
 }
 
 /** The page's `performance.now()` — gesture marks share the probe's clock. */
@@ -134,6 +174,7 @@ export function readProbe(page: Page): Promise<{
   requests: WorkerRequestRecord[];
   paints: ChartPaintRecord[];
   publishes: number[];
+  streamEnds: number[];
 }> {
   return page.evaluate(() => {
     const probe = window as unknown as ProbeWindow;
@@ -141,6 +182,7 @@ export function readProbe(page: Page): Promise<{
       requests: probe.__xfRequests,
       paints: probe.__xfPaints,
       publishes: probe.__xfPublishes,
+      streamEnds: probe.__xfStreamEnds,
     };
   });
 }
@@ -197,7 +239,7 @@ interface QueryLifetime {
   label: string;
   start: number;
   end: number;
-  cancelled: boolean;
+  readToEnd: boolean;
 }
 
 const FENCE_LABEL = /--\s*(\w+) histogram/;
@@ -216,23 +258,28 @@ function labelOf(record: WorkerRequestRecord): string | undefined {
 
 /**
  * Pairs each labelled query's first SQL-bearing request with its
- * connection's `DISCONNECT`. Unlabelled queries (the slider's bounds) are
+ * connection's `DISCONNECT`, noting whether a fetch in between was answered
+ * with the stream's end. Unlabelled queries (the slider's bounds) are
  * skipped; connection ids are reused, so a pair closes on disconnect.
  */
-function queryLifetimes(requests: readonly WorkerRequestRecord[]) {
+function queryLifetimes(
+  requests: readonly WorkerRequestRecord[],
+  streamEnds: readonly number[],
+) {
+  const ends = new Set(streamEnds);
   const open = new Map<unknown, QueryLifetime>();
   const done: QueryLifetime[] = [];
   for (const record of requests) {
     const conn = connectionOf(record);
     const query = open.get(conn);
-    if (record.type === "CANCEL_PENDING_QUERY" && query) query.cancelled = true;
+    if (query && ends.has(record.messageId)) query.readToEnd = true;
     if (record.type === "DISCONNECT" && query) {
       done.push({ ...query, end: record.t });
       open.delete(conn);
     }
     const label = labelOf(record);
     if (label && !query)
-      open.set(conn, { label, start: record.t, end: NaN, cancelled: false });
+      open.set(conn, { label, start: record.t, end: NaN, readToEnd: false });
   }
   return done;
 }
@@ -262,6 +309,31 @@ export function requestsAfterDisconnect(
   });
 }
 
+/**
+ * How many queries closed their connection before the worker answered a
+ * fetch with the stream's end — labelled or not, prepared or plain.
+ *
+ * @example
+ * expect(abandonedQueries(await readProbe(page))).toBeGreaterThan(0);
+ */
+export function abandonedQueries(probe: {
+  requests: readonly WorkerRequestRecord[];
+  streamEnds: readonly number[];
+}): number {
+  const ends = new Set(probe.streamEnds);
+  const reading = new Map<unknown, boolean>();
+  let abandoned = 0;
+  for (const record of probe.requests) {
+    const conn = connectionOf(record);
+    if (OPENING_REQUESTS.has(record.type)) reading.set(conn, false);
+    if (ends.has(record.messageId)) reading.set(conn, true);
+    if (record.type !== "DISCONNECT") continue;
+    if (reading.get(conn) === false) abandoned++;
+    reading.delete(conn);
+  }
+  return abandoned;
+}
+
 function median(xs: readonly number[]): number {
   const sorted = [...xs].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)] ?? 0;
@@ -269,20 +341,24 @@ function median(xs: readonly number[]): number {
 
 /**
  * Per-chart query counts and durations for queries that started inside
- * `[from, to]`, keyed by fence label.
+ * `[from, to]`, keyed by fence label. A query is abandoned when its
+ * connection closed before the worker answered a fetch with the stream's end.
  *
  * @example
- * summarizeQueries(requests, ["delay", "distance"], down, settled).delay.issued
+ * const { requests, streamEnds } = await readProbe(page);
+ * summarizeQueries({ requests, streamEnds }, ["delay"], down, settled).delay.issued
  */
 export function summarizeQueries(
-  requests: readonly WorkerRequestRecord[],
+  probe: {
+    requests: readonly WorkerRequestRecord[];
+    streamEnds: readonly number[];
+  },
   labels: readonly string[],
   from: number,
   to: number,
 ): Record<string, ChartQuerySummary> {
-  const inWindow = queryLifetimes(requests).filter(
-    (q) => q.start >= from && q.start <= to,
-  );
+  const lifetimes = queryLifetimes(probe.requests, probe.streamEnds);
+  const inWindow = lifetimes.filter((q) => q.start >= from && q.start <= to);
   return Object.fromEntries(
     labels.map((label) => {
       const mine = inWindow.filter((q) => q.label === label);
@@ -291,8 +367,8 @@ export function summarizeQueries(
         label,
         {
           issued: mine.length,
-          completed: mine.filter((q) => !q.cancelled).length,
-          cancelled: mine.filter((q) => q.cancelled).length,
+          completed: mine.filter((q) => q.readToEnd).length,
+          abandoned: mine.filter((q) => !q.readToEnd).length,
           medianMs: median(durations),
           maxMs: Math.max(0, ...durations),
         },

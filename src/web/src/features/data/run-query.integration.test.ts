@@ -4,6 +4,9 @@ import { NodeDuckDb } from "./node-duckdb.fixture";
 import { runQuery, type ResultReader } from "./run-query";
 
 const SERIES = "select i from range(1000000) t(i) where i < ?";
+// Long enough that the engine answers several polls before its first chunk.
+const SLOW_AGGREGATE =
+  "select i % 1000 as k, count(*) as n from range(60000000) t(i) group by k";
 const ABANDONED_ROWS = 400_000;
 const KEPT_ROWS = 30_000;
 // The factory numbers its connections in the order they open.
@@ -29,10 +32,34 @@ function postedFor(posted: readonly string[], connection: number): string[] {
     .map((request) => request.slice(prefix.length));
 }
 
+function countOf(types: readonly string[], type: string): number {
+  return types.filter((posted) => posted === type).length;
+}
+
 function fetchesFor(posted: readonly string[], connection: number): number {
-  return postedFor(posted, connection).filter(
-    (type) => type === "FETCH_QUERY_RESULTS",
-  ).length;
+  return countOf(postedFor(posted, connection), "FETCH_QUERY_RESULTS");
+}
+
+/**
+ * Runs `sql` on connection 1, interrupts it the first time `interruptOn` is
+ * posted for it, and returns every request posted for that connection.
+ */
+async function abandonedOn(
+  interruptOn: string,
+  sql: string,
+  params: readonly unknown[] = [],
+): Promise<string[]> {
+  const posted: string[] = [];
+  let reached = (): void => {};
+  const reachedRequest = new Promise<void>((resolve) => (reached = resolve));
+  const factory = db.connectionFactory((request) => {
+    posted.push(request);
+    if (request === `1:${interruptOn}`) reached();
+  });
+  const fiber = Effect.runFork(runQuery(factory, sql, params));
+  await reachedRequest;
+  await Effect.runPromise(Fiber.interrupt(fiber));
+  return postedFor(posted, 1);
 }
 
 let db: NodeDuckDb;
@@ -67,6 +94,29 @@ describe("runQuery on the real engine", () => {
     expect(table.numRows).toBe(KEPT_ROWS);
     expect(posted.at(0)).toBe("1:START_PENDING_QUERY");
     expect(posted.at(-1)).toBe("1:DISCONNECT");
+  });
+
+  describe("interrupted while the engine still runs the query", () => {
+    it("polls a plain query to its header, reads no chunk, and disconnects last", async () => {
+      const abandoned = await abandonedOn("POLL_PENDING_QUERY", SLOW_AGGREGATE);
+
+      expect(countOf(abandoned, "POLL_PENDING_QUERY")).toBeGreaterThan(1);
+      expect(abandoned).not.toContain("FETCH_QUERY_RESULTS");
+      expect(abandoned.at(-1)).toBe("DISCONNECT");
+    }, 60_000);
+
+    it("lets a prepared send answer, then closes its statement and its connection", async () => {
+      const abandoned = await abandonedOn("SEND_PREPARED", SERIES, [
+        ABANDONED_ROWS,
+      ]);
+
+      expect(abandoned).toEqual([
+        "CREATE_PREPARED",
+        "SEND_PREPARED",
+        "CLOSE_PREPARED",
+        "DISCONNECT",
+      ]);
+    });
   });
 
   describe("interrupted mid-read", () => {

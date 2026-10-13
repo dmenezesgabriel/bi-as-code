@@ -67,7 +67,8 @@ export function useQuerySource(): QuerySource {
  * params it changed — a fence that never reads `{{params.*}}` keeps its
  * result and its in-flight query, so a filter input whose bounds read that
  * fence stays enabled through its own changes. Unmount aborts in-flight
- * queries (`cancelSent` via run-query's interrupt handler).
+ * queries: each stops reading at its next batch (run-query's interrupt
+ * handler).
  *
  * @example
  * <QueryRegistryProvider sqlBlocks={page.sqlBlocks} sqlTables={page.sqlTables} params={search}>

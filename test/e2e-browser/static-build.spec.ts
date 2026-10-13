@@ -15,7 +15,16 @@ import {
   readProbe,
   waitForSettled,
 } from "./crossfilter-probe.js";
-import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import {
+  abandonScalePageQueries,
+  expectAbandonedQueriesPostedNothingLate,
+} from "./crossfilter-gestures.js";
+import {
+  collectConsoleErrors,
+  collectWorkerConsoleLines,
+  expect,
+  test,
+} from "./dev-server.fixture.js";
 import {
   chartPoint,
   chartHosts,
@@ -23,6 +32,11 @@ import {
   optionAt,
   readyCharts,
 } from "./echart-hosts.js";
+
+// chromium-headless-shell crashes its renderer under 200k-row slider
+// re-queries on crossfilter-scale; Chrome's new headless completes them
+// (see crossfilter-scale.spec.ts).
+test.use({ channel: "chromium" });
 
 // One build + preview per worker: every test here only reads the build.
 let projectDir: string;
@@ -132,6 +146,19 @@ test("a deep-link reload of crossfilter-scale renders through the SPA fallback",
   await page.reload();
 
   await expect(readyCharts(page)).toHaveCount(3, { timeout: 30_000 });
+  expect(errors).toEqual([]);
+});
+
+test("leaving crossfilter-scale mid-query posts nothing for a disconnected connection off the static build", async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const workerLines = collectWorkerConsoleLines(page);
+
+  await abandonScalePageQueries(page, preview.url);
+
+  await expectAbandonedQueriesPostedNothingLate(page);
+  expect(workerLines).toEqual([]);
   expect(errors).toEqual([]);
 });
 
