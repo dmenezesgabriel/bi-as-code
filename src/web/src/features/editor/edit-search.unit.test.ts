@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isEditSearch } from "./edit-search";
+import { isEditSearch, searchWithoutEditorKey } from "./edit-search";
 
 describe("isEditSearch", () => {
   it.each([
@@ -17,5 +17,42 @@ describe("isEditSearch", () => {
   ])("keeps the plain page for %s", (_case, search) => {
     // Arrange / Act / Assert
     expect(isEditSearch(search)).toBe(false);
+  });
+});
+
+describe("searchWithoutEditorKey", () => {
+  it.each([
+    ["?edit=true", { region: "West", edit: true }],
+    ["bare ?edit", { region: "West", edit: "" }],
+    ["a non-flag value", { region: "West", edit: "West" }],
+    ["?edit=false", { region: "West", edit: false }],
+  ])("drops the editor's key for %s and keeps the rest", (_case, search) => {
+    // Arrange / Act
+    const visible = searchWithoutEditorKey(search);
+
+    // Assert
+    expect(visible).toEqual({ region: "West" });
+  });
+
+  it("returns the same object when the editor's key is absent", () => {
+    // Arrange
+    const search = { region: "West" };
+
+    // Act
+    const visible = searchWithoutEditorKey(search);
+
+    // Assert
+    expect(visible).toBe(search);
+  });
+
+  it("leaves the search it was given untouched", () => {
+    // Arrange
+    const search = { region: "West", edit: true };
+
+    // Act
+    searchWithoutEditorKey(search);
+
+    // Assert
+    expect(search).toEqual({ region: "West", edit: true });
   });
 });

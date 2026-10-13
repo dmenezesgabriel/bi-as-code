@@ -91,6 +91,15 @@ function sidebarLink(page: Page, name: string) {
     .getByRole("link", { name });
 }
 
+/** Reports what the page's SQL sees of the editor's flag and of a filter. */
+const EDIT_FLAG_FENCE = [
+  "```sql edit_flag display",
+  "select 'edit ' || coalesce(cast({{params.edit}} as varchar), 'absent')",
+  "  || ', region ' || coalesce({{params.region}}, 'absent') as seen",
+  "```",
+  "",
+].join("\n");
+
 const LEAVE_ASK =
   "confirm: Leave this page? Your unsaved changes will be lost.";
 
@@ -331,6 +340,25 @@ test("a page already broken on disk still opens in the editor", async ({
     "This page failed to compile",
   );
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a fence reading {{params.edit}} sees no value while the editor's flag is in the URL", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const file = join(biacDev.projectDir, PAGE_FILE);
+  writeFileSync(file, `${readFileSync(file, "utf8")}\n${EDIT_FLAG_FENCE}`);
+
+  await page.goto(`${biacDev.url}weekly-review?region=West&edit=true`);
+
+  await expect(sourceEditor(page)).toContainText("# Weekly review", {
+    timeout: 20_000,
+  });
+  await expect(
+    livePreview(page).getByRole("cell", { name: "edit absent, region West" }),
+  ).toBeVisible({ timeout: 30_000 });
   expect(errors).toEqual([]);
 });
 

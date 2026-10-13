@@ -20,13 +20,14 @@ function renderPage(
   page: CompiledPageModule,
   siteTitle = "biac",
   db?: DuckDbService,
+  initialUrl = "/",
 ) {
   const rootRoute = createRootRoute({
     component: () => <MarkdownPage page={page} siteTitle={siteTitle} />,
   });
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory(),
+    history: createMemoryHistory({ initialEntries: [initialUrl] }),
   });
   const app = <RouterProvider router={router} />;
   render(
@@ -38,6 +39,7 @@ function renderPage(
       app
     ),
   );
+  return router;
 }
 
 /**
@@ -232,6 +234,42 @@ describe("MarkdownPage", () => {
       expect(screen.getByTestId("status")).toHaveTextContent("success"),
     );
     expect(db.queries.map((q) => q.sql)).toEqual(["select * from orders"]);
+  });
+
+  it("hides the editor's edit flag from a fence's params and does not re-run it when the flag goes", async () => {
+    // Arrange
+    const db = new FakeDuckDb();
+    const router = renderPage(
+      page({
+        sqlBlocks: [
+          {
+            name: "leak",
+            sql: "select {{params.edit}} as leaked, {{params.region}} as region",
+          },
+        ],
+        default: function Probe() {
+          const status = useQueryResults().leak?.status ?? "none";
+          return <p data-testid="status">{status}</p>;
+        },
+      }),
+      "biac",
+      db,
+      "/?edit=true&region=West",
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("success"),
+    );
+
+    // Act
+    await act(() => router.history.push("/?region=West"));
+
+    // Assert
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ region: "West" }),
+    );
+    expect(db.queries).toEqual([
+      { sql: "select ? as leaked, ? as region", params: [null, "West"] },
+    ]);
   });
 
   it("gives a hot-swapped page a fresh filter scope and keeps unchanged query results", async () => {

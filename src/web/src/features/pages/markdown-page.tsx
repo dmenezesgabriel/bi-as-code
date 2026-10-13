@@ -1,5 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { searchWithoutEditorKey } from "../editor/edit-search";
 import { browserFilterUrlPort } from "../filters/filter-url-port";
 import { FiltersProvider } from "../filters/page-filters-context";
 import { NavToc } from "../chrome/nav-toc";
@@ -169,7 +170,12 @@ function pageVersion(content: object): number {
  * the fences whose SQL changed.
  */
 function PageBody({ page }: { page: CompiledPageModule }) {
-  const params = useSearch({ strict: false });
+  const search = useSearch({ strict: false });
+  // The editor's flag is not a page parameter, so `{{params.*}}` never sees
+  // it. Memoized because the registry re-interpolates whenever `params` is
+  // a new object and does so during render: a fresh object per render
+  // would never settle.
+  const params = useMemo(() => searchWithoutEditorKey(search), [search]);
   const Content = page.default;
   const scoped = (
     <FiltersProvider key={pageVersion(Content)} port={browserFilterUrlPort}>
