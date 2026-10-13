@@ -126,6 +126,23 @@ const SAVE_CHORD = /Mac/.test(navigator.platform)
   ? "{Meta>}s{/Meta}"
   : "{Control>}s{/Control}";
 
+/** A widget typed self-closed stays that way; one left open is closed. */
+export const SelfClosedWidget: Story = {
+  args: { doc: "" },
+  play: async ({ args, canvas }) => {
+    const textbox = canvas.getByRole("textbox", { name: LABEL });
+    await userEvent.click(textbox);
+    await userEvent.keyboard('<Table data="orders" />');
+    await expect(args.onChange).toHaveBeenLastCalledWith(
+      '<Table data="orders" />',
+    );
+    await userEvent.keyboard('{Enter}<Details title="More">');
+    await expect(args.onChange).toHaveBeenLastCalledWith(
+      '<Table data="orders" />\n<Details title="More"></Details>',
+    );
+  },
+};
+
 /** Typing reports each edit; `Mod-s` hands the edited source to onSave. */
 export const SaveKeybinding: Story = {
   args: { doc: "# Orders " },

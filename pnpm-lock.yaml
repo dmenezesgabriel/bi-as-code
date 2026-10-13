@@ -176,6 +176,9 @@ importers:
       '@base-ui/react':
         specifier: 1.8.0
         version: 1.8.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@codemirror/lang-html':
+        specifier: 6.4.12
+        version: 6.4.12
       '@codemirror/lang-markdown':
         specifier: 6.5.2
         version: 6.5.2

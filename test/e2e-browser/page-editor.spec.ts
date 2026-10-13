@@ -295,6 +295,34 @@ test("a broken tag shows its compile error in the preview, and the fix renders t
   expect(errors).toEqual([]);
 });
 
+test("a self-closed widget typed in the editor is left as typed and the page compiles", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  const selfClosed = '<Table data="orders" />';
+  const tables = livePreview(page).getByRole("table");
+  await openEditorFromHeader(page, biacDev.url);
+  const tablesBefore = await tables.count();
+
+  await appendToLine(page, "# Weekly review", `\n${selfClosed}`);
+
+  await expect(
+    page.locator(".cm-line", { hasText: /^<Table data="orders"/ }),
+  ).toHaveText(selfClosed);
+  await saveWithModS(page);
+  await expect(tables).toHaveCount(tablesBefore + 1, { timeout: 20_000 });
+  await expect(livePreview(page).getByRole("alert")).toHaveCount(0);
+
+  await eraseTyped(page, `\n${selfClosed}`);
+  await saveWithModS(page);
+
+  await expect(tables).toHaveCount(tablesBefore, { timeout: 20_000 });
+  await expectPageBackInPreview(page);
+  expect(errors).toEqual([]);
+});
+
 test("a filter named with the editor's own URL key is a compile error at the attribute that names it", async ({
   page,
   biacDev,
