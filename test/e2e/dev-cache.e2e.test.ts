@@ -1,40 +1,17 @@
 import { spawn } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildCli, startDevServer } from "../lib/dev-server.js";
+import { committedConfigHash, tempDirCount } from "../lib/vite-dep-cache.js";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
-// `biac dev` serves `src/web` as vite's root, so every project shares this
-// dep cache — the one a user's next `bin/biac dev` starts warm from.
-const sharedCacheDir = join(repoRoot, "src/web/node_modules/.vite");
 // `DEBUG=vite:deps` lines: a warm start skips, a cold one commits.
 const OPTIMIZER_SETTLED = /Hash is consistent|dependencies optimized/;
 
 let projectRoot: string | undefined;
-
-function tempDirCount(): number {
-  return readdirSync(sharedCacheDir).filter((name) =>
-    name.startsWith("deps_temp_"),
-  ).length;
-}
-
-function committedConfigHash(): string {
-  const metadata = readFileSync(
-    join(sharedCacheDir, "deps/_metadata.json"),
-    "utf8",
-  );
-  return (JSON.parse(metadata) as { configHash: string }).configHash;
-}
 
 /**
  * Runs `bin/biac dev` as a user's shell does — no `NODE_ENV` — until its
@@ -84,6 +61,7 @@ describe("a test-spawned biac dev", () => {
   it("reuses the dep cache a user's biac dev wrote, leaving no temp dir", async () => {
     const tempDirsBefore = tempDirCount();
     const hashBefore = committedConfigHash();
+    expect(hashBefore).toBeDefined();
 
     const server = await startDevServer(projectRoot!);
     await server.stop();

@@ -10,7 +10,7 @@ const webRoot = fileURLToPath(new URL("../../src/web", import.meta.url));
 /**
  * Real vite dev server with `src/web` as root, matching `biac dev`: pages
  * live outside the vite root, so every request goes through `/@fs/` and the
- * plugin's `server.fs.allow` grant.
+ * plugin's `server.fs.allow` grant. The dep optimizer is off.
  */
 export function makePagesServer(root: string): Promise<ViteDevServer> {
   return createServer({
@@ -19,6 +19,11 @@ export function makePagesServer(root: string): Promise<ViteDevServer> {
     logLevel: "error",
     plugins: [pagesPlugin(root)],
     server: { middlewareMode: true },
+    // `configFile: false` never hashes to `biac dev`'s deps configHash, so an
+    // optimizer here would drop the shared `src/web/node_modules/.vite/deps`
+    // and leak a `deps_temp_*` dir when closed mid-optimize. vite documents
+    // `noDiscovery` with no `include` as turning the optimizer off.
+    optimizeDeps: { noDiscovery: true },
   });
 }
 
