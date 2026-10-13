@@ -111,6 +111,11 @@ export function chartTheme(mode: ThemeMode): Record<string, unknown> {
     line: outsideLabel,
     scatter: outsideLabel,
     tooltip: {
+      // The engine leaves html tooltips unconfined (its documented
+      // backward-compat default) and flips one that would cross the right
+      // edge left by its own width with no lower bound — on a phone-width
+      // chart that lands outside the chart's left edge.
+      confine: true,
       backgroundColor: t.tooltipBg,
       borderColor: t.tooltipBorder,
       textStyle: { color: t.text },

@@ -38,3 +38,13 @@ describe("chartTheme data labels", () => {
     expect(theme).not.toHaveProperty("heatmap");
   });
 });
+
+describe("chartTheme tooltip", () => {
+  it.each(MODES)("confines the %s tooltip to its chart", (mode) => {
+    const theme = chartTheme(mode) as { tooltip?: { confine?: boolean } };
+
+    const confine = theme.tooltip?.confine;
+
+    expect(confine).toBe(true);
+  });
+});

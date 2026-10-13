@@ -245,6 +245,58 @@ async function toggleTheme(page: Page, target: "dark" | "light") {
   await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
 }
 
+test("a tooltip shown at 1280 px never widens the page at 375 px", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openWeeklyReviewCharts(page, biacDev.url);
+
+  // The engine hides its tooltip with visibility/opacity only, so the box
+  // it leaves behind must not count toward the document's scroll width —
+  // moving off the chart first proves a hidden tip is contained too.
+  const bars = chartHosts(page).nth(0);
+  await bars.hover();
+  await expect(bars.locator("> div", { hasText: "revenue" })).toHaveCount(1);
+  await page.mouse.move(5, 5);
+  await page.setViewportSize({ width: 375, height: 812 });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const root = document.documentElement;
+        return root.scrollWidth - root.clientWidth;
+      }),
+    )
+    .toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test("the area chart's tooltip is drawn whole inside its chart at 375 px", async ({
+  page,
+  biacDev,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openWeeklyReviewCharts(page, biacDev.url);
+
+  // Mid-chart is where the engine's own edge flip pushes an unconfined tip
+  // past the chart's left edge on a phone-width host.
+  const area = chartHosts(page).nth(4);
+  await area.hover();
+  const tip = area.locator("> div", { hasText: /\S/ });
+  await expect(tip).toBeVisible();
+
+  const hostBox = await area.boundingBox();
+  const tipBox = await tip.boundingBox();
+  if (!hostBox || !tipBox)
+    throw new Error("the area chart host and its tooltip must both have a box");
+  expect(tipBox.x).toBeGreaterThanOrEqual(hostBox.x);
+  expect(tipBox.x + tipBox.width).toBeLessThanOrEqual(
+    hostBox.x + hostBox.width,
+  );
+});
+
 test("the theme toggle repaints every chart in the other palette", async ({
   page,
   biacDev,

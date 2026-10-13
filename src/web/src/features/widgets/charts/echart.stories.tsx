@@ -79,3 +79,17 @@ export const SvgRenderer: Story = {
     await waitFor(() => expect(host?.querySelector("svg")).not.toBeNull());
   },
 };
+
+/** The host clips its overflow: echarts hides its html tooltip with
+ * `visibility`/`opacity` only, so a hidden tip keeps its box and would
+ * otherwise widen the page once the viewport narrows. */
+export const ClipsOverflow: Story = {
+  play: async ({ canvasElement }) => {
+    const host = canvasElement.querySelector<HTMLElement>(
+      "[data-echarts-theme]",
+    );
+    await waitFor(() => expect(host).toHaveAttribute("data-echarts-ready", ""));
+    const style = getComputedStyle(host as HTMLElement);
+    expect([style.overflowX, style.overflowY]).toEqual(["clip", "clip"]);
+  },
+};

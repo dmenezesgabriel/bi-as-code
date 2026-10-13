@@ -113,7 +113,8 @@ function mountChart(
  * option — the option is `setOption`'d in the same synchronous block as
  * `init` because init's own empty paint can emit `finished` first, which
  * would mark a host that carries no data. The host exposes
- * `echartsInstance` for tests.
+ * `echartsInstance` for tests. The host clips its overflow so a tooltip's
+ * leftover box never counts toward the page's scroll width.
  *
  * @example
  * <EChart option={toChartOption(toSeries(rows, spec, "bar"), "bar", props)} height={320} />
@@ -191,10 +192,15 @@ export function EChart({
     eventsRef.current?.optionApplied?.(instance);
   }, [option]);
 
+  // echarts@6.1.0 `TooltipHTMLContent.hide` sets only `visibility` and
+  // `opacity`: a tooltip shown once keeps its last box inside the host, and
+  // after the viewport narrows that box sits past the host's edge. `clip`
+  // rather than `hidden` — it contains the box without turning the host
+  // into a scroll container.
   return (
     <div
       ref={hostRef}
-      className={cn("w-full", className)}
+      className={cn("w-full overflow-clip", className)}
       style={{ height }}
       data-echarts-theme={mode}
     />
