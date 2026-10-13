@@ -1,6 +1,6 @@
 # SL-028 — Opening the editor or a page never full-reloads `biac dev`
 
-Milestone: Phase 1 · Known debt · State: open · Depends on: — · Closes: Known-debt "lazy `import()` vite dep cache" row (no `GAP-NNN`)
+Milestone: Phase 1 · Known debt · State: partial · Depends on: — · Closes: Known-debt "lazy `import()` vite dep cache" row (no `GAP-NNN`)
 
 ## Outcome
 
@@ -13,7 +13,7 @@ In `biac dev`, the first `?edit` open and the first visit to any page render in 
 3. Click `Edit`. The editor opens beside the page, the Region filter still reads `West`, and `window.__probe` is still `1` (no reload). The `bin/biac dev` terminal shows no `dependencies optimized:` line and no `optimized dependencies changed. reloading`.
 4. Stop the server, restart it with the `?edit=true` tab still open. The tab reconnects into the editor with no `Failed to fetch dynamically imported module` in the console and no reload line in the terminal.
 5. Add `import "@codemirror/autocomplete";` (or any editor package not in the list) to `src/web/src/features/editor/code-editor.tsx` and run the guard test by name (`pnpm -s vitest run <guard file>`). It fails and names the missing specifier. Revert.
-6. Run `bin/biac build`, then `grep -rl codemirror dist/web`. It prints nothing, so the editor stays out of the bundle ([ADR-0010](../adr/0010-page-authoring-is-dev-server-only.md)).
+6. Run `bin/biac build`, then `grep -rl codemirror build`. It prints nothing, so the editor stays out of the bundle ([ADR-0010](../adr/0010-page-authoring-is-dev-server-only.md)).
 
 ### Measured before the slice (2026-10-13, vite 8.2.2, `bin/biac dev --port 5428`, playwright-cli session `sl028-probe`)
 
@@ -116,7 +116,7 @@ Settled in T1:
 ## Tasks
 
 - [x] T1 — Guard first (RED). A unit test collects every runtime bare specifier imported by `src/web/src/features/editor/*.ts(x)`, excluding `*.test.*`, `*.stories.*`, `fake-*` and `import type`. It asserts each one is in the vite config's `optimizeDeps.include`, and on failure names the missing specifier and the file that imports it. Then GREEN: add `optimizeDeps.include` to `src/web/vite.config.ts`, with a comment explaining why: the lazy editor edge, the lockfile+config cache key, and the `CatchBoundary` failure measured above. Commit `fix(web): pre-bundle the lazily loaded editor's deps in biac dev`.
-- [ ] T2 — Integration regression. Start `createServer({ configFile: WEB_CONFIG, cacheDir: <tmp>, optimizeDeps: { entries: [<a file that does not reach the editor>] } })`, which reproduces "the crawl never saw the edge". Wait for the optimizer, then `transformRequest("/src/features/editor/page-editor.tsx")` and its imports. Assert that the depsOptimizer's `metadata.discovered` is empty and that every specifier is in `metadata.optimized`. It should fail with `include` removed and pass with it. Then the `playwright-cli` pass from Demo steps 2–4 (marker, `West` kept, terminal and console clean), the Storybook sweep, and `bin/biac build` with no `codemirror` in `dist/web`.
+- [x] T2 — Integration regression. Start `createServer({ configFile: WEB_CONFIG, cacheDir: <tmp>, optimizeDeps: { entries: [<a file that does not reach the editor>] } })`, which reproduces "the crawl never saw the edge". Wait for the optimizer, then `transformRequest("/src/features/editor/page-editor.tsx")` and its imports. Assert that the depsOptimizer's `metadata.discovered` is empty and that every specifier is in `metadata.optimized`. It should fail with `include` removed and pass with it. Then the `playwright-cli` pass from Demo steps 2–4 (marker, `West` kept, terminal and console clean), the Storybook sweep, and `bin/biac build` with no `codemirror` in `build/`.
 
 ## Out of scope
 
