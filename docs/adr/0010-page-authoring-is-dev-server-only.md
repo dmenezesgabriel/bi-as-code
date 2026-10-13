@@ -61,7 +61,12 @@ Requiring `application/json` makes every write a non-simple request, so a browse
 ## Consequences
 
 - An author edits, saves and watches the page re-render without leaving it; the URL they share is the page's URL, with or without `?edit`.
-- `edit` is a reserved search parameter in `biac dev`, and nothing enforces it yet: a filter input with `id="edit"` would open the editor when used, and `?edit` reaches a page as `{{params.edit}}`. The fix — a compile error for a reserved input id and `edit` stripped from `params` — is tracked in the backlog's Known debt.
+- `edit` is a reserved search parameter on every page, because a page filter persists under its id as a search key and a filter named `edit` would open the editor whenever it held a value. It is enforced at three points:
+  - **Compile time.** A literal `id="edit"` on an input tag, or `edit` in any tag's literal `filters`, is a located compile error: `remarkRejectReservedFilterIds` in `src/engine/reserved-filter-id.ts` runs inside `compilePage`, so `biac dev` serves the compile-error page and `biac build` fails at `file:line:column`. The check goes by tag, because `<Column id>` names a column and is not a filter id.
+  - **Runtime.** An id computed by an expression is invisible to the compiler and is rejected when the page runs (`assertNotEditorSearchKey` in `src/web/src/features/editor/edit-search.ts`, called for an input's `id` and a widget's `filters`). The route's error page shows the message, and under `?edit` it replaces the editor too, so the author fixes the file on disk.
+  - **Page parameters.** `searchWithoutEditorKey` (same file) removes `edit` from the search before it becomes `params`, so `{{params.edit}}` is always NULL and entering or leaving the editor does not change a page's parameters.
+- A chart's crossfilter selection field is a column name, not a filter id, and is not checked: a chart click updates its selection and never writes the URL, so a column named `edit` cannot open the editor.
+- The key matches exactly, so `?Edit` is an ordinary parameter, because router search keys are case-sensitive. The engine and the SPA share no module, so the key is declared once on each side (`src/engine/reserved-filter-id.ts`, `src/web/src/features/editor/edit-search.ts`), each pointing at the other. A second reserved key is the point at which to give them a shared list.
 - Tempting "fixes" to resist:
   - Swapping `import.meta.hot` for `import.meta.env.DEV` "because it reads better" — it ships the editor whenever a build runs with `NODE_ENV` set to `development` or `test`.
   - Rejecting only `Sec-Fetch-Site: cross-site` — sibling `localhost` ports are `same-site`.
