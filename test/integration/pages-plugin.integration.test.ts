@@ -61,6 +61,14 @@ function pageModule(dev: ViteDevServer, file: string) {
   return dev.environments.client.moduleGraph.getModuleById(file);
 }
 
+/** How long a filesystem mutation may take to reach vite's watcher. */
+const WATCH_WAIT_MS = 10_000;
+
+// Every test here boots a vite dev server, and a watch test then waits up
+// to WATCH_WAIT_MS for its event: vitest's 5s default would kill a test
+// before its own wait could run out on a loaded host.
+vi.setConfig({ testTimeout: 2 * WATCH_WAIT_MS });
+
 /** Asserts `act()` (a filesystem mutation) bumps the module's invalidation timestamp. */
 async function expectInvalidated(
   module: { lastInvalidationTimestamp: number } | undefined,
@@ -72,7 +80,7 @@ async function expectInvalidated(
     () => {
       expect(module!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
     },
-    { timeout: 10000 },
+    { timeout: WATCH_WAIT_MS },
   );
 }
 

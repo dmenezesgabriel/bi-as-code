@@ -27,13 +27,16 @@ let db: NodeDuckDb;
 // The fence's raw rows, materialized once — the client-side reference.
 let raw: Row[];
 
+// Opening DuckDB and scanning the parquet fixture takes ~5s alone on a
+// loaded host — half vitest's 10s hook default, which a shared suite run
+// then overruns.
 beforeAll(async () => {
   db = await NodeDuckDb.open();
   db.rows(
     `create view flights as select * from read_parquet('${FLIGHTS.replaceAll("'", "''")}')`,
   );
   raw = db.rows(FENCE.sql);
-});
+}, 30_000);
 
 afterAll(() => db.close());
 

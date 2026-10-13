@@ -281,7 +281,13 @@ describe("buildPageRouter edit mode", () => {
       renderRouter(pages, path, navTree, site, undefined, editorPort());
 
       // Assert
-      await screen.findByRole("textbox", { name: "Page source" });
+      // The editor is a lazy chunk: its import alone outlasts findBy's 1s
+      // default on a loaded host.
+      await screen.findByRole(
+        "textbox",
+        { name: "Page source" },
+        { timeout: 4000 },
+      );
       expect(mountedView("Page source").state.doc.toString()).toBe("# Home\n");
       expect(
         screen.getByRole("region", { name: "Live preview" }),
