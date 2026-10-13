@@ -1,6 +1,7 @@
 import type { Page, TestInfo } from "@playwright/test";
 import {
   collectConsoleErrors,
+  collectWorkerConsoleLines,
   expect,
   resultTables,
   sliderThumbBox,
@@ -18,6 +19,7 @@ import {
   installCrossfilterProbe,
   pageNow,
   readProbe,
+  requestsAfterDisconnect,
   summarizeQueries,
   waitForSettled,
 } from "./crossfilter-probe.js";
@@ -25,6 +27,7 @@ import {
 // Chart hosts in document order on /crossfilter-scale, by fence label.
 const CHARTS = ["delay", "distance", "time"] as const;
 const FLIGHTS = 200_000;
+const ABANDON_ROUNDS = 6;
 
 // chromium-headless-shell (the project default) crashes its renderer
 // ("Target crashed") within ~4 slider publishes of 200k-row re-queries
@@ -117,6 +120,28 @@ async function recordGesture(
   return report;
 }
 
+/**
+ * Drags the slider's Maximum thumb to `fraction` of `track`, then leaves
+ * the page while the re-queries that release started are still running,
+ * and comes back.
+ */
+async function abandonSliderDrag(
+  page: Page,
+  track: { start: number; end: number },
+  fraction: number,
+): Promise<void> {
+  const maximum = await sliderThumbBox(page, "Maximum");
+  const y = maximum.y + maximum.height / 2;
+  const from = { x: maximum.x + maximum.width / 2, y };
+  const to = { x: track.start + (track.end - track.start) * fraction, y };
+  await drag(page, from, to, 12, 0);
+  await page.locator('nav a[href="/weekly-review"]').click();
+  await page.goBack();
+  await expect(chartHosts(page).locator("canvas")).toHaveCount(CHARTS.length, {
+    timeout: 30_000,
+  });
+}
+
 test("the helper fences render nothing while their histograms draw every row", async ({
   page,
   biacDev,
@@ -188,5 +213,30 @@ test("a brush drag over 200k rows re-queries only the other histograms", async (
   expect(delay).toBe(FLIGHTS);
   expect(distance).toBe(time);
   expect(distance).toBeLessThan(FLIGHTS);
+  expect(errors).toEqual([]);
+});
+
+test("leaving the page mid-query posts nothing for a disconnected connection", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const workerLines = collectWorkerConsoleLines(page);
+  await openScalePage(page, biacDev.url);
+  const track = {
+    start: (await sliderThumbBox(page, "Minimum")).x,
+    end: (await sliderThumbBox(page, "Maximum")).x,
+  };
+
+  for (let round = 0; round < ABANDON_ROUNDS; round++)
+    await abandonSliderDrag(page, track, round % 2 === 0 ? 0.3 : 0.9);
+  await waitForSettled(page);
+
+  const { requests } = await readProbe(page);
+  const abandoned = requests.filter((r) => r.type === "CANCEL_PENDING_QUERY");
+  // Without an abandoned query the assertions below would pass vacuously.
+  expect(abandoned.length).toBeGreaterThan(0);
+  expect(requestsAfterDisconnect(requests).map((r) => r.type)).toEqual([]);
+  expect(workerLines).toEqual([]);
   expect(errors).toEqual([]);
 });

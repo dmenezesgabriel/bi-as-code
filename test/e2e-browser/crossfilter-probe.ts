@@ -2,9 +2,9 @@ import type { Page } from "@playwright/test";
 
 /**
  * Cross-filter load probe: records every duckdb-wasm worker request that
- * opens, cancels or closes a query, every chart paint and every filter URL
- * write, so a spec can count publishes, queries per chart and paints per
- * drag without touching application code. Each query runs on its own connection
+ * opens, reads, cancels or closes a query, every chart paint and every
+ * filter URL write, so a spec can count publishes, queries per chart and
+ * paints per drag without touching application code. Each query runs on its own connection
  * (`runQuery` in `src/web/src/features/data/run-query.ts`), so a query's
  * lifetime is its connection's: first SQL-bearing request → `DISCONNECT`,
  * with `CANCEL_PENDING_QUERY` in between when a newer publish superseded it.
@@ -62,6 +62,10 @@ export async function installCrossfilterProbe(page: Page): Promise<void> {
     const kept = new Set([
       "CREATE_PREPARED",
       "START_PENDING_QUERY",
+      "POLL_PENDING_QUERY",
+      "SEND_PREPARED",
+      "FETCH_QUERY_RESULTS",
+      "CLOSE_PREPARED",
       "CANCEL_PENDING_QUERY",
       "DISCONNECT",
     ]);
@@ -144,11 +148,12 @@ export function readProbe(page: Page): Promise<{
 /** In-page: no query open and nothing requested or painted for `quiet` ms. */
 function isQuiet(quiet: number): boolean {
   const probe = window as unknown as ProbeWindow;
+  const opening = ["CREATE_PREPARED", "START_PENDING_QUERY"];
   const open = new Set<unknown>();
   for (const r of probe.__xfRequests) {
     const conn = Array.isArray(r.data) ? r.data[0] : r.data;
     if (r.type === "DISCONNECT") open.delete(conn);
-    else if (r.type !== "CANCEL_PENDING_QUERY") open.add(conn);
+    else if (opening.includes(r.type)) open.add(conn);
   }
   const last = Math.max(
     0,
@@ -230,6 +235,31 @@ function queryLifetimes(requests: readonly WorkerRequestRecord[]) {
       open.set(conn, { label, start: record.t, end: NaN, cancelled: false });
   }
   return done;
+}
+
+// A connection's first request: the one that carries its SQL.
+const OPENING_REQUESTS = new Set(["CREATE_PREPARED", "START_PENDING_QUERY"]);
+
+/**
+ * The requests posted for a connection after its `DISCONNECT`. duckdb-wasm
+ * frees a connection on disconnect and checks no handle afterwards, so each
+ * of these runs on freed memory. Connection ids are reused: a connection is
+ * live again from its next opening request.
+ *
+ * @example
+ * expect(requestsAfterDisconnect((await readProbe(page)).requests)).toEqual([]);
+ */
+export function requestsAfterDisconnect(
+  requests: readonly WorkerRequestRecord[],
+): WorkerRequestRecord[] {
+  const disconnected = new Set<unknown>();
+  return requests.filter((record) => {
+    const conn = connectionOf(record);
+    if (OPENING_REQUESTS.has(record.type)) disconnected.delete(conn);
+    else if (record.type === "DISCONNECT") disconnected.add(conn);
+    else return disconnected.has(conn);
+    return false;
+  });
 }
 
 function median(xs: readonly number[]): number {

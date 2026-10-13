@@ -2,6 +2,13 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Table } from "apache-arrow";
+import {
+  engineConnectionFactory,
+  type EngineConnectionHandle,
+  type EngineRequestObserver,
+  type EngineRequests,
+} from "./engine-connections.fixture";
+import type { ConnectionFactory } from "./run-query";
 import { toRows } from "./to-rows";
 import type { Row } from "./types";
 
@@ -12,10 +19,15 @@ interface BlockingStatement {
 }
 
 /** The slice of duckdb-wasm's blocking connection a test runs. */
-interface BlockingConnection {
+interface BlockingConnection extends EngineConnectionHandle {
   query(sql: string): Table;
   prepare(sql: string): BlockingStatement;
   close(): void;
+}
+
+/** The opened engine: its raw requests, and connections a test can run. */
+interface BlockingEngine extends EngineRequests {
+  connect(): BlockingConnection;
 }
 
 /** The slice of duckdb-wasm's node blocking bindings that opens an engine. */
@@ -24,7 +36,7 @@ interface BlockingBindings {
     bundles: Record<string, { mainModule: string }>,
     logger: unknown,
     runtime: unknown,
-  ): Promise<{ instantiate(): Promise<void>; connect(): BlockingConnection }>;
+  ): Promise<BlockingEngine & { instantiate(): Promise<void> }>;
   VoidLogger: new () => unknown;
   NODE_RUNTIME: unknown;
 }
@@ -41,7 +53,11 @@ const webRoot = fileURLToPath(new URL("../../../", import.meta.url));
  * db.rows("select ? as n", [1]); // → [{ n: 1 }]
  */
 export class NodeDuckDb {
-  private constructor(private readonly connection: BlockingConnection) {}
+  private readonly connection: BlockingConnection;
+
+  private constructor(private readonly engine: BlockingEngine) {
+    this.connection = engine.connect();
+  }
 
   static async open(): Promise<NodeDuckDb> {
     const require = createRequire(join(webRoot, "package.json"));
@@ -60,7 +76,22 @@ export class NodeDuckDb {
       duckdb.NODE_RUNTIME,
     );
     await db.instantiate();
-    return new NodeDuckDb(db.connect());
+    return new NodeDuckDb(db);
+  }
+
+  /**
+   * The engine as `runQuery` meets it in the browser: a connection per
+   * `connect()`, every request answered in posting order. `observe` hears
+   * each request as it is posted.
+   *
+   * @example
+   * const posted: string[] = [];
+   * const factory = db.connectionFactory((request) => posted.push(request));
+   * await Effect.runPromise(runQuery(factory, "select 1"));
+   * // posted → ["1:START_PENDING_QUERY", …, "1:DISCONNECT"]
+   */
+  connectionFactory(observe: EngineRequestObserver): ConnectionFactory {
+    return engineConnectionFactory(this.engine, observe);
   }
 
   /** Runs `sql`, binding `params` to its `?` holes when any are given. */

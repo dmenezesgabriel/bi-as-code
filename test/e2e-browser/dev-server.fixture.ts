@@ -70,6 +70,24 @@ export function collectConsoleErrors(page: Page): string[] {
 }
 
 /**
+ * Every line a worker writes to the console, at any level. duckdb-wasm's
+ * worker reports a request it failed to serve with `console.log`, which
+ * `collectConsoleErrors` never sees. Wire this before the first `page.goto`.
+ *
+ * @example
+ * const workerLines = collectWorkerConsoleLines(page);
+ * // … drive the page …
+ * expect(workerLines).toEqual([]);
+ */
+export function collectWorkerConsoleLines(page: Page): string[] {
+  const lines: string[] = [];
+  page.on("console", (message) => {
+    if (message.worker()) lines.push(`${message.type()}: ${message.text()}`);
+  });
+  return lines;
+}
+
+/**
  * Wraps the prototype the duckdb-wasm worker is later constructed against —
  * every query is a worker post, so a client-side interaction that re-queries
  * leaks through `workerPosts`. Call before the first `page.goto`.
