@@ -35,6 +35,17 @@ describe("usePageFilter", () => {
     expect(seen[0]).toBeUndefined();
   });
 
+  it("rejects the editor's URL key as an input id", () => {
+    const Probe = probe("edit", undefined, []);
+    expect(() =>
+      render(
+        <FiltersProvider port={new FakeFilterUrlPort("?edit=true")}>
+          <Probe />
+        </FiltersProvider>,
+      ),
+    ).toThrow('Reserved filter id "edit"');
+  });
+
   it("ensures the filter with its options — visible on the first render", () => {
     const seen: (Filter<string | string[]> | undefined)[] = [];
     const Probe = probe(

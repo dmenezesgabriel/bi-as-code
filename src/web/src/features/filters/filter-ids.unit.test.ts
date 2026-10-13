@@ -13,4 +13,11 @@ describe("toFilterIds", () => {
   it("passes an id list through unchanged", () => {
     expect(toFilterIds(["region", "channel"])).toEqual(["region", "channel"]);
   });
+
+  it.each([
+    ["a lone id", "edit"],
+    ["a list", ["region", "edit"]],
+  ] as const)("rejects the editor's URL key in %s", (_case, filters) => {
+    expect(() => toFilterIds(filters)).toThrow('Reserved filter id "edit"');
+  });
 });

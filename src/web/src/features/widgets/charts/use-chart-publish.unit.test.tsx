@@ -49,6 +49,31 @@ describe("useChartPublish", () => {
     expect(clauses[0]?.clients?.has(CLIENT)).toBe(true);
   });
 
+  it("publishes on a data column named like the editor's URL key without touching the URL", () => {
+    // A chart's field is a column name, not an author-written filter id, so
+    // the reserved-id guard must not reach it — and a publish never writes.
+    const port = new FakeFilterUrlPort("?edit=true");
+    const { result } = renderHook(
+      () => ({
+        filters: usePageFilters() as Filters,
+        seam: useChartPublish(CLIENT),
+      }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <FiltersProvider port={port}>{children}</FiltersProvider>
+        ),
+      },
+    );
+    const { filters, seam } = result.current;
+
+    act(() => seam.publish(clausePoint("edit", "West", seam.clauseOptions)));
+
+    expect(
+      filters.selection("edit").clauses.map((clause) => clause.value),
+    ).toContain("West");
+    expect(port.written).toEqual([]);
+  });
+
   it("keeps the source stable across renders but distinct per interactor call", () => {
     const { result } = renderHook(
       () => ({

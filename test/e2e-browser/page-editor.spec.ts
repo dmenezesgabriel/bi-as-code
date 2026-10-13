@@ -330,6 +330,33 @@ test("a filter named with the editor's own URL key is a compile error at the att
   expect(errors).toEqual([]);
 });
 
+test("an input id computed to the editor's own URL key fails the page instead of opening the editor", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const file = join(biacDev.projectDir, PAGE_FILE);
+  // An expression the compiler cannot read, so the check runs in the page.
+  writeFileSync(
+    file,
+    `${readFileSync(file, "utf8")}\n<TextInput id={"ed" + "it"} title="Computed" />\n`,
+  );
+
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  await expect(
+    page.getByRole("heading", { name: "This page failed to render" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("main pre")).toHaveText(
+    'Reserved filter id "edit" — "edit" opens the source editor in biac dev; choose another id',
+  );
+  await expect(page.locator(".cm-editor")).toHaveCount(0);
+  expect(new URL(page.url()).search).toBe("");
+  // React reports the error its route boundary caught once, as a `%o`
+  // format string whose arguments the console message text does not expand.
+  expect(errors).toEqual([expect.stringMatching(/^%o/)]);
+});
+
 test("broken front-matter shows its error in the preview instead of taking the app down", async ({
   page,
   biacDev,

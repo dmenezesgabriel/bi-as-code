@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { assertNotEditorSearchKey } from "../editor/edit-search";
 import type { Filter, FilterOptions } from "./filter";
 import { useFilterRoster } from "./filter-roster-context";
 import { usePageFilters } from "./page-filters-context";
@@ -11,7 +12,8 @@ import { usePageFilters } from "./page-filters-context";
  * URL-seeded or `initialValue` value is visible on the first paint.
  * `undefined` outside a `FiltersProvider` — callers degrade like
  * `usePageFilters`. Inside a `FilterRosterProvider` the filter is enlisted
- * in that roster for as long as the caller is mounted.
+ * in that roster for as long as the caller is mounted. Throws on the
+ * editor's URL key, which a page filter must not take.
  *
  * @example
  * const filter = usePageFilter<string | string[]>("region", {
@@ -24,6 +26,7 @@ export function usePageFilter<Value = unknown>(
   id: string,
   opts?: FilterOptions<Value>,
 ): Filter<Value> | undefined {
+  assertNotEditorSearchKey(id);
   const filters = usePageFilters();
   // Ensure-once (the `FiltersProvider` `useState` idiom): `opts` apply on the
   // first ensure only. Re-running `configure` per render would re-decode the
