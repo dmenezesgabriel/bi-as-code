@@ -18,6 +18,30 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // The page editor is reached only through a lazy `import()`, which the
+  // startup crawl may never have followed when the dep cache was written.
+  // Vite keys that cache on the lockfile and this config alone, so a
+  // source-only change never invalidates it: the editor's deps are then
+  // discovered on first `?edit`, re-optimized at runtime, and the page can
+  // full-reload or fail the lazy import ("Failed to fetch dynamically
+  // imported module"). Listing them here puts them in the config hash, so
+  // they are pre-bundled at every start
+  // (https://vite.dev/guide/dep-pre-bundling).
+  // `features/editor/lazy-editor-deps.unit.test.ts` fails when the editor
+  // imports a bare specifier missing from this list.
+  optimizeDeps: {
+    include: [
+      "react",
+      "@tanstack/react-router",
+      "codemirror",
+      "@codemirror/state",
+      "@codemirror/view",
+      "@codemirror/theme-one-dark",
+      "@codemirror/lang-html",
+      "@codemirror/lang-markdown",
+      "@codemirror/lang-sql",
+    ],
+  },
   server: {
     port: 5175,
     strictPort: true,
