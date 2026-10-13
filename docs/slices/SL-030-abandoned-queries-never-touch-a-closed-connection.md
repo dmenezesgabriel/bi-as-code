@@ -1,6 +1,6 @@
 # SL-030 — Abandoning a query never touches a closed DuckDB connection
 
-Milestone: Phase 1 — Known debt · State: open · Depends on: — · Closes: the Known-debt duckdb-wasm worker `null function` / `No prepared statement found with ID` row
+Milestone: Phase 1 — Known debt · State: partial · Depends on: — · Closes: the Known-debt duckdb-wasm worker `null function` / `No prepared statement found with ID` row
 
 > A PRD exists so the executing agent **never guesses and never assumes**. Every path below was checked on disk on 2026-10-13; every number carries the command or script that produced it.
 
@@ -126,7 +126,7 @@ The disagreement: **framework** releases the connection from the code that owns 
 ## Tasks
 
 - [x] T1 — An interrupted `runQuery` posts nothing after it closes its connection. RED in `src/web/src/features/data/run-query.unit.test.ts`: fakes record call order; interrupt mid-read with params and without → after `close` no `readAll`/`next`/`statement.close` happens, and `close` comes after the in-flight read settled. Real-engine integration test: the order the fix produces (stop reading → close statement → disconnect) leaves a second, concurrent connection's stream and statement intact. Browser RED in `test/e2e-browser/crossfilter-scale.spec.ts`: slider drag then leave to `/weekly-review` and back, ×6 — the probe reports 0 requests after `DISCONNECT` and 0 worker console lines of any level (extend `crossfilter-probe.ts` and the console collector; before: 10–11 + 15–18 late requests, 15–18 lines). GREEN in `run-query.ts`. `playwright-cli`: Demo steps 2–4 on `bin/biac dev`, counts before and after in the commit body.
-- [ ] T2 — Settle `cancelSent()` by measurement (Open decisions 1 and 2) on the real engine for parameterised and unparameterised sends; keep, scope or remove the call accordingly with its unit test; correct `runQuery`'s docstring and ADR-0007 if they claim otherwise. Cover the unparameterised path in the browser (a plain named ` ```sql ` block abandoned by navigation, Demo step 5) and the static build (Demo step 6). Point the backlog row at its demo entry, remove the Known-debt row, mark the slice `partial` until a human runs the Demo.
+- [x] T2 — Settle `cancelSent()` by measurement (Open decisions 1 and 2) on the real engine for parameterised and unparameterised sends; keep, scope or remove the call accordingly with its unit test; correct `runQuery`'s docstring and ADR-0007 if they claim otherwise. Cover the unparameterised path in the browser (a plain named ` ```sql ` block abandoned by navigation, Demo step 5) and the static build (Demo step 6). Point the backlog row at its demo entry, remove the Known-debt row, mark the slice `partial` until a human runs the Demo.
 
 ## Out of scope
 
