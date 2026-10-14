@@ -116,7 +116,7 @@ This is test robustness, not a product feature: the question is how each referen
 
 ## Tasks
 
-- [ ] T1 — `scripts/gate.sh` waits for a host whose 1 min load exceeds `nproc` before its heavy tiers, printing the reading, bounded by a maximum wait; RED first in an integration test that injects the load reading and core count (no real load), then the §5 pass
+- [x] T1 — `scripts/gate.sh` waits for a host whose 1 min load exceeds `nproc` before its heavy tiers, printing the reading, bounded by a maximum wait; RED first in an integration test that injects the load reading and core count (no real load), then the §5 pass
 - [ ] T2 — browser budgets sized from a measured 50% quota run: `playwright.config.ts` `timeout`/`expect.timeout` raised with ≥ 2× headroom, per-call overrides equal to the new default removed; RED is today's `filter-inputs.spec.ts` failure at `CPUQuota=50%`, GREEN is 10 of 10 there and the full browser tier at 50%, then the §5 pass
 
 ## Out of scope
