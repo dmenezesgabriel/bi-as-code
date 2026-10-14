@@ -1,6 +1,6 @@
 # SL-032 — A disposed chart is never read
 
-Milestone: Phase 1 — Known debt · State: open · Depends on: — · Closes: the Known-debt DEF-001 row (`layerStack` after an echarts dispose)
+Milestone: Phase 1 — Known debt · State: partial · Depends on: — · Closes: the Known-debt DEF-001 row (`layerStack` after an echarts dispose)
 
 > A PRD exists so the executing agent **never guesses and never assumes**. Every path below was checked on disk on 2026-10-14; every number carries the command or script that produced it.
 
@@ -132,7 +132,7 @@ None planned. If T2 moves the theme flip to `setTheme`, that is an ADR (it rever
 ## Tasks
 
 - [x] T1 — Remove the paint continuation the dispose outlives: RED a browser regression that disposes a chart while an incremental paint is pending, driven through the UI — `charts.spec.ts:359`'s `?region=Atlantis` prune at `CPUQuota=50%` is the reproduction to start from — with the console-clean assertion; the incremental series is the heatmap and the largest series is 39 rows (Root cause steps 5–6), so GREEN is the zrender patch: `CanvasPainter.dispose` invalidates `_redrawId`. Run the browser tier at `CPUQuota=50%` and count `layerStack` failures against this PRD's 1 of 26 and the debt row's 5 of 115.
-- [ ] T2 — The Demo above in the real app, `playwright-cli` pass over `/weekly-review` and `/crossfilter-scale` at 6× throttle (console clean, chart paint time before/after on the largest scatter), `bin/biac build` + `bin/biac preview`; close the DEF-001 row.
+- [x] T2 — The Demo above in the real app, `playwright-cli` pass over `/weekly-review` and `/crossfilter-scale` at 6× throttle (console clean, chart paint time before/after on the largest scatter), `bin/biac build` + `bin/biac preview`; close the DEF-001 row.
 
 ## Out of scope
 
