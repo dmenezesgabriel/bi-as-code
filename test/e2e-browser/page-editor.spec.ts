@@ -29,7 +29,7 @@ async function appendToLine(page: Page, line: string, text: string) {
 
 async function saveWithModS(page: Page) {
   await page.keyboard.press("ControlOrMeta+s");
-  await expect(editorStatus(page)).toHaveText("Saved", { timeout: 10_000 });
+  await expect(editorStatus(page)).toHaveText("Saved");
 }
 
 /** A full reload discards window properties; the marker proves none ran. */
@@ -55,9 +55,7 @@ function livePreview(page: Page) {
  */
 async function expectCompileErrorInPreview(page: Page, location: RegExp) {
   const alert = livePreview(page).getByRole("alert");
-  await expect(alert).toContainText("This page failed to compile", {
-    timeout: 20_000,
-  });
+  await expect(alert).toContainText("This page failed to compile");
   await expect(alert).toContainText(location);
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
   await expect(sourceEditor(page)).toBeVisible();
@@ -67,7 +65,7 @@ async function expectCompileErrorInPreview(page: Page, location: RegExp) {
 async function expectPageBackInPreview(page: Page) {
   await expect(
     livePreview(page).getByRole("heading", { level: 1, name: "Weekly review" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   await expect(livePreview(page).getByRole("alert")).toHaveCount(0);
   expect(await windowMarker(page)).toBe("kept");
 }
@@ -130,9 +128,7 @@ async function openEditorFromHeader(page: Page, url: string) {
   ]);
   await markWindow(page);
   await page.getByRole("banner").getByRole("link", { name: "Edit" }).click();
-  await expect(sourceEditor(page)).toContainText("# Weekly review", {
-    timeout: 20_000,
-  });
+  await expect(sourceEditor(page)).toContainText("# Weekly review");
 }
 
 test("edits a page from the header: Mod-s saves to disk and the preview swaps in place", async ({
@@ -159,7 +155,7 @@ test("edits a page from the header: Mod-s saves to disk and the preview swaps in
   });
   await expect(
     preview.getByRole("heading", { level: 1, name: "Weekly review, edited" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   expect(await windowMarker(page)).toBe("kept");
   await expect(page.getByRole("combobox", { name: "Region" })).toContainText(
     "West",
@@ -169,7 +165,7 @@ test("edits a page from the header: Mod-s saves to disk and the preview swaps in
   await saveWithModS(page);
   await expect(
     preview.getByRole("heading", { name: "Weekly review, edited twice" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   expect(new URL(page.url()).searchParams.get("region")).toBe("West");
   expect(await windowMarker(page)).toBe("kept");
   expect(errors).toEqual([]);
@@ -186,9 +182,7 @@ test("a reload reopens the saved source, and Done returns to the plain page", as
   await saveWithModS(page);
 
   await page.reload();
-  await expect(sourceEditor(page)).toContainText("# Weekly review, on disk", {
-    timeout: 20_000,
-  });
+  await expect(sourceEditor(page)).toContainText("# Weekly review, on disk");
   await page.getByRole("banner").getByRole("link", { name: "Done" }).click();
 
   await expect(
@@ -220,7 +214,7 @@ test("the panes sit side by side at desktop width and stack on a phone", async (
   };
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(`${biacDev.url}weekly-review?edit`);
-  await expect(sourceEditor(page)).toBeVisible({ timeout: 20_000 });
+  await expect(sourceEditor(page)).toBeVisible();
 
   const wide = await boxes();
   expect(wide.preview.x).toBeGreaterThanOrEqual(
@@ -315,13 +309,13 @@ test("a self-closed widget typed in the editor is left as typed and the page com
     page.locator(".cm-line", { hasText: /^<Table data="orders"/ }),
   ).toHaveText(selfClosed);
   await saveWithModS(page);
-  await expect(typedTable).toHaveCount(1, { timeout: 20_000 });
+  await expect(typedTable).toHaveCount(1);
   await expect(livePreview(page).getByRole("alert")).toHaveCount(0);
 
   await eraseTyped(page, `\n${selfClosed}`);
   await saveWithModS(page);
 
-  await expect(typedTable).toHaveCount(0, { timeout: 20_000 });
+  await expect(typedTable).toHaveCount(0);
   await expectPageBackInPreview(page);
   expect(errors).toEqual([]);
 });
@@ -377,7 +371,7 @@ test("an input id computed to the editor's own URL key fails the page instead of
 
   await expect(
     page.getByRole("heading", { name: "This page failed to render" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   await expect(page.locator("main pre")).toHaveText(
     'Reserved filter id "edit" — "edit" opens the source editor in biac dev; choose another id',
   );
@@ -426,9 +420,7 @@ test("a page already broken on disk still opens in the editor", async ({
 
   await page.goto(`${biacDev.url}weekly-review?edit`);
 
-  await expect(sourceEditor(page)).toContainText("<Callout", {
-    timeout: 20_000,
-  });
+  await expect(sourceEditor(page)).toContainText("<Callout");
   await expect(livePreview(page).getByRole("alert")).toContainText(
     "This page failed to compile",
   );
@@ -446,12 +438,10 @@ test("a fence reading {{params.edit}} sees no value while the editor's flag is i
 
   await page.goto(`${biacDev.url}weekly-review?region=West&edit=true`);
 
-  await expect(sourceEditor(page)).toContainText("# Weekly review", {
-    timeout: 20_000,
-  });
+  await expect(sourceEditor(page)).toContainText("# Weekly review");
   await expect(
     livePreview(page).getByRole("cell", { name: "edit absent, region West" }),
-  ).toBeVisible({ timeout: 30_000 });
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 

@@ -24,11 +24,11 @@ async function pickRegion(
 ): Promise<Locator> {
   await page.goto(`${biacDev.url}weekly-review`);
   const region = page.getByRole("combobox", { name: "Region" });
-  await expect(region).toHaveText("Select Region", { timeout: 30_000 });
+  await expect(region).toHaveText("Select Region");
   // Disabled until its options load. A click that has to wait retries with
   // a different scroll alignment each time, and one that lands the bar on
   // its dock line collapses it and hides the dropdown being clicked.
-  await expect(region).toBeEnabled({ timeout: 30_000 });
+  await expect(region).toBeEnabled();
   await region.click();
   await page.getByRole("option", { name }).click();
   expect(urlParam(page, "region")).toBe(name);
@@ -67,7 +67,7 @@ test("picking West in the Region dropdown filters weekly-review and survives rel
   await page
     .getByRole("button", { name: "Filters", exact: true })
     .click({ timeout: 30_000 });
-  await expect(region).toHaveText("West", { timeout: 30_000 });
+  await expect(region).toHaveText("West");
   expect(await openOrderMixRow(page, "Page 1 of 2 · 13 rows")).toEqual([
     "1",
     "West",
@@ -114,7 +114,7 @@ test("picking channels in the multi-select chips the field, filters the table an
   await page.goto(`${biacDev.url}nested/allocation`);
 
   const channel = page.getByRole("combobox", { name: "Channel" });
-  await expect(channel).toBeEnabled({ timeout: 30_000 });
+  await expect(channel).toBeEnabled();
   await channel.click();
 
   // The popup stays open across picks; both options land as chips.
@@ -144,9 +144,9 @@ test("picking channels in the multi-select chips the field, filters the table an
   await expect(results.nth(0)).not.toContainText("Partner");
 
   await page.reload();
-  await expect(page.getByRole("button", { name: "Remove Direct" })).toBeVisible(
-    { timeout: 30_000 },
-  );
+  await expect(
+    page.getByRole("button", { name: "Remove Direct" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Remove Marketplace" }),
   ).toBeVisible();
@@ -200,7 +200,7 @@ test("the Amount slider writes a range param and narrows order_detail", async ({
 
   // Bounds derive from order_amounts (38..44); the seed sits at both ends.
   const minimum = page.getByRole("slider", { name: "Minimum" });
-  await expect(minimum).toBeEnabled({ timeout: 30_000 });
+  await expect(minimum).toBeEnabled();
   await expect(minimum).toHaveAttribute("aria-valuenow", "38");
 
   await minimum.press("ArrowRight");
@@ -213,7 +213,6 @@ test("the Amount slider writes a range param and narrows order_detail", async ({
   await expect(page.getByRole("slider", { name: "Minimum" })).toHaveAttribute(
     "aria-valuenow",
     "39",
-    { timeout: 30_000 },
   );
   expect(urlParam(page, "amount")).toBe("39 - 44");
   expect(errors).toEqual([]);
@@ -234,19 +233,15 @@ test("a region holding one amount states it as text, and another region brings t
   await page.goto(`${biacDev.url}weekly-review?region=North`);
 
   // Every North order is $40, so the Amount bounds collapse to one value.
-  await expect(page.getByText("only one value in range")).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(page.getByText("only one value in range")).toBeVisible();
   await expect(page.getByRole("slider", { name: "Minimum" })).toHaveCount(0);
 
   const region = page.getByRole("combobox", { name: "Region" });
-  await expect(region).toBeEnabled({ timeout: 30_000 });
+  await expect(region).toBeEnabled();
   await region.click();
   await page.getByRole("option", { name: "West" }).click();
 
-  await expect(page.getByRole("slider", { name: "Minimum" })).toBeEnabled({
-    timeout: 30_000,
-  });
+  await expect(page.getByRole("slider", { name: "Minimum" })).toBeEnabled();
   await expect(page.getByRole("slider", { name: "Maximum" })).toBeEnabled();
   await expect(page.getByText("only one value in range")).toHaveCount(0);
   expect(boundsWarnings).toEqual([]);
@@ -261,7 +256,7 @@ test("a pointer drag keeps moving the Amount slider past its first step", async 
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
   const maximum = page.getByRole("slider", { name: "Maximum" });
-  await expect(maximum).toBeEnabled({ timeout: 30_000 });
+  await expect(maximum).toBeEnabled();
   const from = await sliderThumbBox(page, "Maximum");
   const to = await sliderThumbBox(page, "Minimum");
   const y = from.y + from.height / 2;
@@ -308,20 +303,17 @@ test("the Region dropdown cross-filters on amount but never on its own pick", as
   // page re-seeds it to the full extent, so five ArrowRight steps land 43.
   await page.reload();
   const minimum = page.getByRole("slider", { name: "Minimum" });
-  await expect(minimum).toBeEnabled({ timeout: 30_000 });
+  await expect(minimum).toBeEnabled();
   // Each step republishes the clause and re-renders the thumb — poll-press
   // rather than firing five blind presses, so a mid-render keypress can't
   // drop.
   await expect
-    .poll(
-      async () => {
-        const now = Number(await minimum.getAttribute("aria-valuenow"));
-        if (now < 43) await minimum.press("ArrowRight");
-        if (now > 43) await minimum.press("ArrowLeft");
-        return urlParam(page, "amount");
-      },
-      { timeout: 30_000 },
-    )
+    .poll(async () => {
+      const now = Number(await minimum.getAttribute("aria-valuenow"));
+      if (now < 43) await minimum.press("ArrowRight");
+      if (now > 43) await minimum.press("ArrowLeft");
+      return urlParam(page, "amount");
+    })
     .toBe("43 - 44");
 
   await region.click();
@@ -348,9 +340,7 @@ test("the Ordered date range persists the expression and narrows order_detail", 
   await expect(table).not.toContainText("· 355 rows");
 
   await page.reload();
-  await expect(page.locator("#ordered")).toContainText("Last 30 Days", {
-    timeout: 30_000,
-  });
+  await expect(page.locator("#ordered")).toContainText("Last 30 Days");
   expect(urlParam(page, "ordered")).toBe("last 30 days");
 
   // An absolute range over the fixture's own dates narrows the table —
@@ -377,7 +367,7 @@ test("the q text input and large_orders toggle re-query order_detail", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const q = page.getByLabel("Search regions");
-  await expect(q).toBeEnabled({ timeout: 30_000 });
+  await expect(q).toBeEnabled();
   await q.fill("west");
   // The commit lands after ~300ms of quiet — poll past the debounce. The
   // `{{params.q}}` interpolation narrows the fence the widget reads.
@@ -392,9 +382,7 @@ test("the q text input and large_orders toggle re-query order_detail", async ({
   await expect(table).toContainText("· 80 rows");
 
   await page.reload();
-  await expect(page.getByLabel("Search regions")).toHaveValue("west", {
-    timeout: 30_000,
-  });
+  await expect(page.getByLabel("Search regions")).toHaveValue("west");
   // The label names both the switch face and its hidden checkbox input —
   // the role locator pins the one carrying the checked face.
   await expect(
@@ -415,7 +403,7 @@ test("the Channel button group picks Direct, syncs the multi-select and persists
   const direct = page
     .getByRole("group", { name: "Channel" })
     .getByRole("button", { name: "Direct" });
-  await expect(direct).toBeEnabled({ timeout: 30_000 });
+  await expect(direct).toBeEnabled();
   await direct.click();
 
   // The ButtonGroup is `multiple` — the shared channel filter serializes a
@@ -431,9 +419,9 @@ test("the Channel button group picks Direct, syncs the multi-select and persists
   await expect(results.nth(0)).not.toContainText("Partner");
 
   await page.reload();
-  await expect(page.getByRole("button", { name: "Remove Direct" })).toBeVisible(
-    { timeout: 30_000 },
-  );
+  await expect(
+    page.getByRole("button", { name: "Remove Direct" }),
+  ).toBeVisible();
   await expect(direct).toHaveAttribute("aria-pressed", "true");
   await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(2);
   expect(errors).toEqual([]);

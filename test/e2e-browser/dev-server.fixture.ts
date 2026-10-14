@@ -46,7 +46,7 @@ export async function openOrderMixRow(
 ): Promise<string[]> {
   await page.getByRole("tab", { name: "Table" }).click();
   const panel = page.getByRole("tabpanel", { name: "Table" });
-  await expect(panel).toContainText(caption, { timeout: 30_000 });
+  await expect(panel).toContainText(caption);
   return panel.locator("tbody tr").first().locator("td").allTextContents();
 }
 
@@ -165,7 +165,7 @@ export function testBadRefs(
       await page.goto(`${biacDev.url}${route}`);
 
       const alert = page.getByRole("alert");
-      await expect(alert).toHaveCount(1, { timeout: 30_000 });
+      await expect(alert).toHaveCount(1);
       for (const text of want) await expect(alert).toContainText(text);
       await stands(page);
       expect(errors).toEqual([]);

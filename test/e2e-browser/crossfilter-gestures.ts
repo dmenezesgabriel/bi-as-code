@@ -17,9 +17,7 @@ const ABANDON_ROUNDS = 6;
 /** Opens /crossfilter-scale under `url` and waits for its charts to settle. */
 export async function openScalePage(page: Page, url: string): Promise<void> {
   await page.goto(new URL("crossfilter-scale", url).href);
-  await expect(readyCharts(page)).toHaveCount(CHARTS.length, {
-    timeout: 30_000,
-  });
+  await expect(readyCharts(page)).toHaveCount(CHARTS.length);
   await waitForSettled(page);
 }
 
@@ -80,9 +78,7 @@ async function abandonSliderDrag(
   await drag(page, from, to, 12, 0);
   await page.locator('nav a[href="/weekly-review"]').click();
   await page.goBack();
-  await expect(chartHosts(page).locator("canvas")).toHaveCount(CHARTS.length, {
-    timeout: 30_000,
-  });
+  await expect(chartHosts(page).locator("canvas")).toHaveCount(CHARTS.length);
 }
 
 /**

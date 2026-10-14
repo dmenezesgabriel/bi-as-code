@@ -36,9 +36,7 @@ test("weekly-review's <BigValue> renders title, $15k scalar, green delta, 13-poi
   await page.goto(`${biacDev.url}weekly-review`);
 
   const widget = kpi(page);
-  await expect(widget.getByText("Quarter revenue")).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(widget.getByText("Quarter revenue")).toBeVisible();
   // SQL truth: sum(amount) over data/orders is 14600 → `usd` auto-scales
   // to `usd0k`.
   await expect(widget.locator("span.text-xl")).toHaveText("$15k");
@@ -81,7 +79,7 @@ test("<Value> and <Delta> render formatted scalars inside prose", async ({
   const sentence = page.locator("p", {
     hasText: "Quarter revenue closed at",
   });
-  await expect(sentence).toContainText("$15k", { timeout: 30_000 });
+  await expect(sentence).toContainText("$15k");
   await expect(sentence).toContainText("+9.9%");
   await expect(sentence).toContainText("WoW");
   await expect(sentence.locator('[data-status="positive"]')).toHaveCount(1);
@@ -91,7 +89,7 @@ test("<Value> and <Delta> render formatted scalars inside prose", async ({
   const lead = page.locator("p", {
     hasText: "The West leads on revenue at",
   });
-  await expect(lead).toContainText("$6,100", { timeout: 30_000 });
+  await expect(lead).toContainText("$6,100");
   expect(errors).toEqual([]);
 });
 
@@ -105,7 +103,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.goto(`${biacDev.url}weekly-review`);
     // The Quarter revenue <BigValue> chip and the inline prose <Delta>.
     const deltas = page.locator("main span[data-status]");
-    await expect(deltas).toHaveCount(2, { timeout: 30_000 });
+    await expect(deltas).toHaveCount(2);
 
     const ratios: number[] = [];
     for (const delta of await deltas.all()) {
@@ -130,7 +128,7 @@ test("standalone <Sparkline> renders the same series as a line and as bars", asy
   // Three `weekly_revenue` renderings total: the KPI's plus the two
   // standalone tags in the Trend lines paragraph.
   const series = page.locator('svg[aria-label="weekly_revenue"]');
-  await expect(series).toHaveCount(3, { timeout: 30_000 });
+  await expect(series).toHaveCount(3);
 
   const prose = page.locator("p", { hasText: "Weekly revenue as a line" });
   const bars = prose.locator("svg:has(rect)");
@@ -152,9 +150,7 @@ test("?region=Atlantis is pruned by the Region dropdown so the KPI renders unfil
   // once its options load, so the KPI renders the full-quarter read with
   // its delta and sparkline — not the empty face.
   const widget = kpi(page);
-  await expect(widget.locator("span.text-xl")).toHaveText("$15k", {
-    timeout: 30_000,
-  });
+  await expect(widget.locator("span.text-xl")).toHaveText("$15k");
   await expect(page).toHaveURL(/weekly-review$/);
   await expect(widget.getByText("Quarter revenue")).toBeVisible();
   await expect(widget.locator('[data-status="positive"]')).toContainText("+");
@@ -173,9 +169,7 @@ test("?region=West narrows the KPI through its fences' raw param surface", async
   // the West weeks is 6100, `usd` auto-scaling to `usd0k`, with the West
   // WoW delta and its sparkline intact.
   const widget = kpi(page);
-  await expect(widget.locator("span.text-xl")).toHaveText("$6k", {
-    timeout: 30_000,
-  });
+  await expect(widget.locator("span.text-xl")).toHaveText("$6k");
   await expect(widget.locator('[data-status="positive"]')).toContainText(
     "+15.7%",
   );
@@ -220,7 +214,7 @@ testBadRefs(
     const sentence = page.locator("p", {
       hasText: "Quarter revenue closed at",
     });
-    await expect(sentence).toContainText("$15k", { timeout: 30_000 });
+    await expect(sentence).toContainText("$15k");
     await expect(sentence).toContainText("+9.9%");
   },
 );

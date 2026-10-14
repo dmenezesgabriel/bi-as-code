@@ -15,12 +15,9 @@ test("renders the index page: title, prose, gfm table, highlighted sql fence", a
   await page.goto(biacDev.url);
 
   await expect(page).toHaveTitle("Orders overview");
-  // First paint on a fresh dev server can outlast the 10s expect default —
-  // dep re-optimization runs while the suite's parallel servers share one
-  // .vite cache.
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   await expect(
     page.getByText("Weekly order volume across regions."),
   ).toBeVisible();
@@ -69,7 +66,7 @@ test("updates on page edit and serves a page added while running", async ({
   await page.goto(biacDev.url);
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
 
   const indexFile = join(biacDev.projectDir, "pages/index.md");
   const original = readFileSync(indexFile, "utf8");
@@ -111,7 +108,7 @@ test("a content edit swaps the page in place: no reload, filters kept", async ({
   await page.goto(`${biacDev.url}weekly-review?region=West`);
   await expect(
     page.getByRole("heading", { level: 1, name: "Weekly review" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   // Edit only once every widget settled: the Amount slider then holds its
   // silent bounds correction, which a swap must not publish into the
   // Region dropdown it narrows.
@@ -163,7 +160,7 @@ test("renders a styled 404 for an unknown route", async ({ page, biacDev }) => {
 
   await expect(
     page.getByRole("heading", { name: "Page not found" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   await expect(page).toHaveTitle("Page not found");
 
   await page.getByRole("link", { name: "Back to index" }).click();

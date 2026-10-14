@@ -43,7 +43,7 @@ test("weekly-review's <Table> sorts client-side through the 3-state cycle", asyn
   // render ahead of it in document order.
   const widget = tableRegions(page).last();
   const table = widget.locator("table");
-  await expect(table.getByRole("row")).toHaveCount(11, { timeout: 30_000 });
+  await expect(table.getByRole("row")).toHaveCount(11);
 
   const ordersHeader = widget.locator("th", {
     has: page.getByRole("button", { name: "Orders" }),
@@ -107,7 +107,7 @@ test("weekly-review's <Column> children order, title and format the table", asyn
   await page.goto(`${biacDev.url}weekly-review`);
 
   const table = tableRegions(page).last().locator("table");
-  await expect(table.getByRole("row")).toHaveCount(11, { timeout: 30_000 });
+  await expect(table.getByRole("row")).toHaveCount(11);
 
   // The fence selects week, region, orders, share; the <Column> list puts
   // region first and titles every header.
@@ -131,7 +131,7 @@ test("the widget pager walks the 39 rows in pages of 10", async ({
 
   const widget = tableRegions(page).last();
   const table = widget.locator("table");
-  await expect(table.getByRole("row")).toHaveCount(11, { timeout: 30_000 });
+  await expect(table.getByRole("row")).toHaveCount(11);
   await expect(widget).toContainText("Page 1 of 4 · 39 rows");
   await expect(
     widget.getByRole("button", { name: "First page" }),
@@ -165,7 +165,7 @@ test("the order-grain pager's buttons are at least 24×24", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const pager = tableRegions(page).filter({ hasText: "Page 1 of 36" });
-  await expect(pager).toHaveCount(1, { timeout: 30_000 });
+  await expect(pager).toHaveCount(1);
   for (const name of ["First page", "Previous page", "Next page", "Last page"])
     await expectMinTargetSize(pager.getByRole("button", { name }), 24);
 
@@ -187,9 +187,7 @@ test("?region=Atlantis empties the index page's <Table> with its fence", async (
   // and the `<BarChart>`'s empty face each render the shared empty state —
   // the fence opts into `echo` only, so it adds none — and no live table
   // remains on the page.
-  await expect(page.getByText("0 rows", { exact: true })).toHaveCount(2, {
-    timeout: 30_000,
-  });
+  await expect(page.getByText("0 rows", { exact: true })).toHaveCount(2);
   await expect(resultTables(page)).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -210,7 +208,7 @@ test("a data name no sql fence declares renders an inline error", async ({
   await page.goto(biacDev.url);
 
   const alert = page.getByRole("alert");
-  await expect(alert).toBeVisible({ timeout: 30_000 });
+  await expect(alert).toBeVisible();
   await expect(alert).toContainText("no_such_query");
   await expect(alert).toContainText(
     "no sql fence on this page declares this name",
@@ -220,8 +218,6 @@ test("a data name no sql fence declares renders an inline error", async ({
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
   ).toBeVisible();
-  await expect(resultTables(page).first().getByRole("row")).toHaveCount(4, {
-    timeout: 30_000,
-  });
+  await expect(resultTables(page).first().getByRole("row")).toHaveCount(4);
   expect(errors).toEqual([]);
 });

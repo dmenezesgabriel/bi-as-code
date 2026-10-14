@@ -55,7 +55,7 @@ test("leaving a page while its plain query is still polled posts nothing late an
 
   await waitForWorkerRequest(page, "POLL_PENDING_QUERY");
   await page.locator('nav a[href="/weekly-review"]').click();
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await expect(readyCharts(page)).toHaveCount(6);
   await waitForSettled(page);
 
   await expectAbandonedQueriesPostedNothingLate(page);

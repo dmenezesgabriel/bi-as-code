@@ -33,7 +33,7 @@ test("index page runs the named sql block and renders its live result", async ({
   await expect(fence).toContainText("{{params.region}}");
 
   const result = resultTables(page).first();
-  await expect(result.getByRole("row")).toHaveCount(4, { timeout: 30_000 });
+  await expect(result.getByRole("row")).toHaveCount(4);
   const firstQueryMs = Date.now() - start;
   test.info().annotations.push({
     type: "first-query-ms",
@@ -71,7 +71,7 @@ test("{{params.region}} binds the URL search param through a prepared arg", asyn
   await page.goto(`${biacDev.url}?region=West`);
 
   const result = resultTables(page).first();
-  await expect(result.getByRole("row")).toHaveCount(2, { timeout: 30_000 });
+  await expect(result.getByRole("row")).toHaveCount(2);
   expect(await result.locator("tbody td").allTextContents()).toEqual([
     "West",
     "140",
@@ -80,7 +80,7 @@ test("{{params.region}} binds the URL search param through a prepared arg", asyn
 
   // Param absent → NULL → the authored `is null or …` baseline returns all rows.
   await page.goto(biacDev.url);
-  await expect(result.getByRole("row")).toHaveCount(4, { timeout: 30_000 });
+  await expect(result.getByRole("row")).toHaveCount(4);
   expect(errors).toEqual([]);
 });
 
@@ -97,9 +97,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   // <Table> widget, then the weekly_trend <Table> widget in Quarter detail.
   // The trend's 39 rows paginate at pageSize 10, so the DOM holds the
   // first page plus the pager caption.
-  await expect(results.nth(3).getByRole("row")).toHaveCount(11, {
-    timeout: 30_000,
-  });
+  await expect(results.nth(3).getByRole("row")).toHaveCount(11);
   // The caption appears twice: the tab <Table data="region_week" /> and
   // the <Table data="weekly_trend" /> — the fences behind them stay hidden.
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
@@ -133,9 +131,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   // filters=["region"] are the filters spec's subject: region_share still
   // composes all three regions out of `orders`.
   await page.goto(`${biacDev.url}weekly-review?region=West`);
-  await expect(results.nth(0).getByRole("row")).toHaveCount(4, {
-    timeout: 30_000,
-  });
+  await expect(results.nth(0).getByRole("row")).toHaveCount(4);
   expect(
     await results
       .nth(0)
@@ -155,7 +151,7 @@ test("allocation page queries the config-declared channels table", async ({
   await page.goto(`${biacDev.url}nested/allocation`);
 
   const result = resultTables(page).first();
-  await expect(result.getByRole("row")).toHaveCount(4, { timeout: 30_000 });
+  await expect(result.getByRole("row")).toHaveCount(4);
   expect(await result.locator("tbody tr td").allTextContents()).toEqual([
     "Direct",
     "46",
@@ -190,7 +186,7 @@ test("a missing sql: source shows an inline error, not a page crash", async ({
   // prose `<Value>` and the `<BarChart>` — and quiet: no console errors,
   // no unhandled rejections, the rest of the page still renders.
   const alerts = page.getByRole("alert");
-  await expect(alerts).toHaveCount(4, { timeout: 30_000 });
+  await expect(alerts).toHaveCount(4);
   await expect(alerts.first()).toContainText("orders");
   await expect(alerts.first()).toContainText("data/missing.parquet");
   await expect(

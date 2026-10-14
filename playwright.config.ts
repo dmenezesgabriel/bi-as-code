@@ -32,8 +32,13 @@ export default defineConfig({
   // with other repos' runs — measured: load average 51 on 8 cores, and
   // tests failing only under that load. `--workers=N` overrides it.
   workers: 2,
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  // Budgets are twice the slowest passing step of a full run at a 50% CPU
+  // quota (measured 2026-10-14: a test at 114 s, an assertion at 31.8 s),
+  // so a busy host slows a run without failing it. A specific wait needs
+  // no override up to this ceiling; a correct test only reports a genuine
+  // failure later.
+  timeout: 230_000,
+  expect: { timeout: 70_000 },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   // The line reporter writes a title line on every test start and overwrites

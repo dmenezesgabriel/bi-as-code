@@ -24,7 +24,7 @@ test("the FilterBar docks at 64px as one Filters row, holds the page still and i
   const bar = page.locator("div.sticky", { hasText: "Region" });
   const filters = page.getByRole("button", { name: "Filters", exact: true });
   const toggle = page.getByRole("switch", { name: "Large orders only" });
-  await expect(bar).toBeVisible({ timeout: 30_000 });
+  await expect(bar).toBeVisible();
   await expect(bar).toContainText("Region");
 
   // At rest the card face is down — transparent border, no background —
@@ -36,9 +36,7 @@ test("the FilterBar docks at 64px as one Filters row, holds the page still and i
   // The bar is in flow, so what the page keeps is its height plus the
   // spacer after it. Read once Region's options have loaded: until then
   // the dropdown is narrower and the row can wrap differently.
-  await expect(page.getByRole("combobox", { name: "Region" })).toBeEnabled({
-    timeout: 30_000,
-  });
+  await expect(page.getByRole("combobox", { name: "Region" })).toBeEnabled();
   const heightHeldInFlow = () =>
     bar.evaluate((el) =>
       Math.round(
@@ -101,7 +99,7 @@ test("at 375px the opened docked FilterBar stays open through a Region pick, fit
   const bar = page.locator("div.sticky", { hasText: "Region" });
   const filters = page.getByRole("button", { name: "Filters", exact: true });
   const region = page.getByRole("combobox", { name: "Region" });
-  await expect(region).toBeEnabled({ timeout: 30_000 });
+  await expect(region).toBeEnabled();
 
   await page.evaluate(() => window.scrollTo(0, 900));
   await expect(filters).toHaveAttribute("aria-expanded", "false");
@@ -145,7 +143,7 @@ test("the docked Filters row counts the applied inputs and drops the count when 
   const filters = page.getByRole("button", { name: "Filters", exact: true });
   const region = page.getByRole("combobox", { name: "Region" });
   const toggle = page.getByRole("switch", { name: "Large orders only" });
-  await expect(region).toBeEnabled({ timeout: 30_000 });
+  await expect(region).toBeEnabled();
 
   // Picked at rest, where the inputs are page content and no count shows.
   await region.click();

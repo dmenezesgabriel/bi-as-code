@@ -30,7 +30,7 @@ test("weekly-review renders the six charts bound to their fences", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const hosts = chartHosts(page);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await expect(readyCharts(page)).toHaveCount(6);
 
   // The aria description is generated from the tag's column bindings.
   await expect(hosts.nth(0)).toHaveAttribute("role", "img");
@@ -242,7 +242,7 @@ test("the scatter, histogram and heatmap tooltips name their bound columns", asy
 async function toggleTheme(page: Page, target: "dark" | "light") {
   await page.getByRole("button", { name: `Switch to ${target} mode` }).click();
   await expect(page.locator(`[data-echarts-theme="${target}"]`)).toHaveCount(6);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await expect(readyCharts(page)).toHaveCount(6);
 }
 
 test("a tooltip shown at 1280 px never widens the page at 375 px", async ({
@@ -366,7 +366,7 @@ test("?region=Atlantis is pruned by the Region dropdown so every chart stays liv
   // Atlantis is not a region option: the dropdown validates the URL value
   // against its loaded options, drops the stale param, and all six charts
   // render their unfiltered read — no empty faces.
-  await expect(page).toHaveURL(/weekly-review$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/weekly-review$/);
   await expect(page.locator("[data-chart-empty]")).toHaveCount(0);
   await expect(readyCharts(page)).toHaveCount(6);
   expect(errors).toEqual([]);
@@ -378,7 +378,7 @@ test("?region=West narrows the filter-declaring charts while the trend charts st
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review?region=West`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await expect(readyCharts(page)).toHaveCount(6);
 
   // Bar: the wrapped `orders` read — one region, one bar.
   const bar = await optionAt(page, 0);
@@ -407,7 +407,7 @@ test("the index page renders a <BarChart> beside its <Table>", async ({
   await page.goto(biacDev.url);
 
   const host = chartHosts(page);
-  await expect(readyCharts(page)).toHaveCount(1, { timeout: 30_000 });
+  await expect(readyCharts(page)).toHaveCount(1);
   await expect(host).toHaveAttribute(
     "aria-label",
     "bar chart of revenue by region",
@@ -477,6 +477,6 @@ testBadRefs(
     await expect(
       page.getByRole("heading", { name: "Weekly review" }),
     ).toBeVisible();
-    await expect(readyCharts(page)).toHaveCount(5, { timeout: 30_000 });
+    await expect(readyCharts(page)).toHaveCount(5);
   },
 );

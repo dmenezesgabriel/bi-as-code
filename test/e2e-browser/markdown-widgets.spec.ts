@@ -42,7 +42,7 @@ test("the page renders the three callout variants with their type tints", async 
   // Document order: Reading guide (info), Concentration risk (warning),
   // Clean lift (success) — each carries its palette as classes.
   const notes = page.getByRole("note");
-  await expect(notes).toHaveCount(3, { timeout: 30_000 });
+  await expect(notes).toHaveCount(3);
   await expect(notes.nth(0)).toHaveClass(/bg-blue-50/);
   await expect(notes.nth(0)).toContainText("Reading guide");
   await expect(notes.nth(1)).toHaveClass(/bg-yellow-50/);
@@ -60,9 +60,7 @@ test("<Details> toggles aria-expanded and reveals its panel", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const trigger = page.getByRole("button", { name: "Metric definitions" });
-  await expect(trigger).toHaveAttribute("aria-expanded", "false", {
-    timeout: 30_000,
-  });
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByText("count of booked orders")).toBeVisible();
@@ -88,9 +86,7 @@ test("the <Details> triggers are at least 24 px tall", async ({
     "How the region filter works",
     "Mobile summary",
   ];
-  await expect(page.getByRole("button", { name: names[0] })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(page.getByRole("button", { name: names[0] })).toBeVisible();
   for (const name of names)
     await expectMinTargetSize(page.getByRole("button", { name }), 24);
   expect(errors).toEqual([]);
@@ -105,18 +101,14 @@ test("<Details openMobile> resolves against the viewport only at mount", async (
   await page.goto(`${biacDev.url}weekly-review`);
 
   const trigger = page.getByRole("button", { name: "Mobile summary" });
-  await expect(trigger).toHaveAttribute("aria-expanded", "false", {
-    timeout: 30_000,
-  });
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
 
   // Resizing past the breakpoint after mount never flips the reader's
   // disclosure — only a fresh load below `md` starts the panel open.
   await page.setViewportSize({ width: 500, height: 720 });
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   await page.reload();
-  await expect(trigger).toHaveAttribute("aria-expanded", "true", {
-    timeout: 30_000,
-  });
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
   expect(errors).toEqual([]);
 });
 
@@ -129,17 +121,13 @@ test("the order-mix tablist switches panels by click and arrow keys", async ({
 
   const chartTab = page.getByRole("tab", { name: "Chart" });
   const tableTab = page.getByRole("tab", { name: "Table" });
-  await expect(chartTab).toHaveAttribute("aria-selected", "true", {
-    timeout: 30_000,
-  });
+  await expect(chartTab).toHaveAttribute("aria-selected", "true");
 
   await tableTab.click();
   await expect(tableTab).toHaveAttribute("aria-selected", "true");
   await expect(chartTab).toHaveAttribute("aria-selected", "false");
   const visiblePanel = page.locator('[role="tabpanel"]:not([hidden])');
-  await expect(visiblePanel.locator("table tbody tr").first()).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(visiblePanel.locator("table tbody tr").first()).toBeVisible();
 
   // Panels stay mounted: the hidden Chart panel keeps its echarts host.
   await expect(
@@ -166,9 +154,7 @@ test("the single accordion closes the open item; the multi accordion keeps both"
 
   const methodology = page.getByRole("button", { name: "Methodology" });
   const quality = page.getByRole("button", { name: "Data quality" });
-  await expect(methodology).toHaveAttribute("aria-expanded", "false", {
-    timeout: 30_000,
-  });
+  await expect(methodology).toHaveAttribute("aria-expanded", "false");
   await expect(quality).toHaveAttribute("aria-expanded", "false");
 
   await quality.click();
@@ -196,7 +182,7 @@ test("the KPI row shares thirds at 1280px and wraps to full-width lines at 500px
   await page.goto(`${biacDev.url}weekly-review`);
 
   const row = kpiRow(page);
-  await expect(row.locator("> *")).toHaveCount(3, { timeout: 30_000 });
+  await expect(row.locator("> *")).toHaveCount(3);
 
   // Wide: one line, equal thirds.
   const wide = await childBoxes(row);

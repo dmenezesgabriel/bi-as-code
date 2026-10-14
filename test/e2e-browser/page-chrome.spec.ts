@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
@@ -10,20 +10,20 @@ function isDark(page: Page): Promise<boolean> {
   );
 }
 
+/** Opens the index page and returns its site navigation once it has rendered. */
+async function openSiteNav(page: Page, url: string): Promise<Locator> {
+  await page.goto(url);
+  const nav = page.getByRole("navigation", { name: "Site navigation" });
+  await expect(nav.getByRole("link", { name: "biac" })).toBeVisible();
+  return nav;
+}
+
 test("sidebar lists the nav tree in config order and highlights the active route", async ({
   page,
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
-  await page.goto(biacDev.url);
-
-  const nav = page.getByRole("navigation", { name: "Site navigation" });
-  // First paint on a fresh dev server can outlast the 10s expect default —
-  // dep re-optimization runs while the suite's parallel servers share one
-  // .vite cache.
-  await expect(nav.getByRole("link", { name: "biac" })).toBeVisible({
-    timeout: 20_000,
-  });
+  const nav = await openSiteNav(page, biacDev.url);
   await expect(
     nav.getByRole("link", { name: "Orders overview" }),
   ).toHaveAttribute("aria-current", "page");
@@ -58,9 +58,7 @@ test("breadcrumbs follow the nav tree from the current route", async ({
   await page.goto(biacDev.url);
 
   const crumbs = page.getByRole("navigation", { name: "breadcrumb" });
-  await expect(crumbs.getByRole("listitem")).toHaveCount(1, {
-    timeout: 20_000,
-  });
+  await expect(crumbs.getByRole("listitem")).toHaveCount(1);
   await expect(crumbs).toHaveText("Orders overview");
   await expect(crumbs.getByRole("link")).toHaveCount(0);
 
@@ -87,7 +85,7 @@ test("table of contents lists h2/h3 and tracks scroll position", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const toc = page.getByRole("navigation", { name: "On this page" });
-  await expect(toc).toBeVisible({ timeout: 20_000 });
+  await expect(toc).toBeVisible();
   await expect(toc.getByRole("link")).toHaveCount(7);
   await expect(toc.locator('[aria-current="location"]')).toHaveText("Overview");
 
@@ -149,11 +147,7 @@ test("editing biac.config.ts reloads the site title", async ({
   biacDev,
 }) => {
   const errors = collectConsoleErrors(page);
-  await page.goto(biacDev.url);
-  const nav = page.getByRole("navigation", { name: "Site navigation" });
-  await expect(nav.getByRole("link", { name: "biac" })).toBeVisible({
-    timeout: 20_000,
-  });
+  const nav = await openSiteNav(page, biacDev.url);
 
   // Rewriting identical bytes still bumps mtime, so each poll attempt
   // re-fires the chokidar event — the same trick the page-edit test uses.
@@ -183,7 +177,7 @@ test("nav.sidebar:false removes the chrome and the article spans the viewport", 
 
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Site navigation" }),
   ).toHaveCount(0);

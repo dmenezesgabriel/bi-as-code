@@ -34,7 +34,7 @@ for (const route of [
     const errors = collectConsoleErrors(page);
     await page.goto(`${biacDev.url}${route}`);
     const title = page.locator("main > h1");
-    await expect(title).toBeVisible({ timeout: 20_000 });
+    await expect(title).toBeVisible();
 
     const h1 = await typeMetrics(title);
     const paragraph = await typeMetrics(page.locator("main > p").first());
@@ -57,7 +57,7 @@ test("section headings step down the scale while widget text keeps its own", asy
   biacDev,
 }) => {
   await page.goto(`${biacDev.url}/weekly-review`);
-  await expect(page.locator("main > h1")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("main > h1")).toBeVisible();
 
   const h2 = await typeMetrics(page.locator("main > h2").first());
   const h3 = await typeMetrics(page.locator("main > h3").first());
@@ -102,7 +102,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme });
     await page.goto(`${biacDev.url}/weekly-review`);
     const link = page.locator("main > p a").first();
-    await expect(link).toBeVisible({ timeout: 20_000 });
+    await expect(link).toBeVisible();
 
     const look = await linkLook(link);
 
@@ -125,7 +125,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     const comment = page
       .locator("main pre.shiki span[style]", { hasText: /^-- composes/ })
       .first();
-    await expect(comment).toBeVisible({ timeout: 20_000 });
+    await expect(comment).toBeVisible();
 
     const colors = await comment.evaluate((span) => ({
       text: getComputedStyle(span).color,
@@ -146,7 +146,7 @@ test("a page link shows a focus outline when reached by keyboard", async ({
 }) => {
   await page.goto(`${biacDev.url}/nested/page`);
   const link = page.locator("main > p a").first();
-  await expect(link).toBeVisible({ timeout: 20_000 });
+  await expect(link).toBeVisible();
 
   await link.focus();
   await page.keyboard.press("Shift+Tab");
@@ -197,7 +197,7 @@ test("a markdown table pads its header cells and rules its rows", async ({
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}/nested/allocation`);
   const table = page.locator("main > table");
-  await expect(table).toBeVisible({ timeout: 20_000 });
+  await expect(table).toBeVisible();
 
   const share = table.getByRole("columnheader", { name: "Share" });
   const orders = table.getByRole("columnheader", { name: "Orders" });
@@ -225,7 +225,7 @@ test("the Table widget keeps its own header cells beside markdown tables", async
   // Only the widget's sortable header carries aria-sort; the page's own
   // GFM table header does not.
   const header = page.locator("main th[aria-sort]:visible").first();
-  await expect(header).toBeVisible({ timeout: 20_000 });
+  await expect(header).toBeVisible();
 
   const look = await cellLook(header);
 
@@ -262,7 +262,7 @@ for (const route of ["/", "/weekly-review"]) {
     await page.goto(`${biacDev.url}${route}`);
     // The highlighted fence's scroller is the parent of shiki's `pre`.
     const scroller = page.locator("main :has(> pre.shiki):visible").first();
-    await expect(scroller).toBeVisible({ timeout: 20_000 });
+    await expect(scroller).toBeVisible();
 
     const scroll = await fenceScroll(scroller);
     await scroller.focus();

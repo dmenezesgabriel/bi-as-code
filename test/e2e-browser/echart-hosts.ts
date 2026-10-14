@@ -171,5 +171,5 @@ export async function openWeeklyReviewCharts(
   url: string,
 ): Promise<void> {
   await page.goto(`${url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6, { timeout: 30_000 });
+  await expect(readyCharts(page)).toHaveCount(6);
 }
