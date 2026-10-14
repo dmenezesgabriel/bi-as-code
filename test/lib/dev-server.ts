@@ -48,6 +48,12 @@ export interface DevServer {
   /** The URL vite advertised, e.g. "http://localhost:51234/". */
   url: string;
   child: ChildProcessWithoutNullStreams;
+  /**
+   * Every line the server has written so far, from spawn on, as
+   * "<ISO time> <stdout|stderr> <text>" with ANSI escapes stripped — the
+   * evidence a failed test reads after the fact.
+   */
+  log(): readonly string[];
   /** Sends SIGINT; resolves with the exit code once the process is gone. */
   stop(): Promise<number | null>;
   kill(): void;
@@ -55,14 +61,18 @@ export interface DevServer {
 
 /**
  * Spawns `bin/biac dev <projectRoot> --port 0`; see {@link startBiacServer}.
+ * `extraEnvironment` adds variables to the child only, e.g. vite's `DEBUG`.
  *
  * @example
  * const server = await startDevServer(projectRoot);
  * const res = await fetch(server.url); // 200
  * await server.stop();
  */
-export function startDevServer(projectRoot: string): Promise<DevServer> {
-  return startBiacServer("dev", projectRoot);
+export function startDevServer(
+  projectRoot: string,
+  extraEnvironment: NodeJS.ProcessEnv = {},
+): Promise<DevServer> {
+  return startBiacServer("dev", projectRoot, extraEnvironment);
 }
 
 /**
@@ -79,23 +89,20 @@ export function startDevServer(projectRoot: string): Promise<DevServer> {
 export function startBiacServer(
   command: "dev" | "preview",
   projectRoot: string,
+  extraEnvironment: NodeJS.ProcessEnv = {},
 ): Promise<DevServer> {
   const child = spawn(
     process.execPath,
     [join(repoRoot, "bin/biac"), command, projectRoot, "--port", "0"],
-    { env: environmentWithoutNodeEnv() },
+    { env: { ...environmentWithoutNodeEnv(), ...extraEnvironment } },
   );
+  const log = recordLog(child);
   return new Promise((resolve, reject) => {
     let output = "";
     const onData = (chunk: Buffer) => {
       output += chunk.toString();
-      // Under FORCE_COLOR (playwright workers set it) vite ANSI-wraps the
-      // port: "http://localhost:\e[1m45047\e[22m/". Strip escapes so the URL
-      // match is color-agnostic.
-      const match = /http:\/\/localhost:\d+\//.exec(
-        output.replace(/\x1b\[[0-9;]*m/g, ""),
-      );
-      if (match) resolve(devServer(match[0], child));
+      const match = /http:\/\/localhost:\d+\//.exec(stripAnsi(output));
+      if (match) resolve(devServer(match[0], child, log));
     };
     child.stdout.on("data", onData);
     child.stderr.on("data", onData);
@@ -105,6 +112,38 @@ export function startBiacServer(
       ),
     );
   });
+}
+
+/**
+ * Collects the child's output for its whole life — a passing server's log
+ * is otherwise never seen, and a hung request is diagnosed from it.
+ */
+function recordLog(child: ChildProcessWithoutNullStreams): string[] {
+  const log: string[] = [];
+  child.stdout.on("data", (chunk: Buffer) =>
+    log.push(...timestampedLines(chunk, "stdout")),
+  );
+  child.stderr.on("data", (chunk: Buffer) =>
+    log.push(...timestampedLines(chunk, "stderr")),
+  );
+  return log;
+}
+
+function timestampedLines(chunk: Buffer, stream: string): string[] {
+  const time = new Date().toISOString();
+  return stripAnsi(chunk.toString())
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => `${time} ${stream} ${line}`);
+}
+
+/**
+ * Under FORCE_COLOR (playwright workers set it) vite ANSI-wraps the port:
+ * "http://localhost:\e[1m45047\e[22m/". Escapes are stripped so the URL
+ * match and the log read color-agnostic.
+ */
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
 /**
@@ -125,10 +164,12 @@ function environmentWithoutNodeEnv(): NodeJS.ProcessEnv {
 function devServer(
   url: string,
   child: ChildProcessWithoutNullStreams,
+  log: readonly string[],
 ): DevServer {
   return {
     url,
     child,
+    log: () => log,
     stop: () =>
       new Promise<number | null>((done) => {
         child.once("exit", done);

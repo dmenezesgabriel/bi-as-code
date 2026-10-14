@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildCli, startDevServer, type DevServer } from "../lib/dev-server.js";
+import { eventually } from "../lib/http.js";
 
 let projectRoot: string | undefined;
 let server: DevServer | undefined;
@@ -57,6 +58,21 @@ describe("biac dev", () => {
     expect(await before.text()).toContain("# Hi");
     expect(saved.status).toBe(204);
     expect(await after.text()).toBe("# Saved\n");
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("keeps its timestamped output for its whole life, debug lines included", async () => {
+    server = await startDevServer(projectRoot!, { DEBUG: "vite:time" });
+
+    await fetch(`${server.url}src/main.tsx`);
+    await eventually(async () =>
+      server!.log().some((line) => line.includes("vite:time")),
+    );
+
+    expect(server.log()).toContainEqual(
+      expect.stringMatching(/^\d{4}-\d\d-\d\dT[\d:.]+Z stdout .*Local:/),
+    );
+    expect(server.log().join("\n")).not.toContain("\x1b[");
     expect(await server.stop()).toBe(0);
   }, 60_000);
 });

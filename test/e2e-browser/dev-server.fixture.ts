@@ -1,15 +1,30 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startDevServer } from "../lib/dev-server.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
+import {
+  describeBlankPage,
+  rootIsEmpty,
+  trackPendingRequests,
+} from "./pending-requests.js";
 
 export interface BiacDev {
   /** Base URL of the spawned dev server, e.g. "http://localhost:51234/". */
   url: string;
   /** Temp project dir holding a copy of the shipped example project. */
   projectDir: string;
+  /**
+   * The page's still-unanswered requests, each re-requested from node, plus
+   * the server's log — what a failed test attaches when `#root` is empty.
+   */
+  blankPageReport(): Promise<string>;
 }
 
 /**
@@ -116,19 +131,48 @@ export function workerPosts(page: Page): Promise<number> {
  * the shipped `pages/` example, so the suite exercises what users clone and
  * hot-reload mutations never touch the repo (or leak between tests).
  */
+/**
+ * vite's per-request timing, sends and per-module transform/load hooks: the
+ * lines that name the last hook a hung module entered.
+ */
+const VITE_REQUEST_DEBUG = "vite:time,vite:send,vite:transform,vite:load";
+
+/**
+ * Test-scoped server: each test gets its own `biac dev` over a fresh copy of
+ * the shipped `pages/` example, so the suite exercises what users clone and
+ * hot-reload mutations never touch the repo (or leak between tests). A test
+ * that fails on a page whose app never mounted gets `blank-page.txt`.
+ */
 export const test = base.extend<{ biacDev: BiacDev }>({
-  // Playwright reads fixture dependencies from the destructured signature —
-  // `page` is named only to satisfy that pattern, the eslint ignore covers
-  // the unused binding.
-  biacDev: async ({ page: _page }, use) => {
+  biacDev: async ({ page }, use, testInfo) => {
     const projectDir = mkdtempSync(join(tmpdir(), "biac-browser-"));
     copyShippedProject(projectDir);
-    const server = await startDevServer(projectDir);
-    await use({ url: server.url, projectDir });
+    const server = await startDevServer(projectDir, {
+      DEBUG: VITE_REQUEST_DEBUG,
+    });
+    const unanswered = trackPendingRequests(page);
+    const blankPageReport = () => describeBlankPage(unanswered(), server.log());
+    await use({ url: server.url, projectDir, blankPageReport });
+    await attachBlankPageReport(page, testInfo, blankPageReport);
     server.kill();
     rmSync(projectDir, { recursive: true, force: true });
   },
 });
+
+/** Runs before the server is killed, so the re-requests still reach it. */
+async function attachBlankPageReport(
+  page: Page,
+  testInfo: TestInfo,
+  blankPageReport: () => Promise<string>,
+): Promise<void> {
+  if (testInfo.status === testInfo.expectedStatus) return;
+  if (!(await rootIsEmpty(page))) return;
+  // Written to disk, not attached as a body: the dot reporter prints a path,
+  // and a file under test-results/ outlives the run's terminal output.
+  const path = testInfo.outputPath("blank-page.txt");
+  writeFileSync(path, await blankPageReport());
+  await testInfo.attach("blank-page.txt", { path, contentType: "text/plain" });
+}
 
 /**
  * One author-error mutation: `from` (first occurrence in the page file) is
