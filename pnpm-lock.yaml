@@ -13,6 +13,11 @@ overrides:
   brace-expansion@^5.0.8: ^5.0.12
   apache-arrow>@types/node: 24.0.10
 
+patchedDependencies:
+  zrender@6.1.0:
+    hash: 6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae
+    path: patches/zrender@6.1.0.patch
+
 importers:
 
   .:
@@ -9402,7 +9407,7 @@ snapshots:
   echarts@6.1.0:
     dependencies:
       tslib: 2.3.0
-      zrender: 6.1.0
+      zrender: 6.1.0(patch_hash=6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae)
 
   effect@4.0.0: {}
 
@@ -13223,7 +13228,7 @@ snapshots:
 
   zod@4.4.3: {}
 
-  zrender@6.1.0:
+  zrender@6.1.0(patch_hash=6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae):
     dependencies:
       tslib: 2.3.0
 

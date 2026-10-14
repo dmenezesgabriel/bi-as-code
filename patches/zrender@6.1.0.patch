@@ -1,0 +1,15 @@
+diff --git a/lib/canvas/Painter.js b/lib/canvas/Painter.js
+index 78dc6c8d46eca79366f5190a7c191410f8133816..42185b2b968e26a5eb1af1ad86d3cb4c486052f5 100644
+--- a/lib/canvas/Painter.js
++++ b/lib/canvas/Painter.js
+@@ -685,6 +685,10 @@ var CanvasPainter = (function () {
+         });
+     };
+     CanvasPainter.prototype.dispose = function () {
++        // A pending `_paintList` continuation (an incremental layer that ran
++        // over its frame budget) bails on a `_redrawId` mismatch; without
++        // this it runs after dispose and reads the nulled `_i.layerStack`.
++        this._redrawId = null;
+         this.root.innerHTML = '';
+         this.root =
+             this.storage =

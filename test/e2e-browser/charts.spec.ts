@@ -372,6 +372,54 @@ test("?region=Atlantis is pruned by the Region dropdown so every chart stays liv
   expect(errors).toEqual([]);
 });
 
+/**
+ * Stand in for a loaded host: while `window.__slowHeatmapFill` is set, every
+ * `fill()` on a canvas inside the heatmap busy-waits 16 ms — one tick past
+ * zrender's 15 ms incremental-layer budget. Wire before the first `goto`.
+ */
+async function slowHeatmapFill(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const fill = CanvasRenderingContext2D.prototype.fill;
+    CanvasRenderingContext2D.prototype.fill = function (
+      this: CanvasRenderingContext2D,
+      ...args: unknown[]
+    ) {
+      const slow = (window as { __slowHeatmapFill?: boolean })
+        .__slowHeatmapFill;
+      if (slow && this.canvas.closest('[aria-label^="heatmap chart"]')) {
+        const until = performance.now() + 16;
+        while (performance.now() < until);
+      }
+      Reflect.apply(fill, this, args);
+    };
+  });
+}
+
+test("a theme flip mid-paint disposes the heatmap without its paint frame reading it", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await slowHeatmapFill(page);
+  await openWeeklyReviewCharts(page, biacDev.url);
+
+  // echarts marks every heatmap rect incremental, so zrender paints the
+  // heatmap under a 15 ms budget and queues the rest for the next frame.
+  // With each rect over budget, the 39 cells paint one per frame — the
+  // next flip re-inits, so disposes, the heatmap while that frame is queued.
+  await page.evaluate(() => {
+    (window as { __slowHeatmapFill?: boolean }).__slowHeatmapFill = true;
+  });
+  for (const target of ["dark", "light", "dark", "light"] as const) {
+    await toggleTheme(page, target);
+  }
+  await page.evaluate(() => {
+    (window as { __slowHeatmapFill?: boolean }).__slowHeatmapFill = false;
+  });
+  await expect(readyCharts(page)).toHaveCount(6);
+  expect(errors).toEqual([]);
+});
+
 test("?region=West narrows the filter-declaring charts while the trend charts stay whole", async ({
   page,
   biacDev,

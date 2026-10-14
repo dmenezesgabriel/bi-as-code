@@ -32,6 +32,14 @@ allowBuilds:
   "@tailwindcss/oxide": true
   esbuild: true
 minimumReleaseAge: 1440
+# zrender's CanvasPainter.dispose leaves a queued incremental-layer paint
+# frame live, which then reads the nulled layer state (`layerStack` of null).
+# echarts 6.1.0 marks every heatmap rect incremental (HeatmapView.render omits
+# getIncrementalId's useIncremental, which defaults to true), so any heatmap
+# unmounted mid-paint hits it. Unfixed on zrender master; drop on upgrade once
+# Painter.dispose resets _redrawId.
+patchedDependencies:
+  zrender@6.1.0: patches/zrender@6.1.0.patch
 trustPolicy: no-downgrade
 # semver@6.3.1 (2023-07-10) is the official ReDoS security backport for the
 # 6.x line — published 3 days after 7.5.4 introduced provenance attestation,
