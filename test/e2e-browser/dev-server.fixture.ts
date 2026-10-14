@@ -22,7 +22,8 @@ export interface BiacDev {
   projectDir: string;
   /**
    * The page's still-unanswered requests, each re-requested from node, plus
-   * the server's log — what a failed test attaches when `#root` is empty.
+   * its errors and the server's log — what a failed test attaches when
+   * `#root` is empty.
    */
   blankPageReport(): Promise<string>;
 }
@@ -151,7 +152,9 @@ export const test = base.extend<{ biacDev: BiacDev }>({
       DEBUG: VITE_REQUEST_DEBUG,
     });
     const unanswered = trackPendingRequests(page);
-    const blankPageReport = () => describeBlankPage(unanswered(), server.log());
+    const pageErrors = collectConsoleErrors(page);
+    const blankPageReport = () =>
+      describeBlankPage(unanswered(), pageErrors, server.log());
     await use({ url: server.url, projectDir, blankPageReport });
     await attachBlankPageReport(page, testInfo, blankPageReport);
     server.kill();

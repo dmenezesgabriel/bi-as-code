@@ -50,3 +50,43 @@ test("names a module the browser never received as a browser-side hang", async (
   expect(report).toMatch(new RegExp(`${stalledUrl} → 200 in \\d+ ms`));
   expect(report).toMatch(/^Verdict: browser side/m);
 });
+
+test("names the page error behind a blank page with nothing pending", async ({
+  page,
+  biacDev,
+}) => {
+  await page.route(`**${STALLED_MODULE}`, (route) =>
+    route.fulfill({
+      contentType: "text/javascript",
+      body: "export {};",
+    }),
+  );
+  const thrown = page.waitForEvent("pageerror");
+  await page.goto(`${biacDev.url}weekly-review`);
+  await thrown;
+
+  const report = await biacDev.blankPageReport();
+
+  expect(await rootIsEmpty(page)).toBe(true);
+  // The stand-in lacks the module's exports, so the graph fails to link
+  // before its body could run — the error a user's console would show too.
+  expect(report).toMatch(/^Page errors \(1\):\n.*run-query\.ts/m);
+});
+
+test("forgets a request whose document was navigated away", async ({
+  page,
+  biacDev,
+}) => {
+  await page.route(`**${STALLED_MODULE}`, () => {});
+  const stalled = page.waitForRequest((r) => r.url().includes(STALLED_MODULE));
+  await page.goto(`${biacDev.url}weekly-review`, { waitUntil: "commit" });
+  await stalled;
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+
+  await page.reload();
+  await expect(page.locator("#root > *")).not.toHaveCount(0);
+
+  const report = await biacDev.blankPageReport();
+  const requestRows = report.slice(0, report.indexOf("\nVerdict:"));
+  expect(requestRows).not.toContain(STALLED_MODULE);
+});

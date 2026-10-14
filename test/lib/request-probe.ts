@@ -17,6 +17,8 @@ export interface RequestProbe {
 export interface BlankPageEvidence {
   readonly unanswered: readonly UnansweredRequest[];
   readonly probes: readonly RequestProbe[];
+  /** Console errors and uncaught exceptions — a mounted app that threw. */
+  readonly pageErrors: readonly string[];
   readonly serverLog: readonly string[];
 }
 
@@ -78,12 +80,12 @@ export function classifyHang(probes: readonly RequestProbe[]): string {
 
 /**
  * The plain-text attachment for a test that failed on a blank page: each
- * unanswered URL with its start time and re-request result, the verdict, and
- * the dev server's log.
+ * unanswered URL with its start time and re-request result, the verdict, the
+ * page's errors and the dev server's log.
  *
  * @example
  * await testInfo.attach("blank-page.txt", {
- *   body: formatBlankPageReport({ unanswered, probes, serverLog }),
+ *   body: formatBlankPageReport({ unanswered, probes, pageErrors, serverLog }),
  * });
  */
 export function formatBlankPageReport(evidence: BlankPageEvidence): string {
@@ -95,6 +97,8 @@ export function formatBlankPageReport(evidence: BlankPageEvidence): string {
     `Blank page: ${rows.length} requests never answered`,
     ...rows,
     `Verdict: ${classifyHang(evidence.probes)}`,
+    `Page errors (${evidence.pageErrors.length}):`,
+    ...evidence.pageErrors,
     `Server log (${evidence.serverLog.length} lines):`,
     ...evidence.serverLog,
   ].join("\n");

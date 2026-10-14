@@ -29,6 +29,10 @@ export class StallingProxy {
         method: incoming.method,
         headers: incoming.headers,
       });
+      // A browser that cancels, or a dev server stopped mid-answer, ends
+      // the pair instead of throwing "socket hang up" into the test.
+      upstream.on("error", () => response.destroy());
+      response.on("close", () => upstream.destroy());
       upstream.on("response", (answer) => {
         response.writeHead(answer.statusCode ?? 502, answer.headers);
         answer.pipe(response);

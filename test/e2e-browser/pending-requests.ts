@@ -11,7 +11,10 @@ const PROBE_TIMEOUT_MS = 10_000;
 /**
  * Records every request `page` issues until it finishes or fails, and returns
  * a reader for the ones still open. Wire it before the first `page.goto`. The
- * HMR websocket is not an HTTP request, so it never shows up.
+ * HMR websocket is not an HTTP request, so it never shows up. A main-frame
+ * navigation forgets the previous document's requests: Chromium cancels them
+ * without always firing `requestfailed`, and a reload (vite's full reload
+ * included) would otherwise report them as unanswered forever.
  *
  * @example
  * const unanswered = trackPendingRequests(page);
@@ -25,6 +28,9 @@ export function trackPendingRequests(page: Page): () => UnansweredRequest[] {
   );
   page.on("requestfinished", (request) => pending.delete(request));
   page.on("requestfailed", (request) => pending.delete(request));
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) pending.clear();
+  });
   return () => [...pending.values()];
 }
 
@@ -47,17 +53,19 @@ export async function rootIsEmpty(page: Page): Promise<boolean> {
 
 /**
  * Re-requests each unanswered URL from node against the still-running server
- * and formats the result with the server's log — see `formatBlankPageReport`.
+ * and formats the result with the page's errors and the server's log — see
+ * `formatBlankPageReport`.
  *
  * @example
- * const report = await describeBlankPage(unanswered(), server.log());
+ * const report = await describeBlankPage(unanswered(), errors, server.log());
  */
 export async function describeBlankPage(
   unanswered: readonly UnansweredRequest[],
+  pageErrors: readonly string[],
   serverLog: readonly string[],
 ): Promise<string> {
   const probes = await Promise.all(
     unanswered.map((request) => probeRequest(request.url, PROBE_TIMEOUT_MS)),
   );
-  return formatBlankPageReport({ unanswered, probes, serverLog });
+  return formatBlankPageReport({ unanswered, probes, pageErrors, serverLog });
 }

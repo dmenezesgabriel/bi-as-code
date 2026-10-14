@@ -112,6 +112,7 @@ describe("formatBlankPageReport", () => {
         { url: hung.url, startedAt },
       ],
       probes: [answered, hung],
+      pageErrors: [],
       serverLog: [
         "2026-10-14T10:00:00.100Z stderr vite:time 3ms /src/main.tsx",
       ],
@@ -123,5 +124,21 @@ describe("formatBlankPageReport", () => {
     expect(report).toContain(`${hung.url} → no answer in 500 ms`);
     expect(report).toMatch(/Verdict: server side/);
     expect(report).toContain("vite:time 3ms /src/main.tsx");
+  });
+
+  it("lists the page's errors, so a blank page with nothing pending still says why", () => {
+    const report = formatBlankPageReport({
+      unanswered: [],
+      probes: [],
+      pageErrors: [
+        "TypeError: Cannot read properties of undefined (reading 'x')",
+      ],
+      serverLog: [],
+    });
+
+    expect(report).toMatch(/no request was pending/);
+    expect(report).toContain(
+      "Page errors (1):\nTypeError: Cannot read properties of undefined (reading 'x')",
+    );
   });
 });
