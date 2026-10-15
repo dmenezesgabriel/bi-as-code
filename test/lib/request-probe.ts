@@ -17,6 +17,11 @@ export interface RequestProbe {
 export interface BlankPageEvidence {
   readonly unanswered: readonly UnansweredRequest[];
   readonly probes: readonly RequestProbe[];
+  /**
+   * Epoch ms the report was taken: a request issued just before a test timed
+   * out is in flight, not hung, and only its age tells the two apart.
+   */
+  readonly takenAt: number;
   /** Console errors and uncaught exceptions — a mounted app that threw. */
   readonly pageErrors: readonly string[];
   readonly serverLog: readonly string[];
@@ -80,18 +85,18 @@ export function classifyHang(probes: readonly RequestProbe[]): string {
 
 /**
  * The plain-text attachment for a test that failed on a blank page: each
- * unanswered URL with its start time and re-request result, the verdict, the
+ * unanswered URL with its start time, age and re-request result, the verdict, the
  * page's errors and the dev server's log.
  *
  * @example
  * await testInfo.attach("blank-page.txt", {
- *   body: formatBlankPageReport({ unanswered, probes, pageErrors, serverLog }),
+ *   body: formatBlankPageReport({ unanswered, probes, takenAt, pageErrors, serverLog }),
  * });
  */
 export function formatBlankPageReport(evidence: BlankPageEvidence): string {
   const rows = evidence.unanswered.map(
     (request, index) =>
-      `${new Date(request.startedAt).toISOString()} ${request.url} → ${describeProbe(evidence.probes[index])}`,
+      `${new Date(request.startedAt).toISOString()} pending ${evidence.takenAt - request.startedAt} ms ${request.url} → ${describeProbe(evidence.probes[index])}`,
   );
   return [
     `Blank page: ${rows.length} requests never answered`,

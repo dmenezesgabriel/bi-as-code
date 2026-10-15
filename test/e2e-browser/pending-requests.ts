@@ -64,8 +64,15 @@ export async function describeBlankPage(
   pageErrors: readonly string[],
   serverLog: readonly string[],
 ): Promise<string> {
+  const takenAt = Date.now();
   const probes = await Promise.all(
     unanswered.map((request) => probeRequest(request.url, PROBE_TIMEOUT_MS)),
   );
-  return formatBlankPageReport({ unanswered, probes, pageErrors, serverLog });
+  return formatBlankPageReport({
+    unanswered,
+    probes,
+    takenAt,
+    pageErrors,
+    serverLog,
+  });
 }

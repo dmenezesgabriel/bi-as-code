@@ -103,7 +103,7 @@ describe("classifyHang", () => {
 });
 
 describe("formatBlankPageReport", () => {
-  it("lists each unanswered URL with its start time, its re-request and the server log", () => {
+  it("lists each unanswered URL with its start time, its age, its re-request and the server log", () => {
     const startedAt = Date.parse("2026-10-14T10:00:00.000Z");
 
     const report = formatBlankPageReport({
@@ -112,6 +112,7 @@ describe("formatBlankPageReport", () => {
         { url: hung.url, startedAt },
       ],
       probes: [answered, hung],
+      takenAt: startedAt + 1_300,
       pageErrors: [],
       serverLog: [
         "2026-10-14T10:00:00.100Z stderr vite:time 3ms /src/main.tsx",
@@ -119,7 +120,7 @@ describe("formatBlankPageReport", () => {
     });
 
     expect(report).toContain(
-      `2026-10-14T10:00:00.000Z ${answered.url} → 200 in 12 ms`,
+      `2026-10-14T10:00:00.000Z pending 1300 ms ${answered.url} → 200 in 12 ms`,
     );
     expect(report).toContain(`${hung.url} → no answer in 500 ms`);
     expect(report).toMatch(/Verdict: server side/);
@@ -130,6 +131,7 @@ describe("formatBlankPageReport", () => {
     const report = formatBlankPageReport({
       unanswered: [],
       probes: [],
+      takenAt: 0,
       pageErrors: [
         "TypeError: Cannot read properties of undefined (reading 'x')",
       ],
