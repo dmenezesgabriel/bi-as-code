@@ -78,12 +78,12 @@ export function MultiSelectField({
         {title !== undefined && (
           <label
             htmlFor={id}
-            className="mb-1 block cursor-default text-sm font-medium text-neutral-700 dark:text-neutral-300"
+            className="mb-1 block cursor-default text-sm font-medium text-label"
           >
             {title}
           </label>
         )}
-        <Combobox.InputGroup className="flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm text-neutral-900 select-none hover:bg-neutral-50 focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-neutral-500 data-disabled:cursor-not-allowed data-disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800">
+        <Combobox.InputGroup className="flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2 py-1 text-sm text-foreground select-none hover:bg-accent focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-ring data-disabled:cursor-not-allowed data-disabled:opacity-60">
           <Combobox.Value>
             {(selected: readonly string[]) => (
               <SelectionChips
@@ -97,9 +97,9 @@ export function MultiSelectField({
             )}
           </Combobox.Value>
           {loading ? (
-            <LoaderCircleIcon className="ml-auto shrink-0 self-center text-neutral-500" />
+            <LoaderCircleIcon className="ml-auto shrink-0 self-center text-muted-foreground-faded" />
           ) : (
-            <Combobox.Icon className="ml-auto shrink-0 self-center text-neutral-500">
+            <Combobox.Icon className="ml-auto shrink-0 self-center text-muted-foreground-faded">
               <ChevronDownIcon />
             </Combobox.Icon>
           )}
@@ -138,13 +138,13 @@ export function SingleSelectField({
         disabled={loading || !filter}
       >
         {title !== undefined && (
-          <Combobox.Label className="mb-1 block cursor-default text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <Combobox.Label className="mb-1 block cursor-default text-sm font-medium text-label">
             {title}
           </Combobox.Label>
         )}
         <Combobox.Trigger
           id={id}
-          className="flex h-8 w-full cursor-default items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-2 text-sm text-neutral-900 select-none hover:bg-neutral-50 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-500 disabled:cursor-not-allowed disabled:opacity-60 data-placeholder:text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800 dark:data-placeholder:text-neutral-400"
+          className="flex h-8 w-full cursor-default items-center justify-between gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60 data-placeholder:text-muted-foreground-faded"
         >
           <Combobox.Value>
             {(selected: string | null) =>
@@ -152,9 +152,9 @@ export function SingleSelectField({
             }
           </Combobox.Value>
           {loading ? (
-            <LoaderCircleIcon className="shrink-0 text-neutral-500" />
+            <LoaderCircleIcon className="shrink-0 text-muted-foreground-faded" />
           ) : (
-            <Combobox.Icon className="shrink-0 text-neutral-500">
+            <Combobox.Icon className="shrink-0 text-muted-foreground-faded">
               <ChevronDownIcon />
             </Combobox.Icon>
           )}
@@ -200,19 +200,19 @@ function SelectionChips({
           key={value}
           aria-label={labelFor(value)}
           aria-description="Press Backspace or Delete to remove"
-          className="flex h-5 items-center gap-1 rounded bg-neutral-100 pr-0.5 pl-1.5 text-xs text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200"
+          className="flex h-5 items-center gap-1 rounded bg-accent pr-0.5 pl-1.5 text-xs text-accent-foreground"
         >
           <span className="max-w-40 truncate">{labelFor(value)}</span>
           <Combobox.ChipRemove
             aria-label={`Remove ${labelFor(value)}`}
-            className="flex size-4 cursor-default items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-100"
+            className="flex size-4 cursor-default items-center justify-center rounded text-muted-foreground-faded hover:bg-secondary hover:text-foreground"
           >
             <XIcon />
           </Combobox.ChipRemove>
         </Combobox.Chip>
       ))}
       {values.length > 4 && (
-        <span className="px-1 text-xs text-neutral-500 dark:text-neutral-400">
+        <span className="px-1 text-xs text-muted-foreground-faded">
           +{values.length - 3} more
         </span>
       )}
@@ -225,7 +225,7 @@ function SelectionChips({
             ? `${values.length} selected. From the start of the input, press Left Arrow to focus the selected items`
             : undefined
         }
-        className="h-5 min-w-12 flex-1 bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-500 dark:text-neutral-100 dark:placeholder:text-neutral-400"
+        className="h-5 min-w-12 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground-faded"
       />
     </Combobox.Chips>
   );
@@ -259,20 +259,20 @@ export function SelectPopup({
       >
         <Combobox.Popup
           aria-label={label}
-          className="w-[var(--anchor-width)] min-w-40 overflow-hidden rounded-md border border-neutral-300 bg-white text-sm text-neutral-900 shadow-lg dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          className="w-[var(--anchor-width)] min-w-40 overflow-hidden rounded-md border border-input bg-popover text-sm text-foreground shadow-lg"
         >
           {search && (
-            <div className="flex items-center gap-1 border-b border-neutral-200 pr-2 dark:border-neutral-700">
-              <SearchIcon className="ml-2 shrink-0 text-neutral-400" />
+            <div className="flex items-center gap-1 border-b border-popover-border pr-2">
+              <SearchIcon className="ml-2 shrink-0 text-muted-foreground-faded" />
               <Combobox.Input
                 aria-label="Search"
                 placeholder="Search"
-                className="h-8 w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-500 dark:text-neutral-100 dark:placeholder:text-neutral-400"
+                className="h-8 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground-faded"
               />
             </div>
           )}
           <Combobox.Empty>
-            <div className="px-2 py-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+            <div className="px-2 py-1.5 text-sm text-muted-foreground-faded">
               No options found
             </div>
           </Combobox.Empty>
@@ -281,7 +281,7 @@ export function SelectPopup({
               <Combobox.Item
                 key={item.value}
                 value={item.value}
-                className="grid cursor-default grid-cols-[1rem_1fr] items-center gap-2 px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-neutral-100 dark:data-highlighted:bg-neutral-800"
+                className="grid cursor-default grid-cols-[1rem_1fr] items-center gap-2 px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-accent"
               >
                 <Combobox.ItemIndicator className="col-start-1">
                   <CheckIcon />
@@ -293,9 +293,9 @@ export function SelectPopup({
             )}
           </Combobox.List>
           {clear && (
-            <div className="border-t border-neutral-200 dark:border-neutral-700">
+            <div className="border-t border-popover-border">
               {onSelectAll && <SelectAllButton onSelectAll={onSelectAll} />}
-              <Combobox.Clear className="w-full cursor-default px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100 data-[visible]:not-last:border-b-0 dark:text-neutral-300 dark:hover:bg-neutral-800">
+              <Combobox.Clear className="w-full cursor-default px-3 py-1.5 text-left text-sm text-label hover:bg-accent data-[visible]:not-last:border-b-0">
                 Clear
               </Combobox.Clear>
             </div>
@@ -322,7 +322,7 @@ function SelectAllButton({
   return (
     <button
       type="button"
-      className="w-full cursor-default px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+      className="w-full cursor-default px-3 py-1.5 text-left text-sm text-label hover:bg-accent"
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onSelectAll(filtered.map((item) => item.value))}
     >

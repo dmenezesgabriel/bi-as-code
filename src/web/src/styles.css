@@ -31,6 +31,12 @@
   --ring: #737373; /* neutral-500 */
   --popover: #ffffff; /* white */
   --popover-border: #e5e5e5; /* neutral-200 */
+  --input: #d4d4d4; /* neutral-300 — form control borders */
+  --field: #ffffff; /* white — form control surface */
+  --label: #404040; /* neutral-700 */
+  --primary: #171717; /* neutral-900 — filled, selected, checked */
+  --primary-foreground: #ffffff; /* white */
+  --secondary: #e5e5e5; /* neutral-200 — unfilled slider/switch track */
   --chart-axis: #a1a1a1; /* neutral-400 */
   --chart-label-inside: #ffffff; /* white — sits on the series fill */
   --chart-1: #2563eb; /* blue-600 */
@@ -62,6 +68,12 @@
   --ring: #737373; /* neutral-500 */
   --popover: #171717; /* neutral-900 */
   --popover-border: #404040; /* neutral-700 */
+  --input: #404040; /* neutral-700 — form control borders */
+  --field: #171717; /* neutral-900 — form control surface */
+  --label: #d4d4d4; /* neutral-300 */
+  --primary: #e5e5e5; /* neutral-200 — filled, selected, checked */
+  --primary-foreground: #171717; /* neutral-900 */
+  --secondary: #404040; /* neutral-700 — unfilled slider/switch track */
   --chart-axis: #525252; /* neutral-600 */
   --chart-label-inside: #ffffff; /* white — sits on the series fill */
   --chart-1: #2563eb; /* blue-600 */
@@ -91,6 +103,14 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-overlay: var(--overlay);
   --color-ring: var(--ring);
+  --color-popover: var(--popover);
+  --color-popover-border: var(--popover-border);
+  --color-input: var(--input);
+  --color-field: var(--field);
+  --color-label: var(--label);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
 }
 
 /* Shiki dual-theme fences: codeToHtml emits the light theme as a literal

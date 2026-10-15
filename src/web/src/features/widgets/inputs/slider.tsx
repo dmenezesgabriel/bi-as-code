@@ -30,7 +30,7 @@ function sameSliderValue(a: SliderValue, b: SliderValue): boolean {
 }
 
 const thumbClass =
-  "block size-4 cursor-grab rounded-full border-2 border-neutral-900 bg-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500 data-dragging:cursor-grabbing disabled:cursor-not-allowed dark:border-neutral-200 dark:bg-neutral-900";
+  "block size-4 cursor-grab rounded-full border-2 border-primary bg-field shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-dragging:cursor-grabbing disabled:cursor-not-allowed";
 
 interface SliderSource {
   /** Finite column extrema, `{}` when the query can't supply them. */
@@ -202,14 +202,14 @@ function SliderField({
         disabled={disabled}
       >
         <div className="mb-1 flex items-baseline justify-between gap-2">
-          <SliderPrimitive.Label className="cursor-default truncate text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <SliderPrimitive.Label className="cursor-default truncate text-sm font-medium text-label">
             {label}
           </SliderPrimitive.Label>
-          <SliderPrimitive.Value className="shrink-0 text-sm font-normal text-neutral-500 dark:text-neutral-400" />
+          <SliderPrimitive.Value className="shrink-0 text-sm font-normal text-muted-foreground-faded" />
         </div>
         <SliderPrimitive.Control className="flex h-5 items-center">
-          <SliderPrimitive.Track className="relative h-1 w-full rounded-full bg-neutral-200 dark:bg-neutral-700">
-            <SliderPrimitive.Indicator className="absolute h-full rounded-full bg-neutral-900 dark:bg-neutral-200" />
+          <SliderPrimitive.Track className="relative h-1 w-full rounded-full bg-secondary">
+            <SliderPrimitive.Indicator className="absolute h-full rounded-full bg-primary" />
             {range ? (
               <>
                 <SliderPrimitive.Thumb
@@ -228,7 +228,7 @@ function SliderField({
             )}
           </SliderPrimitive.Track>
         </SliderPrimitive.Control>
-        <div className="mt-1 flex justify-between text-xs text-neutral-500 select-none dark:text-neutral-400">
+        <div className="mt-1 flex justify-between text-xs text-muted-foreground-faded select-none">
           <span>{bounds.min}</span>
           <span>{bounds.max}</span>
         </div>
@@ -254,14 +254,12 @@ function PinnedSliderReadout({
   return (
     <div className="relative mb-4 min-h-16 w-64">
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-medium text-neutral-700 dark:text-neutral-300">
-          {label}
-        </span>
-        <span className="shrink-0 text-sm font-normal text-neutral-500 dark:text-neutral-400">
+        <span className="truncate text-sm font-medium text-label">{label}</span>
+        <span className="shrink-0 text-sm font-normal text-muted-foreground-faded">
           {value}
         </span>
       </div>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="text-xs text-muted-foreground-faded">
         only one value in range
       </p>
     </div>

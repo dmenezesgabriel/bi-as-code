@@ -142,7 +142,7 @@ describe("FilterBar", () => {
       // render and flash back when the observer lands.
       expect(bar().className).toContain("border-transparent");
       expect(bar().className).toContain("shadow-none");
-      expect(bar().className).not.toContain(" bg-white");
+      expect(bar().className).not.toContain(" bg-background");
     });
 
     it("gains the floating card style when the sentinel leaves the viewport", () => {
@@ -152,8 +152,8 @@ describe("FilterBar", () => {
       act(() => io.fire(false));
 
       const el = bar();
-      expect(el.className).toContain("border-neutral-200");
-      expect(el.className).toContain("bg-white");
+      expect(el.className).toContain("border-border");
+      expect(el.className).toContain("bg-background");
       expect(el.className).toContain("px-4");
       expect(el.className).toContain("shadow");
       expect(el.className).not.toContain("border-transparent");
@@ -169,7 +169,7 @@ describe("FilterBar", () => {
       const el = bar();
       expect(el.className).toContain("border-transparent");
       expect(el.className).toContain("shadow-none");
-      expect(el.className).not.toContain(" bg-white");
+      expect(el.className).not.toContain(" bg-background");
     });
 
     it("disconnects the sentinel observer on unmount", () => {

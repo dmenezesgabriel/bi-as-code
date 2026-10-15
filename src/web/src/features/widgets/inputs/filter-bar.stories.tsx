@@ -11,7 +11,7 @@ import type { FilterBarProps } from "./types";
 const field = (label: string) => (
   <div
     key={label}
-    className="mb-4 flex h-9 w-40 items-center rounded-md border border-neutral-300 px-3 text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
+    className="mb-4 flex h-9 w-40 items-center rounded-md border border-input px-3 text-sm text-muted-foreground-faded"
   >
     {label}
   </div>
@@ -52,7 +52,7 @@ export const Default: Story = {
     }
     await expect(bar.className).toContain("top-(--dock-top,4rem)");
     await expect(bar.className).toContain("border-transparent");
-    await expect(bar.className).not.toContain(" bg-white");
+    await expect(bar.className).not.toContain(" bg-background");
     await expect(canvas.queryByRole("button", { name: "Filters" })).toBeNull();
   },
 };
@@ -86,13 +86,16 @@ function ScrollingReport({ inputs = TWO_INPUTS }: { inputs?: ReactNode }) {
   return (
     <>
       <h1 className="mb-4 text-2xl font-semibold">Weekly review</h1>
-      <p className="mb-8 max-w-prose text-sm text-neutral-600 dark:text-neutral-400">
+      <p className="mb-8 max-w-prose text-sm text-muted-foreground">
         The lead-in keeps the sentinel inside the viewport at rest — the bar's
         card face must appear only once the bar has actually docked, never on
         first paint.
       </p>
       <FilterBar>{inputs}</FilterBar>
-      <div className="text-sm text-neutral-500" style={{ height: "200vh" }}>
+      <div
+        className="text-sm text-muted-foreground-faded"
+        style={{ height: "200vh" }}
+      >
         Report content scrolls beneath the pinned bar.
       </div>
     </>
@@ -125,13 +128,13 @@ export const FloatsOnScroll: Story = {
     await expect(stickyBar(canvas).className).toContain("border-transparent");
 
     const bar = await dockBar(canvas);
-    await expect(bar.className).toContain(" bg-white");
+    await expect(bar.className).toContain(" bg-background");
     await expect(bar.className).toContain("shadow");
     expect(Math.round(bar.getBoundingClientRect().top)).toBe(64);
 
     window.scrollTo(0, 0);
     await waitFor(() => expect(bar.className).toContain("border-transparent"));
-    await expect(bar.className).not.toContain(" bg-white");
+    await expect(bar.className).not.toContain(" bg-background");
     await expect(canvas.queryByRole("button", { name: "Filters" })).toBeNull();
     await expect(canvas.getByLabelText("Region")).toBeVisible();
   },

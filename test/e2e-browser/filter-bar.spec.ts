@@ -30,7 +30,7 @@ test("the FilterBar docks at 64px as one Filters row, holds the page still and i
   // At rest the card face is down — transparent border, no background —
   // and the bar is page content: every input shown, no trigger.
   await expect(bar).toHaveClass(/border-transparent/);
-  await expect(bar).not.toHaveClass(/bg-white/);
+  await expect(bar).not.toHaveClass(/bg-background/);
   await expect(filters).toHaveCount(0);
   await expect(toggle).toBeVisible();
   // The bar is in flow, so what the page keeps is its height plus the
@@ -50,7 +50,7 @@ test("the FilterBar docks at 64px as one Filters row, holds the page still and i
   // default 4rem dock line, below the `h-12` header), gains the card face
   // and shrinks to one `Filters` row with the inputs out of reach.
   await page.evaluate(() => window.scrollTo(0, 600));
-  await expect(bar).toHaveClass(/bg-white/);
+  await expect(bar).toHaveClass(/bg-background/);
   await expect(bar).toHaveClass(/shadow/);
   await expect(filters).toHaveAttribute("aria-expanded", "false");
   await expect(toggle).toBeHidden();
@@ -82,7 +82,7 @@ test("the FilterBar docks at 64px as one Filters row, holds the page still and i
   // Back at the top the card face drops as the sentinel re-enters.
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(bar).toHaveClass(/border-transparent/);
-  await expect(bar).not.toHaveClass(/bg-white/);
+  await expect(bar).not.toHaveClass(/bg-background/);
   await expect(filters).toHaveCount(0);
   await expect(toggle).toBeChecked();
   expect(errors).toEqual([]);

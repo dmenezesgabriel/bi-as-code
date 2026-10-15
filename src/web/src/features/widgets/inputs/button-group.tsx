@@ -6,7 +6,7 @@ import type { ButtonGroupProps } from "./types";
 import { toSelectionArray, useSelectInput } from "./use-select-input";
 
 const toggleClass =
-  "inline-flex h-8 shrink-0 cursor-default items-center border-r border-neutral-300 px-3 text-sm text-neutral-900 select-none last:border-r-0 hover:bg-neutral-50 focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-500 disabled:cursor-not-allowed disabled:opacity-60 data-pressed:bg-neutral-900 data-pressed:text-white data-pressed:hover:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-800 dark:data-pressed:bg-neutral-200 dark:data-pressed:text-neutral-900 dark:data-pressed:hover:bg-neutral-300";
+  "inline-flex h-8 shrink-0 cursor-default items-center border-r border-input px-3 text-sm text-foreground select-none last:border-r-0 hover:bg-accent focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60 data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90";
 
 /**
  * The `<ButtonGroup>` MDX widget — a segmented control filter input: one
@@ -40,10 +40,7 @@ export function ButtonGroup({
   const labelId = `${props.id}-label`;
   return (
     <div className="relative mb-4 max-w-full">
-      <span
-        id={labelId}
-        className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-      >
+      <span id={labelId} className="mb-1 block text-sm font-medium text-label">
         {label}
       </span>
       <div className="overflow-x-auto pb-1">
@@ -56,14 +53,14 @@ export function ButtonGroup({
           multiple={multiple}
           disabled={loading || !filter || items.length === 0}
           aria-labelledby={labelId}
-          className="inline-flex w-fit items-stretch overflow-hidden rounded-md border border-neutral-300 bg-white data-disabled:opacity-80 dark:border-neutral-700 dark:bg-neutral-900"
+          className="inline-flex w-fit items-stretch overflow-hidden rounded-md border border-input bg-field data-disabled:opacity-80"
         >
           {items.length === 0 ? (
             <Toggle value="__empty" disabled className={toggleClass}>
               {loading ? (
-                <LoaderCircleIcon className="text-neutral-500" />
+                <LoaderCircleIcon className="text-muted-foreground-faded" />
               ) : (
-                <span className="text-neutral-500 dark:text-neutral-400">
+                <span className="text-muted-foreground-faded">
                   No options available
                 </span>
               )}

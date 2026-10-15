@@ -59,7 +59,7 @@ export function TextInput({
     <div className="relative mb-4 w-64">
       <label
         htmlFor={id}
-        className="mb-1 block cursor-default truncate text-sm font-medium text-neutral-700 dark:text-neutral-300"
+        className="mb-1 block cursor-default truncate text-sm font-medium text-label"
       >
         {title ?? titleCase(id)}
       </label>
@@ -73,7 +73,7 @@ export function TextInput({
         }}
         placeholder={placeholder ?? "Enter text..."}
         disabled={!filter}
-        className="h-8 w-full rounded-md border border-neutral-300 bg-white px-2 text-sm text-neutral-900 placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-400"
+        className="h-8 w-full rounded-md border border-input bg-field px-2 text-sm text-foreground placeholder:text-muted-foreground-faded focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
       />
     </div>
   );

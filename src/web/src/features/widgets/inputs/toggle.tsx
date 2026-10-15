@@ -5,13 +5,13 @@ import { titleCase } from "./option-items";
 import type { ToggleProps } from "./types";
 
 const rowBase =
-  "mb-4 flex h-9 w-fit items-center gap-3 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-xs dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100";
+  "mb-4 flex h-9 w-fit items-center gap-3 rounded-md border border-input bg-field px-3 py-2 text-sm text-foreground shadow-xs";
 
 const switchClass =
-  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-neutral-200 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500 data-checked:bg-neutral-900 data-disabled:cursor-not-allowed data-disabled:opacity-60 dark:bg-neutral-700 dark:data-checked:bg-neutral-200";
+  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-secondary transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-checked:bg-primary data-disabled:cursor-not-allowed data-disabled:opacity-60";
 
 const thumbClass =
-  "absolute start-0.5 block size-4 rounded-full bg-white shadow-sm transition-transform data-checked:translate-x-4 dark:bg-neutral-900 dark:data-checked:bg-neutral-800";
+  "absolute start-0.5 block size-4 rounded-full bg-field shadow-sm transition-transform data-checked:translate-x-4 data-checked:bg-primary-foreground";
 
 /**
  * The `<Toggle>` MDX widget — a boolean switch filter input (evidence's

@@ -15,10 +15,10 @@ import {
 import type { DateRangeProps } from "./types";
 
 const triggerClass =
-  "flex h-8 w-full cursor-default items-center gap-2 rounded-md border border-neutral-300 bg-white px-2 text-sm text-neutral-900 select-none hover:bg-neutral-50 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800";
+  "flex h-8 w-full cursor-default items-center gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const fieldClass =
-  "h-7 w-full rounded-md border border-neutral-300 bg-white px-1.5 text-sm text-neutral-900 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100";
+  "h-7 w-full rounded-md border border-input bg-field px-1.5 text-sm text-foreground focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring";
 
 /** Evidence's `getDisplayText`: a held preset shows its label, a held
  * expression renders verbatim, and nothing held reads "All Time". */
@@ -53,7 +53,7 @@ function RangeFields({
   readonly bounds: { readonly start?: string; readonly end?: string };
 }): ReactElement {
   return (
-    <div className="flex items-center gap-2 border-t border-neutral-200 px-3 py-2 dark:border-neutral-700">
+    <div className="flex items-center gap-2 border-t border-popover-border px-3 py-2">
       <Input
         type="date"
         aria-label="Start date"
@@ -63,7 +63,7 @@ function RangeFields({
         }}
         className={fieldClass}
       />
-      <span className="text-xs text-neutral-500 dark:text-neutral-400">to</span>
+      <span className="text-xs text-muted-foreground-faded">to</span>
       <Input
         type="date"
         aria-label="End date"
@@ -123,13 +123,13 @@ export function DateRange({
     <div className="relative mb-4 w-64">
       <label
         htmlFor={id}
-        className="mb-1 block cursor-default truncate text-sm font-medium text-neutral-700 dark:text-neutral-300"
+        className="mb-1 block cursor-default truncate text-sm font-medium text-label"
       >
         {title ?? titleCase(id)}
       </label>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger id={id} disabled={!filter} className={triggerClass}>
-          <CalendarIcon className="shrink-0 text-neutral-500" />
+          <CalendarIcon className="shrink-0 text-muted-foreground-faded" />
           <span className="truncate">{displayText(held)}</span>
         </Popover.Trigger>
         <Popover.Portal>
@@ -140,7 +140,7 @@ export function DateRange({
           >
             <Popover.Popup
               aria-label={`${title ?? titleCase(id)} range`}
-              className="w-56 overflow-hidden rounded-md border border-neutral-300 bg-white text-sm text-neutral-900 shadow-lg dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+              className="w-56 overflow-hidden rounded-md border border-input bg-popover text-sm text-foreground shadow-lg"
             >
               <div className="flex flex-col py-1">
                 {DATE_RANGE_PRESETS.map((preset) => {
@@ -152,7 +152,7 @@ export function DateRange({
                       key={preset.key}
                       type="button"
                       aria-pressed={active}
-                      className="cursor-default px-3 py-1.5 text-left text-sm text-neutral-700 outline-none hover:bg-neutral-100 focus-visible:bg-neutral-100 aria-pressed:bg-neutral-100 aria-pressed:font-medium dark:text-neutral-300 dark:hover:bg-neutral-800 dark:focus-visible:bg-neutral-800 dark:aria-pressed:bg-neutral-800"
+                      className="cursor-default px-3 py-1.5 text-left text-sm text-label outline-none hover:bg-accent focus-visible:bg-accent aria-pressed:bg-accent aria-pressed:font-medium"
                       onClick={() => {
                         if (filter) filter.value = preset.key;
                         setOpen(false);

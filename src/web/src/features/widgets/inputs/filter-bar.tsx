@@ -26,8 +26,7 @@ export const DOCKED_ROW_HEIGHT = "2.5rem";
 // half the viewport: the row above them (2.5rem) and the gap (0.25rem) count.
 const OPENED_PANEL_BOUNDS = "max-h-[calc(50dvh-2.75rem)] overflow-y-auto";
 
-const CARD_FACE =
-  "border-neutral-200 bg-white px-4 shadow dark:border-neutral-800 dark:bg-neutral-950";
+const CARD_FACE = "border-border bg-background px-4 shadow";
 
 /**
  * The `<FilterBar>` MDX widget — evidence's `filter_bar` ported to our
@@ -150,7 +149,7 @@ function FiltersTrigger({
       ref={ref}
       aria-labelledby={labelId}
       aria-describedby={activeCount > 0 ? countId : undefined}
-      className="group flex min-h-6 cursor-pointer items-center gap-0.5 text-sm text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100"
+      className="group flex min-h-6 cursor-pointer items-center gap-0.5 text-sm text-label hover:text-foreground"
     >
       <ChevronDownIcon className="shrink-0 -rotate-90 transition-transform group-data-panel-open:rotate-0" />
       <span id={labelId}>Filters</span>
