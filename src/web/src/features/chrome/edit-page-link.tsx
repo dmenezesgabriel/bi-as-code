@@ -4,7 +4,7 @@ import { isEditSearch } from "../editor/edit-search";
 type PageSearch = Record<string, unknown>;
 
 const LINK_CLASS =
-  "ml-2 rounded px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
+  "ml-2 rounded px-2 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground";
 
 /**
  * Header toggle between a page and its source editor: `Edit` adds the

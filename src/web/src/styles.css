@@ -4,6 +4,68 @@
    inline script in index.html sets it before first paint. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Theme tokens: every chrome colour, light on :root and dark on .dark, so a
+   component names one utility (`bg-background`) and gets both modes. Values
+   are hex, not Tailwind 4's oklch, because the ECharts theme reads these
+   back and zrender's colour parser has no oklch (ADR-0014). Each value is
+   the sRGB rendering of the Tailwind neutral it replaced. */
+:root {
+  --background: #ffffff; /* white */
+  --foreground: #171717; /* neutral-900 */
+  --muted: #f5f5f5; /* neutral-100 */
+  --muted-foreground: #525252; /* neutral-600 */
+  --muted-foreground-faded: #737373; /* neutral-500 */
+  --accent: #f5f5f5; /* neutral-100 */
+  --accent-foreground: #171717; /* neutral-900 */
+  --border: #e5e5e5; /* neutral-200 */
+  --border-strong: #d4d4d4; /* neutral-300 */
+  --separator: #d4d4d4; /* neutral-300 */
+  --indicator: #404040; /* neutral-700 */
+  --sidebar: #fafafa; /* neutral-50 */
+  --sidebar-foreground: #404040; /* neutral-700 */
+  --sidebar-accent: #e5e5e5; /* neutral-200 */
+  --overlay: rgb(0 0 0 / 20%);
+  --ring: #737373; /* neutral-500 */
+}
+
+.dark {
+  --background: #0a0a0a; /* neutral-950 */
+  --foreground: #f5f5f5; /* neutral-100 */
+  --muted: #171717; /* neutral-900 */
+  --muted-foreground: #a1a1a1; /* neutral-400 */
+  --muted-foreground-faded: #a1a1a1; /* neutral-400 */
+  --accent: #262626; /* neutral-800 */
+  --accent-foreground: #f5f5f5; /* neutral-100 */
+  --border: #262626; /* neutral-800 */
+  --border-strong: #404040; /* neutral-700 */
+  --separator: #525252; /* neutral-600 */
+  --indicator: #a1a1a1; /* neutral-400 */
+  --sidebar: #171717; /* neutral-900 */
+  --sidebar-foreground: #d4d4d4; /* neutral-300 */
+  --sidebar-accent: #404040; /* neutral-700 */
+  --overlay: rgb(0 0 0 / 50%);
+  --ring: #737373; /* neutral-500 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted-foreground-faded: var(--muted-foreground-faded);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-separator: var(--separator);
+  --color-indicator: var(--indicator);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-overlay: var(--overlay);
+  --color-ring: var(--ring);
+}
+
 /* Shiki dual-theme fences: codeToHtml emits the light theme as a literal
    color plus a --shiki-dark (and --shiki-dark-bg) custom property per
    token; under .dark the dark values take over. !important beats the

@@ -14,7 +14,7 @@ import { highlightFence } from "./shiki-highlighter";
 // https://dequeuniversity.com/rules/axe/4.10/scrollable-region-focusable),
 // so it takes `tabIndex={0}` and the inputs' focus-visible outline.
 const FENCE_SCROLLER_CLASS =
-  "overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500";
+  "overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 // Shiki paints the fence background on its own `pre`; without this the
 // `pre` stays as wide as the scroller and the background ends where the

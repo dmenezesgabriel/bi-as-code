@@ -38,8 +38,7 @@ const preview: Preview = {
     (Story, context) => (
       <div
         className={cn(
-          "min-h-screen w-full bg-white px-6 py-6 text-neutral-900",
-          "dark:bg-neutral-950 dark:text-neutral-100",
+          "min-h-screen w-full bg-background px-6 py-6 text-foreground",
           context.globals.theme === "dark" && "dark",
         )}
       >

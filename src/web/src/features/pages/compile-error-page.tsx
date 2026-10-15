@@ -24,10 +24,10 @@ export function CompileErrorPage({ error }: CompileErrorPageProps) {
     <main className="mx-auto max-w-4xl px-6 py-10">
       <div role="alert">
         <h1 className="text-2xl font-semibold">This page failed to compile</h1>
-        <p className="mt-2 font-mono text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="mt-2 font-mono text-sm text-muted-foreground">
           {errorLocation(error)}
         </p>
-        <pre className="mt-4 rounded bg-neutral-100 p-4 text-sm break-words whitespace-pre-wrap dark:bg-neutral-900">
+        <pre className="mt-4 rounded bg-muted p-4 text-sm break-words whitespace-pre-wrap">
           {error.message}
         </pre>
       </div>

@@ -62,17 +62,17 @@ export const ProseTable = proseElement(
 );
 export const ProseTh = proseElement(
   "th",
-  "border-b border-neutral-300 py-1 pr-4 text-left font-medium last:pr-0 dark:border-neutral-700",
+  "border-b border-border-strong py-1 pr-4 text-left font-medium last:pr-0",
 );
 export const ProseTd = proseElement(
   "td",
-  "border-b border-neutral-200 py-1 pr-4 last:pr-0 dark:border-neutral-800",
+  "border-b border-border py-1 pr-4 last:pr-0",
 );
 
 // Underlined as well as colored: WCAG 1.4.1 rejects color as the only cue,
 // and each color clears 3:1 against the body text of its theme.
 const LINK =
-  "rounded-sm text-blue-600 underline underline-offset-2 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-500 dark:text-blue-500";
+  "rounded-sm text-blue-600 underline underline-offset-2 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dark:text-blue-500";
 
 /**
  * The markdown `a` override: an absolute-path href goes through the client

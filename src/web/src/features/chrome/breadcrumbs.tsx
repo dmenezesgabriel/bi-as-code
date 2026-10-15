@@ -27,16 +27,13 @@ export function Breadcrumbs({ tree }: { tree: NavTree }) {
   return (
     <nav
       aria-label="breadcrumb"
-      className="ml-3 min-w-0 flex-1 overflow-hidden border-l border-neutral-200 pl-3 dark:border-neutral-800"
+      className="ml-3 min-w-0 flex-1 overflow-hidden border-l border-border pl-3"
     >
       <ol className="flex items-center gap-1.5 whitespace-nowrap text-sm">
         {crumbs.map((crumb, i) => (
           <li key={crumb.id} className="flex min-w-0 items-center gap-1.5">
             {i > 0 && (
-              <span
-                aria-hidden="true"
-                className="text-neutral-300 dark:text-neutral-600"
-              >
+              <span aria-hidden="true" className="text-separator">
                 /
               </span>
             )}
@@ -51,10 +48,7 @@ export function Breadcrumbs({ tree }: { tree: NavTree }) {
 function CrumbLabel({ crumb, last }: { crumb: Crumb; last: boolean }) {
   if (last) {
     return (
-      <span
-        aria-current="page"
-        className="truncate text-neutral-900 dark:text-neutral-100"
-      >
+      <span aria-current="page" className="truncate text-foreground">
         {crumb.label}
       </span>
     );
@@ -63,16 +57,14 @@ function CrumbLabel({ crumb, last }: { crumb: Crumb; last: boolean }) {
     return (
       <Link
         to={crumb.href}
-        className="truncate text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+        className="truncate text-muted-foreground-faded hover:text-foreground"
       >
         {crumb.label}
       </Link>
     );
   }
   return (
-    <span className="truncate text-neutral-500 dark:text-neutral-400">
-      {crumb.label}
-    </span>
+    <span className="truncate text-muted-foreground-faded">{crumb.label}</span>
   );
 }
 

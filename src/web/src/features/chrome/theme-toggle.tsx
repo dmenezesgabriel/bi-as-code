@@ -26,7 +26,7 @@ export function ThemeToggle({
       aria-label={`Switch to ${target} mode`}
       title={`Switch to ${target} mode`}
       onClick={onToggle}
-      className="ml-2 rounded p-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+      className="ml-2 rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
     >
       {mode === "dark" ? <SunIcon /> : <MoonIcon />}
     </button>

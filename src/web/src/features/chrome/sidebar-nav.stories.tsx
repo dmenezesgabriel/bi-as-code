@@ -41,7 +41,7 @@ const meta: Meta<typeof SidebarNav> = {
   decorators: [
     withMemoryRouter(PATHS, "/"),
     (Story) => (
-      <div className="h-[480px] w-72 border border-neutral-200 dark:border-neutral-800">
+      <div className="h-[480px] w-72 border border-border">
         <Story />
       </div>
     ),
