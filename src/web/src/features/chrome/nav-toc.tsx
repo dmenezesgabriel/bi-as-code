@@ -25,8 +25,10 @@ function sameHeadings(a: TocHeading[], b: TocHeading[]): boolean {
  * the rendered article DOM (evidence's approach — no rehype plugin), with
  * a debounced MutationObserver re-extracting when the page mutates. The
  * scroll-spy ports framework's `client/toc.ts`: an IntersectionObserver
- * bounded at the viewport's vertical center triggers a full recompute —
- * a `location.hash` match wins near the top, otherwise the lowest heading
+ * bounded at the viewport's vertical center (and every `hashchange`)
+ * triggers a full recompute —
+ * a `location.hash` match wins while it sits where the jump landed it
+ * (its `scroll-margin-top`), otherwise the lowest heading
  * still above center — and the highlight bar slides to the active link.
  * Renders nothing when the article has fewer than two qualifying headings.
  *
@@ -69,6 +71,9 @@ export function NavToc({ article }: { article: HTMLElement }) {
         headings.map((h) => ({
           id: h.id,
           top: h.element.getBoundingClientRect().top,
+          scrollMarginTop: parseFloat(
+            getComputedStyle(h.element).scrollMarginTop,
+          ),
         })),
         window.location.hash,
         window.innerHeight,
@@ -86,7 +91,13 @@ export function NavToc({ article }: { article: HTMLElement }) {
       rootMargin: "0px 0px -50% 0px",
     });
     for (const h of headings) observer.observe(h.element);
-    return () => observer.disconnect();
+    // A jump near the page end can scroll too little for any heading to
+    // cross mid-viewport, so the observer alone would keep the old entry.
+    window.addEventListener("hashchange", recompute);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("hashchange", recompute);
+    };
   }, [headings]);
 
   if (headings.length < 2) return null;

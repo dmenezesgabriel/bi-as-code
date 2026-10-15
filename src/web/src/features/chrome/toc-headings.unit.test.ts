@@ -80,9 +80,9 @@ describe("collectTocHeadings", () => {
 describe("pickActiveHeadingId", () => {
   it("returns the last heading still above the viewport center", () => {
     const headings = [
-      { id: "a", top: -10 },
-      { id: "b", top: 100 },
-      { id: "c", top: 700 },
+      { id: "a", top: -10, scrollMarginTop: 0 },
+      { id: "b", top: 100, scrollMarginTop: 0 },
+      { id: "c", top: 700, scrollMarginTop: 0 },
     ];
 
     expect(pickActiveHeadingId(headings, "", 768)).toBe("b");
@@ -90,8 +90,8 @@ describe("pickActiveHeadingId", () => {
 
   it("lights the first heading while every heading is still below the center", () => {
     const headings = [
-      { id: "a", top: 700 },
-      { id: "b", top: 900 },
+      { id: "a", top: 700, scrollMarginTop: 0 },
+      { id: "b", top: 900, scrollMarginTop: 0 },
     ];
 
     expect(pickActiveHeadingId(headings, "", 768)).toBe("a");
@@ -101,31 +101,71 @@ describe("pickActiveHeadingId", () => {
     expect(pickActiveHeadingId([], "", 768)).toBeNull();
   });
 
-  it("prefers the hash-matched heading sitting within 40px of the top", () => {
+  it("prefers the hash-matched heading sitting within 40px of its scroll margin", () => {
     const headings = [
-      { id: "a", top: -100 },
-      { id: "b", top: 100 },
-      { id: "c", top: 20 },
+      { id: "a", top: -100, scrollMarginTop: 0 },
+      { id: "b", top: 100, scrollMarginTop: 0 },
+      { id: "c", top: 20, scrollMarginTop: 0 },
     ];
 
     expect(pickActiveHeadingId(headings, "#c", 768)).toBe("c");
   });
 
-  it("falls back to the center rule when the hash match is outside the top band", () => {
+  it("falls back to the center rule when the hash match is below its landing band", () => {
     const headings = [
-      { id: "a", top: -500 },
-      { id: "b", top: -100 },
-      { id: "c", top: 600 },
+      { id: "a", top: -500, scrollMarginTop: 0 },
+      { id: "b", top: -100, scrollMarginTop: 0 },
+      { id: "c", top: 600, scrollMarginTop: 0 },
     ];
 
     expect(pickActiveHeadingId(headings, "#c", 768)).toBe("b");
   });
 
   it("matches an encoded hash against a non-slug id", () => {
-    const headings = [{ id: "Section One", top: 20 }];
+    const headings = [{ id: "Section One", top: 20, scrollMarginTop: 0 }];
 
     expect(pickActiveHeadingId(headings, "#Section%20One", 768)).toBe(
       "Section One",
     );
+  });
+
+  it("lights a hash heading that landed exactly at its scroll margin", () => {
+    const headings = [
+      { id: "a", top: -400, scrollMarginTop: 136 },
+      { id: "b", top: 136, scrollMarginTop: 136 },
+      { id: "c", top: 300, scrollMarginTop: 136 },
+    ];
+
+    expect(pickActiveHeadingId(headings, "#b", 1400)).toBe("b");
+  });
+
+  it("lights a hash heading landed at a smaller margin, as in the editor pane", () => {
+    const headings = [
+      { id: "a", top: -400, scrollMarginTop: 88 },
+      { id: "b", top: 88, scrollMarginTop: 88 },
+      { id: "c", top: 250, scrollMarginTop: 88 },
+    ];
+
+    expect(pickActiveHeadingId(headings, "#b", 1400)).toBe("b");
+  });
+
+  it("ignores the hash once its heading scrolls above its scroll margin", () => {
+    const headings = [
+      { id: "a", top: -400, scrollMarginTop: 136 },
+      { id: "b", top: 20, scrollMarginTop: 136 },
+      { id: "c", top: 300, scrollMarginTop: 136 },
+    ];
+
+    expect(pickActiveHeadingId(headings, "#b", 1400)).toBe("c");
+  });
+
+  it("ignores the hash while its heading sits 40px or more below its scroll margin", () => {
+    const headings = [
+      { id: "a", top: -400, scrollMarginTop: 136 },
+      { id: "b", top: 176, scrollMarginTop: 136 },
+      { id: "c", top: 300, scrollMarginTop: 136 },
+    ];
+
+    expect(pickActiveHeadingId(headings, "#b", 1400)).toBe("c");
   });
 });

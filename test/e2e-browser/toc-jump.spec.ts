@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { openWeeklyReviewCharts } from "./echart-hosts.js";
 
 // The clearance a jumped heading keeps under the header on a page with no
 // bar (80px scroll margin − 48px header) — the same rhythm below a docked bar.
@@ -7,6 +8,9 @@ const GAP_BELOW_DOCKED_BAR_PX = 32;
 
 const DESKTOP = { width: 1280, height: 720 };
 const PHONE = { width: 375, height: 812 };
+// Tall enough that a short section's successor also clears mid-viewport after
+// a jump — where the center rule alone lights the wrong entry.
+const TALL_DESKTOP = { width: 1280, height: 1400 };
 
 /**
  * How far the heading's top sits below the filter bar's bottom edge, in px;
@@ -55,6 +59,9 @@ for (const route of ["weekly-review", "crossfilter-scale"]) {
       await link.click();
       await expect(page).toHaveURL(new RegExp(`#${id}$`));
       await expectHeadingClearsBar(page, id);
+      await expect(toc.locator('[aria-current="location"]')).toHaveText(
+        (await link.textContent())!,
+      );
     }
     expect(errors).toEqual([]);
   });
@@ -76,6 +83,27 @@ for (const route of ["weekly-review", "crossfilter-scale"]) {
     expect(errors).toEqual([]);
   });
 }
+
+test("on a tall viewport the rail lights the entry jumped to, not the short section after it", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize(TALL_DESKTOP);
+  // Charts grow the page as they paint; jumping before then moves the
+  // heading after it lands.
+  await openWeeklyReviewCharts(page, biacDev.url);
+  const toc = page.getByRole("navigation", { name: "On this page" });
+  await expect(toc).toBeVisible();
+
+  // Takeaways ends the page and cannot reach its landing offset: the jump
+  // scrolls too little for any heading to cross mid-viewport.
+  for (const name of ["Order mix", "Quarter detail", "Takeaways"]) {
+    await toc.getByRole("link", { name, exact: true }).click();
+    await expect(toc.locator('[aria-current="location"]')).toHaveText(name);
+  }
+  expect(errors).toEqual([]);
+});
 
 test("in the editor's preview pane a #heading link lands below the bar docked at the pane top", async ({
   page,

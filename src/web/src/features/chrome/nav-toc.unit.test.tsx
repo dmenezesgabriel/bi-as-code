@@ -23,6 +23,19 @@ function stubTop(id: string, top: number) {
   vi.spyOn(el, "getBoundingClientRect").mockReturnValue({ top } as DOMRect);
 }
 
+/**
+ * Simulates a `#beta` jump on a page with a docked filter bar: Beta lands at
+ * its 136px scroll margin, and the short section's successor, Gamma, also
+ * sits above jsdom's 384px viewport center.
+ */
+function landBetaBelowDockedBar() {
+  window.location.hash = "#beta";
+  document.getElementById("beta")!.style.scrollMarginTop = "136px";
+  stubTop("alpha", -500);
+  stubTop("beta", 136);
+  stubTop("gamma", 300);
+}
+
 const THREE_SECTIONS = (
   <>
     <h2>Alpha</h2>
@@ -110,17 +123,31 @@ describe("NavToc", () => {
     );
   });
 
-  it("prefers the hash-matched heading at the viewport top", async () => {
+  it("prefers the hash-matched heading where its scroll margin landed it", async () => {
     const io = stubIntersectionObserver();
     renderToc(THREE_SECTIONS);
     await screen.findByRole("navigation", { name: "On this page" });
 
-    window.location.hash = "#gamma";
-    stubTop("beta", 600);
-    stubTop("gamma", 20);
+    landBetaBelowDockedBar();
     act(() => io.fire());
 
-    expect(screen.getByRole("link", { name: "Gamma" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Beta" })).toHaveAttribute(
+      "aria-current",
+      "location",
+    );
+  });
+
+  it("recomputes the current entry when the hash changes", async () => {
+    stubIntersectionObserver();
+    renderToc(THREE_SECTIONS);
+    await screen.findByRole("navigation", { name: "On this page" });
+
+    landBetaBelowDockedBar();
+    act(() => {
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+
+    expect(screen.getByRole("link", { name: "Beta" })).toHaveAttribute(
       "aria-current",
       "location",
     );

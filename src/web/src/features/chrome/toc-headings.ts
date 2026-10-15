@@ -14,7 +14,16 @@ export interface TocHeading {
 export interface HeadingTop {
   id: string;
   top: number;
+  /** The heading's computed `scroll-margin-top` — where an anchor jump lands it. */
+  scrollMarginTop: number;
 }
+
+// How far below its landing offset a hash-matched heading still counts as
+// the one jumped to — framework `client/toc.ts`'s 40px band.
+const HASH_BAND_PX = 40;
+// Sub-pixel slack under the landing offset: a jump lands exactly on it, and
+// layout may round the rect a fraction of a pixel above.
+const LANDING_SLACK_PX = 1;
 
 /**
  * Collects the h2/h3 headings inside `root`, assigning each a stable anchor
@@ -67,18 +76,21 @@ function slugifyHeading(text: string): string {
 
 /**
  * Picks the active ToC heading, porting framework `client/toc.ts`'s relink
- * semantics: a `location.hash` match wins while its heading sits just below
- * the viewport top (0–40px); otherwise the lowest heading still above the
- * viewport's vertical center is current — so scrolling back up re-lights
+ * semantics: a `location.hash` match wins while its heading sits within 40px
+ * below its own `scroll-margin-top` — where an anchor jump lands it, so the
+ * band follows the docked chrome above the heading; otherwise the lowest
+ * heading still above the viewport's vertical center is current — so scrolling back up re-lights
  * earlier sections. Until the first heading crosses the center (a page
  * whose intro fills the top half), the first section is current, so the
  * rail always shows where a reader is. `headings` are document-ordered with
  * their current `getBoundingClientRect().top`.
  *
  * @example
- * pickActiveHeadingId([{id: "a", top: -5}, {id: "b", top: 120}], "", 768);
- * // → "b"
- * pickActiveHeadingId([{id: "a", top: 500}], "", 768); // → "a"
+ * pickActiveHeadingId(
+ *   [{id: "a", top: -5, scrollMarginTop: 80}, {id: "b", top: 120, scrollMarginTop: 80}],
+ *   "", 768,
+ * ); // → "b"
+ * pickActiveHeadingId([{id: "a", top: 136, scrollMarginTop: 136}], "#a", 768); // → "a"
  */
 export function pickActiveHeadingId(
   headings: readonly HeadingTop[],
@@ -87,10 +99,15 @@ export function pickActiveHeadingId(
 ): string | null {
   if (hash) {
     const match = headings.find((h) => encodeURI(`#${h.id}`) === hash);
-    if (match && match.top > 0 && match.top < 40) return match.id;
+    if (match && sitsAtLanding(match)) return match.id;
   }
   const current = [...headings]
     .reverse()
     .find((h) => h.top < viewportHeight * 0.5);
   return current?.id ?? headings[0]?.id ?? null;
+}
+
+function sitsAtLanding(heading: HeadingTop): boolean {
+  const offset = heading.top - heading.scrollMarginTop;
+  return offset >= -LANDING_SLACK_PX && offset < HASH_BAND_PX;
 }

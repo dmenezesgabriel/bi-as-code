@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import { NavToc } from "./nav-toc";
 
 /**
@@ -49,6 +49,47 @@ export const WithHeadings: Story = {
       "Refunds",
     ]);
     await expect(links[0]).toHaveAttribute("href", "#orders");
+  },
+};
+
+/**
+ * A page whose headings land 136px down — the offset `MarkdownPage` gives
+ * them under a docked filter bar — with a short section right after the
+ * jump target, so its successor also sits above mid-viewport.
+ */
+function ArticleWithDockedOffset() {
+  const [article, setArticle] = useState<HTMLElement | null>(null);
+  return (
+    <div className="@container flex gap-8">
+      <main
+        ref={setArticle}
+        className="w-full max-w-2xl [&_h2]:scroll-mt-[136px]"
+      >
+        <h1>Quarterly report</h1>
+        <h2 id="orders">Orders</h2>
+        <p className="h-[150vh]">Order volume by week and region.</p>
+        <h2 id="mix">Order mix</h2>
+        <p>One line of mix.</p>
+        <h2 id="size">Order size</h2>
+        <p className="h-[150vh]">Order size by week and region.</p>
+      </main>
+      {article && <NavToc article={article} />}
+    </div>
+  );
+}
+
+/** A jump lights the heading it landed on, not the short section after it. */
+export const JumpedBelowDockedBar: Story = {
+  render: () => <ArticleWithDockedOffset />,
+  play: async ({ canvasElement }) => {
+    const nav = canvasElement.querySelector('nav[aria-label="On this page"]');
+    await expect(nav).not.toBeNull();
+    window.location.hash = "mix";
+    await waitFor(() =>
+      expect(nav!.querySelector('[aria-current="location"]')).toHaveTextContent(
+        "Order mix",
+      ),
+    );
   },
 };
 
