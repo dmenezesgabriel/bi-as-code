@@ -4,6 +4,7 @@ import { toScatterOption } from "./to-scatter-option";
 import { toScatterSeries } from "./to-scatter-series";
 import type { ScatterChartProps } from "./types";
 import { seriesBrushAxis } from "./use-brush-select";
+import { useChartTokens } from "./use-chart-tokens";
 import { legendSelectTarget } from "./use-legend-select";
 
 /**
@@ -22,6 +23,7 @@ export function ScatterChart({
   renderer,
   ...props
 }: ScatterChartProps): ReactElement {
+  const tokens = useChartTokens();
   return (
     <BoundChart
       data={props.data}
@@ -38,7 +40,7 @@ export function ScatterChart({
           size: props.size,
         })
       }
-      option={(model) => toScatterOption(model, props)}
+      option={(model) => toScatterOption(model, props, tokens)}
       brushAxis={(model) =>
         seriesBrushAxis(model.xType, props.x, model.xDomain)
       }

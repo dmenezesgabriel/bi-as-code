@@ -4,6 +4,7 @@ import { toChartOption } from "./to-option";
 import { toSeries } from "./to-series";
 import type { SeriesChartWidgetProps } from "./types";
 import { seriesBrushAxis } from "./use-brush-select";
+import { useChartTokens } from "./use-chart-tokens";
 import { legendSelectTarget } from "./use-legend-select";
 
 /**
@@ -23,6 +24,7 @@ export function SeriesChart({
   renderer,
   ...props
 }: SeriesChartWidgetProps): ReactElement {
+  const tokens = useChartTokens();
   return (
     <BoundChart
       data={props.data}
@@ -34,7 +36,7 @@ export function SeriesChart({
       model={(rows) =>
         toSeries(rows, { x: props.x, y: props.y, series: props.series }, type)
       }
-      option={(model) => toChartOption(model, type, props)}
+      option={(model) => toChartOption(model, type, props, tokens)}
       brushAxis={(model) =>
         seriesBrushAxis(model.xType, props.x, model.xDomain)
       }

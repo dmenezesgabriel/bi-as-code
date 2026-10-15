@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { LIGHT_CHART_TOKENS } from "./chart-tokens.fixture";
 import { FormatError } from "../value/types";
-import { ariaDescription, tooltipFormatter } from "./series-chart.fixture";
+import {
+  PALETTE_OVERRIDE_PROPS,
+  ariaDescription,
+  paletteOverrides,
+  tooltipFormatter,
+} from "./series-chart.fixture";
 import { toHistogram } from "./to-histogram";
 import { toHistogramOption } from "./to-histogram-option";
 
@@ -21,6 +27,7 @@ describe("toHistogramOption", () => {
     const option = toHistogramOption(
       toHistogram(AMOUNTS, { value: "amount", binCount: 4 }),
       PROPS,
+      LIGHT_CHART_TOKENS,
     );
     const xAxis = option.xAxis as {
       type?: string;
@@ -46,6 +53,7 @@ describe("toHistogramOption", () => {
     const option = toHistogramOption(
       toHistogram(AMOUNTS, { value: "amount", binCount: 4 }),
       { ...PROPS, valueFmt: "usd0" },
+      LIGHT_CHART_TOKENS,
     );
     const xAxis = option.xAxis as { data?: unknown[] };
     expect(xAxis.data).toEqual(["$12", "$29", "$46", "$63"]);
@@ -55,6 +63,7 @@ describe("toHistogramOption", () => {
     const option = toHistogramOption(
       toHistogram(AMOUNTS, { value: "amount" }),
       PROPS,
+      LIGHT_CHART_TOKENS,
     );
     const yAxis = option.yAxis as {
       type?: string;
@@ -70,6 +79,7 @@ describe("toHistogramOption", () => {
     const titled = toHistogramOption(
       toHistogram(AMOUNTS, { value: "amount" }),
       { ...PROPS, yTitle: "Orders" },
+      LIGHT_CHART_TOKENS,
     );
     expect((titled.yAxis as { name?: string }).name).toBe("Orders");
   });
@@ -78,6 +88,7 @@ describe("toHistogramOption", () => {
     const option = toHistogramOption(
       toHistogram(REGIONAL, { value: "amount", series: "region", binCount: 2 }),
       { ...PROPS, series: "region", valueFmt: "num0" },
+      LIGHT_CHART_TOKENS,
     );
     expect((option.tooltip as { trigger?: string }).trigger).toBe("axis");
     const html = tooltipFormatter(option)([
@@ -98,6 +109,7 @@ describe("toHistogramOption", () => {
     const option = toHistogramOption(
       toHistogram(rows, { value: "amount", series: "region" }),
       { ...PROPS, series: "region" },
+      LIGHT_CHART_TOKENS,
     );
     const html = tooltipFormatter(option)([
       { seriesName: "<b>x</b>", marker: "", value: 1, dataIndex: 0 },
@@ -109,36 +121,47 @@ describe("toHistogramOption", () => {
   it("shows a legend once the chart has more than one series", () => {
     const model = toHistogram(REGIONAL, { value: "amount", series: "region" });
     expect(
-      toHistogramOption(model, { ...PROPS, series: "region" }).legend,
+      toHistogramOption(
+        model,
+        { ...PROPS, series: "region" },
+        LIGHT_CHART_TOKENS,
+      ).legend,
     ).toBeDefined();
     expect(
-      toHistogramOption(model, { ...PROPS, series: "region", legend: false })
-        .legend,
+      toHistogramOption(
+        model,
+        { ...PROPS, series: "region", legend: false },
+        LIGHT_CHART_TOKENS,
+      ).legend,
     ).toBeUndefined();
     expect(
-      toHistogramOption(toHistogram(AMOUNTS, { value: "amount" }), PROPS)
-        .legend,
+      toHistogramOption(
+        toHistogram(AMOUNTS, { value: "amount" }),
+        PROPS,
+        LIGHT_CHART_TOKENS,
+      ).legend,
     ).toBeUndefined();
   });
 
   it("paints a single-color palette and per-series overrides", () => {
     const model = toHistogram(REGIONAL, { value: "amount", series: "region" });
-    const colored = toHistogramOption(model, {
-      ...PROPS,
-      series: "region",
-      color: "#123456",
-      seriesColors: { South: "#654321" },
+    const colored = toHistogramOption(
+      model,
+      { ...PROPS, ...PALETTE_OVERRIDE_PROPS },
+      LIGHT_CHART_TOKENS,
+    );
+    expect(paletteOverrides(colored)).toEqual({
+      palette: ["#123456"],
+      south: "#654321",
+      north: undefined,
     });
-    expect(colored.color).toEqual(["#123456"]);
-    const series = colored.series as { name?: string; color?: string }[];
-    expect(series.find((s) => s.name === "South")?.color).toBe("#654321");
-    expect(series.find((s) => s.name === "North")?.color).toBeUndefined();
   });
 
   it("draws count labels inside the stacked bands when labels is set", () => {
     const option = toHistogramOption(
       toHistogram(REGIONAL, { value: "amount", series: "region" }),
       { ...PROPS, series: "region", labels: true },
+      LIGHT_CHART_TOKENS,
     );
     const label = (
       option.series as { label?: { show?: boolean; position?: string } }[]
@@ -150,7 +173,11 @@ describe("toHistogramOption", () => {
   it("describes the chart in the aria label", () => {
     expect(
       ariaDescription(
-        toHistogramOption(toHistogram(AMOUNTS, { value: "amount" }), PROPS),
+        toHistogramOption(
+          toHistogram(AMOUNTS, { value: "amount" }),
+          PROPS,
+          LIGHT_CHART_TOKENS,
+        ),
       ),
     ).toBe("histogram chart of amount");
     expect(
@@ -158,15 +185,20 @@ describe("toHistogramOption", () => {
         toHistogramOption(
           toHistogram(REGIONAL, { value: "amount", series: "region" }),
           { ...PROPS, series: "region" },
+          LIGHT_CHART_TOKENS,
         ),
       ),
     ).toBe("histogram chart of amount, split by region");
     expect(
       ariaDescription(
-        toHistogramOption(toHistogram(AMOUNTS, { value: "amount" }), {
-          ...PROPS,
-          title: "Order size",
-        }),
+        toHistogramOption(
+          toHistogram(AMOUNTS, { value: "amount" }),
+          {
+            ...PROPS,
+            title: "Order size",
+          },
+          LIGHT_CHART_TOKENS,
+        ),
       ),
     ).toBe("Order size");
   });
@@ -175,10 +207,14 @@ describe("toHistogramOption", () => {
     "throws FormatError for a bogus %s code",
     (prop) => {
       expect(() =>
-        toHistogramOption(toHistogram(AMOUNTS, { value: "amount" }), {
-          ...PROPS,
-          [prop]: "bogus",
-        }),
+        toHistogramOption(
+          toHistogram(AMOUNTS, { value: "amount" }),
+          {
+            ...PROPS,
+            [prop]: "bogus",
+          },
+          LIGHT_CHART_TOKENS,
+        ),
       ).toThrowError(FormatError);
     },
   );
@@ -192,6 +228,7 @@ describe("toHistogramOption one unit per axis", () => {
     const option = toHistogramOption(
       toHistogram(rows, { value: "amount", binCount: 4 }),
       PROPS,
+      LIGHT_CHART_TOKENS,
     );
 
     expect((option.xAxis as { data?: unknown[] }).data).toEqual([
@@ -213,6 +250,7 @@ describe("toHistogramOption one unit per axis", () => {
     const option = toHistogramOption(
       toHistogram(rows, { value: "amount", series: "region", binCount: 2 }),
       { ...PROPS, series: "region", yFmt: "num" },
+      LIGHT_CHART_TOKENS,
     );
     const yAxis = option.yAxis as {
       axisLabel?: { formatter?: (v: unknown) => string };

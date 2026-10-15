@@ -21,12 +21,13 @@ import { CanvasRenderer, SVGRenderer } from "echarts/renderers";
 import { useEffect, useRef, type ReactElement } from "react";
 import { cn } from "../../../lib/cn";
 import { useThemeMode } from "../../chrome/theme-mode";
-import type { ThemeMode } from "../../chrome/theme";
-import { themeName } from "./theme";
+import { chartTheme } from "./theme";
+import { useChartTokens } from "./use-chart-tokens";
 import type {
   ChartBrushEndParams,
   ChartBrushSelectedParams,
   ChartClickParams,
+  ChartTokens,
   ChartLegendSelectParams,
   ChartOption,
   ChartRenderer,
@@ -67,16 +68,16 @@ export const DEFAULT_CHART_HEIGHT = 300;
  * emit `finished` first, which would mark a host that carries no data.
  *
  * @example
- * el.echartsInstance = mountChart(el, option, mode, "canvas");
+ * el.echartsInstance = mountChart(el, option, tokens, "canvas");
  */
 function mountChart(
   el: EChartHostElement,
   option: ChartOption,
-  mode: ThemeMode,
+  tokens: ChartTokens,
   renderer: ChartRenderer,
   eventsRef: { readonly current: EChartProps["events"] },
 ): EChartsType {
-  const instance = echarts.init(el, themeName(mode), { renderer });
+  const instance = echarts.init(el, chartTheme(tokens), { renderer });
   instance.on("finished", () => el.setAttribute("data-echarts-ready", ""));
   // The ref delegates to the latest `events` prop so a handler that changes
   // identity between renders never resubscribes, and a re-init (theme flip)
@@ -107,8 +108,8 @@ function mountChart(
  * accordion body) has no box: init there warns and paints at 0×0, so init
  * defers to the first ResizeObserver report of a real box. jsdom has no
  * `checkVisibility`, so the deferral never engages under unit tests.
- * A mode flip re-inits with the other registered theme — `setTheme` swaps
- * are subtler than a recreate and theme toggles are rare user actions.
+ * A mode flip re-reads the theme tokens and re-inits with them — `setTheme`
+ * swaps are subtler than a recreate and theme toggles are rare user actions.
  * `data-echarts-ready` marks the first finished paint of the applied
  * option — the option is `setOption`'d in the same synchronous block as
  * `init` because init's own empty paint can emit `finished` first, which
@@ -117,7 +118,7 @@ function mountChart(
  * leftover box never counts toward the page's scroll width.
  *
  * @example
- * <EChart option={toChartOption(toSeries(rows, spec, "bar"), "bar", props)} height={320} />
+ * <EChart option={toChartOption(toSeries(rows, spec, "bar"), "bar", props, tokens)} height={320} />
  */
 export function EChart({
   option,
@@ -127,6 +128,7 @@ export function EChart({
   events,
 }: EChartProps): ReactElement {
   const mode = useThemeMode();
+  const tokens = useChartTokens();
   const hostRef = useRef<EChartHostElement>(null);
   // The init effect's deps exclude `option` (a changed option must not
   // re-init the engine), so it reads the latest through a ref — synced in
@@ -150,7 +152,7 @@ export function EChart({
       el.echartsInstance = mountChart(
         el,
         optionRef.current,
-        mode,
+        tokens,
         renderer,
         eventsRef,
       );
@@ -182,7 +184,7 @@ export function EChart({
       el.removeAttribute("data-echarts-ready");
       chart.dispose();
     };
-  }, [mode, renderer]);
+  }, [tokens, renderer]);
 
   useEffect(() => {
     const instance = hostRef.current?.echartsInstance;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIGHT_CHART_TOKENS } from "./chart-tokens.fixture";
 import { FormatError } from "../value/types";
 import { toChartOption } from "./to-option";
 import type { SeriesChartProps, SeriesModel } from "./types";
@@ -121,7 +122,12 @@ interface OptionProbe {
 }
 
 function probe(model: SeriesModel, props: Partial<SeriesChartProps> = {}) {
-  return toChartOption(model, "bar", { ...PROPS, ...props }) as OptionProbe;
+  return toChartOption(
+    model,
+    "bar",
+    { ...PROPS, ...props },
+    LIGHT_CHART_TOKENS,
+  ) as OptionProbe;
 }
 
 describe("toChartOption axes", () => {
@@ -261,7 +267,12 @@ describe("toChartOption series", () => {
   });
 
   it("maps the area type onto a line series with an area style", () => {
-    const option = toChartOption(TWO_SERIES, "area", PROPS) as OptionProbe;
+    const option = toChartOption(
+      TWO_SERIES,
+      "area",
+      PROPS,
+      LIGHT_CHART_TOKENS,
+    ) as OptionProbe;
     expect(option.series?.[0]?.type).toBe("line");
     expect(option.series?.[0]?.areaStyle).toEqual({});
   });
@@ -285,13 +296,23 @@ describe("toChartOption series", () => {
   });
 
   it("hides line symbols by default and unhides them for labels", () => {
-    const plain = toChartOption(TWO_SERIES, "line", PROPS) as OptionProbe;
+    const plain = toChartOption(
+      TWO_SERIES,
+      "line",
+      PROPS,
+      LIGHT_CHART_TOKENS,
+    ) as OptionProbe;
     expect(plain.series?.[0]?.itemStyle?.opacity).toBe(0);
 
-    const labeled = toChartOption(TWO_SERIES, "line", {
-      ...PROPS,
-      labels: true,
-    }) as OptionProbe;
+    const labeled = toChartOption(
+      TWO_SERIES,
+      "line",
+      {
+        ...PROPS,
+        labels: true,
+      },
+      LIGHT_CHART_TOKENS,
+    ) as OptionProbe;
     expect(labeled.series?.[0]?.itemStyle?.opacity).toBe(1);
     expect(labeled.series?.[0]?.symbolSize).toBe(0);
   });
@@ -322,12 +343,17 @@ describe("toChartOption labels", () => {
     expect(option.series?.[0]?.label?.position).toBe("inside");
   });
 
-  it("pins a label inside a stacked bar to white", () => {
-    const option = probe(TWO_SERIES, { stacked: true, labels: true });
+  it("colours a label inside a stacked bar with the inside-label token", () => {
+    const tokens = { ...LIGHT_CHART_TOKENS, labelInside: "#fefefe" };
 
-    const color = option.series?.[0]?.label?.color;
+    const option = toChartOption(
+      TWO_SERIES,
+      "bar",
+      { ...PROPS, stacked: true, labels: true },
+      tokens,
+    ) as OptionProbe;
 
-    expect(color).toBe("#ffffff");
+    expect(option.series?.[0]?.label?.color).toBe("#fefefe");
   });
 
   it("leaves a label outside its mark to the theme's color", () => {
@@ -384,12 +410,17 @@ describe("toChartOption legend, title and aria", () => {
       "bar chart of revenue by region",
     );
     expect(
-      toChartOption(TWO_SERIES, "line", {
-        ...PROPS,
-        x: "week",
-        y: "orders",
-        series: "region",
-      }) as OptionProbe,
+      toChartOption(
+        TWO_SERIES,
+        "line",
+        {
+          ...PROPS,
+          x: "week",
+          y: "orders",
+          series: "region",
+        },
+        LIGHT_CHART_TOKENS,
+      ) as OptionProbe,
     ).toMatchObject({
       aria: {
         label: { description: "line chart of orders by week, split by region" },

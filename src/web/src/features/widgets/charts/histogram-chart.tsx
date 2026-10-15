@@ -4,6 +4,7 @@ import { histogramQuery } from "./histogram-sql";
 import { fromHistogramBins, toHistogram } from "./to-histogram";
 import { toHistogramOption } from "./to-histogram-option";
 import type { HistogramChartProps } from "./types";
+import { useChartTokens } from "./use-chart-tokens";
 import { legendSelectTarget } from "./use-legend-select";
 
 /**
@@ -24,6 +25,7 @@ export function Histogram({
   renderer,
   ...props
 }: HistogramChartProps): ReactElement {
+  const tokens = useChartTokens();
   const spec = {
     value: props.value,
     series: props.series,
@@ -43,7 +45,7 @@ export function Histogram({
         model: (rows) => fromHistogramBins(rows, spec),
       }}
       isEmpty={(model) => model.bins.length === 0}
-      option={(model) => toHistogramOption(model, props)}
+      option={(model) => toHistogramOption(model, props, tokens)}
       brushAxis={(model) => ({
         kind: "bins",
         field: props.value,

@@ -168,6 +168,31 @@ export type EChartHostElement = HTMLDivElement & {
   echartsInstance?: EChartsType;
 };
 
+/**
+ * Every colour a chart paints, resolved from the theme tokens in
+ * `src/web/src/styles.css` for one mode. The canvas cannot inherit CSS, so
+ * the values are read back and handed to the engine (ADR-0014).
+ */
+export interface ChartTokens {
+  readonly foreground: string;
+  readonly mutedForeground: string;
+  /** Axis lines and ticks. */
+  readonly axis: string;
+  /** Split lines and heatmap cell borders. */
+  readonly border: string;
+  /** The page surface behind the chart — the heatmap ramp's zero end. */
+  readonly background: string;
+  readonly popover: string;
+  readonly popoverBorder: string;
+  /** A label inside a mark sits on the series fill, not on the page. */
+  readonly labelInside: string;
+  /** The categorical palette; series pick colours by index. */
+  readonly series: readonly string[];
+}
+
+/** Looks up one custom property (`--border`) and returns its value. */
+export type ReadToken = (name: string) => string;
+
 /** The three cartesian chart kinds this family ships. */
 export type SeriesChartType = "bar" | "line" | "area";
 

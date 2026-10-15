@@ -12,6 +12,7 @@ import {
 } from "./to-option";
 import type {
   ChartOption,
+  ChartTokens,
   HistogramChartProps,
   HistogramModel,
   HistogramSeries,
@@ -29,11 +30,12 @@ import { seriesValueRange } from "./value-range";
  * the model already carries the resolved bins.
  *
  * @example
- * toHistogramOption(toHistogram(rows, { value: "amount" }), props)
+ * toHistogramOption(toHistogram(rows, { value: "amount" }), props, tokens)
  */
 export function toHistogramOption(
   model: HistogramModel,
   props: HistogramChartProps,
+  tokens: ChartTokens,
 ): ChartOption {
   assertFormats(model, props);
   const legend = props.legend ?? model.series.length > 1;
@@ -56,7 +58,7 @@ export function toHistogramOption(
       minInterval: 1,
     },
     series: model.series.map((s) =>
-      seriesOption(s, props, countFmt, countRange),
+      seriesOption(s, props, countFmt, countRange, tokens),
     ),
     ...chartChromeOption(props, legend),
     tooltip: {
@@ -128,6 +130,7 @@ function seriesOption(
   props: HistogramChartProps,
   countFmt: string,
   countRange: FormatRange | undefined,
+  tokens: ChartTokens,
 ): Record<string, unknown> {
   return {
     name: series.name,
@@ -146,6 +149,7 @@ function seriesOption(
           "bar",
           { ...props, stacked: true, yFmt: countFmt },
           countRange,
+          tokens,
         )
       : {}),
     emphasis: { focus: "series", blurScope: "coordinateSystem" },

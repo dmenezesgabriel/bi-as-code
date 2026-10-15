@@ -4,6 +4,7 @@ import { toPercentageStack } from "./stack";
 import type {
   ChartOption,
   ChartSeries,
+  ChartTokens,
   HeatmapChartProps,
   HistogramChartProps,
   SeriesChartProps,
@@ -42,12 +43,13 @@ export interface TooltipParam {
  * the model already carries the resolved data.
  *
  * @example
- * toChartOption(toSeries(rows, { x: "week", y: "orders" }, "line"), "line", props)
+ * toChartOption(toSeries(rows, { x: "week", y: "orders" }, "line"), "line", props, tokens)
  */
 export function toChartOption(
   model: SeriesModel,
   type: SeriesChartType,
   props: SeriesChartProps,
+  tokens: ChartTokens,
 ): ChartOption {
   assertFormats(model, props);
   const percentage = props.stacked === "100%";
@@ -58,7 +60,7 @@ export function toChartOption(
     grid: gridOption(props, legend),
     xAxis: xAxisOption(model, props),
     yAxis: yAxisOption(props, percentage, yRange),
-    series: series.map((s) => seriesOption(s, type, props, yRange)),
+    series: series.map((s) => seriesOption(s, type, props, yRange, tokens)),
     ...chartChromeOption(props, legend),
     tooltip: {
       trigger: "axis",
@@ -250,6 +252,7 @@ function seriesOption(
   type: SeriesChartType,
   props: SeriesChartProps,
   yRange: FormatRange | undefined,
+  tokens: ChartTokens,
 ): Record<string, unknown> {
   const echartsType = type === "area" ? "line" : type;
   const lineLike = echartsType === "line";
@@ -266,7 +269,7 @@ function seriesOption(
       ? { color: props.seriesColors[series.name] }
       : {}),
     ...(lineLike ? lineOption(props.labels === true) : {}),
-    ...(props.labels ? labelOption(type, props, yRange) : {}),
+    ...(props.labels ? labelOption(type, props, yRange, tokens) : {}),
     emphasis: {
       focus: "series",
       blurScope: "coordinateSystem",
@@ -301,7 +304,8 @@ export function labelOption(
     readonly yFmt?: string;
     readonly stacked?: StackedMode;
   },
-  yRange?: FormatRange,
+  yRange: FormatRange | undefined,
+  tokens: ChartTokens,
 ): Record<string, unknown> {
   const fmt =
     props.labelsFmt ?? (props.stacked === "100%" ? "pct0" : props.yFmt);
@@ -310,17 +314,13 @@ export function labelOption(
     label: {
       show: true,
       position,
-      ...(position === "inside" ? { color: INSIDE_LABEL_COLOR } : {}),
+      ...(position === "inside" ? { color: tokens.labelInside } : {}),
       formatter: (p: { value?: unknown }) =>
         safeFormat(yOf(p.value), fmt, yRange),
     },
     labelLayout: { hideOverlap: true },
   };
 }
-
-// A label inside a mark sits on the series fill, not on the page, so it
-// opts out of the theme's page-contrast label color in both modes.
-const INSIDE_LABEL_COLOR = "#ffffff";
 
 function labelPosition(
   type: SeriesChartType | "scatter",

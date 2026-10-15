@@ -15,6 +15,7 @@ import {
 } from "./to-option";
 import type {
   ChartOption,
+  ChartTokens,
   ScatterChartProps,
   ScatterModel,
   ScatterSeries,
@@ -44,11 +45,12 @@ const MAX_BUBBLE_SIZE_SQ = MAX_BUBBLE_SIZE * MAX_BUBBLE_SIZE;
  * model already carries the resolved data.
  *
  * @example
- * toScatterOption(toScatterSeries(rows, { x: "orders", y: "revenue" }), props)
+ * toScatterOption(toScatterSeries(rows, { x: "orders", y: "revenue" }), props, tokens)
  */
 export function toScatterOption(
   model: ScatterModel,
   props: ScatterChartProps,
+  tokens: ChartTokens,
 ): ChartOption {
   assertFormats(model, props);
   const legend = props.legend ?? model.series.length > 1;
@@ -59,7 +61,9 @@ export function toScatterOption(
     grid: gridOption(props, legend),
     xAxis: xAxisOption(model, props),
     yAxis: yAxisOption(props, false, yRange),
-    series: model.series.map((s) => seriesOption(s, props, maxSize, yRange)),
+    series: model.series.map((s) =>
+      seriesOption(s, props, maxSize, yRange, tokens),
+    ),
     ...chartChromeOption(props, legend),
     tooltip: {
       trigger: "item",
@@ -105,6 +109,7 @@ function seriesOption(
   props: ScatterChartProps,
   maxSize: number | undefined,
   yRange: FormatRange | undefined,
+  tokens: ChartTokens,
 ): Record<string, unknown> {
   return {
     name: series.name,
@@ -119,7 +124,7 @@ function seriesOption(
     ...(props.seriesColors?.[series.name] !== undefined
       ? { color: props.seriesColors[series.name] }
       : {}),
-    ...(props.labels ? labelOption("scatter", props, yRange) : {}),
+    ...(props.labels ? labelOption("scatter", props, yRange, tokens) : {}),
     emphasis: { focus: "series" },
   };
 }

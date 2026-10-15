@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { LIGHT_CHART_TOKENS } from "./chart-tokens.fixture";
 import { FormatError } from "../value/types";
 import {
+  PALETTE_OVERRIDE_PROPS,
   SCATTER_ROWS,
   ariaDescription,
+  paletteOverrides,
   tooltipFormatter,
 } from "./series-chart.fixture";
 import { toScatterOption } from "./to-scatter-option";
@@ -15,6 +18,7 @@ describe("toScatterOption", () => {
     const option = toScatterOption(
       toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
       PROPS,
+      LIGHT_CHART_TOKENS,
     );
     const series = option.series as { type?: string; data?: unknown[] }[];
     expect(series[0]?.type).toBe("scatter");
@@ -27,11 +31,15 @@ describe("toScatterOption", () => {
       { x: "a", y: 1 },
       { x: "b", y: 2 },
     ];
-    const option = toScatterOption(toScatterSeries(rows, { x: "x", y: "y" }), {
-      data: "q",
-      x: "x",
-      y: "y",
-    });
+    const option = toScatterOption(
+      toScatterSeries(rows, { x: "x", y: "y" }),
+      {
+        data: "q",
+        x: "x",
+        y: "y",
+      },
+      LIGHT_CHART_TOKENS,
+    );
     const xAxis = option.xAxis as { type?: string; data?: unknown[] };
     expect(xAxis.type).toBe("category");
     expect(xAxis.data).toEqual(["a", "b"]);
@@ -41,6 +49,7 @@ describe("toScatterOption", () => {
     const option = toScatterOption(
       toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
       PROPS,
+      LIGHT_CHART_TOKENS,
     );
     const series = option.series as { symbolSize?: unknown }[];
     expect(series[0]?.symbolSize).toBe(9);
@@ -54,6 +63,7 @@ describe("toScatterOption", () => {
         size: "accounts",
       }),
       { ...PROPS, size: "accounts" },
+      LIGHT_CHART_TOKENS,
     );
     const series = option.series as {
       symbolSize?: (value: unknown[]) => number;
@@ -74,6 +84,7 @@ describe("toScatterOption", () => {
     const option = toScatterOption(
       toScatterSeries(rows, { x: "x", y: "y", size: "accounts" }),
       { data: "q", x: "x", y: "y", size: "accounts" },
+      LIGHT_CHART_TOKENS,
     );
     const series = option.series as { symbolSize?: unknown }[];
     expect(series[0]?.symbolSize).toBe(9);
@@ -87,6 +98,7 @@ describe("toScatterOption", () => {
         size: "accounts",
       }),
       { ...PROPS, size: "accounts" },
+      LIGHT_CHART_TOKENS,
     );
     expect((option.tooltip as { trigger?: string }).trigger).toBe("item");
     const html = tooltipFormatter(option)({
@@ -102,11 +114,15 @@ describe("toScatterOption", () => {
 
   it("escapes html in tooltip values", () => {
     const rows = [{ x: "<b>x</b>", y: 1 }];
-    const option = toScatterOption(toScatterSeries(rows, { x: "x", y: "y" }), {
-      data: "q",
-      x: "x",
-      y: "y",
-    });
+    const option = toScatterOption(
+      toScatterSeries(rows, { x: "x", y: "y" }),
+      {
+        data: "q",
+        x: "x",
+        y: "y",
+      },
+      LIGHT_CHART_TOKENS,
+    );
     const html = tooltipFormatter(option)({
       seriesName: "y",
       value: ["<b>x</b>", 1],
@@ -122,16 +138,21 @@ describe("toScatterOption", () => {
       series: "region",
     });
     expect(
-      toScatterOption(model, { ...PROPS, series: "region" }).legend,
+      toScatterOption(model, { ...PROPS, series: "region" }, LIGHT_CHART_TOKENS)
+        .legend,
     ).toBeDefined();
     expect(
-      toScatterOption(model, { ...PROPS, series: "region", legend: false })
-        .legend,
+      toScatterOption(
+        model,
+        { ...PROPS, series: "region", legend: false },
+        LIGHT_CHART_TOKENS,
+      ).legend,
     ).toBeUndefined();
     expect(
       toScatterOption(
         toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
         PROPS,
+        LIGHT_CHART_TOKENS,
       ).legend,
     ).toBeUndefined();
   });
@@ -140,6 +161,7 @@ describe("toScatterOption", () => {
     const option = toScatterOption(
       toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
       { ...PROPS, labels: true },
+      LIGHT_CHART_TOKENS,
     );
     const series = option.series as { label?: { show?: boolean } }[];
     expect(series[0]?.label?.show).toBe(true);
@@ -151,16 +173,16 @@ describe("toScatterOption", () => {
       y: "revenue",
       series: "region",
     });
-    const colored = toScatterOption(model, {
-      ...PROPS,
-      series: "region",
-      color: "#123456",
-      seriesColors: { South: "#654321" },
+    const colored = toScatterOption(
+      model,
+      { ...PROPS, ...PALETTE_OVERRIDE_PROPS },
+      LIGHT_CHART_TOKENS,
+    );
+    expect(paletteOverrides(colored)).toEqual({
+      palette: ["#123456"],
+      south: "#654321",
+      north: undefined,
     });
-    expect(colored.color).toEqual(["#123456"]);
-    const series = colored.series as { name?: string; color?: string }[];
-    expect(series.find((s) => s.name === "South")?.color).toBe("#654321");
-    expect(series.find((s) => s.name === "North")?.color).toBeUndefined();
   });
 
   it("describes the chart in the aria label", () => {
@@ -169,6 +191,7 @@ describe("toScatterOption", () => {
         toScatterOption(
           toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
           PROPS,
+          LIGHT_CHART_TOKENS,
         ),
       ),
     ).toBe("scatter chart of revenue by orders");
@@ -177,6 +200,7 @@ describe("toScatterOption", () => {
         toScatterOption(
           toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
           { ...PROPS, title: "Orders vs revenue" },
+          LIGHT_CHART_TOKENS,
         ),
       ),
     ).toBe("Orders vs revenue");
@@ -189,6 +213,7 @@ describe("toScatterOption", () => {
         toScatterOption(
           toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
           { ...PROPS, size: "accounts", [prop]: "bogus" },
+          LIGHT_CHART_TOKENS,
         ),
       ).toThrowError(FormatError);
     },
@@ -211,6 +236,7 @@ describe("toScatterOption one unit per axis", () => {
     return toScatterOption(
       toScatterSeries(WIDE_ROWS, { x: "orders", y: "revenue" }),
       { ...PROPS, ...props },
+      LIGHT_CHART_TOKENS,
     );
   }
 

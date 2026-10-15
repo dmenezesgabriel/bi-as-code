@@ -181,6 +181,30 @@ export function tooltipFormatter(
   return fmt as (params: TooltipParam | readonly TooltipParam[]) => string;
 }
 
+/** The props that give the North/South series a palette and one override. */
+export const PALETTE_OVERRIDE_PROPS = {
+  series: "region",
+  color: "#123456",
+  seriesColors: { South: "#654321" },
+} as const;
+
+/**
+ * What an option built with `PALETTE_OVERRIDE_PROPS` paints: the palette,
+ * the overridden South series' colour and the untouched North's.
+ */
+export function paletteOverrides(option: unknown): {
+  palette: unknown;
+  south: string | undefined;
+  north: string | undefined;
+} {
+  const { color, series } = option as {
+    color?: unknown;
+    series?: { name?: string; color?: string }[];
+  };
+  const colorOf = (name: string) => series?.find((s) => s.name === name)?.color;
+  return { palette: color, south: colorOf("South"), north: colorOf("North") };
+}
+
 /** The aria description an assembled chart option carries, if any. */
 export function ariaDescription(option: unknown): string | undefined {
   return (option as { aria?: { label?: { description?: string } } }).aria?.label

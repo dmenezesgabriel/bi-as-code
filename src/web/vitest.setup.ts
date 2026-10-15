@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // Vitest runs with globals disabled, so Testing Library's auto-cleanup
 // (which hooks a global afterEach) never registers — renders would
@@ -56,4 +58,20 @@ if (typeof window !== "undefined") {
   // The router scrolls on navigation; jsdom only prints "Not implemented"
   // warnings. Stub it like the layout APIs above.
   window.scrollTo = () => undefined;
+
+  installThemeTokens(document);
+}
+
+/**
+ * Loads the app stylesheet into the test document, as `main.tsx` does in the
+ * browser, so charts read their colours from the real theme tokens. The
+ * Tailwind `@import` is dropped: jsdom cannot resolve a package specifier
+ * and the tests need only the custom properties.
+ */
+function installThemeTokens(doc: Document): void {
+  // Vitest stubs every `.css` import, `?raw` included, to an empty string.
+  const css = readFileSync(join(import.meta.dirname, "src/styles.css"), "utf8");
+  const style = doc.createElement("style");
+  style.textContent = css.replace(/^@import .*;$/m, "");
+  doc.head.append(style);
 }

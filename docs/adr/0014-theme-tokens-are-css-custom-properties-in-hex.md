@@ -27,7 +27,7 @@ Dark mode is class-strategy: `src/web/index.html` sets `.dark` on `<html>` befor
 
 ## Decision
 
-Theme colours are CSS custom properties defined on `:root` (light) and `.dark` in `src/web/src/styles.css`, each listed explicitly in hex, and exposed as Tailwind utilities through `@theme inline` (`--color-<name>: var(--<name>)`).
+Theme colours are CSS custom properties defined on `:root, .light` (light) and `.dark` in `src/web/src/styles.css`, each listed explicitly in hex, and exposed as Tailwind utilities through `@theme inline` (`--color-<name>: var(--<name>)`).
 
 Names follow the shadcn/ui set (`background`, `foreground`, `muted`, `muted-foreground`, `accent`, `border`, `ring`, `sidebar`, …) because that vocabulary is what Tailwind users already read; a tone the set does not name gets its own token (`separator`, `indicator`, `border-strong`, `muted-foreground-faded`) rather than being merged into a near neighbour. Components use the semantic utilities with no `dark:` twin: the token carries both values.
 
@@ -36,4 +36,5 @@ Names follow the shadcn/ui set (`background`, `foreground`, `muted`, `muted-fore
 - Restyling a tone is one edit in `styles.css`, in each mode.
 - Values are hex even though Tailwind's palette is `oklch`. This is not an oversight to "modernise": an `oklch` token would silently drop out of every chart that reads it. Each hex value is the sRGB rendering of the Tailwind tone it replaced, so the page looks the same.
 - A colour that varies by mode is added as a token, never as a `dark:` utility.
+- The chart theme reads the tokens back at chart init, through a hidden probe element classed `light` or `dark` under `<body>` (`src/web/src/features/widgets/charts/css-token-reader.ts`). The probe names its mode itself because a chart re-inits for a new mode before `<html>` changes class — React runs a child's effects before its parent's — which is why the light values are also selectable as `.light`. A token missing from the stylesheet throws, naming it, rather than painting an engine default.
 - Alpha tints stay as Tailwind opacity modifiers on a token (`bg-sidebar-accent/60`) rather than as extra tokens.

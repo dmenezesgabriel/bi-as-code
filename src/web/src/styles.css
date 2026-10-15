@@ -8,8 +8,11 @@
    component names one utility (`bg-background`) and gets both modes. Values
    are hex, not Tailwind 4's oklch, because the ECharts theme reads these
    back and zrender's colour parser has no oklch (ADR-0014). Each value is
-   the sRGB rendering of the Tailwind neutral it replaced. */
-:root {
+   the sRGB rendering of the Tailwind tone it replaced. `.light` selects
+   the light set on an element under a dark root — the chart theme's token
+   probe needs it. */
+:root,
+.light {
   --background: #ffffff; /* white */
   --foreground: #171717; /* neutral-900 */
   --muted: #f5f5f5; /* neutral-100 */
@@ -26,6 +29,18 @@
   --sidebar-accent: #e5e5e5; /* neutral-200 */
   --overlay: rgb(0 0 0 / 20%);
   --ring: #737373; /* neutral-500 */
+  --popover: #ffffff; /* white */
+  --popover-border: #e5e5e5; /* neutral-200 */
+  --chart-axis: #a1a1a1; /* neutral-400 */
+  --chart-label-inside: #ffffff; /* white — sits on the series fill */
+  --chart-1: #2563eb; /* blue-600 */
+  --chart-2: #059669; /* emerald-600 */
+  --chart-3: #d97706; /* amber-600 */
+  --chart-4: #dc2626; /* red-600 */
+  --chart-5: #7c3aed; /* violet-600 */
+  --chart-6: #0891b2; /* cyan-600 */
+  --chart-7: #db2777; /* pink-600 */
+  --chart-8: #65a30d; /* lime-600 */
 }
 
 .dark {
@@ -45,6 +60,18 @@
   --sidebar-accent: #404040; /* neutral-700 */
   --overlay: rgb(0 0 0 / 50%);
   --ring: #737373; /* neutral-500 */
+  --popover: #171717; /* neutral-900 */
+  --popover-border: #404040; /* neutral-700 */
+  --chart-axis: #525252; /* neutral-600 */
+  --chart-label-inside: #ffffff; /* white — sits on the series fill */
+  --chart-1: #2563eb; /* blue-600 */
+  --chart-2: #059669; /* emerald-600 */
+  --chart-3: #d97706; /* amber-600 */
+  --chart-4: #dc2626; /* red-600 */
+  --chart-5: #7c3aed; /* violet-600 */
+  --chart-6: #0891b2; /* cyan-600 */
+  --chart-7: #db2777; /* pink-600 */
+  --chart-8: #65a30d; /* lime-600 */
 }
 
 @theme inline {

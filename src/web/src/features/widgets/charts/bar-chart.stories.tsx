@@ -142,7 +142,7 @@ export const LabeledDark: Story = {
     const option = await appliedOption<{
       series?: { label?: { color?: string; textBorderWidth?: number } }[];
     }>(canvasElement);
-    expect(option.series?.[0]?.label?.color).toBe("#a3a3a3");
+    expect(option.series?.[0]?.label?.color).toBe("#a1a1a1");
     expect(option.series?.[0]?.label?.textBorderWidth).toBeUndefined();
   },
 };

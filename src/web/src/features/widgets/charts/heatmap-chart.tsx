@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
-import { useThemeMode } from "../../chrome/theme-mode";
 import { BoundChart } from "./bound-chart";
 import { toHeatmap } from "./to-heatmap";
 import { toHeatmapOption } from "./to-heatmap-option";
 import type { HeatmapChartProps } from "./types";
+import { useChartTokens } from "./use-chart-tokens";
 
 /**
  * The `<Heatmap>` MDX widget: a density grid bound to a named ```sql fence
@@ -23,7 +23,7 @@ export function Heatmap({
   renderer,
   ...props
 }: HeatmapChartProps): ReactElement {
-  const mode = useThemeMode();
+  const tokens = useChartTokens();
   return (
     <BoundChart
       data={props.data}
@@ -34,7 +34,7 @@ export function Heatmap({
         toHeatmap(rows, { x: props.x, y: props.y, value: props.value })
       }
       isEmpty={(model) => model.cells.length === 0}
-      option={(model) => toHeatmapOption(model, props, mode)}
+      option={(model) => toHeatmapOption(model, props, tokens)}
     />
   );
 }

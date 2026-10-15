@@ -87,3 +87,12 @@ export function effectiveBackground(element: Locator): Promise<string> {
     }
   });
 }
+
+/** The value custom property `token` holds on the document root, trimmed. */
+export function readRootToken(page: Page, token: string): Promise<string> {
+  return page.evaluate(
+    (name) =>
+      getComputedStyle(document.documentElement).getPropertyValue(name).trim(),
+    token,
+  );
+}

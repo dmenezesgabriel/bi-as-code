@@ -1,4 +1,3 @@
-import type { ThemeMode } from "../../chrome/theme";
 import type { FormatRange } from "../value/types";
 import {
   chartChromeOption,
@@ -9,29 +8,32 @@ import {
   safeFormat,
   type TooltipParam,
 } from "./to-option";
-import { SERIES_COLORS, themeTokens } from "./theme";
-import type { ChartOption, HeatmapChartProps, HeatmapModel } from "./types";
+import type {
+  ChartOption,
+  ChartTokens,
+  HeatmapChartProps,
+  HeatmapModel,
+} from "./types";
 import { numericRange } from "../value/numeric-range";
 
 /**
  * Assembles the `setOption` payload for a heatmap model: two category axes
  * (x on top, y inverted — the matrix reads top-down like evidence's), one
  * `heatmap` series of `[xi,yi,v]` cells, a continuous `visualMap` strip as
- * the legend, and an item tooltip naming all three columns. `mode` resolves
+ * the legend, and an item tooltip naming all three columns. `tokens` supply
  * the `inRange` ramp and cell border — those colors must be baked into the
- * option, not inherited from the registered theme.
+ * option, not inherited from the chart theme.
  *
  * @example
- * toHeatmapOption(toHeatmap(rows, { x: "week", y: "region", value: "orders" }), props, mode)
+ * toHeatmapOption(toHeatmap(rows, { x: "week", y: "region", value: "orders" }), props, tokens)
  */
 export function toHeatmapOption(
   model: HeatmapModel,
   props: HeatmapChartProps,
-  mode: ThemeMode,
+  tokens: ChartTokens,
 ): ChartOption {
   assertFormats(model, props);
   const legend = props.legend ?? true;
-  const tokens = themeTokens(mode);
   const grid = gridOption(props, false) as { top: number; bottom: number };
   // The colour strip's ends, its ticks and the cell labels all read off one
   // scale, so they format against its span and share a unit.
@@ -68,13 +70,13 @@ export function toHeatmapOption(
       left: "center",
       bottom: 0,
       itemWidth: 10,
-      textStyle: { fontSize: 11, color: tokens.textMuted },
+      textStyle: { fontSize: 11, color: tokens.mutedForeground },
       text: [
         safeFormat(model.max, props.valueFmt, valueSpan),
         safeFormat(model.min, props.valueFmt, valueSpan),
       ],
       formatter: (v: unknown) => safeFormat(v, props.valueFmt, valueSpan),
-      inRange: { color: colorRamp(props.colorScale, tokens.surface) },
+      inRange: { color: colorRamp(props.colorScale, tokens) },
     },
     aria: {
       enabled: true,
@@ -169,14 +171,15 @@ function seriesOption(
  * data" end blends into the page); one color → `[surface, color]`, reading
  * as a gradient anchored on the surface rather than a flat fill; two or
  * more → verbatim. Evidence's `getBackgroundAdjustedColorScale` semantics,
- * resolved against our mode tokens.
+ * resolved against the mode's chart tokens.
  */
 function colorRamp(
   scale: string | readonly string[] | undefined,
-  surface: string,
+  tokens: ChartTokens,
 ): readonly string[] {
   const colors = scale === undefined ? [] : [scale].flat();
-  if (colors.length === 0) return [surface, SERIES_COLORS[0]];
+  const surface = tokens.background;
+  if (colors.length === 0) return [surface, tokens.series[0]!];
   if (colors.length === 1) return [surface, colors[0]!];
   return colors;
 }

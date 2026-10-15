@@ -74,7 +74,7 @@ interface BoundChartProps<M> {
  * makes the component model exist).
  *
  * @example
- * <BoundChart data="orders" select="crossfilter" pointField="region" brushAxis={(m) => seriesBrushAxis(m.xType, "region", m.xDomain)} model={(r) => toScatterSeries(r, spec)} option={(m) => toScatterOption(m, props)} />
+ * <BoundChart data="orders" select="crossfilter" pointField="region" brushAxis={(m) => seriesBrushAxis(m.xType, "region", m.xDomain)} model={(r) => toScatterSeries(r, spec)} option={(m) => toScatterOption(m, props, tokens)} />
  */
 export function BoundChart<M>(props: BoundChartProps<M>): ReactElement {
   const { result, height, client, filtered, pending } = useChartRows(

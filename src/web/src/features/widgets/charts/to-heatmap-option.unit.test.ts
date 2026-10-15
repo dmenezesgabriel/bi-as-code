@@ -5,8 +5,10 @@ import {
   ariaDescription,
   tooltipFormatter,
 } from "./series-chart.fixture";
+import { DARK_CHART_TOKENS, LIGHT_CHART_TOKENS } from "./chart-tokens.fixture";
 import { toHeatmap } from "./to-heatmap";
 import { toHeatmapOption } from "./to-heatmap-option";
+import type { ChartTokens } from "./types";
 
 const PROPS = {
   data: "q",
@@ -18,19 +20,19 @@ const PROPS = {
 function option(
   props: Parameters<typeof toHeatmapOption>[1] = PROPS,
   rows = TREND_ROWS,
-  mode: "light" | "dark" = "light",
+  tokens: ChartTokens = LIGHT_CHART_TOKENS,
 ) {
   return toHeatmapOption(
     toHeatmap(rows, { x: props.x, y: props.y, value: props.value }),
     props,
-    mode,
+    tokens,
   );
 }
 
 describe("toHeatmapOption", () => {
   it("emits a heatmap series over two category axes, x on top, y inverted", () => {
     const model = toHeatmap(TREND_ROWS, PROPS);
-    const opt = toHeatmapOption(model, PROPS, "light");
+    const opt = toHeatmapOption(model, PROPS, LIGHT_CHART_TOKENS);
     const xAxis = opt.xAxis as {
       type?: string;
       position?: string;
@@ -74,7 +76,8 @@ describe("toHeatmapOption", () => {
   });
 
   it("re-anchors the default ramp on the dark surface in dark mode", () => {
-    const visualMap = option(PROPS, TREND_ROWS, "dark").visualMap as {
+    const visualMap = option(PROPS, TREND_ROWS, DARK_CHART_TOKENS)
+      .visualMap as {
       inRange?: { color?: unknown };
     };
     expect(visualMap.inRange?.color).toEqual(["#0a0a0a", "#2563eb"]);
@@ -87,7 +90,7 @@ describe("toHeatmapOption", () => {
     const dark = option(
       { ...PROPS, colorScale: ["#f59e0b"] },
       TREND_ROWS,
-      "dark",
+      DARK_CHART_TOKENS,
     ).visualMap as { inRange?: { color?: unknown } };
     expect(light.inRange?.color).toEqual(["#ffffff", "#f59e0b"]);
     expect(dark.inRange?.color).toEqual(["#0a0a0a", "#f59e0b"]);

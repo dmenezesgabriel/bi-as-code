@@ -7,9 +7,11 @@ import {
   testBadRefs,
   workerPosts,
 } from "./dev-server.fixture.js";
+import { readRootToken } from "./contrast.js";
 import {
   axisTickTexts,
   chartHosts,
+  chartPaintAt,
   openWeeklyReviewCharts,
   optionAt,
   pointLabelTexts,
@@ -319,7 +321,7 @@ test("the theme toggle repaints every chart in the other palette", async ({
   const lightRamp = (await optionAt(page, 5)).visualMap?.[0]?.inRange
     ?.color?.[0];
   // The Regional split's bar labels take each mode's muted text color from
-  // the registered theme — neutral-600 on white, neutral-400 on near-black.
+  // the chart theme — `--muted-foreground` on white and on near-black.
   expect((await optionAt(page, 0)).series[0]?.label?.color).toBe("#525252");
 
   await toggleTheme(page, "dark");
@@ -347,13 +349,74 @@ test("the theme toggle repaints every chart in the other palette", async ({
   const darkRamp = (await optionAt(page, 5)).visualMap?.[0]?.inRange
     ?.color?.[0];
   expect(darkRamp).not.toBe(lightRamp);
-  expect((await optionAt(page, 0)).series[0]?.label?.color).toBe("#a3a3a3");
+  expect((await optionAt(page, 0)).series[0]?.label?.color).toBe("#a1a1a1");
 
   await toggleTheme(page, "light");
 
   // A repaint is client-side theme work — no re-query reaches the worker.
   expect(await workerPosts(page)).toBe(posts);
   expect(errors).toEqual([]);
+});
+
+/** The colours every chart should paint, read off the root's theme tokens. */
+async function tokenPaint(page: Page) {
+  const token = (name: string) => readRootToken(page, name);
+  return {
+    axisLabel: await token("--muted-foreground"),
+    axisLine: await token("--chart-axis"),
+    splitLine: await token("--border"),
+    tooltipBackground: await token("--popover"),
+    tooltipBorder: await token("--popover-border"),
+    firstSeries: await token("--chart-1"),
+  };
+}
+
+/** Asserts the Regional split's bars paint from the root's current tokens. */
+async function expectChartPaintsTokens(page: Page): Promise<void> {
+  expect(await chartPaintAt(page, 0)).toEqual(await tokenPaint(page));
+}
+
+test("every chart colour follows the theme tokens through a light, dark, light round trip", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await openWeeklyReviewCharts(page, biacDev.url);
+  await expectChartPaintsTokens(page);
+
+  await toggleTheme(page, "dark");
+  await expectChartPaintsTokens(page);
+  expect((await chartPaintAt(page, 0)).splitLine).toBe("#262626");
+
+  // Back to light: the charts re-init before `<html>` drops `.dark`, so
+  // only a token read that names its own mode lands on the light values.
+  await toggleTheme(page, "light");
+  await expectChartPaintsTokens(page);
+  expect((await chartPaintAt(page, 0)).splitLine).toBe("#e5e5e5");
+  expect(errors).toEqual([]);
+});
+
+test("an edited token reaches the charts on the next theme flip", async ({
+  page,
+  biacDev,
+}) => {
+  await openWeeklyReviewCharts(page, biacDev.url);
+
+  // Edit the light token rule itself, as DevTools' Styles pane does.
+  await page.evaluate(() => {
+    const rule = [...document.styleSheets]
+      .flatMap((sheet) => [...sheet.cssRules])
+      .find(
+        (r): r is CSSStyleRule =>
+          r instanceof CSSStyleRule && r.selectorText === ":root, .light",
+      );
+    if (!rule) throw new Error("no `:root, .light` token rule in the page");
+    rule.style.setProperty("--border", "#ff00ff");
+  });
+  await toggleTheme(page, "dark");
+  await toggleTheme(page, "light");
+
+  expect((await chartPaintAt(page, 0)).splitLine).toBe("#ff00ff");
 });
 
 test("?region=Atlantis is pruned by the Region dropdown so every chart stays live", async ({

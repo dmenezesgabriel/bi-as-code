@@ -10,7 +10,7 @@ import type { ThemeMode } from "./theme";
  * The resolved light/dark mode as a tree value. `useTheme` already decides
  * the mode and applies it to `documentElement`, but canvas-rendered widgets
  * (echarts) cannot read CSS classes — they need the mode as a JS value to
- * pick their registered theme. Default `light` for provider-less mounts
+ * read their theme tokens for. Default `light` for provider-less mounts
  * (stories, tests).
  */
 const ThemeModeContext = createContext<ThemeMode>("light");

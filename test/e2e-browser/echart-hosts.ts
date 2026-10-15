@@ -173,3 +173,51 @@ export async function openWeeklyReviewCharts(
   await page.goto(`${url}weekly-review`);
   await expect(readyCharts(page)).toHaveCount(6);
 }
+
+/** The colours a chart's live model resolved from its theme and option. */
+export interface ChartPaint {
+  axisLabel: string;
+  axisLine: string;
+  splitLine: string;
+  tooltipBackground: string;
+  tooltipBorder: string;
+  firstSeries: string;
+}
+
+/**
+ * The colours chart host `hostIndex` paints its first category/value axis
+ * pair and tooltip with — read off the engine's merged model, so a theme
+ * colour and an option colour read alike.
+ */
+export function chartPaintAt(
+  page: Page,
+  hostIndex: number,
+): Promise<ChartPaint> {
+  return page.evaluate((hi) => {
+    type Model = { get(path: string | string[]): string };
+    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
+      hi
+    ];
+    const chart = (
+      host as unknown as {
+        echartsInstance?: {
+          getModel(): { getComponent(type: string, index: number): Model };
+          getOption(): { color?: string[] };
+        };
+      }
+    ).echartsInstance;
+    if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
+    const model = chart.getModel();
+    const xAxis = model.getComponent("xAxis", 0);
+    const yAxis = model.getComponent("yAxis", 0);
+    const tooltip = model.getComponent("tooltip", 0);
+    return {
+      axisLabel: xAxis.get(["axisLabel", "color"]),
+      axisLine: xAxis.get(["axisLine", "lineStyle", "color"]),
+      splitLine: yAxis.get(["splitLine", "lineStyle", "color"]),
+      tooltipBackground: tooltip.get("backgroundColor"),
+      tooltipBorder: tooltip.get("borderColor"),
+      firstSeries: chart.getOption().color?.[0] ?? "",
+    };
+  }, hostIndex);
+}

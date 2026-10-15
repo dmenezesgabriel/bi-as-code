@@ -1,11 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
-import { effectiveBackground, paintedRgb } from "./contrast.js";
+import { effectiveBackground, paintedRgb, readRootToken } from "./contrast.js";
 import type { Rgb } from "./contrast.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 type ColorScheme = "light" | "dark";
 
-/** The chrome token values, light and dark, as `src/web/src/styles.css` defines them. */
+/** The theme token values, light and dark, as `src/web/src/styles.css` defines them. */
 const TOKENS: Record<ColorScheme, Record<string, string>> = {
   light: {
     "--background": "#ffffff",
@@ -24,6 +24,18 @@ const TOKENS: Record<ColorScheme, Record<string, string>> = {
     "--sidebar-accent": "#e5e5e5",
     "--overlay": "rgb(0 0 0 / 20%)",
     "--ring": "#737373",
+    "--popover": "#ffffff",
+    "--popover-border": "#e5e5e5",
+    "--chart-axis": "#a1a1a1",
+    "--chart-label-inside": "#ffffff",
+    "--chart-1": "#2563eb",
+    "--chart-2": "#059669",
+    "--chart-3": "#d97706",
+    "--chart-4": "#dc2626",
+    "--chart-5": "#7c3aed",
+    "--chart-6": "#0891b2",
+    "--chart-7": "#db2777",
+    "--chart-8": "#65a30d",
   },
   dark: {
     "--background": "#0a0a0a",
@@ -42,6 +54,18 @@ const TOKENS: Record<ColorScheme, Record<string, string>> = {
     "--sidebar-accent": "#404040",
     "--overlay": "rgb(0 0 0 / 50%)",
     "--ring": "#737373",
+    "--popover": "#171717",
+    "--popover-border": "#404040",
+    "--chart-axis": "#525252",
+    "--chart-label-inside": "#ffffff",
+    "--chart-1": "#2563eb",
+    "--chart-2": "#059669",
+    "--chart-3": "#d97706",
+    "--chart-4": "#dc2626",
+    "--chart-5": "#7c3aed",
+    "--chart-6": "#0891b2",
+    "--chart-7": "#db2777",
+    "--chart-8": "#65a30d",
   },
 };
 
@@ -227,14 +251,6 @@ async function expectProbes(
     const expected = await paintedRgb(page, tokens[probe.token]!);
     expectSameColor(await paintedRgb(page, computed), expected, probe.name);
   }
-}
-
-function readRootToken(page: Page, token: string): Promise<string> {
-  return page.evaluate(
-    (name) =>
-      getComputedStyle(document.documentElement).getPropertyValue(name).trim(),
-    token,
-  );
 }
 
 for (const colorScheme of ["light", "dark"] as const) {
