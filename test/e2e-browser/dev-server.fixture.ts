@@ -20,6 +20,8 @@ export interface BiacDev {
   url: string;
   /** Temp project dir holding a copy of the shipped example project. */
   projectDir: string;
+  /** The server's timestamped log so far — what a file write waits on. */
+  log(): readonly string[];
   /**
    * The page's still-unanswered requests, each re-requested from node, plus
    * its errors and the server's log — what a failed test attaches when
@@ -155,7 +157,12 @@ export const test = base.extend<{ biacDev: BiacDev }>({
     const pageErrors = collectConsoleErrors(page);
     const blankPageReport = () =>
       describeBlankPage(requests, pageErrors, server.log());
-    await use({ url: server.url, projectDir, blankPageReport });
+    await use({
+      url: server.url,
+      projectDir,
+      log: () => server.log(),
+      blankPageReport,
+    });
     await attachBlankPageReport(page, testInfo, blankPageReport);
     server.kill();
     rmSync(projectDir, { recursive: true, force: true });

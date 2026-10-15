@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 /** Whether the document root currently carries the `dark` class. */
@@ -149,18 +150,22 @@ test("editing biac.config.ts reloads the site title", async ({
   const errors = collectConsoleErrors(page);
   const nav = await openSiteNav(page, biacDev.url);
 
-  // Rewriting identical bytes still bumps mtime, so each poll attempt
-  // re-fires the chokidar event — the same trick the page-edit test uses.
+  // A config edit is a full reload. Under load one reload outlasts any short
+  // retry, so the file is written only until the server logs it — a later
+  // write would restart the reload — and the title is then awaited once.
   const configFile = join(biacDev.projectDir, "biac.config.ts");
-  await expect(async () => {
-    writeFileSync(
-      configFile,
-      'export default { title: "ACME", theme: "system", nav: { sidebar: true } };\n',
-    );
-    await expect(nav.getByRole("link", { name: "ACME" })).toBeVisible({
-      timeout: 3_000,
-    });
-  }).toPass({ timeout: 20_000 });
+  await rewriteUntilServerLogs({
+    rewrite: () =>
+      writeFileSync(
+        configFile,
+        'export default { title: "ACME", theme: "system", nav: { sidebar: true } };\n',
+      ),
+    log: biacDev.log,
+    fileTail: "biac.config.ts",
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  await expect(nav.getByRole("link", { name: "ACME" })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

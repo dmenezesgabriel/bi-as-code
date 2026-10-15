@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildCli, startDevServer, type DevServer } from "../lib/dev-server.js";
 import { eventually } from "../lib/http.js";
+import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 
 let projectRoot: string | undefined;
 let server: DevServer | undefined;
@@ -73,6 +74,26 @@ describe("biac dev", () => {
       expect.stringMatching(/^\d{4}-\d\d-\d\dT[\d:.]+Z stdout .*Local:/),
     );
     expect(server.log().join("\n")).not.toContain("\x1b[");
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("acknowledges a biac.config.ts write with a page reload naming it", async () => {
+    const configFile = join(projectRoot!, "biac.config.ts");
+    writeFileSync(configFile, 'export default { title: "Before" };\n');
+    server = await startDevServer(projectRoot!);
+    // A config edit reloads only a client that loaded the config module.
+    await fetch(`${server.url}@id/__x00__virtual:biac-config`);
+
+    const line = await rewriteUntilServerLogs({
+      rewrite: () =>
+        writeFileSync(configFile, 'export default { title: "After" };\n'),
+      log: server.log,
+      fileTail: "biac.config.ts",
+      attemptMs: 3_000,
+      timeoutMs: 20_000,
+    });
+
+    expect(line).toMatch(/ page reload \S*\/biac\.config\.ts/);
     expect(await server.stop()).toBe(0);
   }, 60_000);
 });
