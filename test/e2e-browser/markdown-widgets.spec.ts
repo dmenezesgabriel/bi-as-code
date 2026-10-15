@@ -43,11 +43,11 @@ test("the page renders the three callout variants with their type tints", async 
   // Clean lift (success) — each carries its palette as classes.
   const notes = page.getByRole("note");
   await expect(notes).toHaveCount(3);
-  await expect(notes.nth(0)).toHaveClass(/bg-blue-50/);
+  await expect(notes.nth(0)).toHaveClass(/bg-info-surface/);
   await expect(notes.nth(0)).toContainText("Reading guide");
-  await expect(notes.nth(1)).toHaveClass(/bg-yellow-50/);
+  await expect(notes.nth(1)).toHaveClass(/bg-warning-surface/);
   await expect(notes.nth(1)).toContainText("Concentration risk");
-  await expect(notes.nth(2)).toHaveClass(/bg-emerald-50/);
+  await expect(notes.nth(2)).toHaveClass(/bg-success-surface/);
   await expect(notes.nth(2)).toContainText("Clean lift");
   expect(errors).toEqual([]);
 });

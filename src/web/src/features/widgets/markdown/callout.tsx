@@ -3,16 +3,15 @@ import { cn } from "../../../lib/cn";
 import { WidgetError } from "./states";
 import type { CalloutProps, CalloutType } from "./types";
 
-// Type-tint pairs, light surface + dark alpha wash. Emerald stands in for
-// evidence's `fern` scale — its nearest shipped palette.
+// One status tone family per type; light is a solid tint, dark an alpha
+// wash of the same hue (styles.css). Emerald stands in for evidence's
+// `fern` scale — its nearest shipped palette.
 const CALLOUT_CLASSES: Record<CalloutType, string> = {
-  info: "bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-200",
-  success:
-    "bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-200",
-  warning:
-    "bg-yellow-50 border-yellow-200 text-yellow-900 dark:bg-yellow-500/10 dark:border-yellow-500/20 dark:text-yellow-200",
+  info: "bg-info-surface border-info-border text-info-foreground",
+  success: "bg-success-surface border-success-border text-success-foreground",
+  warning: "bg-warning-surface border-warning-border text-warning-foreground",
   error:
-    "bg-red-50 border-red-200 text-red-900 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-200",
+    "bg-destructive-surface border-destructive-border text-destructive-foreground",
 };
 
 /**

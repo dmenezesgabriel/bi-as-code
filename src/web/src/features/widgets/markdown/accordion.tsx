@@ -11,14 +11,12 @@ import type {
 } from "./types";
 
 // Class maps ported from evidence's `tv()` variants in
-// core/src/user-components/tags/accordion/Accordion.svelte; its shadcn
-// tokens resolve to our neutral scale (accent → neutral-100/800, card →
-// white/neutral-900, border → neutral-200/700 — the same resolutions
-// the Tabs variants use).
+// core/src/user-components/tags/accordion/Accordion.svelte, on the same
+// shadcn token names (accent, card, card-border) the Tabs variants use.
 const VARIANTS: Record<AccordionVariant, string> = {
   default: "",
-  well: "rounded-lg border border-neutral-200 bg-neutral-100 px-4 py-2 dark:border-neutral-700 dark:bg-neutral-800",
-  card: "rounded-lg border border-neutral-200 bg-white px-4 py-2 shadow-xs dark:border-neutral-700 dark:bg-neutral-900",
+  well: "rounded-lg border border-card-border bg-accent px-4 py-2",
+  card: "rounded-lg border border-card-border bg-card px-4 py-2 shadow-xs",
 };
 
 /**
@@ -75,7 +73,7 @@ export function Accordion({
         <AccordionPrimitive.Item
           key={item.key}
           value={String(i)}
-          className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+          className="border-b border-border last:border-b-0"
         >
           {/* data-slot marks the h3 as widget chrome so collectTocHeadings
               skips it — accordion titles are disclosure labels, not
@@ -86,7 +84,7 @@ export function Accordion({
           >
             <AccordionPrimitive.Trigger className="group flex flex-1 cursor-pointer items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-colors hover:underline">
               <span>{item.props.title}</span>
-              <ChevronDownIcon className="shrink-0 translate-y-0.5 text-neutral-500 transition-transform duration-200 group-data-panel-open:rotate-180 dark:text-neutral-400" />
+              <ChevronDownIcon className="shrink-0 translate-y-0.5 text-muted-foreground-faded transition-transform duration-200 group-data-panel-open:rotate-180" />
             </AccordionPrimitive.Trigger>
           </AccordionPrimitive.Header>
           <AccordionPrimitive.Panel

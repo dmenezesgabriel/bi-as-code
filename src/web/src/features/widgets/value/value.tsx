@@ -38,10 +38,7 @@ export function Value({
         const negative = redNegatives && numeric !== null && numeric < 0;
         return (
           <span
-            className={cn(
-              "inline",
-              negative && "text-red-600 dark:text-red-400",
-            )}
+            className={cn("inline", negative && "text-negative")}
             style={negative || color === undefined ? undefined : { color }}
           >
             {formatted}

@@ -84,7 +84,7 @@ export const DownIsGood: Story = {
   ],
   play: async ({ canvas, canvasElement }) => {
     await canvas.findByText("-4.1%");
-    await expect(root(canvasElement).className).toContain("text-emerald-");
+    await expect(root(canvasElement).className).toContain("text-positive");
   },
 };
 

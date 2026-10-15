@@ -20,7 +20,7 @@ export const Info: Story = {
   args: { type: "info", title: "Report info" },
   play: async ({ canvas }) => {
     const note = canvas.getByRole("note");
-    await expect(note.className).toContain("bg-blue-50");
+    await expect(note.className).toContain("bg-info-surface");
     await expect(
       canvas.getByRole("heading", { name: "Report info" }),
     ).toBeInTheDocument();
@@ -31,7 +31,9 @@ export const Info: Story = {
 export const Success: Story = {
   args: { type: "success", title: "All systems normal" },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("note").className).toContain("bg-emerald-50");
+    await expect(canvas.getByRole("note").className).toContain(
+      "bg-success-surface",
+    );
   },
 };
 
@@ -39,7 +41,9 @@ export const Success: Story = {
 export const Warning: Story = {
   args: { type: "warning", title: "Concentration risk" },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("note").className).toContain("bg-yellow-50");
+    await expect(canvas.getByRole("note").className).toContain(
+      "bg-warning-surface",
+    );
   },
 };
 
@@ -47,7 +51,9 @@ export const Warning: Story = {
 export const ErrorVariant: Story = {
   args: { type: "error", title: "Data quality" },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("note").className).toContain("bg-red-50");
+    await expect(canvas.getByRole("note").className).toContain(
+      "bg-destructive-surface",
+    );
   },
 };
 
@@ -66,8 +72,11 @@ export const Dark: Story = {
   globals: { theme: "dark" },
   play: async ({ canvas }) => {
     const note = canvas.getByRole("note");
-    await expect(note.className).toContain("dark:bg-yellow-500/10");
-    await expect(note.className).toContain("dark:text-yellow-200");
+    const style = getComputedStyle(note);
+    await expect(style.getPropertyValue("--warning-surface")).toBe("#f0b1001a");
+    await expect(style.getPropertyValue("--warning-foreground")).toBe(
+      "#fff085",
+    );
   },
 };
 

@@ -43,7 +43,7 @@ export function SparklineDisplay({
     return (
       <span
         className={cn(
-          "inline-flex items-center justify-center align-baseline text-neutral-400 dark:text-neutral-500",
+          "inline-flex items-center justify-center align-baseline text-sparkline",
           className,
         )}
         style={{ width, height }}
@@ -75,7 +75,7 @@ export function SparklineDisplay({
   return (
     <span
       className={cn(
-        "inline-block align-baseline leading-none text-neutral-400 dark:text-neutral-500",
+        "inline-block align-baseline leading-none text-sparkline",
         className,
       )}
       style={color === undefined ? undefined : { color }}

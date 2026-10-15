@@ -12,9 +12,9 @@ export function TableLoading() {
       aria-label="Loading query result"
       className="animate-pulse space-y-1.5 py-2"
     >
-      <div className="h-4 rounded bg-neutral-200 dark:bg-neutral-700" />
-      <div className="h-4 w-5/6 rounded bg-neutral-200 dark:bg-neutral-700" />
-      <div className="h-4 w-4/6 rounded bg-neutral-200 dark:bg-neutral-700" />
+      <div className="h-4 rounded bg-secondary" />
+      <div className="h-4 w-5/6 rounded bg-secondary" />
+      <div className="h-4 w-4/6 rounded bg-secondary" />
     </div>
   );
 }
@@ -33,7 +33,7 @@ export function TableError({
   return (
     <p
       role="alert"
-      className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+      className="rounded border border-destructive-border bg-destructive-surface px-3 py-2 text-sm text-destructive-foreground"
     >
       <code className="font-medium">{name}</code>: {message}
     </p>
@@ -42,5 +42,5 @@ export function TableError({
 
 /** A successful query that returned no rows. */
 export function TableEmpty() {
-  return <p className="py-2 text-sm text-neutral-500">0 rows</p>;
+  return <p className="py-2 text-sm text-muted-foreground-faded">0 rows</p>;
 }

@@ -95,7 +95,7 @@ export const WellVariant: Story = {
   args: { variant: "well" },
   play: async ({ canvasElement }) => {
     const root = canvasElement.querySelector('[data-slot="accordion-root"]');
-    await expect(root?.className).toContain("bg-neutral-100");
+    await expect(root?.className).toContain("bg-accent");
     await expect(root?.className).toContain("rounded-lg");
   },
 };
@@ -105,7 +105,7 @@ export const CardVariant: Story = {
   args: { variant: "card" },
   play: async ({ canvasElement }) => {
     const root = canvasElement.querySelector('[data-slot="accordion-root"]');
-    await expect(root?.className).toContain("bg-white");
+    await expect(root?.className).toContain("bg-card");
     await expect(root?.className).toContain("shadow-xs");
   },
 };
@@ -172,6 +172,9 @@ export const Dark: Story = {
   args: { variant: "well" },
   play: async ({ canvasElement }) => {
     const root = canvasElement.querySelector('[data-slot="accordion-root"]');
-    await expect(root?.className).toContain("dark:bg-neutral-800");
+    await expect(root?.className).toContain("bg-accent");
+    await expect(
+      getComputedStyle(root as HTMLElement).getPropertyValue("--accent"),
+    ).toBe("#262626");
   },
 };

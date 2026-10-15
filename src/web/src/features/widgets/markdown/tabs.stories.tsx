@@ -228,8 +228,10 @@ export const Dark: Story = {
   globals: { theme: "dark" },
   args: { variant: "well" },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("tablist").className).toContain(
-      "dark:bg-neutral-800",
-    );
+    await expect(
+      getComputedStyle(canvas.getByRole("tablist")).getPropertyValue(
+        "--accent",
+      ),
+    ).toBe("#262626");
   },
 };

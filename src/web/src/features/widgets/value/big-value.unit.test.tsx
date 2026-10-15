@@ -259,7 +259,7 @@ describe("BigValue", () => {
       "negative",
     );
     expect(delta.closest("[data-status]")?.className).toContain(
-      "text-emerald-",
+      "text-positive",
     );
   });
 

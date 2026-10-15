@@ -90,7 +90,7 @@ export function DataTable({
                     <td
                       key={column.id}
                       className={cn(
-                        "border-b border-neutral-200 py-1 pr-4 dark:border-neutral-800",
+                        "border-b border-border py-1 pr-4",
                         (typeof value === "number" ||
                           typeof value === "bigint") &&
                           "text-right",
@@ -130,7 +130,7 @@ function SortableHeader({
   return (
     <th
       aria-sort={ariaSortValue(active)}
-      className="border-b border-neutral-300 py-1 pr-4 text-left font-medium dark:border-neutral-700"
+      className="border-b border-border-strong py-1 pr-4 text-left font-medium"
     >
       <button
         type="button"
@@ -170,7 +170,7 @@ function TablePager({
   onPage: (page: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-1 text-xs text-neutral-500 dark:text-neutral-400">
+    <div className="flex items-center justify-between py-1 text-xs text-muted-foreground-faded">
       <span>
         Page {current + 1} of {pageCount} · {totalRows} rows
       </span>
@@ -226,7 +226,7 @@ function PagerButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="inline-flex size-6 items-center justify-center rounded text-neutral-600 hover:bg-neutral-100 disabled:opacity-40 disabled:hover:bg-transparent dark:text-neutral-400 dark:hover:bg-neutral-800 dark:disabled:hover:bg-transparent"
+      className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent"
     >
       {children}
     </button>

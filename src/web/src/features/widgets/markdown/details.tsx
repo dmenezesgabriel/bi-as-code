@@ -41,7 +41,7 @@ export function Details({
   }
   return (
     <Collapsible.Root defaultOpen={defaultOpen} className="flex flex-col">
-      <Collapsible.Trigger className="group flex min-h-6 max-w-full cursor-pointer items-center gap-0.5 text-left text-sm text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100">
+      <Collapsible.Trigger className="group flex min-h-6 max-w-full cursor-pointer items-center gap-0.5 text-left text-sm text-label hover:text-foreground">
         <ChevronDownIcon className="shrink-0 -rotate-90 transition-transform group-data-panel-open:rotate-0" />
         <span className="min-w-0 truncate">{title}</span>
       </Collapsible.Trigger>

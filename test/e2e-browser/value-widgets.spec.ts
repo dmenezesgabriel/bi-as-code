@@ -46,7 +46,7 @@ test("weekly-review's <BigValue> renders title, $15k scalar, green delta, 13-poi
   const delta = widget.locator('[data-status="positive"]');
   await expect(delta).toContainText("+9.9%");
   await expect(delta).toContainText("last week vs. prior");
-  await expect(delta).toHaveClass(/text-emerald-/);
+  await expect(delta).toHaveClass(/text-positive/);
   await expect(delta.locator("svg")).toHaveCount(1);
 
   const spark = widget.locator('svg[aria-label="weekly_revenue"]');

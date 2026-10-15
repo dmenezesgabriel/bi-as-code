@@ -11,7 +11,7 @@ import type { RowAlign, RowProps } from "./types";
 const box = (label: string, height?: number) => (
   <div
     key={label}
-    className="rounded border border-neutral-200 p-4 dark:border-neutral-700"
+    className="rounded border border-card-border p-4"
     style={height === undefined ? undefined : { height }}
   >
     {label}

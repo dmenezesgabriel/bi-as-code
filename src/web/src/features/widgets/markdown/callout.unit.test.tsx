@@ -18,20 +18,20 @@ describe("Callout", () => {
   it("tints info by default", () => {
     render(<Callout>body</Callout>);
 
-    expect(screen.getByRole("note").className).toContain("bg-blue-50");
+    expect(screen.getByRole("note").className).toContain("bg-info-surface");
   });
 
   it.each([
-    ["info", "bg-blue-50"],
-    ["success", "bg-emerald-50"],
-    ["warning", "bg-yellow-50"],
-    ["error", "bg-red-50"],
+    ["info", "bg-info-surface"],
+    ["success", "bg-success-surface"],
+    ["warning", "bg-warning-surface"],
+    ["error", "bg-destructive-surface"],
   ] as const)("tints type=%s with its palette", (type, bg) => {
     render(<Callout type={type}>body</Callout>);
 
     const note = screen.getByRole("note");
     expect(note.className).toContain(bg);
-    expect(note.className).toContain("dark:bg-");
+    expect(note.className).not.toContain("dark:");
   });
 
   it("renders the title as a bold heading", () => {

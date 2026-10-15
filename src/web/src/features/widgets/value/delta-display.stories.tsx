@@ -62,7 +62,7 @@ export const DownIsGood: Story = {
   play: async ({ canvasElement }) => {
     const el = root(canvasElement);
     await expect(el).toHaveAttribute("data-status", "negative");
-    await expect(el.className).toContain("text-emerald-");
+    await expect(el.className).toContain("text-positive");
   },
 };
 

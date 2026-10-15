@@ -134,14 +134,14 @@ describe("Accordion", () => {
 
     const root = container.firstElementChild;
     expect(root?.className).toContain("rounded-lg");
-    expect(root?.className).toContain("bg-neutral-100");
+    expect(root?.className).toContain("bg-accent");
   });
 
   it("applies the card-variant root classes (raised surface)", () => {
     const { container } = renderAccordion(TWO_ITEMS, { variant: "card" });
 
     const root = container.firstElementChild;
-    expect(root?.className).toContain("bg-white");
+    expect(root?.className).toContain("bg-card");
     expect(root?.className).toContain("shadow-xs");
   });
 

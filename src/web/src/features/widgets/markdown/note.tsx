@@ -10,7 +10,7 @@ import type { NoteProps } from "./types";
  */
 export function Note({ children }: NoteProps): ReactElement {
   return (
-    <div className="mt-0 block pb-3 text-xs leading-normal text-neutral-500 dark:text-neutral-400">
+    <div className="mt-0 block pb-3 text-xs leading-normal text-muted-foreground-faded">
       {children}
     </div>
   );

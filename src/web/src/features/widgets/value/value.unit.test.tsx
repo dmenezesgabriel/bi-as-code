@@ -154,7 +154,7 @@ describe("Value", () => {
     );
 
     const el = await screen.findByText("-42.0");
-    expect(el.className).toContain("text-red-");
+    expect(el.className).toContain("text-negative");
   });
 
   it("leaves positive values uncolored under redNegatives", async () => {
@@ -164,7 +164,7 @@ describe("Value", () => {
     );
 
     const el = await screen.findByText("42.0");
-    expect(el.className).not.toContain("text-red-");
+    expect(el.className).not.toContain("text-negative");
   });
 
   it("applies the color prop as an inline style", async () => {
@@ -184,7 +184,7 @@ describe("Value", () => {
     );
 
     const el = await screen.findByText("-42.0");
-    expect(el.className).toContain("text-red-");
+    expect(el.className).toContain("text-negative");
     expect(el.style.color).toBe("");
   });
 });

@@ -69,6 +69,8 @@ export const Dark: Story = {
   globals: { theme: "dark" },
   play: async ({ canvas }) => {
     const trigger = canvas.getByRole("button", { name: "Metric definitions" });
-    await expect(trigger.className).toContain("dark:text-neutral-300");
+    await expect(getComputedStyle(trigger).getPropertyValue("--label")).toBe(
+      "#d4d4d4",
+    );
   },
 };

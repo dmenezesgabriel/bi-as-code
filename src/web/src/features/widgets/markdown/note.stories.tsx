@@ -21,7 +21,7 @@ export const Default: Story = {
       "Figures are trailing four-week averages from the orders set.",
     );
     await expect(note.className).toContain("text-xs");
-    await expect(note.className).toContain("text-neutral-500");
+    await expect(note.className).toContain("text-muted-foreground-faded");
   },
 };
 
@@ -32,6 +32,8 @@ export const Dark: Story = {
     const note = canvas.getByText(
       "Figures are trailing four-week averages from the orders set.",
     );
-    await expect(note.className).toContain("dark:text-neutral-400");
+    await expect(
+      getComputedStyle(note).getPropertyValue("--muted-foreground-faded"),
+    ).toBe("#a1a1a1");
   },
 };

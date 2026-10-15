@@ -8,7 +8,6 @@ describe("Note", () => {
 
     const note = screen.getByText("Report data sourced from the warehouse");
     expect(note.className).toContain("text-xs");
-    expect(note.className).toContain("text-neutral-500");
-    expect(note.className).toContain("dark:text-neutral-400");
+    expect(note.className).toContain("text-muted-foreground-faded");
   });
 });

@@ -117,7 +117,7 @@ describe("Delta", () => {
     await screen.findByText("-4.1%");
     const el = statusRoot();
     expect(el).toHaveAttribute("data-status", "negative");
-    expect(el.className).toContain("text-emerald-");
+    expect(el.className).toContain("text-positive");
   });
 
   it("honors neutralRange for small wobbles", async () => {

@@ -44,7 +44,7 @@ export function PageEditor({
     <div className="grid lg:h-[calc(100vh-3rem)] lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]">
       <section
         aria-label="Source editor"
-        className="flex h-[60vh] min-w-0 flex-col border-b border-neutral-200 lg:h-full lg:border-r lg:border-b-0 dark:border-neutral-800"
+        className="flex h-[60vh] min-w-0 flex-col border-b border-border lg:h-full lg:border-r lg:border-b-0"
       >
         <SourcePane file={file} port={port} confirmLeave={confirmLeave} />
       </section>
@@ -80,10 +80,8 @@ function SourcePane({
   }
   return (
     <>
-      <div className="flex h-9 shrink-0 items-center justify-between gap-4 border-b border-neutral-200 px-4 text-sm dark:border-neutral-800">
-        <code className="truncate text-neutral-600 dark:text-neutral-400">
-          {file}
-        </code>
+      <div className="flex h-9 shrink-0 items-center justify-between gap-4 border-b border-border px-4 text-sm">
+        <code className="truncate text-muted-foreground">{file}</code>
         <p role="status" className="shrink-0">
           {statusText(status)}
         </p>

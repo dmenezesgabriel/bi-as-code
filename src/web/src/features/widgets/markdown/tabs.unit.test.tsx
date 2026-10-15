@@ -171,7 +171,7 @@ describe("Tabs", () => {
     renderTabs(TWO_TABS, { variant: "well" });
 
     const list = screen.getByRole("tablist");
-    expect(list.className).toContain("bg-neutral-100");
+    expect(list.className).toContain("bg-accent");
     expect(list.className).toContain("w-fit");
     expect(list.className).toContain("rounded-lg");
   });

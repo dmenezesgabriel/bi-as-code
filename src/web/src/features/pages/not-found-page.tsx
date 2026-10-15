@@ -10,7 +10,7 @@ export function NotFoundPage() {
         This route does not match any page in <code>pages/</code>.
       </p>
       <p className="mt-4">
-        <Link to="/" className="text-blue-600 underline dark:text-blue-400">
+        <Link to="/" className="text-link underline">
           Back to index
         </Link>
       </p>

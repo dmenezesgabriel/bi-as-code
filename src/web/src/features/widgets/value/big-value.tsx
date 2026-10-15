@@ -106,7 +106,7 @@ function BigValueSuccess({
   return (
     <>
       {resolved.shownTitle !== undefined && (
-        <span className="block text-sm text-neutral-500 dark:text-neutral-400">
+        <span className="block text-sm text-muted-foreground-faded">
           {resolved.shownTitle}
         </span>
       )}

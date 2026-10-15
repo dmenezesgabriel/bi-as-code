@@ -72,7 +72,7 @@ export const RedNegatives: Story = {
   ],
   play: async ({ canvas }) => {
     const el = await canvas.findByText("-4.1%");
-    await expect(el.className).toContain("text-red-");
+    await expect(el.className).toContain("text-negative");
   },
 };
 

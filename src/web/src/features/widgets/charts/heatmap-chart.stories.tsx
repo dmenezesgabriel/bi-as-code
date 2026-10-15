@@ -131,7 +131,7 @@ export const ConstantValue: Story = {
 };
 
 /** The dark theme re-anchors the ramp on the dark surface — the "no data"
- * end blends into `dark:bg-neutral-950` instead of going white. */
+ * end blends into the dark `--background` instead of going white. */
 export const Dark: Story = {
   decorators: [
     withThemeMode("dark"),

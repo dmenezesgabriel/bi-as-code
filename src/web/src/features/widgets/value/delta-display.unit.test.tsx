@@ -47,7 +47,7 @@ describe("DeltaDisplay", () => {
     const root = container.firstElementChild!;
     expect(root).toHaveAttribute("data-status", "positive");
     expect(root).toHaveTextContent("+5.2%");
-    expect(root.className).toContain("text-emerald-");
+    expect(root.className).toContain("text-positive");
   });
 
   it("shows a negative value with its own sign, marked down", () => {
@@ -56,7 +56,7 @@ describe("DeltaDisplay", () => {
     const root = container.firstElementChild!;
     expect(root).toHaveAttribute("data-status", "negative");
     expect(root).toHaveTextContent("-5.2%");
-    expect(root.className).toContain("text-red-");
+    expect(root.className).toContain("text-negative");
   });
 
   it("marks a value inside the neutral range neutral", () => {
@@ -85,7 +85,7 @@ describe("DeltaDisplay", () => {
 
     const root = container.firstElementChild!;
     expect(root).toHaveAttribute("data-status", "positive");
-    expect(root.className).toContain("text-red-");
+    expect(root.className).toContain("text-negative");
   });
 
   it("draws the direction arrow as decorative svg", () => {
@@ -158,18 +158,16 @@ describe("DeltaDisplay", () => {
 });
 
 describe("DeltaDisplay text tone", () => {
-  // WCAG 1.4.3: light tones sit one step darker than the chip tint so the
-  // text clears 4.5:1 on white and on the 10% tinted chip alike.
+  // The tone tokens carry both modes; the browser spec measures the
+  // painted colours and their WCAG 1.4.3 contrast on the chip.
   it.each([
-    { value: 0.05, light: "text-emerald-700", dark: "dark:text-emerald-400" },
-    { value: -0.05, light: "text-red-700", dark: "dark:text-red-400" },
-    { value: 0, light: "text-neutral-600", dark: "dark:text-neutral-400" },
-  ])("colors $value with $light / $dark", ({ value, light, dark }) => {
+    { value: 0.05, tone: "text-positive" },
+    { value: -0.05, tone: "text-negative" },
+    { value: 0, tone: "text-muted-foreground" },
+  ])("colors $value with $tone", ({ value, tone }) => {
     const { container } = render(<DeltaDisplay value={value} chip />);
 
-    const classes = container.firstElementChild!.classList;
-    expect(classes).toContain(light);
-    expect(classes).toContain(dark);
+    expect(container.firstElementChild!.classList).toContain(tone);
   });
 
   it("lets the arrow inherit the text tone", () => {

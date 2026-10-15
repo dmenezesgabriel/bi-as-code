@@ -11,6 +11,6 @@ describe("WidgetError", () => {
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Tab");
     expect(alert).toHaveTextContent("must be a direct child of <Tabs>");
-    expect(alert.className).toContain("border-red-200");
+    expect(alert.className).toContain("border-destructive-border");
   });
 });

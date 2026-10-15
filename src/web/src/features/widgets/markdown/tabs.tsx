@@ -6,13 +6,11 @@ import { WidgetError } from "./states";
 import type { TabProps, TabsProps, TabsVariant } from "./types";
 
 // Class maps ported from evidence's `tv()` variants in
-// core/src/user-components/tags/tabs/Tabs.svelte; its shadcn tokens
-// resolve to our neutral scale (muted → neutral-100/800, border →
-// neutral-200/800, muted-foreground → neutral-500/400).
+// core/src/user-components/tags/tabs/Tabs.svelte, on the same shadcn token
+// names; evidence's `muted` well is our `accent` (neutral-100/800).
 const LIST_VARIANTS: Record<TabsVariant, string> = {
-  default:
-    "border-b border-neutral-200 text-neutral-500 dark:border-neutral-800 dark:text-neutral-400",
-  well: "rounded-lg border border-neutral-200 bg-neutral-100 text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400",
+  default: "border-b border-border text-muted-foreground-faded",
+  well: "rounded-lg border border-card-border bg-accent text-muted-foreground-faded",
 };
 
 // Evidence draws the underline (default) or pill (well) indicator through
@@ -22,15 +20,14 @@ const LIST_VARIANTS: Record<TabsVariant, string> = {
 // first — equal stacking order, earlier in the DOM — keeping it behind
 // the trigger labels without z-index.
 const INDICATOR_VARIANTS: Record<TabsVariant, string> = {
-  default: "border-b border-neutral-900 dark:border-neutral-100",
-  well: "rounded-md border border-neutral-200 bg-white shadow-xs dark:border-neutral-700 dark:bg-neutral-900",
+  default: "border-b border-foreground",
+  well: "rounded-md border border-card-border bg-card shadow-xs",
 };
 
 // Evidence's active/hover text token (foreground for default, primary for
 // well) converges on our neutral foreground — evidence's `primary` is
 // near-black in its own theme.
-const TRIGGER_ACTIVE =
-  "data-active:text-neutral-900 hover:text-neutral-900 dark:data-active:text-neutral-100 dark:hover:text-neutral-100";
+const TRIGGER_ACTIVE = "data-active:text-foreground hover:text-foreground";
 
 /** The default variant's list always spans w-full so its border-b draws
  * the row rule; well hugs the tabs unless fullWidth, which also centers. */

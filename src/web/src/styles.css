@@ -37,6 +37,24 @@
   --primary: #171717; /* neutral-900 — filled, selected, checked */
   --primary-foreground: #ffffff; /* white */
   --secondary: #e5e5e5; /* neutral-200 — unfilled slider/switch track */
+  --card: #ffffff; /* white — raised panels: accordion card, active well tab */
+  --card-border: #e5e5e5; /* neutral-200 */
+  --sparkline: #a1a1a1; /* neutral-400 */
+  --link: #155dfc; /* blue-600 */
+  --positive: #007a55; /* emerald-700 — a good delta */
+  --negative: #c10007; /* red-700 — a bad delta, a red negative value */
+  --info-surface: #eff6ff; /* blue-50 */
+  --info-border: #bedbff; /* blue-200 */
+  --info-foreground: #1c398e; /* blue-900 */
+  --success-surface: #ecfdf5; /* emerald-50 */
+  --success-border: #a4f4cf; /* emerald-200 */
+  --success-foreground: #004f3b; /* emerald-900 */
+  --warning-surface: #fefce8; /* yellow-50 */
+  --warning-border: #fff085; /* yellow-200 */
+  --warning-foreground: #733e0a; /* yellow-900 */
+  --destructive-surface: #fef2f2; /* red-50 — error callouts and error states */
+  --destructive-border: #ffc9c9; /* red-200 */
+  --destructive-foreground: #82181a; /* red-900 */
   --chart-axis: #a1a1a1; /* neutral-400 */
   --chart-label-inside: #ffffff; /* white — sits on the series fill */
   --chart-1: #2563eb; /* blue-600 */
@@ -74,6 +92,24 @@
   --primary: #e5e5e5; /* neutral-200 — filled, selected, checked */
   --primary-foreground: #171717; /* neutral-900 */
   --secondary: #404040; /* neutral-700 — unfilled slider/switch track */
+  --card: #171717; /* neutral-900 */
+  --card-border: #404040; /* neutral-700 */
+  --sparkline: #737373; /* neutral-500 */
+  --link: #2b7fff; /* blue-500 — blue-400 drops under 3:1 against the dark body text, so a link stops reading apart from its paragraph (WCAG 1.4.1) */
+  --positive: #00d492; /* emerald-400 */
+  --negative: #ff6467; /* red-400 */
+  --info-surface: #2b7fff1a; /* blue-500 at 10% */
+  --info-border: #2b7fff33; /* blue-500 at 20% */
+  --info-foreground: #bedbff; /* blue-200 */
+  --success-surface: #00bc7d1a; /* emerald-500 at 10% */
+  --success-border: #00bc7d33; /* emerald-500 at 20% */
+  --success-foreground: #a4f4cf; /* emerald-200 */
+  --warning-surface: #f0b1001a; /* yellow-500 at 10% */
+  --warning-border: #f0b10033; /* yellow-500 at 20% */
+  --warning-foreground: #fff085; /* yellow-200 */
+  --destructive-surface: #fb2c361a; /* red-500 at 10% */
+  --destructive-border: #fb2c3633; /* red-500 at 20% */
+  --destructive-foreground: #ffc9c9; /* red-200 */
   --chart-axis: #525252; /* neutral-600 */
   --chart-label-inside: #ffffff; /* white — sits on the series fill */
   --chart-1: #2563eb; /* blue-600 */
@@ -111,6 +147,24 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-sparkline: var(--sparkline);
+  --color-link: var(--link);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-info-surface: var(--info-surface);
+  --color-info-border: var(--info-border);
+  --color-info-foreground: var(--info-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-success-border: var(--success-border);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-border: var(--destructive-border);
+  --color-destructive-foreground: var(--destructive-foreground);
 }
 
 /* Shiki dual-theme fences: codeToHtml emits the light theme as a literal
