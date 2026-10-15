@@ -20,7 +20,7 @@ import { useRestingHeight } from "./use-resting-height";
 
 // One row: a 24 px trigger (WCAG 2.5.8) with breathing room, well under the
 // share of a short viewport a sticky band may cover.
-const DOCKED_ROW_HEIGHT = "2.5rem";
+export const DOCKED_ROW_HEIGHT = "2.5rem";
 
 // The opened inputs scroll inside themselves rather than cover more than
 // half the viewport: the row above them (2.5rem) and the gap (0.25rem) count.
@@ -78,6 +78,7 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
           box animates. */}
       <Collapsible.Root
         ref={bar}
+        data-filter-bar=""
         open={resting || opened}
         onOpenChange={setOpened}
         className={cn(

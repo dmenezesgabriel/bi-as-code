@@ -1,5 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { searchWithoutEditorKey } from "../editor/edit-search";
 import { browserFilterUrlPort } from "../filters/filter-url-port";
 import { FiltersProvider } from "../filters/page-filters-context";
@@ -15,7 +15,7 @@ import { ScatterChart } from "../widgets/charts/scatter-chart";
 import { ButtonGroup } from "../widgets/inputs/button-group";
 import { DateRange } from "../widgets/inputs/date-range";
 import { Dropdown } from "../widgets/inputs/dropdown";
-import { FilterBar } from "../widgets/inputs/filter-bar";
+import { DOCKED_ROW_HEIGHT, FilterBar } from "../widgets/inputs/filter-bar";
 import { MultiSelect } from "../widgets/inputs/multi-select";
 import { Slider } from "../widgets/inputs/slider";
 import { TextInput } from "../widgets/inputs/text-input";
@@ -135,9 +135,14 @@ export function MarkdownPage({
     // A size container: the ToC rail shows by the width this page has, not
     // the viewport's — the editor's preview pane is half the screen.
     <div className="@container mx-auto flex max-w-6xl gap-8 px-6 py-10">
+      {/* A jumped heading clears the header by 2rem, and on a page with a
+          filter bar the docked row too, by the same gap. The margin is on
+          the heading, not `scroll-padding-top` on the scroller: the editor's
+          preview pane is a second scroller with its own `--dock-top`. */}
       <main
         ref={setArticle}
-        className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20"
+        style={{ "--docked-row-height": DOCKED_ROW_HEIGHT } as CSSProperties}
+        className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 has-[[data-filter-bar]]:[&_h2]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)] has-[[data-filter-bar]]:[&_h3]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)]"
       >
         <PageBody page={page} />
       </main>

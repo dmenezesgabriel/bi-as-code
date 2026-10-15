@@ -92,6 +92,8 @@ describe("FilterBar", () => {
       for (const cls of ["sticky", "top-(--dock-top,4rem)", "z-10"]) {
         expect(bar().className).toContain(cls);
       }
+      // The page's headings key their jump offset off this marker.
+      expect(bar()).toHaveAttribute("data-filter-bar");
       for (const cls of [
         "flex",
         "flex-row",
