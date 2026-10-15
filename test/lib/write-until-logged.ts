@@ -5,8 +5,12 @@ export interface RewriteUntilServerLogsOptions {
   rewrite(): void;
   /** The dev server's log so far, e.g. `DevServer.log`. */
   log(): readonly string[];
-  /** The path's tail as vite prints it, e.g. "biac.config.ts", "pages/a.md". */
-  fileTail: string;
+  /**
+   * The tail of the path vite logs for this write: the file itself for a
+   * reload ("biac.config.ts", "pages/a.md"), the accepting module for an
+   * in-place swap ("/@id/__x00__virtual:biac-pages" for a page edit).
+   */
+  loggedPath: string;
   /** How long one write may go unacknowledged before it is written again. */
   attemptMs: number;
   /** Total budget; past it the call throws. */
@@ -16,10 +20,12 @@ export interface RewriteUntilServerLogsOptions {
 const POLL_MS = 50;
 
 /**
- * vite 8.2.2 logs a watched file's change as `page reload <file>[ (reason)]`
- * or `hmr update <file>[, <file>…]`, the path relative to its root, or absolute
- * when outside it — `biac dev`'s root is not the project dir, so only the
- * tail is matched.
+ * vite 8.2.2 logs a watched file's change as `page reload <file>[ (reason)]`,
+ * the path relative to its root, or absolute when outside it — `biac dev`'s
+ * root is not the project dir, so only the tail is matched — or, when the
+ * change swaps in place, as `hmr update <url>[, <url>…]` naming the modules
+ * that accept it, not the file (`updateModules` in vite's
+ * `dist/node/chunks/node.js` logs each boundary's url).
  */
 const ACKNOWLEDGMENT_PREFIX = /page reload|hmr update/;
 
@@ -32,7 +38,7 @@ const ACKNOWLEDGMENT_PREFIX = /page reload|hmr update/;
  * await rewriteUntilServerLogs({
  *   rewrite: () => writeFileSync(configFile, source),
  *   log: biacDev.log,
- *   fileTail: "biac.config.ts",
+ *   loggedPath: "biac.config.ts",
  *   attemptMs: 3_000,
  *   timeoutMs: 20_000,
  * });
@@ -48,8 +54,8 @@ export async function rewriteUntilServerLogs(
     if (line) return line;
   }
   throw new Error(
-    `${options.fileTail} was never acknowledged: no ` +
-      `"${ACKNOWLEDGMENT_PREFIX.source} …${options.fileTail}" line in ` +
+    `${options.loggedPath} was never acknowledged: no ` +
+      `"${ACKNOWLEDGMENT_PREFIX.source} …${options.loggedPath}" line in ` +
       `${options.timeoutMs} ms; the server's last lines:\n` +
       options.log().slice(-10).join("\n"),
   );
@@ -61,7 +67,7 @@ async function awaitAcknowledgment(
   deadline: number,
 ): Promise<string | undefined> {
   const attemptEnd = Math.min(Date.now() + options.attemptMs, deadline);
-  const pattern = acknowledgmentPattern(options.fileTail);
+  const pattern = acknowledgmentPattern(options.loggedPath);
   while (Date.now() < attemptEnd) {
     const line = options
       .log()
@@ -73,9 +79,9 @@ async function awaitAcknowledgment(
   return undefined;
 }
 
-function acknowledgmentPattern(fileTail: string): RegExp {
-  const escaped = fileTail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function acknowledgmentPattern(loggedPath: string): RegExp {
+  const escaped = loggedPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(
-    `(?:${ACKNOWLEDGMENT_PREFIX.source}) .*(?:[\\s/])${escaped}(?:$|[\\s,])`,
+    `(?:${ACKNOWLEDGMENT_PREFIX.source})(?:\\s|.*[\\s/])${escaped}(?:$|[\\s,])`,
   );
 }

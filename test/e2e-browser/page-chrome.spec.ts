@@ -161,7 +161,7 @@ test("editing biac.config.ts reloads the site title", async ({
         'export default { title: "ACME", theme: "system", nav: { sidebar: true } };\n',
       ),
     log: biacDev.log,
-    fileTail: "biac.config.ts",
+    loggedPath: "biac.config.ts",
     attemptMs: 3_000,
     timeoutMs: 20_000,
   });

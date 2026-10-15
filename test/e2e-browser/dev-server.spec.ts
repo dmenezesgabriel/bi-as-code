@@ -1,11 +1,18 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 import {
   collectConsoleErrors,
   expect,
   openOrderMixRow,
   test,
 } from "./dev-server.fixture.js";
+
+/**
+ * A content edit swaps the page in place, and vite logs that as an update
+ * of the module accepting it — the page manifest — not of the page file.
+ */
+const PAGE_SWAP_LOGGED_PATH = "/@id/__x00__virtual:biac-pages";
 
 test("renders the index page: title, prose, gfm table, highlighted sql fence", async ({
   page,
@@ -70,31 +77,44 @@ test("updates on page edit and serves a page added while running", async ({
 
   const indexFile = join(biacDev.projectDir, "pages/index.md");
   const original = readFileSync(indexFile, "utf8");
-  // Rewriting identical bytes still bumps mtime, so each poll attempt
-  // re-fires the chokidar event — the rewrite cannot be missed by a watcher
-  // that came up between the previous attempt and this one.
-  await expect(async () => {
-    writeFileSync(
-      indexFile,
-      original.replace("# Orders overview", "# Edited overview"),
-    );
-    await expect(
-      page.getByRole("heading", { name: "Edited overview" }),
-    ).toBeVisible({ timeout: 3_000 });
-  }).toPass({ timeout: 20_000 });
+  // Under load one update outlasts any short retry, so each file is written
+  // only until the server logs it — a later write would restart the update
+  // the test then awaits once.
+  await rewriteUntilServerLogs({
+    rewrite: () =>
+      writeFileSync(
+        indexFile,
+        original.replace("# Orders overview", "# Edited overview"),
+      ),
+    log: biacDev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  await expect(
+    page.getByRole("heading", { name: "Edited overview" }),
+  ).toBeVisible();
 
-  // The watcher is live now (the edit landed), so a single write suffices;
-  // the manifest regenerates on the next request once invalidated.
-  writeFileSync(
-    join(biacDev.projectDir, "pages/new-page.md"),
-    "---\ntitle: Fresh page\n---\n# Fresh page\n",
-  );
-  await expect(async () => {
-    await page.goto(`${biacDev.url}new-page`);
-    await expect(page.getByRole("heading", { name: "Fresh page" })).toBeVisible(
-      { timeout: 3_000 },
-    );
-  }).toPass({ timeout: 20_000 });
+  // An added page changes the manifest, a full reload; a `goto` while it
+  // runs is aborted, so the reloaded sidebar listing the page comes first.
+  await rewriteUntilServerLogs({
+    rewrite: () =>
+      writeFileSync(
+        join(biacDev.projectDir, "pages/new-page.md"),
+        "---\ntitle: Fresh page\n---\n# Fresh page\n",
+      ),
+    log: biacDev.log,
+    loggedPath: "pages/new-page.md",
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  await expect(
+    page
+      .getByRole("navigation", { name: "Site navigation" })
+      .getByRole("link", { name: "Fresh page" }),
+  ).toBeVisible();
+  await page.goto(`${biacDev.url}new-page`);
+  await expect(page.getByRole("heading", { name: "Fresh page" })).toBeVisible();
 
   expect(errors).toEqual([]);
 });
@@ -126,15 +146,20 @@ test("a content edit swaps the page in place: no reload, filters kept", async ({
 
   const file = join(biacDev.projectDir, "pages/weekly-review.md");
   const original = readFileSync(file, "utf8");
-  await expect(async () => {
-    writeFileSync(
-      file,
-      original.replace("# Weekly review", "# Weekly review, edited"),
-    );
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Weekly review, edited" }),
-    ).toBeVisible({ timeout: 3_000 });
-  }).toPass({ timeout: 20_000 });
+  await rewriteUntilServerLogs({
+    rewrite: () =>
+      writeFileSync(
+        file,
+        original.replace("# Weekly review", "# Weekly review, edited"),
+      ),
+    log: biacDev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Weekly review, edited" }),
+  ).toBeVisible();
 
   expect(
     await page.evaluate(

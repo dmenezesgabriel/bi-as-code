@@ -32,7 +32,7 @@ function rewriteConfig(serverLog: FakeServerLog, timeoutMs = 1_000) {
   return rewriteUntilServerLogs({
     rewrite: serverLog.rewrite,
     log: serverLog.log,
-    fileTail: "biac.config.ts",
+    loggedPath: "biac.config.ts",
     attemptMs: 100,
     timeoutMs,
   });
@@ -57,14 +57,15 @@ describe("rewriteUntilServerLogs", () => {
     expect(serverLog.rewrites).toBe(3);
   });
 
-  it("accepts an hmr update naming the file", async () => {
-    const update = "t stdout [vite] (client) hmr update /pages/index.md";
+  it("accepts an hmr update naming the module that accepts the write", async () => {
+    const update =
+      "t stdout [vite] (client) hmr update /@id/__x00__virtual:biac-pages";
     const serverLog = new FakeServerLog(1, update);
 
     const line = await rewriteUntilServerLogs({
       rewrite: serverLog.rewrite,
       log: serverLog.log,
-      fileTail: "pages/index.md",
+      loggedPath: "/@id/__x00__virtual:biac-pages",
       attemptMs: 100,
       timeoutMs: 1_000,
     });

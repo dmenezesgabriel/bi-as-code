@@ -88,12 +88,33 @@ describe("biac dev", () => {
       rewrite: () =>
         writeFileSync(configFile, 'export default { title: "After" };\n'),
       log: server.log,
-      fileTail: "biac.config.ts",
+      loggedPath: "biac.config.ts",
       attemptMs: 3_000,
       timeoutMs: 20_000,
     });
 
     expect(line).toMatch(/ page reload \S*\/biac\.config\.ts/);
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("acknowledges an added page with a page reload naming it", async () => {
+    server = await startDevServer(projectRoot!);
+    // An added page reloads only a client that loaded the manifest module.
+    await fetch(`${server.url}@id/__x00__virtual:biac-pages`);
+
+    const line = await rewriteUntilServerLogs({
+      rewrite: () =>
+        writeFileSync(
+          join(projectRoot!, "pages/added.md"),
+          "---\ntitle: Added\n---\n# Added\n",
+        ),
+      log: server.log,
+      loggedPath: "pages/added.md",
+      attemptMs: 3_000,
+      timeoutMs: 20_000,
+    });
+
+    expect(line).toMatch(/ page reload \S*\/pages\/added\.md/);
     expect(await server.stop()).toBe(0);
   }, 60_000);
 });
