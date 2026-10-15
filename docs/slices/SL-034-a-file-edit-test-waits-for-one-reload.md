@@ -15,7 +15,7 @@ A numbered script a human runs from a cold start. The slice is not `shipped` unt
 1. `pnpm build:cli && bin/biac dev --port 5534`, open `http://localhost:5534/` in Chrome with DevTools → Performance → CPU throttling at 6×.
 2. Edit `biac.config.ts` `title` and save once: the page reloads once and the sidebar shows the new title.
 3. Add `pages/fresh-page.md` (`# Fresh page`): the open page reloads once, the sidebar lists it, `/fresh-page` renders it. Delete the file and restore `biac.config.ts`.
-4. `nice -n 10 timeout 40m systemd-run --user --scope -p CPUQuota=50% pnpm exec playwright test test/e2e-browser/page-chrome.spec.ts:145 test/e2e-browser/dev-server.spec.ts:61 --repeat-each=5 --workers=2` — 10 of 10 pass.
+4. `nice -n 10 timeout 40m systemd-run --user --scope -p CPUQuota=50% pnpm exec playwright test test/e2e-browser/page-chrome.spec.ts:146 test/e2e-browser/dev-server.spec.ts:61 --repeat-each=5 --workers=2` — 10 of 10 pass.
 5. `pnpm gate` passes; `bin/biac build && bin/biac preview` → `/` unaffected.
 
 ## Evidence — what was measured on 2026-10-15
@@ -103,7 +103,7 @@ Nothing in the ledger claims this is shipped.
 
 ## Open decisions
 
-- The single UI wait's budget: measured in T1 at the 50% quota once the rewrite is gone (the time from the acknowledgment to the title), then sized the way `7eed95b` sized the tier.
+- None. The single UI wait's budget was settled in T1: acknowledgment → title measured 6.1–15.6 s at the 50% quota (each write acknowledged on the first attempt, 246–551 ms), under half the 70 s `expect.timeout` that `7eed95b` sized, so the wait takes the tier default and no per-call override.
 
 ## Surface
 
@@ -118,7 +118,7 @@ Nothing in the ledger claims this is shipped.
 
 One TDD unit each, one conventional commit each. Each closes with the 50% quota run of its tests ×5 and `pnpm gate`.
 
-- [ ] T1 — The config edit waits for one reload: a helper that rewrites a file until the dev server logs a `page reload`/`hmr update` naming it (unit-tested against a fake log; integration-tested against a real `biac dev` in `test/integration/`), `BiacDev` exposes the log, `page-chrome.spec.ts:145` writes until acknowledged then waits once with a measured budget — RED: 0 of 5 at the quota (above); GREEN: 5 of 5.
+- [x] T1 — The config edit waits for one reload: `rewriteUntilServerLogs` in `test/lib/write-until-logged.ts` rewrites a file until the dev server logs a `page reload`/`hmr update` naming it (fake-log cases in `test/integration/write-until-logged.integration.test.ts`; a real `biac dev` case in `test/e2e/dev-server.e2e.test.ts`, where the suite already spawns it serially), `BiacDev` exposes `log()`, `page-chrome.spec.ts:146` writes until acknowledged then waits once under the tier `expect.timeout` — RED: 1 of 5 at the quota; GREEN: 5 of 5.
 - [ ] T2 — The page edit and the added page wait for one reload: `dev-server.spec.ts:61` uses the helper for the edit (line 84) and the added page (line 97), waits for the reloaded page to list `Fresh page` in the sidebar before one `goto`, and `dev-server.spec.ts:102` moves to the helper — RED: 0 of 5 at the quota; GREEN: 5 of 5; then mark DEF-003 closed.
 
 ## Out of scope
