@@ -1,6 +1,6 @@
 # SL-034 — A file edit under `biac dev` is tested by waiting for the one reload it causes
 
-Milestone: Phase 1 — Known debt · State: open · Depends on: — · Closes: the Known-debt DEF-003 row (a `biac.config.ts` hot reload and a page added while running fail under a 50% CPU quota)
+Milestone: Phase 1 — Known debt · State: partial · Depends on: — · Closes: the Known-debt DEF-003 row (a `biac.config.ts` hot reload and a page added while running fail under a 50% CPU quota)
 
 > A PRD exists so the executing agent **never guesses and never assumes**. Every path below was checked on disk on 2026-10-15; every number carries the command that produced it.
 
@@ -119,7 +119,7 @@ Nothing in the ledger claims this is shipped.
 One TDD unit each, one conventional commit each. Each closes with the 50% quota run of its tests ×5 and `pnpm gate`.
 
 - [x] T1 — The config edit waits for one reload: `rewriteUntilServerLogs` in `test/lib/write-until-logged.ts` rewrites a file until the dev server logs a `page reload`/`hmr update` naming it (fake-log cases in `test/integration/write-until-logged.integration.test.ts`; a real `biac dev` case in `test/e2e/dev-server.e2e.test.ts`, where the suite already spawns it serially), `BiacDev` exposes `log()`, `page-chrome.spec.ts:146` writes until acknowledged then waits once under the tier `expect.timeout` — RED: 1 of 5 at the quota; GREEN: 5 of 5.
-- [ ] T2 — The page edit and the added page wait for one reload: `dev-server.spec.ts:61` uses the helper for the edit (line 84) and the added page (line 97), waits for the reloaded page to list `Fresh page` in the sidebar before one `goto`, and `dev-server.spec.ts:102` moves to the helper — RED: 0 of 5 at the quota; GREEN: 5 of 5; then mark DEF-003 closed.
+- [x] T2 — The page edit and the added page wait for one reload: `dev-server.spec.ts` (the page-edit/added-page test and the in-place swap test) writes through `rewriteUntilServerLogs`; the added page waits for the reloaded sidebar to list `Fresh page`, then one `goto`. An in-place swap is logged by vite as `hmr update /@id/__x00__virtual:biac-pages` (the accepting module, not the file), so the helper's option became `loggedPath` and its pattern matches a path straight after the prefix. RED: 2 of 5 and 5 of 5 at the quota (3 `ERR_ABORTED` on `/new-page`); GREEN: 5 of 5 each; DEF-003 row deleted.
 
 ## Out of scope
 
