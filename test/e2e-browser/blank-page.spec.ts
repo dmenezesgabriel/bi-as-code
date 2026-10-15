@@ -25,8 +25,11 @@ test("names a module the server never answers as a server-side hang", async ({
     const stalledUrl = new URL(STALLED_MODULE, proxyUrl).href;
     expect(await rootIsEmpty(page)).toBe(true);
     expect(report).toContain(`${stalledUrl} → no answer in`);
+    // Not "1 of N": on a loaded host a sibling module can still be in
+    // flight when the report is taken, and its re-request may outlast the
+    // probe timeout too (measured at a 50% CPU quota: effect.js > 10 s).
     expect(report).toMatch(
-      /^Verdict: server side: stuck on 1 of \d+ — \S+run-query\.ts$/m,
+      /^Verdict: server side: stuck on \d+ of \d+ — .*run-query\.ts/m,
     );
     expect(report).toMatch(/stderr .*vite:time/);
   } finally {
@@ -89,4 +92,23 @@ test("forgets a request whose document was navigated away", async ({
   const report = await biacDev.blankPageReport();
   const requestRows = report.slice(0, report.indexOf("\nVerdict:"));
   expect(requestRows).not.toContain(STALLED_MODULE);
+});
+
+test("names a module request the browser gave up on", async ({
+  page,
+  biacDev,
+}) => {
+  await page.route(`**${STALLED_MODULE}`, (route) =>
+    route.abort("connectionreset"),
+  );
+  const failed = page.waitForEvent("requestfailed");
+  await page.goto(`${biacDev.url}weekly-review`, { waitUntil: "commit" });
+  await failed;
+
+  const report = await biacDev.blankPageReport();
+
+  const failedUrl = new URL(STALLED_MODULE, biacDev.url).href;
+  expect(await rootIsEmpty(page)).toBe(true);
+  expect(report).toMatch(/^Failed requests \(1\):$/m);
+  expect(report).toContain(`${failedUrl} — net::ERR_CONNECTION_RESET`);
 });

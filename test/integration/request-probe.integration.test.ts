@@ -112,6 +112,7 @@ describe("formatBlankPageReport", () => {
         { url: hung.url, startedAt },
       ],
       probes: [answered, hung],
+      failed: [],
       takenAt: startedAt + 1_300,
       pageErrors: [],
       serverLog: [
@@ -131,6 +132,7 @@ describe("formatBlankPageReport", () => {
     const report = formatBlankPageReport({
       unanswered: [],
       probes: [],
+      failed: [],
       takenAt: 0,
       pageErrors: [
         "TypeError: Cannot read properties of undefined (reading 'x')",
@@ -141,6 +143,25 @@ describe("formatBlankPageReport", () => {
     expect(report).toMatch(/no request was pending/);
     expect(report).toContain(
       "Page errors (1):\nTypeError: Cannot read properties of undefined (reading 'x')",
+    );
+  });
+
+  it("lists each failed request with Chrome's reason — a module graph it breaks never mounts", () => {
+    const startedAt = Date.parse("2026-10-14T10:00:00.000Z");
+
+    const report = formatBlankPageReport({
+      unanswered: [],
+      probes: [],
+      failed: [
+        { url: hung.url, startedAt, failure: "net::ERR_CONNECTION_RESET" },
+      ],
+      takenAt: startedAt,
+      pageErrors: [],
+      serverLog: [],
+    });
+
+    expect(report).toContain(
+      `Failed requests (1):\n2026-10-14T10:00:00.000Z ${hung.url} — net::ERR_CONNECTION_RESET`,
     );
   });
 });

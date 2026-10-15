@@ -12,7 +12,7 @@ import { copyShippedProject } from "../lib/shipped-project.js";
 import {
   describeBlankPage,
   rootIsEmpty,
-  trackPendingRequests,
+  trackPageRequests,
 } from "./pending-requests.js";
 
 export interface BiacDev {
@@ -151,10 +151,10 @@ export const test = base.extend<{ biacDev: BiacDev }>({
     const server = await startDevServer(projectDir, {
       DEBUG: VITE_REQUEST_DEBUG,
     });
-    const unanswered = trackPendingRequests(page);
+    const requests = trackPageRequests(page);
     const pageErrors = collectConsoleErrors(page);
     const blankPageReport = () =>
-      describeBlankPage(unanswered(), pageErrors, server.log());
+      describeBlankPage(requests, pageErrors, server.log());
     await use({ url: server.url, projectDir, blankPageReport });
     await attachBlankPageReport(page, testInfo, blankPageReport);
     server.kill();

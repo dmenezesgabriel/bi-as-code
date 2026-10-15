@@ -5,6 +5,14 @@ export interface UnansweredRequest {
   readonly startedAt: number;
 }
 
+/**
+ * A request Chrome gave up on, with its reason (`net::ERR_…`). A failed
+ * module request breaks the import graph without leaving anything pending.
+ */
+export interface FailedRequest extends UnansweredRequest {
+  readonly failure: string;
+}
+
 /** What a node-side re-request of one unanswered URL got from the server. */
 export interface RequestProbe {
   readonly url: string;
@@ -17,6 +25,7 @@ export interface RequestProbe {
 export interface BlankPageEvidence {
   readonly unanswered: readonly UnansweredRequest[];
   readonly probes: readonly RequestProbe[];
+  readonly failed: readonly FailedRequest[];
   /**
    * Epoch ms the report was taken: a request issued just before a test timed
    * out is in flight, not hung, and only its age tells the two apart.
@@ -85,12 +94,12 @@ export function classifyHang(probes: readonly RequestProbe[]): string {
 
 /**
  * The plain-text attachment for a test that failed on a blank page: each
- * unanswered URL with its start time, age and re-request result, the verdict, the
- * page's errors and the dev server's log.
+ * unanswered URL with its start time, age and re-request result, the verdict,
+ * each failed request, the page's errors and the dev server's log.
  *
  * @example
  * await testInfo.attach("blank-page.txt", {
- *   body: formatBlankPageReport({ unanswered, probes, takenAt, pageErrors, serverLog }),
+ *   body: formatBlankPageReport({ unanswered, probes, failed, takenAt, pageErrors, serverLog }),
  * });
  */
 export function formatBlankPageReport(evidence: BlankPageEvidence): string {
@@ -102,6 +111,11 @@ export function formatBlankPageReport(evidence: BlankPageEvidence): string {
     `Blank page: ${rows.length} requests never answered`,
     ...rows,
     `Verdict: ${classifyHang(evidence.probes)}`,
+    `Failed requests (${evidence.failed.length}):`,
+    ...evidence.failed.map(
+      (request) =>
+        `${new Date(request.startedAt).toISOString()} ${request.url} — ${request.failure}`,
+    ),
     `Page errors (${evidence.pageErrors.length}):`,
     ...evidence.pageErrors,
     `Server log (${evidence.serverLog.length} lines):`,
