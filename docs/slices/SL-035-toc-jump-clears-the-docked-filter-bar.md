@@ -123,7 +123,7 @@ Verdict: **present and partial.** SL-002 shipped the ToC and SL-012/SL-023 the d
 ## Tasks
 
 - [x] T1 — On a page with a `<FilterBar>`, `h2`/`h3` `scroll-margin-top` = `--dock-top` + docked row height + gap; pages without a bar keep 80 px. RED: browser e2e jumping every `/weekly-review` and `/crossfilter-scale` entry at 1280×720 and 375×812 asserting heading top ≥ docked bar bottom (+ gap), editor pane still clear; unit test on the class/marker. `playwright-cli`: re-run this PRD's probe, before/after screenshots of `#order-mix`.
-- [ ] T2 — The rail lights the jumped entry: `pickActiveHeadingId`'s hash window starts at the heading's computed `scroll-margin-top`. RED: unit cases for a landing at 136 px and 88 px; browser e2e at 1280×1400 that `Order mix` and `Quarter detail` light themselves. `playwright-cli`: probe at 1280×1400 and 1280×720.
+- [x] T2 — The rail lights the jumped entry: `pickActiveHeadingId`'s hash window starts at the heading's computed `scroll-margin-top`. RED: unit cases for a landing at 136 px and 88 px; browser e2e at 1280×1400 that `Order mix` and `Quarter detail` light themselves. `playwright-cli`: probe at 1280×1400 and 1280×720.
 
 ## Out of scope
 
