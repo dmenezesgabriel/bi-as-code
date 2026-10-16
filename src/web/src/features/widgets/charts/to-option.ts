@@ -13,8 +13,7 @@ import type {
   StackedMode,
   XAxisKind,
 } from "./types";
-import { numericRange } from "../value/numeric-range";
-import { seriesValueRange } from "./value-range";
+import { axisValueRange, seriesValueRange } from "./value-range";
 
 /**
  * The echarts params one hovered point contributes to an axis tooltip: the
@@ -175,7 +174,9 @@ export function xAxisOption(
   model: { readonly xDomain: readonly unknown[]; readonly xType: XAxisKind },
   props: SeriesChartProps,
 ): Record<string, unknown> {
-  const formatter = xTickFormatter(model, props.xFmt);
+  const xRange =
+    model.xType === "value" ? axisValueRange(model.xDomain) : undefined;
+  const formatter = xTickFormatter(model, props.xFmt, xRange);
   return {
     type: model.xType,
     ...(model.xType === "category" ? { data: [...model.xDomain] } : {}),
@@ -186,8 +187,20 @@ export function xAxisOption(
       ? { name: props.xTitle, nameLocation: "middle", nameGap: 30 }
       : {}),
     ...(formatter !== undefined ? { axisLabel: { formatter } } : {}),
+    ...wholeTickOption(xRange),
     animation: false,
   };
+}
+
+/**
+ * An axis over whole numbers ticks on whole numbers — echarts would
+ * otherwise split a 0–3 axis at 0.5 and label a week or an order count that
+ * cannot exist.
+ */
+function wholeTickOption(
+  range: FormatRange | undefined,
+): Record<string, unknown> {
+  return range?.whole === true ? { minInterval: 1 } : {};
 }
 
 /**
@@ -200,12 +213,10 @@ export function xAxisOption(
  */
 function xTickFormatter(
   model: { readonly xDomain: readonly unknown[]; readonly xType: XAxisKind },
-  xFmt?: string,
+  xFmt: string | undefined,
+  xRange: FormatRange | undefined,
 ): ((value: unknown, index: number) => string) | undefined {
-  if (model.xType === "value") {
-    const xRange = numericRange(model.xDomain);
-    return (v) => safeFormat(v, xFmt, xRange);
-  }
+  if (model.xType === "value") return (v) => safeFormat(v, xFmt, xRange);
   if (xFmt === undefined) return undefined;
   if (model.xType === "time")
     return (v) => safeFormat(new Date(Number(v)), xFmt);
@@ -224,7 +235,7 @@ export function yAxisOption(
   return {
     type: "value",
     animation: false,
-    ...(percentage ? { min: 0, max: 1 } : {}),
+    ...(percentage ? { min: 0, max: 1 } : wholeTickOption(yRange)),
     ...(props.yTitle !== undefined
       ? {
           name: props.yTitle,

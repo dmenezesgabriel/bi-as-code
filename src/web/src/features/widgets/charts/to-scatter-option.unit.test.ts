@@ -242,6 +242,7 @@ describe("toScatterOption one unit per axis", () => {
     { orders: 9000, revenue: 7000 },
   ];
   interface AxisProbe {
+    minInterval?: number;
     axisLabel?: { formatter?: (value: unknown, index: number) => string };
   }
   interface LabelProbe {
@@ -278,5 +279,41 @@ describe("toScatterOption one unit per axis", () => {
     const yAxis = wideOption({ yFmt: "usd0" }).yAxis as AxisProbe;
 
     expect(yAxis.axisLabel?.formatter?.(3000, 0)).toBe("$3,000");
+  });
+
+  it("ticks a whole-number x axis on whole numbers, without decimals", () => {
+    const rows = [
+      { orders: 4, revenue: 120.5 },
+      { orders: 25, revenue: 980.25 },
+    ];
+
+    const option = toScatterOption(
+      toScatterSeries(rows, { x: "orders", y: "revenue" }),
+      PROPS,
+      LIGHT_CHART_TOKENS,
+    );
+    const xAxis = option.xAxis as AxisProbe;
+    const yAxis = option.yAxis as AxisProbe;
+
+    expect(xAxis.minInterval).toBe(1);
+    expect(xAxis.axisLabel?.formatter?.(5, 0)).toBe("5");
+    expect(yAxis.minInterval).toBeUndefined();
+  });
+
+  it("keeps a fractional x axis' decimals", () => {
+    const rows = [
+      { orders: 0.5, revenue: 100 },
+      { orders: 24.5, revenue: 900 },
+    ];
+
+    const option = toScatterOption(
+      toScatterSeries(rows, { x: "orders", y: "revenue" }),
+      PROPS,
+      LIGHT_CHART_TOKENS,
+    );
+    const xAxis = option.xAxis as AxisProbe;
+
+    expect(xAxis.minInterval).toBeUndefined();
+    expect(xAxis.axisLabel?.formatter?.(5, 0)).toBe("5.0");
   });
 });

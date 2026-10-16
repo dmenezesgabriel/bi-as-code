@@ -26,6 +26,12 @@ export class FormatError extends Data.TaggedError("FormatError")<{
 export interface FormatRange {
   readonly min: number;
   readonly max: number;
+  /**
+   * Every value the range spans is a whole number — `num`/`usd` below the
+   * thousands unit drop their decimals (`5`, not `5.0`), since a whole
+   * number has none to show.
+   */
+  readonly whole?: boolean;
 }
 
 /**

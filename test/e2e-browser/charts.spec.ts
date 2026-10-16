@@ -112,6 +112,27 @@ test("the Regional split's ticks and bar labels read in one unit", async ({
   expect(labels).toEqual(["6k", "5k", "4k"]);
 });
 
+test("whole-number axes tick on whole numbers", async ({ page, biacDev }) => {
+  await openWeeklyReviewCharts(page, biacDev.url);
+
+  // Order counts and week numbers are whole: no `5.0`, no half-week tick.
+  const wholeAxes = [
+    await axisTickTexts(page, 1, "xAxis"),
+    await axisTickTexts(page, 3, "xAxis"),
+    await axisTickTexts(page, 3, "yAxis"),
+    await axisTickTexts(page, 4, "xAxis"),
+  ];
+  for (const ticks of wholeAxes) {
+    expect(ticks.length).toBeGreaterThan(2);
+    for (const tick of ticks) expect(tick).toMatch(/^[\d,]+$/);
+  }
+
+  // The 100% stack's axis is fractions of one and keeps its percent ticks.
+  const shares = await axisTickTexts(page, 4, "yAxis");
+  expect(shares.at(-1)).toBe("100%");
+  expect(shares).toContain("20%");
+});
+
 test("the scatter, histogram and heatmap apply their own option shapes", async ({
   page,
   biacDev,

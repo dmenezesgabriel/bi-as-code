@@ -47,16 +47,12 @@ export function toHistogramOption(
   return {
     grid: gridOption(legend),
     xAxis: xAxisOption(model, props),
-    yAxis: {
-      ...yAxisOption(
-        { yTitle: props.yTitle ?? "Frequency", yFmt: countFmt },
-        false,
-        countRange,
-      ),
-      // Counts are integers — pin tick granularity so a shallow histogram
-      // never labels a fractional frequency.
-      minInterval: 1,
-    },
+    // Counts are whole, so the count range ticks on whole numbers.
+    yAxis: yAxisOption(
+      { yTitle: props.yTitle ?? "Frequency", yFmt: countFmt },
+      false,
+      countRange,
+    ),
     series: model.series.map((s) =>
       seriesOption(s, props, countFmt, countRange, tokens),
     ),

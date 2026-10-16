@@ -25,8 +25,35 @@ export function seriesValueRange(
   stacked?: StackedMode,
 ): FormatRange | undefined {
   const points = series.flatMap((s) => s.data);
-  return numericRange(
-    stacked ? stackTotals(points) : points.map((point) => point[1]),
+  const values = points.map((point) => point[1]);
+  const range = numericRange(stacked ? stackTotals(points) : values);
+  // A stack is whole when its segments are — totals of 0.5 + 0.5 still need
+  // the 0.5 tick between them.
+  return range && { ...range, whole: isWholeNumberDomain(values) };
+}
+
+/**
+ * The span of `values` with its `whole` flag set — the range one value axis
+ * formats its ticks against, and whether those ticks may stop at integers.
+ *
+ * @example
+ * axisValueRange([0, 5, 25]) // { min: 0, max: 25, whole: true }
+ */
+export function axisValueRange(
+  values: readonly unknown[],
+): FormatRange | undefined {
+  const range = numericRange(values);
+  return range && { ...range, whole: isWholeNumberDomain(values) };
+}
+
+/**
+ * Every number in `values` is an integer (a `bigint` always is) — an axis
+ * over them has nothing between its whole-number ticks to show. The models
+ * carry plain cell values with no column types, so the values decide.
+ */
+function isWholeNumberDomain(values: readonly unknown[]): boolean {
+  return values.every(
+    (v) => typeof v !== "number" || !Number.isFinite(v) || Number.isInteger(v),
   );
 }
 

@@ -75,6 +75,7 @@ interface AxisProbe {
   min?: number;
   max?: number;
   boundaryGap?: unknown;
+  minInterval?: number;
   axisLabel?: { formatter?: (value: never, index: number) => string };
 }
 interface SeriesProbe {
@@ -252,6 +253,64 @@ describe("toChartOption one unit per axis", () => {
     ]);
 
     expect(html).toContain("revenue: 3,700");
+  });
+});
+
+describe("toChartOption whole-number axes", () => {
+  const FRACTIONAL: SeriesModel = {
+    xDomain: [0.5, 1.5],
+    xType: "value",
+    series: [
+      {
+        name: "rate",
+        data: [
+          [0.5, 2.5],
+          [1.5, 24.5],
+        ],
+      },
+    ],
+  };
+
+  function line(model: SeriesModel, props: Partial<SeriesChartProps> = {}) {
+    return toChartOption(
+      model,
+      "line",
+      { ...PROPS, ...props },
+      LIGHT_CHART_TOKENS,
+    ) as OptionProbe;
+  }
+
+  it("ticks whole-number x and y axes on whole numbers", () => {
+    const option = line(TWO_SERIES);
+
+    expect(option.xAxis?.minInterval).toBe(1);
+    expect(option.yAxis?.minInterval).toBe(1);
+  });
+
+  it("prints whole-number ticks without decimals", () => {
+    const option = line(TWO_SERIES);
+
+    expect(option.xAxis?.axisLabel?.formatter?.(2 as never, 0)).toBe("2");
+    expect(option.yAxis?.axisLabel?.formatter?.(30 as never, 0)).toBe("30");
+  });
+
+  it("keeps a fractional axis' ticks and decimals", () => {
+    const option = line(FRACTIONAL);
+
+    expect(option.xAxis?.minInterval).toBeUndefined();
+    expect(option.yAxis?.minInterval).toBeUndefined();
+    expect(option.yAxis?.axisLabel?.formatter?.(5 as never, 0)).toBe("5.0");
+  });
+
+  it("leaves a 100% stack's fraction axis free of a whole-number floor", () => {
+    const option = line(RAW_STACK, { stacked: "100%" });
+
+    expect(option.yAxis?.minInterval).toBeUndefined();
+    expect(option.yAxis?.axisLabel?.formatter?.(0.4 as never, 0)).toBe("40%");
+  });
+
+  it("never floors a category axis", () => {
+    expect(line(CATEGORIES).xAxis?.minInterval).toBeUndefined();
   });
 });
 

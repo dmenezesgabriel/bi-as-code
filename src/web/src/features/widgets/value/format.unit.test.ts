@@ -188,6 +188,28 @@ describe("formatValue — auto-scale against a range", () => {
   });
 });
 
+describe("formatValue — auto-scale against a whole-number range", () => {
+  it.each<[string | undefined, number, FormatRange, string]>([
+    [undefined, 5, { min: 0, max: 25, whole: true }, "5"],
+    ["num", 7, { min: 0, max: 9, whole: true }, "7"],
+    ["usd", 40, { min: 0, max: 60, whole: true }, "$40"],
+    // Past the k threshold the scaled presets already carry no decimals.
+    [undefined, 3000, { min: 0, max: 7000, whole: true }, "3k"],
+    ["num", 1_500_000, { min: 0, max: 5_000_000, whole: true }, "1.5M"],
+    // A fractional range keeps the decimals its magnitude calls for.
+    [undefined, 5, { min: 0, max: 25 }, "5.0"],
+    [undefined, 5, { min: 0, max: 25, whole: false }, "5.0"],
+    // Percents of whole numbers are still fractions of one.
+    ["pct", 0.5, { min: 0, max: 0.9, whole: true }, "50.0%"],
+  ])("fmt=%s on %s within %o → %s", (code, value, range, expected) => {
+    // Act
+    const formatted = formatValue(value, code, range);
+
+    // Assert
+    expect(formatted).toBe(expected);
+  });
+});
+
 describe("formatValue — defaults when fmt is unset", () => {
   it.each<[unknown, string]>([
     [DATE, "2025-03-01"],
