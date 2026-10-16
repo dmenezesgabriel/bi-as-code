@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { chartHosts, openWeeklyReviewCharts } from "./echart-hosts.js";
 
 /** `rounded-full` is `calc(infinity * 1px)`, which chromium paints as this. */
 const PILL = "3.35544e+07px";
@@ -85,6 +86,30 @@ for (const colorScheme of ["light", "dark"] as const) {
         document.documentElement.style.setProperty("--radius", "0.75rem"),
       );
       await expectCornersOnScale(page, ["8px", "10px", "12px", PILL]);
+    });
+
+    test("an open chart tooltip's corner follows a changed --radius", async ({
+      page,
+      biacDev,
+    }) => {
+      const errors = collectConsoleErrors(page);
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await openWeeklyReviewCharts(page, biacDev.url);
+      await page.evaluate(() =>
+        document.documentElement.style.setProperty("--radius", "0.75rem"),
+      );
+      const bars = chartHosts(page).first();
+      await bars.scrollIntoViewIfNeeded();
+
+      await bars.hover();
+
+      // The html tooltip is the host's only child whose inline style sets
+      // the engine's tooltip z-index.
+      const tooltip = bars.locator('div[style*="z-index: 9999999"]');
+      await expect(tooltip).toBeVisible();
+      const [smallest] = await scaleRadii(page);
+      await expect(tooltip).toHaveCSS("border-top-left-radius", smallest!);
+      expect(errors).toEqual([]);
     });
   });
 }

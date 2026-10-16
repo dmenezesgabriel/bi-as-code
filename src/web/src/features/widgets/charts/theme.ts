@@ -82,6 +82,12 @@ export function chartTheme(t: ChartTokens): Record<string, unknown> {
       backgroundColor: t.popover,
       borderColor: t.popoverBorder,
       textStyle: { color: t.foreground },
+      // The engine rounds its html tooltip with a literal 4px; its
+      // extraCssText lands after that in the element's inline style, so the
+      // corner follows the page's radius scale instead (ADR-0014). Tailwind
+      // emits `--radius-sm` at runtime only because this file references it
+      // (https://tailwindcss.com/docs/theme#generating-all-css-variables).
+      extraCssText: "border-radius: var(--radius-sm);",
     },
   };
 }

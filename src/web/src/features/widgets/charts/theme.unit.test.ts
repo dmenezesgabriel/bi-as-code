@@ -22,6 +22,7 @@ interface TooltipTheme {
   readonly backgroundColor?: string;
   readonly borderColor?: string;
   readonly textStyle?: { readonly color?: string };
+  readonly extraCssText?: string;
 }
 
 /** A stylesheet stand-in: answers custom-property lookups from a map. */
@@ -153,4 +154,15 @@ describe("chartTheme tooltip", () => {
       textStyle: { color: tokens.foreground },
     });
   });
+
+  it.each(TOKEN_SETS)(
+    "rounds the %s tooltip from the radius scale",
+    (_m, tokens) => {
+      const theme = chartTheme(tokens) as { tooltip?: TooltipTheme };
+
+      const css = theme.tooltip?.extraCssText;
+
+      expect(css).toBe("border-radius: var(--radius-sm);");
+    },
+  );
 });
