@@ -106,7 +106,7 @@ group by region
 order by revenue desc
 ```
 
-<BarChart data="orders" x="region" y="revenue" labels filters={["region"]} select="crossfilter" />
+<BarChart data="orders" x="region" y="revenue" title="Revenue by region" subtitle="Sum of order amounts, US dollars" labels filters={["region"]} select="crossfilter" />
 
 ```sql region_share echo display
 -- composes the orders block above: each region's share of all orders
@@ -138,7 +138,7 @@ order by week, region
 
 <Tabs>
   <Tab title="Chart">
-    <ScatterChart data="region_week" x="orders" y="revenue" series="region" filters={["region"]} select="crossfilter" />
+    <ScatterChart data="region_week" x="orders" y="revenue" series="region" title="Orders and revenue per region-week" subtitle="One point per region and week; revenue in US dollars" filters={["region"]} select="crossfilter" />
   </Tab>
   <Tab title="Table">
     <Table data="region_week" filters={["region"]} />
@@ -158,7 +158,7 @@ select order_date::varchar as order_date, amount, region
 from orders
 ```
 
-<Histogram data="order_amounts" value="amount" filters={["region", "amount", "ordered"]} select="crossfilter" />
+<Histogram data="order_amounts" value="amount" title="Order amounts" subtitle="Orders per amount bin, US dollars" filters={["region", "amount", "ordered"]} select="crossfilter" />
 
 The same distribution at order grain — the `<Table>` narrows on every
 input above: the region pick, the amount range and the ordered window

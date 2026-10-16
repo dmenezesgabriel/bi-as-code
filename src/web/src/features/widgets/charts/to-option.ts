@@ -32,7 +32,7 @@ export interface TooltipParam {
 
 /**
  * Assembles the full `setOption` payload for a series chart: typed axes,
- * stacked/normalized series, axis tooltip, legend, title and the aria
+ * stacked/normalized series, axis tooltip, legend and the aria
  * description. `props.stacked === "100%"` normalizes the model here —
  * `toSeries` always emits raw values so tooltips keep the un-normalized
  * number on the point's third slot. Ticks and point labels format against
@@ -57,7 +57,7 @@ export function toChartOption(
   const legend = props.legend ?? series.length > 1;
   const yRange = seriesValueRange(series, props.stacked);
   return {
-    grid: gridOption(props, legend),
+    grid: gridOption(legend),
     xAxis: xAxisOption(model, props),
     yAxis: yAxisOption(props, percentage, yRange),
     series: series.map((s) => seriesOption(s, type, props, yRange, tokens)),
@@ -96,18 +96,16 @@ export function probeFormat(fmt: string | undefined, sample: unknown): void {
 
 /**
  * The optional chrome every chart-family option shares: legend (gated on
- * `legend`), `title`, and a single-color palette — spread into the option
- * literal after `series`.
+ * `legend`) and a single-color palette — spread into the option literal
+ * after `series`. The chart `title` is never painted here: `BoundChart`
+ * renders it as text above the canvas.
  */
 export function chartChromeOption(
-  props: { readonly title?: string; readonly color?: string },
+  props: { readonly color?: string },
   legend: boolean,
 ): Record<string, unknown> {
   return {
-    ...(legend ? { legend: { top: props.title ? 30 : 0 } } : {}),
-    ...(props.title !== undefined
-      ? { title: { text: props.title, top: 0 } }
-      : {}),
+    ...(legend ? { legend: { top: 0 } } : {}),
     ...(props.color !== undefined ? { color: [props.color] } : {}),
   };
 }
@@ -157,14 +155,9 @@ export function safeFormat(
   }
 }
 
-/** Legend sits under the title when both are on; the grid pays for both. */
-export function gridOption(
-  props: { readonly title?: string },
-  legend: boolean,
-): Record<string, unknown> {
-  let top = 8;
-  if (props.title !== undefined) top += 30;
-  if (legend) top += 28;
+/** The grid starts under the legend when one is on. */
+export function gridOption(legend: boolean): Record<string, unknown> {
+  const top = legend ? 36 : 8;
   // `containLabel` is deprecated in echarts 6 — the pair below is its
   // documented equivalent: axis labels stay inside the grid rect.
   return {
@@ -371,7 +364,6 @@ export function describeChart(
   type: SeriesChartType | "scatter" | "histogram" | "heatmap",
   props: SeriesChartProps | HistogramChartProps | HeatmapChartProps,
 ): string {
-  if (props.title !== undefined) return props.title;
   const split =
     "series" in props && props.series !== undefined
       ? `, split by ${props.series}`

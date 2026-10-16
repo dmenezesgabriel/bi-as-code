@@ -203,7 +203,7 @@ describe("toScatterOption", () => {
           LIGHT_CHART_TOKENS,
         ),
       ),
-    ).toBe("Orders vs revenue");
+    ).toBe("scatter chart of revenue by orders");
   });
 
   it.each(["xFmt", "yFmt", "sizeFmt", "labelsFmt"] as const)(

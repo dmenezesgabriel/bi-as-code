@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { BoundChart } from "./bound-chart";
+import { chartFrameProps } from "./frame-props";
 import { toScatterOption } from "./to-scatter-option";
 import { toScatterSeries } from "./to-scatter-series";
 import type { ScatterChartProps } from "./types";
@@ -26,9 +27,7 @@ export function ScatterChart({
   const tokens = useChartTokens();
   return (
     <BoundChart
-      data={props.data}
-      height={props.height}
-      filters={props.filters}
+      {...chartFrameProps(props)}
       select={props.select}
       pointField={props.x}
       renderer={renderer}

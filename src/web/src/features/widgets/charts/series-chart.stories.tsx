@@ -160,6 +160,44 @@ export const QueryError: Story = {
   },
 };
 
+/** `title` and `subtitle` render as text above the plot, and the title
+ * names the chart's figure. */
+export const Titled: Story = {
+  args: { title: "Revenue by region", subtitle: "US dollars" },
+  decorators: [withQueryData([ORDERS_REGIONAL], dbWith(REGIONAL_ROWS))],
+  play: async ({ canvas, canvasElement }) => {
+    const host = await readyHost(canvasElement);
+    const figure = canvas.getByRole("figure", { name: "Revenue by region" });
+    await expect(figure).toContainElement(host);
+    await expect(canvas.getByText("US dollars")).toBeVisible();
+  },
+};
+
+/** The title stays over the loading pulse. */
+export const TitledLoading: Story = {
+  args: { title: "Revenue by region", subtitle: "US dollars" },
+  decorators: [withQueryData([ORDERS_REGIONAL], FakeDuckDb.pending())],
+  play: async ({ canvas }) => {
+    const figure = canvas.getByRole("figure", { name: "Revenue by region" });
+    await expect(figure).toContainElement(await canvas.findByRole("status"));
+  },
+};
+
+/** The title stays over a failed query's alert. */
+export const TitledQueryError: Story = {
+  args: { title: "Revenue by region", subtitle: "US dollars" },
+  decorators: [
+    withQueryData(
+      [ORDERS_REGIONAL],
+      FakeDuckDb.failing("Catalog Error: Table orders does not exist"),
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const figure = canvas.getByRole("figure", { name: "Revenue by region" });
+    await expect(figure).toContainElement(await canvas.findByRole("alert"));
+  },
+};
+
 /** A `data` value no ```sql fence declares renders the named alert. */
 export const UnknownName: Story = {
   args: { data: "ghost" },

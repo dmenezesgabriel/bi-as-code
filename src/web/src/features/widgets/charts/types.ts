@@ -262,7 +262,9 @@ export type StackedMode = boolean | "100%";
  * result shows. `select="crossfilter"` publishes the chart's selection
  * gestures as clauses into the interacted field's selection — mark clicks
  * predicate `x` — so every widget declaring that field in `filters`
- * re-queries while the chart skips its own clause (ADR-0004).
+ * re-queries while the chart skips its own clause (ADR-0004). `title` and
+ * `subtitle` render as text above the plot — the title names the chart's
+ * figure, the muted subtitle carries context such as the unit.
  */
 export interface SeriesChartProps {
   readonly data: string;
@@ -279,6 +281,7 @@ export interface SeriesChartProps {
   readonly xFmt?: string;
   readonly yFmt?: string;
   readonly title?: string;
+  readonly subtitle?: string;
   readonly xTitle?: string;
   readonly yTitle?: string;
   readonly legend?: boolean;

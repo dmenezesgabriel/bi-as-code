@@ -397,14 +397,21 @@ describe("toChartOption legend, title and aria", () => {
     expect(probe(TWO_SERIES, { legend: false }).legend).toBeUndefined();
   });
 
-  it("sets the chart title text", () => {
-    expect(probe(CATEGORIES, { title: "Revenue" }).title?.text).toBe("Revenue");
+  it("never paints the title in the canvas — the chart frame renders it as text", () => {
+    const titled = probe(TWO_SERIES, { title: "Revenue", subtitle: "USD" });
+    expect(titled.title).toBeUndefined();
+    expect(titled.legend).toMatchObject({ top: 0 });
   });
 
-  it("describes the chart for aria — the title wins, else a generated summary", () => {
+  it("reserves grid room for the legend alone, never for a title", () => {
+    expect(probe(CATEGORIES, { title: "Revenue" }).grid?.top).toBe(8);
+    expect(probe(TWO_SERIES, { title: "Revenue" }).grid?.top).toBe(36);
+  });
+
+  it("describes the chart for aria with a generated summary, title or not", () => {
     expect(
       probe(CATEGORIES, { title: "Revenue" }).aria?.label?.description,
-    ).toBe("Revenue");
+    ).toBe("bar chart of revenue by region");
     expect(probe(CATEGORIES).aria?.enabled).toBe(true);
     expect(probe(CATEGORIES).aria?.label?.description).toBe(
       "bar chart of revenue by region",

@@ -169,7 +169,9 @@ describe("toHeatmapOption", () => {
     expect(ariaDescription(option())).toBe(
       "heatmap chart of orders by week and region",
     );
-    expect(ariaDescription(option({ ...PROPS, title: "Load" }))).toBe("Load");
+    expect(ariaDescription(option({ ...PROPS, title: "Load" }))).toBe(
+      "heatmap chart of orders by week and region",
+    );
   });
 
   it("reserves grid room for the strip only when shown", () => {

@@ -58,7 +58,7 @@ export function toScatterOption(
   const yByName = new Map(model.series.map((s) => [s.name, s.y]));
   const yRange = seriesValueRange(model.series);
   return {
-    grid: gridOption(props, legend),
+    grid: gridOption(legend),
     xAxis: xAxisOption(model, props),
     yAxis: yAxisOption(props, false, yRange),
     series: model.series.map((s) =>

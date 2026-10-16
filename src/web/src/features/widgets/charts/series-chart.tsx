@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { BoundChart } from "./bound-chart";
+import { chartFrameProps } from "./frame-props";
 import { toChartOption } from "./to-option";
 import { toSeries } from "./to-series";
 import type { SeriesChartWidgetProps } from "./types";
@@ -27,9 +28,7 @@ export function SeriesChart({
   const tokens = useChartTokens();
   return (
     <BoundChart
-      data={props.data}
-      height={props.height}
-      filters={props.filters}
+      {...chartFrameProps(props)}
       select={props.select}
       pointField={props.x}
       renderer={renderer}

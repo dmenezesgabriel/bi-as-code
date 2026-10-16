@@ -45,7 +45,7 @@ export function toHistogramOption(
   const countFmt = props.yFmt ?? "num0";
   const countRange = stackedCountRange(model.series);
   return {
-    grid: gridOption(props, legend),
+    grid: gridOption(legend),
     xAxis: xAxisOption(model, props),
     yAxis: {
       ...yAxisOption(

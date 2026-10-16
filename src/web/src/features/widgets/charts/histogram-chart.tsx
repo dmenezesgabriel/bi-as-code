@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { BoundChart } from "./bound-chart";
+import { chartFrameProps } from "./frame-props";
 import { histogramQuery } from "./histogram-sql";
 import { fromHistogramBins, toHistogram } from "./to-histogram";
 import { toHistogramOption } from "./to-histogram-option";
@@ -34,9 +35,7 @@ export function Histogram({
   };
   return (
     <BoundChart
-      data={props.data}
-      height={props.height}
-      filters={props.filters}
+      {...chartFrameProps(props)}
       select={props.select}
       renderer={renderer}
       model={(rows) => toHistogram(rows, spec)}

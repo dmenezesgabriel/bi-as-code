@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { BoundChart } from "./bound-chart";
+import { chartFrameProps } from "./frame-props";
 import { toHeatmap } from "./to-heatmap";
 import { toHeatmapOption } from "./to-heatmap-option";
 import type { HeatmapChartProps } from "./types";
@@ -26,9 +27,7 @@ export function Heatmap({
   const tokens = useChartTokens();
   return (
     <BoundChart
-      data={props.data}
-      height={props.height}
-      filters={props.filters}
+      {...chartFrameProps(props)}
       renderer={renderer}
       model={(rows) =>
         toHeatmap(rows, { x: props.x, y: props.y, value: props.value })

@@ -98,6 +98,23 @@ test("the helper fences render nothing while their histograms draw every row", a
   expect(errors).toEqual([]);
 });
 
+test("every histogram names its figure, with the unit in its subtitle", async ({
+  page,
+  biacDev,
+}) => {
+  await openScalePage(page, biacDev.url);
+
+  for (const [title, subtitle] of [
+    ["Arrival delay", "Flights per bin, minutes"],
+    ["Flight distance", "Flights per bin, miles"],
+    ["Departure time", "Flights per bin, hour of day"],
+  ] as const) {
+    const figure = page.getByRole("figure", { name: title });
+    await expect(figure.getByText(subtitle, { exact: true })).toBeVisible();
+    await expect(figure.locator("[data-echarts-ready]")).toHaveCount(1);
+  }
+});
+
 test("a slider drag over 200k rows settles every histogram on the released range", async ({
   page,
   biacDev,

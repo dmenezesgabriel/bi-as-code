@@ -1,6 +1,5 @@
 import type { FormatRange } from "../value/types";
 import {
-  chartChromeOption,
   describeChart,
   escapeHtml,
   gridOption,
@@ -34,7 +33,7 @@ export function toHeatmapOption(
 ): ChartOption {
   assertFormats(model, props);
   const legend = props.legend ?? true;
-  const grid = gridOption(props, false) as { top: number; bottom: number };
+  const grid = gridOption(false) as { top: number; bottom: number };
   // The colour strip's ends, its ticks and the cell labels all read off one
   // scale, so they format against its span and share a unit.
   const valueSpan = numericRange([model.min, model.max]);
@@ -56,7 +55,6 @@ export function toHeatmapOption(
       true,
     ),
     series: [seriesOption(model, props, tokens.border, valueSpan)],
-    ...chartChromeOption(props, false),
     tooltip: {
       trigger: "item",
       formatter: (param: TooltipParam) => tooltipHtml(param, model, props),

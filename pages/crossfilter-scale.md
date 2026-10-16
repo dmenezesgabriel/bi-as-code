@@ -30,7 +30,7 @@ select delay, distance, time
 from flights
 ```
 
-<Histogram data="delays" value="delay" filters={["delay", "distance", "time"]} select="crossfilter" />
+<Histogram data="delays" value="delay" title="Arrival delay" subtitle="Flights per bin, minutes" filters={["delay", "distance", "time"]} select="crossfilter" />
 
 ## Distance
 
@@ -40,7 +40,7 @@ select delay, distance, time
 from flights
 ```
 
-<Histogram data="distances" value="distance" filters={["delay", "distance", "time"]} select="crossfilter" />
+<Histogram data="distances" value="distance" title="Flight distance" subtitle="Flights per bin, miles" filters={["delay", "distance", "time"]} select="crossfilter" />
 
 ## Time
 
@@ -50,4 +50,4 @@ select delay, distance, time
 from flights
 ```
 
-<Histogram data="times" value="time" filters={["delay", "distance", "time"]} select="crossfilter" />
+<Histogram data="times" value="time" title="Departure time" subtitle="Flights per bin, hour of day" filters={["delay", "distance", "time"]} select="crossfilter" />

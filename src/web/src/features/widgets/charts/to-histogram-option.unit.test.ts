@@ -200,7 +200,7 @@ describe("toHistogramOption", () => {
           LIGHT_CHART_TOKENS,
         ),
       ),
-    ).toBe("Order size");
+    ).toBe("histogram chart of amount");
   });
 
   it.each(["valueFmt", "yFmt", "labelsFmt"] as const)(
