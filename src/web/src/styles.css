@@ -217,6 +217,12 @@
   /* The one gap between consecutive page blocks — widgets, charts, tables,
      fences and paragraphs alike — so a page reads as one rhythm. */
   --spacing-block-gap: 1rem;
+
+  /* The reading measure for text blocks: 70ch at the 16px body. It is rem,
+     not ch, because ch resolves against each element's own font size and
+     would let a heading run wider than the paragraph under it. Only text
+     takes it — charts and tables keep the full column a BI page needs. */
+  --container-measure: 40rem;
 }
 
 /* One focus ring for every focusable element — ours, Base UI's, shiki's

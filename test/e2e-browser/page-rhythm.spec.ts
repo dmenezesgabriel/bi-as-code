@@ -59,3 +59,78 @@ for (const route of ["weekly-review", "", "crossfilter-scale"]) {
     expect(errors).toEqual([]);
   });
 }
+
+// `--container-measure` in `src/web/src/styles.css`: 70ch at the 16 px body.
+const MEASURE_PX = 640;
+
+/** The first `main > p`'s width in `ch` of its own font. */
+function paragraphWidthInCh(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const paragraph = document.querySelector("main > p");
+    if (!paragraph) throw new Error("expected a `main > p`, found none");
+    const ch = document.createElement("span");
+    ch.style.cssText = "display:inline-block;width:1ch";
+    paragraph.append(ch);
+    const width = paragraph.getBoundingClientRect().width;
+    const chWidth = ch.getBoundingClientRect().width;
+    ch.remove();
+    return width / chWidth;
+  });
+}
+
+/** The page column's width and the width of the block holding its first chart. */
+function chartAndColumnWidths(page: Page): Promise<[number, number]> {
+  return page.evaluate(() => {
+    const main = document.querySelector("main");
+    const chart = [...(main?.children ?? [])].find((block) =>
+      block.querySelector("[data-echarts-ready]"),
+    );
+    if (!main || !chart) throw new Error("expected a chart block in `main`");
+    return [
+      chart.getBoundingClientRect().width,
+      main.getBoundingClientRect().width,
+    ];
+  });
+}
+
+for (const [route, width] of [
+  ["", 1920],
+  ["weekly-review", 1280],
+] as const) {
+  test(`/${route} at ${width}px stops prose at the measure and keeps charts the full column`, async ({
+    page,
+    biacDev,
+  }) => {
+    // Arrange
+    const errors = collectConsoleErrors(page);
+    await page.setViewportSize({ width, height: 900 });
+
+    // Act
+    await page.goto(`${biacDev.url}${route}`);
+    await expect(page.locator("[data-echarts-ready]").first()).toBeVisible();
+
+    // Assert — half a `ch` of slack: 40rem is 70ch only to the sub-pixel.
+    expect(await paragraphWidthInCh(page)).toBeLessThanOrEqual(70.5);
+    const [chartWidth, columnWidth] = await chartAndColumnWidths(page);
+    expect(columnWidth).toBeGreaterThan(MEASURE_PX);
+    expect(chartWidth).toBeCloseTo(columnWidth, 0);
+    expect(errors).toEqual([]);
+  });
+}
+
+test("/weekly-review caps a markdown list at the measure", async ({
+  page,
+  biacDev,
+}) => {
+  // Arrange
+  await page.setViewportSize({ width: 1920, height: 900 });
+
+  // Act
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  // Assert
+  const list = page.locator("main > ul").first();
+  await expect(list).toBeVisible();
+  const box = await list.boundingBox();
+  expect(box?.width).toBeLessThanOrEqual(MEASURE_PX);
+});

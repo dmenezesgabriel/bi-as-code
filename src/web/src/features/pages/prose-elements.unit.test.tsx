@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
+  ProseBlockquote,
   ProseH1,
   ProseH2,
   ProseH3,
@@ -8,10 +9,12 @@ import {
   ProseH5,
   ProseH6,
   ProseLink,
+  ProseOrderedList,
   ProseParagraph,
   ProseTable,
   ProseTd,
   ProseTh,
+  ProseUnorderedList,
 } from "./prose-elements";
 import { renderWithRouter } from "../chrome/router-harness";
 
@@ -179,5 +182,45 @@ describe("prose table", () => {
     const classes = screen.getByRole("columnheader").className.split(" ");
     expect(classes).toContain("pr-8");
     expect(classes).not.toContain("pr-4");
+  });
+});
+
+describe("prose measure", () => {
+  const textBlocks = [
+    ["p", ProseParagraph],
+    ["h2", ProseH2],
+    ["ul", ProseUnorderedList],
+    ["ol", ProseOrderedList],
+    ["blockquote", ProseBlockquote],
+  ] as const;
+
+  it.each(textBlocks)("caps a %s at the reading measure", (tag, Block) => {
+    // Arrange / Act
+    const { container } = render(<Block>Order volume.</Block>);
+
+    // Assert
+    const element = container.querySelector(tag);
+    expect(element?.className.split(" ")).toContain("max-w-measure");
+  });
+
+  it("leaves a table the full column", () => {
+    // Arrange / Act
+    const { container } = render(<ProseTable />);
+
+    // Assert
+    const table = container.querySelector("table");
+    expect(table?.className).not.toContain("max-w-measure");
+  });
+
+  it("lets a caller class widen a capped block", () => {
+    // Arrange / Act
+    const { container } = render(
+      <ProseParagraph className="max-w-none">Order volume.</ProseParagraph>,
+    );
+
+    // Assert
+    const classes = container.querySelector("p")?.className.split(" ");
+    expect(classes).toContain("max-w-none");
+    expect(classes).not.toContain("max-w-measure");
   });
 });

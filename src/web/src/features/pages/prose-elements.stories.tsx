@@ -13,6 +13,7 @@ import {
   ProseTable,
   ProseTd,
   ProseTh,
+  ProseUnorderedList,
 } from "./prose-elements";
 
 const meta: Meta<typeof ProseH1> = {
@@ -148,6 +149,43 @@ export const Tables: Story = {
     for (const cell of cells) {
       await expect(getComputedStyle(cell).borderBottomWidth).toBe("1px");
     }
+  },
+};
+
+/** In a column wider than the measure, a long paragraph, a heading and a
+ * list stop at 640px (70ch at the body size) while a chart beside them keeps
+ * the full column. */
+export const ProseMeasure: Story = {
+  render: () => (
+    <div data-testid="column" className="w-[56rem]">
+      <ProseH2>
+        A heading that runs on long enough to reach past the measure
+      </ProseH2>
+      <ProseParagraph>
+        Order volume rose in the West for the third week running, led by the
+        marketplace channel, while the South held flat and returns stayed inside
+        their normal band, so the lift reads as clean demand.
+      </ProseParagraph>
+      <ProseUnorderedList>
+        <li>
+          West growth is volume-led and concentrated in the top five accounts,
+          which is worth watching before the quarter closes.
+        </li>
+      </ProseUnorderedList>
+      <div role="figure" aria-label="Chart" className="h-40 border" />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const width = (element: HTMLElement) =>
+      element.getBoundingClientRect().width;
+    const column = canvas.getByTestId("column");
+
+    await expect(width(canvas.getByRole("heading"))).toBe(640);
+    await expect(width(canvas.getByText(/^Order volume rose/))).toBe(640);
+    await expect(width(canvas.getByRole("list"))).toBe(640);
+    await expect(width(canvas.getByRole("figure", { name: "Chart" }))).toBe(
+      width(column),
+    );
   },
 };
 

@@ -1,5 +1,12 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// tailwind-merge only knows Tailwind's default theme steps; `measure` is
+// `--container-measure` in `styles.css`, so without this a caller's
+// `max-w-none` would sit beside `max-w-measure` instead of replacing it.
+const twMerge = extendTailwindMerge({
+  extend: { theme: { container: ["measure"] } },
+});
 
 /**
  * Merge conditional class names and de-duplicate conflicting Tailwind

@@ -10,6 +10,9 @@ type ProseTag =
   | "h5"
   | "h6"
   | "p"
+  | "ul"
+  | "ol"
+  | "blockquote"
   | "table"
   | "th"
   | "td";
@@ -18,7 +21,8 @@ type ProseTag =
 // would otherwise render as one run of body text. Weight, line-height and
 // balanced wrapping follow common document stylesheets; a heading that opens
 // its container (a page, a callout body) sits flush.
-const HEADING = "font-semibold leading-tight text-balance first:mt-0";
+const HEADING =
+  "max-w-measure font-semibold leading-tight text-balance first:mt-0";
 
 /**
  * A markdown element override for the MDX components map: renders `tag`
@@ -51,7 +55,14 @@ export const ProseH6 = proseElement("h6", cn(HEADING, "mt-6 mb-2 text-base"));
 // A paragraph carries the block gap itself, not only from the page column,
 // so paragraphs inside a callout, details or tab body keep the same rhythm.
 // The last one drops it so such a body ends flush with the widget's padding.
-export const ProseParagraph = proseElement("p", "mb-block-gap last:mb-0");
+export const ProseParagraph = proseElement(
+  "p",
+  "mb-block-gap max-w-measure last:mb-0",
+);
+// Lists and quotes are running text too, so they stop at the same measure.
+export const ProseUnorderedList = proseElement("ul", "max-w-measure");
+export const ProseOrderedList = proseElement("ol", "max-w-measure");
+export const ProseBlockquote = proseElement("blockquote", "max-w-measure");
 
 // Preflight leaves a GFM table unpadded and unruled, so its header cells
 // run together. The rules, padding and size match the `<Table>` widget so

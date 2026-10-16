@@ -10,4 +10,8 @@ describe("cn", () => {
   it("de-duplicates conflicting Tailwind utilities, last wins", () => {
     expect(cn("px-2 px-4")).toBe("px-4");
   });
+
+  it("knows the theme's measure as a max-width step, last wins", () => {
+    expect(cn("max-w-measure", "max-w-none")).toBe("max-w-none");
+  });
 });

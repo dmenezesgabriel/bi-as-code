@@ -33,6 +33,7 @@ import { Delta } from "../widgets/value/delta";
 import { Sparkline } from "../widgets/value/sparkline-widget";
 import { Value } from "../widgets/value/value";
 import {
+  ProseBlockquote,
   ProseH1,
   ProseH2,
   ProseH3,
@@ -40,10 +41,12 @@ import {
   ProseH5,
   ProseH6,
   ProseLink,
+  ProseOrderedList,
   ProseParagraph,
   ProseTable,
   ProseTd,
   ProseTh,
+  ProseUnorderedList,
 } from "./prose-elements";
 import { QueryRegistryProvider } from "./query-registry";
 import { SqlBlockPre } from "./sql-block";
@@ -52,7 +55,7 @@ import { useDocumentTitle } from "./use-document-title";
 
 /**
  * MDX element overrides. `h1`–`h6` and `p` give markdown text the page type
- * scale; `table`, `th` and `td` pad and rule GFM tables; `a` styles links
+ * scale; `ul`, `ol` and `blockquote` stop at the same reading measure; `table`, `th` and `td` pad and rule GFM tables; `a` styles links
  * and routes absolute-path ones through the client router so page-to-page navigation never reloads the SPA; `pre` hands
  * fenced code blocks to shiki and pairs named sql fences with their query
  * results; the widgets (`Table` with its `Column` carrier, `BigValue`, `Value`, `Delta`, `Sparkline`,
@@ -75,6 +78,9 @@ const mdxComponents: MdxComponentMap = {
   h5: ProseH5,
   h6: ProseH6,
   p: ProseParagraph,
+  ul: ProseUnorderedList,
+  ol: ProseOrderedList,
+  blockquote: ProseBlockquote,
   table: ProseTable,
   th: ProseTh,
   td: ProseTd,
