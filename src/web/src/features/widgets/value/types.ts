@@ -32,6 +32,12 @@ export interface FormatRange {
    * number has none to show.
    */
   readonly whole?: boolean;
+  /**
+   * The value is read with no axis beside it (a data label that replaces
+   * its axis) — the thousands unit keeps one decimal (`3.7k`, not `4k`),
+   * since no tick is there to correct the rounding.
+   */
+  readonly standalone?: boolean;
 }
 
 /**

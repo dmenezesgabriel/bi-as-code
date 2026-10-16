@@ -6,7 +6,8 @@ import type { SeriesChartProps } from "./types";
  * The `<BarChart>` MDX widget: a cartesian bar chart bound to a named
  * ```sql fence on the same page. `x`/`y`/`series` name result columns; `y`
  * accepts one column or an array; `stacked` piles series on one stack
- * (`"100%"` normalizes to shares); `labels` draws per-point values.
+ * (`"100%"` normalizes to shares); `labels` draws per-point values — on a
+ * non-stacked bar they replace the value axis's ticks and gridlines.
  *
  * @example
  * <BarChart data="orders" x="region" y="revenue" labels />

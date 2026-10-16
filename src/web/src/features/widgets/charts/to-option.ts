@@ -55,11 +55,15 @@ export function toChartOption(
   const series = percentage ? toPercentageStack(model.series) : model.series;
   const legend = props.legend ?? series.length > 1;
   const yRange = seriesValueRange(series, props.stacked);
+  const labelsAsAxis = labelsReplaceValueAxis(type, props);
+  const yAxis = yAxisOption(props, percentage, yRange);
+  const labelRange =
+    labelsAsAxis && yRange ? { ...yRange, standalone: true } : yRange;
   return {
     grid: gridOption(legend),
     xAxis: xAxisOption(model, props),
-    yAxis: yAxisOption(props, percentage, yRange),
-    series: series.map((s) => seriesOption(s, type, props, yRange, tokens)),
+    yAxis: labelsAsAxis ? withoutValueReadout(yAxis) : yAxis,
+    series: series.map((s) => seriesOption(s, type, props, labelRange, tokens)),
     ...chartChromeOption(props, legend),
     tooltip: {
       trigger: "axis",
@@ -252,11 +256,38 @@ export function yAxisOption(
   };
 }
 
+/**
+ * A non-stacked bar with `labels` prints every value on its mark, so the
+ * value axis' ticks and gridlines only repeat them — NN/g: "We can simply
+ * remove the y-axis and grid lines, since the data labels render them
+ * redundant" (https://www.nngroup.com/articles/clutter-charts/). A stacked
+ * bar's labels are segments, not the totals the axis reads, and a line's
+ * labels thin out under `hideOverlap`, so both keep their axis.
+ * ADR-0015 records the decision.
+ */
+function labelsReplaceValueAxis(
+  type: SeriesChartType,
+  props: SeriesChartProps,
+): boolean {
+  return type === "bar" && props.labels === true && !props.stacked;
+}
+
+/** The value axis with its tick labels and gridlines off — the baseline stays. */
+function withoutValueReadout(
+  axis: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...axis,
+    axisLabel: { ...(axis.axisLabel as object), show: false },
+    splitLine: { show: false },
+  };
+}
+
 function seriesOption(
   series: ChartSeries,
   type: SeriesChartType,
   props: SeriesChartProps,
-  yRange: FormatRange | undefined,
+  labelRange: FormatRange | undefined,
   tokens: ChartTokens,
 ): Record<string, unknown> {
   const echartsType = type === "area" ? "line" : type;
@@ -274,7 +305,7 @@ function seriesOption(
       ? { color: props.seriesColors[series.name] }
       : {}),
     ...(lineLike ? lineOption(props.labels === true) : {}),
-    ...(props.labels ? labelOption(type, props, yRange, tokens) : {}),
+    ...(props.labels ? labelOption(type, props, labelRange, tokens) : {}),
     emphasis: {
       focus: "series",
       blurScope: "coordinateSystem",

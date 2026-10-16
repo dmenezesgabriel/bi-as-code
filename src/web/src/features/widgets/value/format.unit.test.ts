@@ -210,6 +210,30 @@ describe("formatValue — auto-scale against a whole-number range", () => {
   });
 });
 
+describe("formatValue — auto-scale for a value read with no axis beside it", () => {
+  it.each<[string | undefined, number, FormatRange, string]>([
+    // The k unit keeps a decimal: `3.7k`, not a `4k` that no tick corrects.
+    [
+      undefined,
+      3700,
+      { min: 0, max: 6100, whole: true, standalone: true },
+      "3.7k",
+    ],
+    ["usd", 4800, { min: 0, max: 6100, standalone: true }, "$4.8k"],
+    // Without the flag the k unit still rounds to the axis' whole steps.
+    [undefined, 3700, { min: 0, max: 6100, whole: true }, "4k"],
+    // Below the k threshold nothing changes.
+    [undefined, 95, { min: 0, max: 140, whole: true, standalone: true }, "95"],
+    ["num", 1_500_000, { min: 0, max: 5_000_000, standalone: true }, "1.5M"],
+  ])("fmt=%s on %s within %o → %s", (code, value, range, expected) => {
+    // Act
+    const formatted = formatValue(value, code, range);
+
+    // Assert
+    expect(formatted).toBe(expected);
+  });
+});
+
 describe("formatValue — defaults when fmt is unset", () => {
   it.each<[unknown, string]>([
     [DATE, "2025-03-01"],

@@ -76,7 +76,11 @@ interface AxisProbe {
   max?: number;
   boundaryGap?: unknown;
   minInterval?: number;
-  axisLabel?: { formatter?: (value: never, index: number) => string };
+  axisLabel?: {
+    show?: boolean;
+    formatter?: (value: never, index: number) => string;
+  };
+  splitLine?: { show?: boolean };
 }
 interface SeriesProbe {
   name?: string;
@@ -194,8 +198,13 @@ describe("toChartOption one unit per axis", () => {
     ]);
   });
 
-  it("formats point labels against the same range as the ticks", () => {
-    const option = probe(CATEGORIES, { labels: true });
+  it("formats a line's point labels against the same range as the ticks", () => {
+    const option = toChartOption(
+      CATEGORIES,
+      "line",
+      { ...PROPS, labels: true },
+      LIGHT_CHART_TOKENS,
+    ) as OptionProbe;
 
     expect(label(option).formatter?.({ value: ["South", 3700] })).toBe("4k");
   });
@@ -437,6 +446,58 @@ describe("toChartOption labels", () => {
       labelsFmt: "num0k",
     });
     expect(label(option).formatter?.({ value: ["North", 4800] })).toBe("5k");
+  });
+});
+
+describe("toChartOption labels in place of the value axis", () => {
+  it("hides a labelled bar's value ticks and gridlines", () => {
+    // Act
+    const option = probe(CATEGORIES, { labels: true });
+
+    // Assert
+    expect(option.yAxis?.axisLabel?.show).toBe(false);
+    expect(option.yAxis?.splitLine?.show).toBe(false);
+  });
+
+  it("keeps a decimal in each bar label's unit once no tick corrects it", () => {
+    // Act
+    const option = probe(CATEGORIES, { labels: true });
+
+    // Assert
+    const format = label(option).formatter;
+    expect(format?.({ value: ["South", 3700] })).toBe("3.7k");
+    expect(format?.({ value: ["West", 6100] })).toBe("6.1k");
+  });
+
+  it.each<[string, SeriesModel, Partial<SeriesChartProps>]>([
+    ["an unlabelled bar", CATEGORIES, {}],
+    [
+      "a stacked bar, whose labels are segments",
+      TWO_SERIES,
+      { stacked: true, labels: true },
+    ],
+    ["a 100% stack", RAW_STACK, { stacked: "100%", labels: true }],
+  ])("keeps the value axis on %s", (_, model, props) => {
+    // Act
+    const option = probe(model, props);
+
+    // Assert
+    expect(option.yAxis?.axisLabel?.show).toBeUndefined();
+    expect(option.yAxis?.splitLine).toBeUndefined();
+  });
+
+  it("keeps the value axis on a labelled line", () => {
+    // Act
+    const option = toChartOption(
+      CATEGORIES,
+      "line",
+      { ...PROPS, labels: true },
+      LIGHT_CHART_TOKENS,
+    ) as OptionProbe;
+
+    // Assert
+    expect(option.yAxis?.axisLabel?.show).toBeUndefined();
+    expect(option.yAxis?.splitLine).toBeUndefined();
   });
 });
 

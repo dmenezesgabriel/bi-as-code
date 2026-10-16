@@ -18,7 +18,13 @@ export interface AppliedOption {
     barCategoryGap?: unknown;
   }[];
   xAxis: { type?: string; name?: string; data?: unknown[] }[];
-  yAxis: { max?: number; name?: string; data?: unknown[] }[];
+  yAxis: {
+    max?: number;
+    name?: string;
+    data?: unknown[];
+    axisLabel?: { show?: boolean };
+    splitLine?: { show?: boolean };
+  }[];
   legend: { selected?: Record<string, boolean> }[];
   visualMap?: { min?: number; max?: number; inRange?: { color?: string[] } }[];
 }

@@ -34,7 +34,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The demo shape: three labeled bars of revenue by region. */
+/** The applied value axis' readout switches, as echarts merges them. */
+interface ValueAxisProbe {
+  axisLabel?: { show?: boolean };
+  splitLine?: { show?: boolean };
+}
+
+/** The demo shape: three labeled bars of revenue by region. The labels
+ * replace the value axis — no y ticks, no gridlines — and keep a decimal in
+ * their unit (`3.7k`). */
 export const Labeled: Story = {
   args: { labels: true },
   decorators: [withQueryData([ORDERS_REGIONAL], dbWith(REGIONAL_ROWS))],
@@ -45,10 +53,13 @@ export const Labeled: Story = {
       "aria-label",
       "bar chart of revenue by region",
     );
-    const option = await appliedOption<{ series?: { type?: string }[] }>(
-      canvasElement,
-    );
+    const option = await appliedOption<{
+      series?: { type?: string }[];
+      yAxis?: ValueAxisProbe[];
+    }>(canvasElement);
     expect(option.series?.[0]?.type).toBe("bar");
+    expect(option.yAxis?.[0]?.axisLabel?.show).toBe(false);
+    expect(option.yAxis?.[0]?.splitLine?.show).toBe(false);
   },
 };
 
@@ -174,7 +185,11 @@ export const StackedLabeled: Story = {
   play: async ({ canvasElement }) => {
     const option = await appliedOption<{
       series?: { label?: { position?: string; color?: string } }[];
+      yAxis?: ValueAxisProbe[];
     }>(canvasElement);
+    // Segment labels don't give the stack totals, so the axis stays.
+    expect(option.yAxis?.[0]?.axisLabel?.show).toBe(true);
+    expect(option.yAxis?.[0]?.splitLine?.show).toBe(true);
     expect(option.series?.every((s) => s.label?.position === "inside")).toBe(
       true,
     );

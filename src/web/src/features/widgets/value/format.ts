@@ -155,10 +155,14 @@ function describeValue(value: unknown): string {
 /**
  * `num`/`usd` pick decimals by magnitude and a unit by threshold — the k
  * threshold is 4000 (not 1000) so `1,500` keeps full precision, and a
- * `whole` range below it takes no decimals; `pct` picks decimals only, never
- * a unit suffix.
+ * `whole` range below it takes no decimals; a `standalone` range keeps one
+ * decimal in the k unit; `pct` picks decimals only, never a unit suffix.
  */
-function resolveAuto(base: string, abs: number, whole: boolean): string {
+function resolveAuto(
+  base: string,
+  abs: number,
+  range: FormatRange | undefined,
+): string {
   if (abs === 0) return `${base}0`;
   if (base === "pct") {
     if (abs < 0.1) return "pct2";
@@ -168,8 +172,8 @@ function resolveAuto(base: string, abs: number, whole: boolean): string {
   if (abs >= 1e12) return `${base}1t`;
   if (abs >= 1e9) return `${base}1b`;
   if (abs >= 1e6) return `${base}1m`;
-  if (abs >= 4e3) return `${base}0k`;
-  if (whole) return `${base}0`;
+  if (abs >= 4e3) return `${base}${range?.standalone === true ? 1 : 0}k`;
+  if (range?.whole === true) return `${base}0`;
   if (abs < 10) return `${base}2`;
   if (abs < 100) return `${base}1`;
   return `${base}0`;
@@ -199,7 +203,7 @@ function resolveCode(
     return resolveAuto(
       code,
       abs === 0 || range === undefined ? abs : rangeMagnitude(range),
-      range?.whole === true,
+      range,
     );
   if (abs === 0 && /^[a-z]{3}\d[kmbt]$/.test(code))
     return `${code.slice(0, 3)}0`;
