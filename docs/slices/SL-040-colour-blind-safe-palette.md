@@ -171,7 +171,7 @@ One TDD unit each, one conventional commit each. A task that changes a screen na
 
 - [x] T1 — The measurement (D5): a module for Machado severity-1.0 simulation, CIE76 ΔE and WCAG contrast, unit-tested against the audit's published numbers (ours deutan 1.7 / protan 12.5 / tritan 7.8; Okabe–Ito 17.0 / 20.7 / 16.1). Settle D1's floor numbers in this PRD from a search run with it.
 - [x] T2 — The palette (D1–D4, D6): RED — `test/lib/series-palette.unit.test.ts` asserts the floors per mode over `--chart-*`, `--background` and `--chart-label-inside` parsed from `styles.css`, failing on the old tokens (deutan 1.7, tritan 7.8); GREEN — new `--chart-1..8` per mode and dark `--chart-label-inside`; pinned hexes updated; weekday bar on `/weekly-review` and the eight-series stories.
-- [ ] T3 — ADR-0016 records the palette, its floors and the method; GAP-026 closed in `docs/research/usability-audit.md` with the re-measured numbers; demo run.
+- [x] T3 — ADR-0016 records the palette, its floors and the method; GAP-026 closed in `docs/research/usability-audit.md` with the re-measured numbers; demo run.
 
 ## Out of scope
 

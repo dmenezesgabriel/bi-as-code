@@ -64,7 +64,7 @@
      SC 1.4.11). test/lib/series-palette.unit.test.ts holds the floors.
      Okabe-Ito's orange, sky blue and yellow fall below 3:1 on white, so
      the light set keeps its blue, vermillion, green and purple and fills
-     the rest by maximin search under those floors. */
+     the rest by maximin search under those floors (ADR-0016). */
   --chart-1: #0072b2; /* Okabe-Ito blue */
   --chart-2: #d55e00; /* Okabe-Ito vermillion */
   --chart-3: #009e73; /* Okabe-Ito bluish green */
