@@ -34,7 +34,9 @@ export default defineConfig({
           // Node-side sources only (src/cli, src/engine) — src/web is the
           // SPA's own deployment artifact (web-unit project below); without
           // this exclusion the web tests run twice with the wrong `@/` alias.
-          include: ["src/**/*.unit.test.ts"],
+          // test/lib holds measurement helpers that later specs trust, so
+          // their own unit tests run here too.
+          include: ["src/**/*.unit.test.ts", "test/lib/**/*.unit.test.ts"],
           exclude: ["src/web/**", "node_modules/**"],
         },
       },
