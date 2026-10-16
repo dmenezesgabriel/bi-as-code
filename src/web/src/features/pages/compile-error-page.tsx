@@ -27,7 +27,7 @@ export function CompileErrorPage({ error }: CompileErrorPageProps) {
         <p className="mt-2 font-mono text-sm text-muted-foreground">
           {errorLocation(error)}
         </p>
-        <pre className="mt-4 rounded bg-muted p-4 text-sm break-words whitespace-pre-wrap">
+        <pre className="mt-4 rounded-sm bg-muted p-4 text-sm break-words whitespace-pre-wrap">
           {error.message}
         </pre>
       </div>

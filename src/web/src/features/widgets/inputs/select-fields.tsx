@@ -200,12 +200,12 @@ function SelectionChips({
           key={value}
           aria-label={labelFor(value)}
           aria-description="Press Backspace or Delete to remove"
-          className="flex h-5 items-center gap-1 rounded bg-accent pr-0.5 pl-1.5 text-xs text-accent-foreground"
+          className="flex h-5 items-center gap-1 rounded-sm bg-accent pr-0.5 pl-1.5 text-xs text-accent-foreground"
         >
           <span className="max-w-40 truncate">{labelFor(value)}</span>
           <Combobox.ChipRemove
             aria-label={`Remove ${labelFor(value)}`}
-            className="flex size-4 cursor-default items-center justify-center rounded text-muted-foreground-faded hover:bg-secondary hover:text-foreground"
+            className="flex size-4 cursor-default items-center justify-center rounded-sm text-muted-foreground-faded hover:bg-secondary hover:text-foreground"
           >
             <XIcon />
           </Combobox.ChipRemove>

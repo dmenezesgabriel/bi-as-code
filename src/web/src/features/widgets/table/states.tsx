@@ -12,9 +12,9 @@ export function TableLoading() {
       aria-label="Loading query result"
       className="animate-pulse space-y-1.5 py-2"
     >
-      <div className="h-4 rounded bg-secondary" />
-      <div className="h-4 w-5/6 rounded bg-secondary" />
-      <div className="h-4 w-4/6 rounded bg-secondary" />
+      <div className="h-4 rounded-sm bg-secondary" />
+      <div className="h-4 w-5/6 rounded-sm bg-secondary" />
+      <div className="h-4 w-4/6 rounded-sm bg-secondary" />
     </div>
   );
 }
@@ -33,7 +33,7 @@ export function TableError({
   return (
     <p
       role="alert"
-      className="rounded border border-destructive-border bg-destructive-surface px-3 py-2 text-sm text-destructive-foreground"
+      className="rounded-sm border border-destructive-border bg-destructive-surface px-3 py-2 text-sm text-destructive-foreground"
     >
       <code className="font-medium">{name}</code>: {message}
     </p>

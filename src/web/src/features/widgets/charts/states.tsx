@@ -16,7 +16,7 @@ export function ChartLoading({ height }: { height: number }): ReactElement {
     <div
       role="status"
       aria-label="Loading query result"
-      className="w-full animate-pulse rounded bg-secondary"
+      className="w-full animate-pulse rounded-sm bg-secondary"
       style={{ height }}
     />
   );
@@ -40,7 +40,7 @@ export function ChartError({
     <div className="w-full" style={{ height }}>
       <p
         role="alert"
-        className="rounded border border-destructive-border bg-destructive-surface px-3 py-2 text-sm text-destructive-foreground"
+        className="rounded-sm border border-destructive-border bg-destructive-surface px-3 py-2 text-sm text-destructive-foreground"
       >
         <code className="font-medium">{name}</code>: {message}
       </p>

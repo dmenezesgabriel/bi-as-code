@@ -62,7 +62,7 @@ export function SidebarNav({
                   event.preventDefault();
                   toggleDir(dir);
                 }}
-                className="cursor-pointer select-none rounded px-2 py-1.5 text-sm font-medium text-sidebar-foreground hover:bg-accent"
+                className="cursor-pointer select-none rounded-sm px-2 py-1.5 text-sm font-medium text-sidebar-foreground hover:bg-accent"
               >
                 {dir.name}
               </summary>
@@ -101,7 +101,7 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "block rounded px-2 py-1.5 text-sm",
+        "block rounded-sm px-2 py-1.5 text-sm",
         active
           ? "bg-sidebar-accent/60 font-medium text-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",

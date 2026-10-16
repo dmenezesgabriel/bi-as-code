@@ -108,7 +108,7 @@ export function AppShell({
               aria-label="Toggle sidebar"
               aria-expanded={visible}
               onClick={toggleSidebar}
-              className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             >
               <span aria-hidden>☰</span>
             </button>

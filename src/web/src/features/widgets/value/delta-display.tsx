@@ -124,7 +124,7 @@ export function DeltaDisplay({
       className={cn(
         "inline-flex items-center align-baseline",
         statusClass,
-        chip && `rounded border px-1 text-sm ${chipClass}`,
+        chip && `rounded-sm border px-1 text-sm ${chipClass}`,
         className,
       )}
     >

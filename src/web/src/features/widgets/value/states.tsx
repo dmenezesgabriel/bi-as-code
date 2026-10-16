@@ -16,7 +16,7 @@ export function ValueLoading(): ReactElement {
     <span
       role="status"
       aria-label="Loading query result"
-      className="inline-block h-4 w-16 animate-pulse rounded bg-secondary align-middle"
+      className="inline-block h-4 w-16 animate-pulse rounded-sm bg-secondary align-middle"
     />
   );
 }
@@ -35,7 +35,7 @@ export function ValueError({
   return (
     <span
       role="alert"
-      className="rounded border border-destructive-border bg-destructive-surface px-1.5 py-0.5 text-sm text-destructive-foreground"
+      className="rounded-sm border border-destructive-border bg-destructive-surface px-1.5 py-0.5 text-sm text-destructive-foreground"
     >
       <code className="font-medium">{name}</code>: {message}
     </span>

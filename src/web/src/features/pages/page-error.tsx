@@ -13,7 +13,7 @@ export function PageError({ error }: ErrorComponentProps) {
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
       <h1 className="text-2xl font-semibold">This page failed to render</h1>
-      <pre className="mt-4 overflow-x-auto rounded bg-muted p-4 text-sm">
+      <pre className="mt-4 overflow-x-auto rounded-sm bg-muted p-4 text-sm">
         {message}
       </pre>
     </main>

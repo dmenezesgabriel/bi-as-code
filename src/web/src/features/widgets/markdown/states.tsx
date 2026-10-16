@@ -19,7 +19,7 @@ export function WidgetError({
   return (
     <p
       role="alert"
-      className="rounded border border-destructive-border bg-destructive-surface px-3 py-2 text-sm text-destructive-foreground"
+      className="rounded-sm border border-destructive-border bg-destructive-surface px-3 py-2 text-sm text-destructive-foreground"
     >
       <code className="font-medium">{name}</code>: {message}
     </p>

@@ -226,7 +226,7 @@ function PagerButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent"
+      className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent"
     >
       {children}
     </button>
