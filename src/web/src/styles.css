@@ -178,6 +178,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* The one gap between consecutive page blocks — widgets, charts, tables,
+     fences and paragraphs alike — so a page reads as one rhythm. */
+  --spacing-block-gap: 1rem;
 }
 
 /* One focus ring for every focusable element — ours, Base UI's, shiki's

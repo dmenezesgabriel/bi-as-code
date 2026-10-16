@@ -122,8 +122,9 @@ describe("FilterBar", () => {
       expect(sentinel).toHaveAttribute("aria-hidden", "true");
       for (const cls of [
         "pointer-events-none",
-        "-mt-(--dock-top,4rem)",
-        "mb-(--dock-top,4rem)",
+        "relative",
+        "-top-(--dock-top,4rem)",
+        "mb-0",
         "h-0",
         "w-0",
       ]) {

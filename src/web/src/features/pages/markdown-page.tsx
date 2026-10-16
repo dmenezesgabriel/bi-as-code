@@ -142,7 +142,7 @@ export function MarkdownPage({
       <main
         ref={setArticle}
         style={{ "--docked-row-height": DOCKED_ROW_HEIGHT } as CSSProperties}
-        className="mx-auto w-full min-w-0 max-w-4xl [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 has-[[data-filter-bar]]:[&_h2]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)] has-[[data-filter-bar]]:[&_h3]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)]"
+        className="mx-auto w-full min-w-0 max-w-4xl space-y-block-gap [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 has-[[data-filter-bar]]:[&_h2]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)] has-[[data-filter-bar]]:[&_h3]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)]"
       >
         <PageBody page={page} />
       </main>

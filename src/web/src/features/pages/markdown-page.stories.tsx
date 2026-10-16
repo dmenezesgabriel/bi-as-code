@@ -100,3 +100,33 @@ export const PageWithQuery: Story = {
     await expect(canvas.getByRole("cell", { name: "West" })).toBeVisible();
   },
 };
+
+/** Consecutive blocks sit one block gap (16px) apart: widget roots carry
+ * no margin of their own, so the gap comes from the page column alone. */
+export const BlockRhythm: Story = {
+  args: {
+    page: pageModule({
+      title: "Rhythm",
+      default: () => (
+        <>
+          <div role="figure" aria-label="KPI row" className="h-16 border" />
+          <div role="figure" aria-label="Chart" className="h-40 border" />
+          <p>Order volume rose in the West.</p>
+          <div role="figure" aria-label="Table" className="h-24 border" />
+        </>
+      ),
+    }),
+  },
+  decorators: [withMemoryRouter(["/"], "/")],
+  play: async ({ canvas }) => {
+    const kpis = canvas.getByRole("figure", { name: "KPI row" });
+    const chart = canvas.getByRole("figure", { name: "Chart" });
+    const text = canvas.getByText("Order volume rose in the West.");
+    const table = canvas.getByRole("figure", { name: "Table" });
+    const gap = (above: HTMLElement, below: HTMLElement) =>
+      below.getBoundingClientRect().top - above.getBoundingClientRect().bottom;
+    const gaps = [gap(kpis, chart), gap(chart, text), gap(text, table)];
+
+    await expect(gaps).toEqual([16, 16, 16]);
+  },
+};

@@ -194,7 +194,7 @@ function SliderField({
 }: SliderFieldProps): ReactElement {
   const value = fieldValue(held, range, bounds);
   return (
-    <div className="relative mb-4 w-64">
+    <div className="relative w-64">
       <SliderPrimitive.Root
         value={value}
         onValueChange={onChange}
@@ -255,7 +255,7 @@ function PinnedSliderReadout({
   readonly value: number;
 }): ReactElement {
   return (
-    <div className="relative mb-4 min-h-16 w-64">
+    <div className="relative min-h-16 w-64">
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span className="truncate text-sm font-medium text-label">{label}</span>
         <span className="shrink-0 text-sm font-normal text-muted-foreground-faded">

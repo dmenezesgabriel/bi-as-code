@@ -39,7 +39,7 @@ export function ButtonGroup({
   const label = title ?? titleCase(props.id);
   const labelId = `${props.id}-label`;
   return (
-    <div className="relative mb-4 max-w-full">
+    <div className="relative max-w-full">
       <span id={labelId} className="mb-1 block text-sm font-medium text-label">
         {label}
       </span>

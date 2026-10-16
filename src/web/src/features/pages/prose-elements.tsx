@@ -48,9 +48,10 @@ export const ProseH3 = proseElement("h3", cn(HEADING, "mt-8 mb-2 text-xl"));
 export const ProseH4 = proseElement("h4", cn(HEADING, "mt-6 mb-2 text-lg"));
 export const ProseH5 = proseElement("h5", cn(HEADING, "mt-6 mb-2 text-base"));
 export const ProseH6 = proseElement("h6", cn(HEADING, "mt-6 mb-2 text-base"));
-// The last paragraph drops its margin so a callout or details body ends
-// flush with the widget's own padding.
-export const ProseParagraph = proseElement("p", "mb-[1.2em] last:mb-0");
+// A paragraph carries the block gap itself, not only from the page column,
+// so paragraphs inside a callout, details or tab body keep the same rhythm.
+// The last one drops it so such a body ends flush with the widget's padding.
+export const ProseParagraph = proseElement("p", "mb-block-gap last:mb-0");
 
 // Preflight leaves a GFM table unpadded and unruled, so its header cells
 // run together. The rules, padding and size match the `<Table>` widget so
@@ -58,7 +59,7 @@ export const ProseParagraph = proseElement("p", "mb-[1.2em] last:mb-0");
 // as an inline `text-align`, which wins over the header's `text-left`.
 export const ProseTable = proseElement(
   "table",
-  "my-4 w-full border-collapse text-sm",
+  "mb-block-gap w-full border-collapse text-sm last:mb-0",
 );
 export const ProseTh = proseElement(
   "th",

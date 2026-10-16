@@ -120,7 +120,7 @@ export function DateRange({
   const bounds = resolveDateRange(held) ?? {};
 
   return (
-    <div className="relative mb-4 w-64">
+    <div className="relative w-64">
       <label
         htmlFor={id}
         className="mb-1 block cursor-default truncate text-sm font-medium text-label"

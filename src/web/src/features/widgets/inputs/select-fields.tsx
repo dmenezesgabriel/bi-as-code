@@ -58,7 +58,7 @@ export function MultiSelectField({
   readonly values: string[];
 }): ReactElement {
   return (
-    <div className="relative mb-4 max-w-72">
+    <div className="relative max-w-72">
       <Combobox.Root
         items={collection}
         multiple
@@ -127,7 +127,7 @@ export function SingleSelectField({
   value,
 }: SelectFieldProps & { readonly value: string | null }): ReactElement {
   return (
-    <div className="relative mb-4 max-w-72">
+    <div className="relative max-w-72">
       <Combobox.Root
         items={collection}
         value={value}

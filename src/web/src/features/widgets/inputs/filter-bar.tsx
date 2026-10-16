@@ -65,12 +65,15 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
       {/* The sentinel's top sits one dock offset above the bar's rest top,
           so it leaves its scroll container exactly when the bar reaches the
           dock line — the card face fires at the pin moment, never early or
-          late. The bottom margin hands the offset back so layout is
-          unchanged. */}
+          late. A relative offset, not a negative margin, moves it: a margin
+          would collapse with the block above and swallow the page's block
+          gap before the bar. It takes no gap of its own either, so its flow
+          position is the bar's rest top whatever margin the block above
+          leaves. */}
       <div
         ref={sentinel}
         aria-hidden="true"
-        className="pointer-events-none -mt-(--dock-top,4rem) mb-(--dock-top,4rem) h-0 w-0"
+        className="pointer-events-none relative -top-(--dock-top,4rem) mb-0 h-0 w-0"
       />
       {/* Only paint properties transition: the docked row and the spacer
           below must swap heights in one frame, or the page shifts while the
@@ -109,9 +112,12 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
       </Collapsible.Root>
       {/* A sticky bar is in flow: the height it gives up when docked is
           held here, so the page below never moves and the sentinel never
-          swings back into view. */}
+          swings back into view. It takes no block gap of its own: the bar's
+          gap already sits above it, and a second would open below once the
+          spacer has height and its margin stops collapsing. */}
       <div
         aria-hidden="true"
+        className="mb-0"
         style={{ height: resting ? 0 : heightGivenUp(restingHeight) }}
       />
     </>

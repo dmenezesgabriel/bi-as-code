@@ -5,7 +5,6 @@ import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 interface TypeMetrics {
   fontSize: string;
   fontWeight: string;
-  marginBottom: string;
 }
 
 function typeMetrics(element: Locator): Promise<TypeMetrics> {
@@ -14,7 +13,6 @@ function typeMetrics(element: Locator): Promise<TypeMetrics> {
     return {
       fontSize: style.fontSize,
       fontWeight: style.fontWeight,
-      marginBottom: style.marginBottom,
     };
   });
 }
@@ -38,16 +36,21 @@ for (const route of [
 
     const h1 = await typeMetrics(title);
     const paragraph = await typeMetrics(page.locator("main > p").first());
-    // The article's last paragraph ends flush; every other one leaves a gap.
+    // A paragraph sits one block gap above the body block after it; a
+    // heading below keeps its own larger space, so it is not measured.
     const gaps = await page
-      .locator("main > p:not(:last-child)")
+      .locator("main > p:has(+ :not(h1, h2, h3, h4, h5, h6, br))")
       .evaluateAll((nodes) =>
-        nodes.map((node) => parseFloat(getComputedStyle(node).marginBottom)),
+        nodes.map(
+          (node) =>
+            node.nextElementSibling!.getBoundingClientRect().top -
+            node.getBoundingClientRect().bottom,
+        ),
       );
 
     expect(h1).toMatchObject({ fontSize: "30px", fontWeight: "700" });
     expect(paragraph.fontSize).toBe("16px");
-    expect(gaps.every((gap) => gap > 0)).toBe(true);
+    expect(gaps).toEqual(gaps.map(() => 16));
     expect(errors).toEqual([]);
   });
 }

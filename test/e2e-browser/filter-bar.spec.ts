@@ -94,7 +94,9 @@ test("at 375px the opened docked FilterBar stays open through a Region pick, fit
 }) => {
   test.slow();
   const errors = collectConsoleErrors(page);
-  await page.setViewportSize({ width: 375, height: 812 });
+  // A short phone: the panel's inputs outgrow half of its 667px height,
+  // so the bound and the scroll inside the card are both exercised.
+  await page.setViewportSize({ width: 375, height: 667 });
   await page.goto(`${biacDev.url}weekly-review`);
   const bar = page.locator("div.sticky", { hasText: "Region" });
   const filters = page.getByRole("button", { name: "Filters", exact: true });
@@ -105,7 +107,7 @@ test("at 375px the opened docked FilterBar stays open through a Region pick, fit
   await expect(filters).toHaveAttribute("aria-expanded", "false");
   await filters.click();
 
-  // Bar row plus the opened card: at most half of the 812px viewport,
+  // Bar row plus the opened card: at most half of the 667px viewport,
   // with the inputs that do not fit scrolling inside the card.
   const opened = await bar.evaluate((el) => {
     const card = el.lastElementChild!;
@@ -115,7 +117,7 @@ test("at 375px the opened docked FilterBar stays open through a Region pick, fit
       scrolls: card.scrollHeight > card.clientHeight,
     };
   });
-  expect(opened.height).toBeLessThanOrEqual(406);
+  expect(opened.height).toBeLessThanOrEqual(333.5);
   expect(opened.scrolls).toBe(true);
 
   // The option list is portaled outside the app root: picking from it is

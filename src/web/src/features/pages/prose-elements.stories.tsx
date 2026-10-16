@@ -58,8 +58,9 @@ export const HeadingScale: Story = {
   },
 };
 
-/** Consecutive paragraphs leave a gap; the last one ends flush so a
- * callout or details body closes on the widget's own padding. */
+/** Consecutive paragraphs sit one block gap (16px) apart, even outside the
+ * page column; the last one ends flush so a callout or details body closes
+ * on the widget's own padding. */
 export const Paragraphs: Story = {
   render: () => (
     <div>
@@ -72,8 +73,8 @@ export const Paragraphs: Story = {
     const last = canvas.getByText("Returns held steady.");
 
     await expect(
-      parseFloat(getComputedStyle(first).marginBottom),
-    ).toBeGreaterThan(0);
+      last.getBoundingClientRect().top - first.getBoundingClientRect().bottom,
+    ).toBe(16);
     await expect(getComputedStyle(last).marginBottom).toBe("0px");
   },
 };
