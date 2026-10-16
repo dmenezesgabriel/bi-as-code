@@ -6,6 +6,7 @@ import {
   optionAt,
   paintedTexts,
   type PaintedText,
+  WEEKLY_REVIEW_CHART_COUNT,
 } from "./echart-hosts.js";
 
 const WEEKLY_REVIEW_TITLES = [
@@ -15,6 +16,7 @@ const WEEKLY_REVIEW_TITLES = [
     "One point per region and week; revenue in US dollars",
   ],
   ["Order amounts", "Orders per amount bin, US dollars"],
+  ["Orders by region and weekday", "One bar per weekday, Monday first"],
 ] as const;
 
 /** The `title` component of every chart's live echarts model, flattened. */
@@ -49,8 +51,10 @@ test("weekly-review titles its charts in text above the plot", async ({
     );
   }
   // The trend charts carry no title, so no figure wraps them.
-  await expect(page.getByRole("figure")).toHaveCount(3);
-  await expect(chartHosts(page)).toHaveCount(6);
+  await expect(page.getByRole("figure")).toHaveCount(
+    WEEKLY_REVIEW_TITLES.length,
+  );
+  await expect(chartHosts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
   expect(await canvasTitles(page)).toEqual([]);
   expect(errors).toEqual([]);
 });

@@ -6,6 +6,8 @@ import {
   withThemeMode,
 } from "../../../../.storybook/decorators";
 import { FakeDuckDb } from "../../data/fake-duckdb";
+import type { Row } from "../../data/types";
+import type { SqlBlock } from "../../pages/types";
 import { SeriesChart } from "./series-chart";
 import {
   ORDERS_REGIONAL,
@@ -59,6 +61,58 @@ export const MultiSeries: Story = {
     expect(option.series?.map((s) => s.name)).toEqual(["North", "South"]);
     expect(option.legend?.length).toBeGreaterThan(0);
   },
+};
+
+const SEGMENTS = [
+  "Retail",
+  "Wholesale",
+  "Online",
+  "Partner",
+  "Enterprise",
+  "Education",
+  "Public",
+  "Nonprofit",
+];
+
+// One bar per segment in each region: eight series, so all eight `--chart-*`
+// series colours paint side by side.
+const SEGMENT_ROWS: Row[] = ["North", "South"].flatMap((region, regionIndex) =>
+  SEGMENTS.map((segment, index) => ({
+    region,
+    segment,
+    orders: 40 + 5 * index - 10 * regionIndex,
+  })),
+);
+
+const SEGMENT_MIX: SqlBlock = {
+  name: "segment_mix",
+  sql: "select region, segment, orders from segments",
+};
+
+const eightSeries = {
+  args: { data: "segment_mix", x: "region", y: "orders", series: "segment" },
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{ series?: { name?: string }[] }>(
+      canvasElement,
+    );
+    expect(option.series?.map((s) => s.name)).toEqual(SEGMENTS);
+  },
+} satisfies Story;
+
+/** Eight series fill the palette; each stays distinct for protan, deutan
+ * and tritan readers (DevTools → Rendering → Emulate vision deficiencies). */
+export const EightSeries: Story = {
+  ...eightSeries,
+  decorators: [withQueryData([SEGMENT_MIX], dbWith(SEGMENT_ROWS))],
+};
+
+/** The dark palette over the same eight series. */
+export const EightSeriesDark: Story = {
+  ...eightSeries,
+  decorators: [
+    withQueryData([SEGMENT_MIX], dbWith(SEGMENT_ROWS)),
+    withThemeMode("dark"),
+  ],
 };
 
 /** `y` accepts an array of columns — each becomes a named series. */

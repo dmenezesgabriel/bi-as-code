@@ -234,8 +234,11 @@ export function pointLabelTexts(
   }, hostIndex);
 }
 
+/** How many charts `pages/weekly-review.md` draws. */
+export const WEEKLY_REVIEW_CHART_COUNT = 7;
+
 /**
- * Opens weekly-review on the dev server at `url` and waits for its six
+ * Opens weekly-review on the dev server at `url` and waits for all its
  * charts' first finished paint — the baseline every chart spec reads from.
  */
 export async function openWeeklyReviewCharts(
@@ -243,7 +246,7 @@ export async function openWeeklyReviewCharts(
   url: string,
 ): Promise<void> {
   await page.goto(`${url}weekly-review`);
-  await expect(readyCharts(page)).toHaveCount(6);
+  await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
 }
 
 /** The colours a chart's live model resolved from its theme and option. */

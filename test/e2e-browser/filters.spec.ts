@@ -6,6 +6,7 @@ import {
   resultTables,
   test,
 } from "./dev-server.fixture.js";
+import { WEEKLY_REVIEW_CHART_COUNT } from "./echart-hosts.js";
 
 /**
  * The filter model's user interaction is the URL itself: `?region=West` seeds
@@ -23,7 +24,9 @@ test("?region=West narrows the filter-declaring widgets while their fences stay 
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review?region=West`);
-  await expect(page.locator("[data-echarts-ready]")).toHaveCount(6);
+  await expect(page.locator("[data-echarts-ready]")).toHaveCount(
+    WEEKLY_REVIEW_CHART_COUNT,
+  );
 
   const results = resultTables(page);
 

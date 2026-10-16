@@ -201,6 +201,19 @@ order by week, region
 
 <Heatmap data="weekly_trend" x="week" y="region" value="orders" />
 
+Orders land on every day of the week in every region. Monday is the
+busiest day everywhere and the other six sit close together, so the
+lift is not one day's volume.
+
+```sql region_weekday
+select region, dayname(order_date) as weekday, count(*) as orders
+from orders
+group by region, weekday, isodow(order_date)
+order by region, isodow(order_date)
+```
+
+<BarChart data="region_weekday" x="region" y="orders" series="weekday" title="Orders by region and weekday" subtitle="One bar per weekday, Monday first" />
+
 ```sql weekly_revenue
 select week, sum(amount) as revenue
 from orders

@@ -16,6 +16,7 @@ import {
   optionAt,
   pointLabelTexts,
   readyCharts,
+  WEEKLY_REVIEW_CHART_COUNT,
 } from "./echart-hosts.js";
 
 test.beforeEach(async ({ page }) => {
@@ -24,7 +25,7 @@ test.beforeEach(async ({ page }) => {
   await instrumentWorkerPosts(page);
 });
 
-test("weekly-review renders the six charts bound to their fences", async ({
+test("weekly-review renders every chart bound to their fences", async ({
   page,
   biacDev,
 }) => {
@@ -32,7 +33,7 @@ test("weekly-review renders the six charts bound to their fences", async ({
   await page.goto(`${biacDev.url}weekly-review`);
 
   const hosts = chartHosts(page);
-  await expect(readyCharts(page)).toHaveCount(6);
+  await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
 
   // The aria description is generated from the tag's column bindings.
   await expect(hosts.nth(0)).toHaveAttribute("role", "img");
@@ -89,6 +90,24 @@ test("weekly-review renders the six charts bound to their fences", async ({
   expect(area.series.every((s) => s.stack === "total")).toBe(true);
   expect(area.series.every((s) => s.areaStyle !== undefined)).toBe(true);
   expect(area.yAxis[0]?.max).toBe(1);
+
+  // Grouped bar: region_weekday's series="weekday" pivot — seven series,
+  // Monday first, so every one of the palette's first seven colours paints.
+  await expect(hosts.nth(6)).toHaveAttribute(
+    "aria-label",
+    "bar chart of orders by region, split by weekday",
+  );
+  const weekdays = await optionAt(page, 6);
+  expect(weekdays.series.map((s) => s.name)).toEqual([
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ]);
+  expect(weekdays.xAxis[0]?.data).toEqual(["North", "South", "West"]);
 
   const posts = await workerPosts(page);
   expect(await workerPosts(page)).toBe(posts);
@@ -260,11 +279,13 @@ test("the scatter, histogram and heatmap tooltips name their bound columns", asy
   expect(errors).toEqual([]);
 });
 
-/** Click the chrome toggle and wait for all six hosts to re-theme. */
+/** Click the chrome toggle and wait for every host to re-theme. */
 async function toggleTheme(page: Page, target: "dark" | "light") {
   await page.getByRole("button", { name: `Switch to ${target} mode` }).click();
-  await expect(page.locator(`[data-echarts-theme="${target}"]`)).toHaveCount(6);
-  await expect(readyCharts(page)).toHaveCount(6);
+  await expect(page.locator(`[data-echarts-theme="${target}"]`)).toHaveCount(
+    WEEKLY_REVIEW_CHART_COUNT,
+  );
+  await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
 }
 
 test("a tooltip shown at 1280 px never widens the page at 375 px", async ({
@@ -447,11 +468,11 @@ test("?region=Atlantis is pruned by the Region dropdown so every chart stays liv
   await page.goto(`${biacDev.url}weekly-review?region=Atlantis`);
 
   // Atlantis is not a region option: the dropdown validates the URL value
-  // against its loaded options, drops the stale param, and all six charts
+  // against its loaded options, drops the stale param, and every chart
   // render their unfiltered read — no empty faces.
   await expect(page).toHaveURL(/weekly-review$/);
   await expect(page.locator("[data-chart-empty]")).toHaveCount(0);
-  await expect(readyCharts(page)).toHaveCount(6);
+  await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
   expect(errors).toEqual([]);
 });
 
@@ -499,7 +520,7 @@ test("a theme flip mid-paint disposes the heatmap without its paint frame readin
   await page.evaluate(() => {
     (window as { __slowHeatmapFill?: boolean }).__slowHeatmapFill = false;
   });
-  await expect(readyCharts(page)).toHaveCount(6);
+  await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
   expect(errors).toEqual([]);
 });
 
@@ -509,7 +530,7 @@ test("?region=West narrows the filter-declaring charts while the trend charts st
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review?region=West`);
-  await expect(readyCharts(page)).toHaveCount(6);
+  await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
 
   // Bar: the wrapped `orders` read — one region, one bar.
   const bar = await optionAt(page, 0);
@@ -599,7 +620,7 @@ const BAD_CHART_REFS = [
 
 // `series="region"`'s first occurrence sits on the <ScatterChart>,
 // `value=` on the <Histogram>/<Heatmap>; the other mutations hit the
-// <BarChart>. Either way one widget alerts and the other five stand.
+// <BarChart>. Either way one widget alerts and every other chart stands.
 testBadRefs(
   "weekly-review",
   "pages/weekly-review.md",
@@ -608,6 +629,6 @@ testBadRefs(
     await expect(
       page.getByRole("heading", { name: "Weekly review" }),
     ).toBeVisible();
-    await expect(readyCharts(page)).toHaveCount(5);
+    await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT - 1);
   },
 );

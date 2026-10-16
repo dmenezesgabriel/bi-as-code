@@ -146,7 +146,7 @@ export const Dark: Story = {
     }>(canvasElement);
     expect(option.visualMap?.[0]?.inRange?.color).toEqual([
       "#0a0a0a",
-      "#2563eb",
+      "#0072b2",
     ]);
   },
 };

@@ -1,14 +1,25 @@
 import type { ChartTokens } from "./types";
 
-const SERIES = [
-  "#2563eb",
-  "#059669",
-  "#d97706",
-  "#dc2626",
-  "#7c3aed",
-  "#0891b2",
-  "#db2777",
-  "#65a30d",
+const LIGHT_SERIES = [
+  "#0072b2",
+  "#d55e00",
+  "#009e73",
+  "#cc79a7",
+  "#8800ff",
+  "#773311",
+  "#4433aa",
+  "#bb55ff",
+] as const;
+
+const DARK_SERIES = [
+  "#0072b2",
+  "#e69f00",
+  "#009e73",
+  "#cc79a7",
+  "#56b4e9",
+  "#d55e00",
+  "#f0e442",
+  "#8800ff",
 ] as const;
 
 /** The light chart tokens, as `src/web/src/styles.css` defines them. */
@@ -21,7 +32,7 @@ export const LIGHT_CHART_TOKENS: ChartTokens = {
   popover: "#ffffff",
   popoverBorder: "#e5e5e5",
   labelInside: "#ffffff",
-  series: SERIES,
+  series: LIGHT_SERIES,
 };
 
 /** The dark chart tokens, as `src/web/src/styles.css` defines them. */
@@ -33,6 +44,6 @@ export const DARK_CHART_TOKENS: ChartTokens = {
   background: "#0a0a0a",
   popover: "#171717",
   popoverBorder: "#404040",
-  labelInside: "#ffffff",
-  series: SERIES,
+  labelInside: "#0a0a0a",
+  series: DARK_SERIES,
 };

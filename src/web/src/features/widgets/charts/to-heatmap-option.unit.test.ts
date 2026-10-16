@@ -72,7 +72,7 @@ describe("toHeatmapOption", () => {
     expect(visualMap.orient).toBe("horizontal");
     // The default ramp anchors on the light surface to the first series
     // accent so the "no data" end blends into the page.
-    expect(visualMap.inRange?.color).toEqual(["#ffffff", "#2563eb"]);
+    expect(visualMap.inRange?.color).toEqual(["#ffffff", "#0072b2"]);
   });
 
   it("re-anchors the default ramp on the dark surface in dark mode", () => {
@@ -80,7 +80,7 @@ describe("toHeatmapOption", () => {
       .visualMap as {
       inRange?: { color?: unknown };
     };
-    expect(visualMap.inRange?.color).toEqual(["#0a0a0a", "#2563eb"]);
+    expect(visualMap.inRange?.color).toEqual(["#0a0a0a", "#0072b2"]);
   });
 
   it("expands a lone colorScale color to [surface, color] per mode", () => {
@@ -129,7 +129,7 @@ describe("toHeatmapOption", () => {
     };
     expect(visualMap.min).toBe(7);
     expect(visualMap.max).toBe(7);
-    expect(visualMap.inRange?.color).toEqual(["#ffffff", "#2563eb"]);
+    expect(visualMap.inRange?.color).toEqual(["#ffffff", "#0072b2"]);
   });
 
   it("formats a cell tooltip with the x/y/value rows", () => {

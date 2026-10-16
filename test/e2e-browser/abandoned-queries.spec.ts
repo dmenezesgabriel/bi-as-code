@@ -15,7 +15,7 @@ import {
   expect,
   test,
 } from "./dev-server.fixture.js";
-import { readyCharts } from "./echart-hosts.js";
+import { readyCharts, WEEKLY_REVIEW_CHART_COUNT } from "./echart-hosts.js";
 
 // An unparameterised fence slow enough that duckdb-wasm answers several
 // `POLL_PENDING_QUERY` requests before its first chunk.
@@ -55,7 +55,7 @@ test("leaving a page while its plain query is still polled posts nothing late an
 
   await waitForWorkerRequest(page, "POLL_PENDING_QUERY");
   await page.locator('nav a[href="/weekly-review"]').click();
-  await expect(readyCharts(page)).toHaveCount(6);
+  await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
   await waitForSettled(page);
 
   await expectAbandonedQueriesPostedNothingLate(page);
