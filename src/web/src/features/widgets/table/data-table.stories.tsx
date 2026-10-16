@@ -149,3 +149,32 @@ export const HumanizedHeaders: Story = {
     ).toHaveAttribute("aria-sort", "descending");
   },
 };
+
+/** A numeric column's header and every cell sit right — a leading null
+ * included, since the column's first non-null cell decides — while text
+ * stays left. Sorting swaps the glyph without moving the header's edge. */
+export const NumericAlignment: Story = {
+  args: {
+    rows: [
+      { region: "West", orders: null, revenue: 6100 },
+      { region: "North", orders: 120, revenue: 4800 },
+      { region: "South", orders: 95, revenue: 3700 },
+    ],
+  },
+  play: async ({ canvas }) => {
+    const alignOf = (element: Element) => getComputedStyle(element).textAlign;
+    const [region, orders, revenue] = canvas.getAllByRole("columnheader");
+    await expect([region!, orders!, revenue!].map(alignOf)).toEqual([
+      "left",
+      "right",
+      "right",
+    ]);
+    const nullCell = canvas.getAllByRole("row")[1]!.querySelectorAll("td")[1]!;
+    await expect(alignOf(nullCell)).toBe("right");
+    const button = canvas.getByRole("button", { name: "Orders" });
+    const idleRight = button.getBoundingClientRect().right;
+    await userEvent.click(button);
+    await expect(orders).toHaveAttribute("aria-sort", "descending");
+    await expect(button.getBoundingClientRect().right).toBe(idleRight);
+  },
+};

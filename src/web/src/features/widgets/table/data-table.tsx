@@ -13,7 +13,12 @@ import type { Row } from "../../data/types";
 import { nextSort, sortRows } from "./sort-rows";
 import { TableEmpty } from "./states";
 import { defaultTableColumns } from "./table-columns";
-import type { Sort, TableColumn } from "./types";
+import type { ColumnAlign, Sort, TableColumn } from "./types";
+
+const ALIGN_CLASS: Record<ColumnAlign, string> = {
+  left: "text-left",
+  right: "text-right",
+};
 
 /**
  * The table's presentational core: renders already-materialized `rows`
@@ -84,22 +89,17 @@ export function DataTable({
               // set re-renders wholesale on every new QueryResult.
               // eslint-disable-next-line react-doctor/no-array-index-as-key
               <tr key={index}>
-                {shown.map((column) => {
-                  const value = row[column.id];
-                  return (
-                    <td
-                      key={column.id}
-                      className={cn(
-                        "border-b border-border py-1 pr-4",
-                        (typeof value === "number" ||
-                          typeof value === "bigint") &&
-                          "text-right",
-                      )}
-                    >
-                      {column.format(value)}
-                    </td>
-                  );
-                })}
+                {shown.map((column) => (
+                  <td
+                    key={column.id}
+                    className={cn(
+                      "border-b border-border py-1 pr-4",
+                      ALIGN_CLASS[column.align],
+                    )}
+                  >
+                    {column.format(row[column.id])}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -130,12 +130,23 @@ function SortableHeader({
   return (
     <th
       aria-sort={ariaSortValue(active)}
-      className="border-b border-border-strong py-1 pr-4 text-left font-medium"
+      className={cn(
+        "border-b border-border-strong py-1 pr-4 font-medium",
+        ALIGN_CLASS[column.align],
+      )}
     >
+      {/* A right-aligned header leads with its glyph so the title's edge
+          sits flush over the figures below, whatever glyph the sort shows.
+          The button repeats the column's alignment: a <button> centres its
+          own lines, so a wrapped title would drift off the column's edge. */}
       <button
         type="button"
         onClick={() => onSort(column.id)}
-        className="flex items-center gap-1 focus-visible:-outline-offset-2"
+        className={cn(
+          "inline-flex items-center gap-1 focus-visible:-outline-offset-2",
+          ALIGN_CLASS[column.align],
+          column.align === "right" && "flex-row-reverse",
+        )}
       >
         {column.title}
         <SortGlyph direction={active} />

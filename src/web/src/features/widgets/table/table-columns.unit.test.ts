@@ -49,6 +49,34 @@ describe("defaultTableColumns", () => {
   it("is empty for an empty result", () => {
     expect(defaultTableColumns([])).toEqual([]);
   });
+
+  it("right-aligns a numeric column and left-aligns a text one", () => {
+    const columns = defaultTableColumns([{ id: 7n, ...ROWS[0]! }]);
+
+    expect(columns.map((c) => [c.id, c.align])).toEqual([
+      ["id", "right"],
+      ["region", "left"],
+      ["orders", "right"],
+      ["revenue", "right"],
+      ["share", "right"],
+    ]);
+  });
+
+  it("aligns by the first non-null cell, so leading nulls stay right", () => {
+    const [orders] = defaultTableColumns([
+      { orders: null },
+      { orders: null },
+      { orders: 140 },
+    ]);
+
+    expect(orders!.align).toBe("right");
+  });
+
+  it("left-aligns a column with no non-null cell", () => {
+    const [gap] = defaultTableColumns([{ gap: null }]);
+
+    expect(gap!.align).toBe("left");
+  });
 });
 
 describe("resolveTableColumns", () => {
@@ -98,6 +126,16 @@ describe("resolveTableColumns", () => {
     const [orders] = resolveTableColumns(ROWS, [{ id: "orders", fmt: "usd" }]);
 
     expect(orders!.format(null)).toBe("");
+  });
+
+  it("keeps the result column's alignment, with or without a fmt", () => {
+    const columns = resolveTableColumns(ROWS, [
+      { id: "share", fmt: "pct1" },
+      { id: "orders" },
+      { id: "region" },
+    ]);
+
+    expect(columns.map((c) => c.align)).toEqual(["right", "right", "left"]);
   });
 
   it("throws ColumnError naming a listed id the result lacks", () => {

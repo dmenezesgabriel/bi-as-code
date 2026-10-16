@@ -3,7 +3,7 @@ import { formatValue } from "../value/format";
 import { numericRange } from "../value/numeric-range";
 import { ColumnError } from "../value/types";
 import { formatTitle } from "./format-title";
-import type { ColumnProps, TableColumn } from "./types";
+import type { ColumnAlign, ColumnProps, TableColumn } from "./types";
 
 /**
  * Every column of the result, in query order, titled by `formatTitle` and
@@ -18,6 +18,7 @@ export function defaultTableColumns(rows: readonly Row[]): TableColumn[] {
     id,
     title: formatTitle(id),
     format: defaultCellText,
+    align: columnAlign(rows, id),
   }));
 }
 
@@ -41,6 +42,7 @@ export function resolveTableColumns(
       id: spec.id,
       title: spec.title ?? formatTitle(spec.id),
       format: cellFormatter(rows, spec),
+      align: columnAlign(rows, spec.id),
     };
     assertColumnRenders(rows, column);
     return column;
@@ -54,9 +56,24 @@ export function resolveTableColumns(
  */
 function defaultCellText(value: unknown): string {
   if (value == null) return "";
-  if (typeof value === "number" || typeof value === "bigint")
-    return formatValue(value, "num0");
+  if (isNumeric(value)) return formatValue(value, "num0");
   return String(value);
+}
+
+function isNumeric(value: unknown): value is number | bigint {
+  return typeof value === "number" || typeof value === "bigint";
+}
+
+/**
+ * A result column has one type, so its first non-null cell speaks for all:
+ * numbers sit right, so a header and its figures share one edge.
+ */
+function columnAlign(rows: readonly Row[], id: string): ColumnAlign {
+  return isNumeric(firstValue(rows, id)) ? "right" : "left";
+}
+
+function firstValue(rows: readonly Row[], id: string): unknown {
+  return rows.find((row) => row[id] != null)?.[id];
 }
 
 function cellFormatter(
@@ -78,5 +95,5 @@ function assertColumnRenders(rows: readonly Row[], column: TableColumn): void {
   if (!Object.hasOwn(first, column.id)) {
     throw new ColumnError({ column: column.id, available: Object.keys(first) });
   }
-  column.format(rows.find((row) => row[column.id] != null)?.[column.id]);
+  column.format(firstValue(rows, column.id));
 }

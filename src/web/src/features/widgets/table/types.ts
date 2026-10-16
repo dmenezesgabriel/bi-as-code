@@ -29,14 +29,19 @@ export interface ColumnProps {
   readonly title?: string;
 }
 
+/** Which edge a column's header and cells sit against. */
+export type ColumnAlign = "left" | "right";
+
 /**
  * One column as `DataTable` renders it: `id` keys the row value (and the
- * sort), `title` is the header, `format` turns a raw cell into its text.
+ * sort), `title` is the header, `format` turns a raw cell into its text,
+ * `align` places the header and every cell — `right` for numbers.
  */
 export interface TableColumn {
   readonly id: string;
   readonly title: string;
   readonly format: (value: unknown) => string;
+  readonly align: ColumnAlign;
 }
 
 /**

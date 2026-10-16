@@ -10,6 +10,7 @@ import {
   workerPosts,
 } from "./dev-server.fixture.js";
 import { expectMinTargetSize } from "./target-size.js";
+import { textBounds } from "./text-bounds.js";
 
 /**
  * A `DataTable` root — `div.py-2` wraps the scrollable table and the pager.
@@ -20,6 +21,34 @@ function tableRegions(page: Page) {
   return page
     .locator("div.py-2")
     .filter({ has: page.locator("div.overflow-x-auto table") });
+}
+
+/**
+ * How far a header label's text ends from its first-row figure's text, in
+ * px: 0 when the label sits flush over its column.
+ */
+async function headerOffset(table: Locator, title: string): Promise<number> {
+  const headers = await table.locator("th").allTextContents();
+  const index = headers.indexOf(title);
+  if (index < 0) {
+    throw new Error(`no header "${title}"; expected one of ${headers}`);
+  }
+  const label = table.locator("th").nth(index).getByRole("button");
+  const cell = table.locator("tbody tr").first().locator("td").nth(index);
+  return (await textBounds(cell)).right - (await textBounds(label)).right;
+}
+
+/** weekly-review's last `<Table>` widget, loaded at `width` px. */
+async function weeklyReviewWidget(
+  page: Page,
+  baseUrl: string,
+  width: number,
+): Promise<Locator> {
+  await page.setViewportSize({ width, height: 800 });
+  await page.goto(`${baseUrl}weekly-review`);
+  const table = tableRegions(page).last().locator("table");
+  await expect(table.getByRole("row")).toHaveCount(11);
+  return table;
 }
 
 function firstRowCells(table: Locator) {
@@ -119,6 +148,56 @@ test("weekly-review's <Column> children order, title and format the table", asyn
   ]);
   // `share` is a 0–1 ratio; fmt="pct1" renders it with one decimal.
   expect(await firstRowCells(table)).toEqual(["North", "1", "14", "53.8%"]);
+  expect(errors).toEqual([]);
+});
+
+test("allocation's <Table> sits numeric headers flush over their figures", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`${biacDev.url}nested/allocation`);
+
+  const table = tableRegions(page).last().locator("table");
+  await expect(table.getByRole("button", { name: "Share" })).toBeVisible();
+
+  expect(Math.abs(await headerOffset(table, "Share"))).toBeLessThanOrEqual(1);
+  expect(Math.abs(await headerOffset(table, "Orders"))).toBeLessThanOrEqual(1);
+  const channel = table.getByRole("columnheader", { name: "Channel" });
+  await expect(channel).toHaveCSS("text-align", "left");
+  expect(errors).toEqual([]);
+});
+
+test("a sorted numeric header keeps its edge over the figures", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const table = await weeklyReviewWidget(page, biacDev.url, 1280);
+  expect(Math.abs(await headerOffset(table, "Orders"))).toBeLessThanOrEqual(1);
+
+  await table.getByRole("button", { name: "Orders" }).click();
+
+  const orders = table.getByRole("columnheader", { name: "Orders" });
+  await expect(orders).toHaveAttribute("aria-sort", "descending");
+  expect(Math.abs(await headerOffset(table, "Orders"))).toBeLessThanOrEqual(1);
+  expect(errors).toEqual([]);
+});
+
+test("a numeric header that wraps at 375 px still ends flush over its figures", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const table = await weeklyReviewWidget(page, biacDev.url, 375);
+  // A <button> centres its own lines, so a wrapped label drifts off the
+  // column's edge unless the button carries the column's alignment too.
+  const label = table.getByRole("button", { name: "Share of week" });
+  expect((await label.boundingBox())!.height).toBeGreaterThan(30);
+
+  const offset = await headerOffset(table, "Share of week");
+  expect(Math.abs(offset)).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
 });
 

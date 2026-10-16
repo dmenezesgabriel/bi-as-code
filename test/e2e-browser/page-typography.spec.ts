@@ -1,6 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { contrastRatio } from "./contrast.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { textBounds } from "./text-bounds.js";
 
 interface TypeMetrics {
   fontSize: string;
@@ -250,17 +251,6 @@ function cellLook(cell: Locator): Promise<CellLook> {
   });
 }
 
-// The rendered width of a cell's text, not of the cell box: right-aligned
-// labels that touch show up as a zero gap between these boxes.
-function textBounds(cell: Locator): Promise<{ left: number; right: number }> {
-  return cell.evaluate((node) => {
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    const { left, right } = range.getBoundingClientRect();
-    return { left, right };
-  });
-}
-
 test("a markdown table pads its header cells and rules its rows", async ({
   page,
   biacDev,
@@ -273,6 +263,8 @@ test("a markdown table pads its header cells and rules its rows", async ({
   const share = table.getByRole("columnheader", { name: "Share" });
   const orders = table.getByRole("columnheader", { name: "Orders" });
   const shareLook = await cellLook(share);
+  // Text extents, not cell boxes: right-aligned labels that touch show up
+  // as a zero gap between these boxes.
   const gap = (await textBounds(orders)).left - (await textBounds(share)).right;
   const rows = await table
     .getByRole("cell")

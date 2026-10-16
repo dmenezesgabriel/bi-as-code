@@ -130,16 +130,36 @@ describe("DataTable", () => {
     expect(visibleWeeks()[0]).toBe("w11");
   });
 
-  it("right-aligns number and bigint cells", () => {
-    render(<DataTable rows={[{ label: "x", n: 5, big: 5n }]} />);
-
-    for (const value of ["5"]) {
-      const cell = screen.getAllByRole("cell", { name: value });
-      for (const td of cell) expect(td).toHaveClass("text-right");
-    }
-    expect(screen.getByRole("cell", { name: "x" })).not.toHaveClass(
-      "text-right",
+  it("aligns a numeric column's header and every cell right, null cells included", () => {
+    render(
+      <DataTable
+        rows={[
+          { label: "x", n: null, big: 5n },
+          { label: "y", n: 5, big: 6n },
+        ]}
+      />,
     );
+
+    const [label, n, big] = screen.getAllByRole("columnheader");
+    expect(label).toHaveClass("text-left");
+    expect(n).toHaveClass("text-right");
+    expect(big).toHaveClass("text-right");
+    for (const tr of screen.getAllByRole("row").slice(1)) {
+      const [text, ...figures] = (tr as HTMLTableRowElement).cells;
+      expect(text).toHaveClass("text-left");
+      for (const td of figures) expect(td).toHaveClass("text-right");
+    }
+  });
+
+  it("leads a right-aligned header with its sort glyph and trails a left one", () => {
+    render(<DataTable rows={[{ region: "West", orders: 140 }]} />);
+
+    const region = screen.getByRole("button", { name: "Region" });
+    const orders = screen.getByRole("button", { name: "Orders" });
+    expect(region.lastElementChild?.tagName).toBe("svg");
+    expect(orders).toHaveClass("flex-row-reverse", "text-right");
+    expect(region).toHaveClass("text-left");
+    expect(region).not.toHaveClass("flex-row-reverse");
   });
 
   it("renders numbers num0 and nulls empty by default", () => {
