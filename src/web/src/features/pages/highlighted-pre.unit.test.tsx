@@ -23,17 +23,15 @@ describe("HighlightedPre", () => {
     await waitFor(() => {
       expect(container.querySelector("pre.shiki")).not.toBeNull();
     });
-    // Dual-theme output: the light value is a literal `color`, the dark
-    // one a --shiki-dark custom property that styles.css applies under
-    // .dark.
+    // Every token colour is a --shiki-token-* custom property that
+    // styles.css defines per mode, so the fence follows the theme class.
     const token = container.querySelector('pre.shiki span[style*="--shiki-"]');
     expect(token).not.toBeNull();
-    expect(token?.getAttribute("style")).toContain("color:");
-    expect(token?.getAttribute("style")).toContain("--shiki-dark");
+    expect(token?.getAttribute("style")).toContain("var(--shiki-token-");
     expect(container.querySelector("pre.shiki")).toHaveTextContent("select 1");
   });
 
-  it("colors a dark SQL comment to read at text contrast on its fence", async () => {
+  it("paints a SQL comment and its fence from the theme tokens", async () => {
     const { container } = render(
       <HighlightedPre>
         <code className="language-sql">-- note</code>
@@ -44,17 +42,42 @@ describe("HighlightedPre", () => {
       expect(container.querySelector("pre.shiki")).not.toBeNull();
     });
     const pre = container.querySelector("pre.shiki");
-    const comment = container.querySelector(
-      'pre.shiki span[style*="--shiki-dark"]',
+    const comment = container.querySelector("pre.shiki span[style]");
+
+    expect(pre?.getAttribute("style")).toContain("var(--shiki-background)");
+    expect(comment?.getAttribute("style")).toContain(
+      "var(--shiki-token-comment)",
+    );
+  });
+
+  it("sets a highlighted fence on the muted, rounded, small-type surface", async () => {
+    const { container } = render(
+      <HighlightedPre>
+        <code className="language-sql">select 1</code>
+      </HighlightedPre>,
     );
 
-    // github-dark-default: #8b949e on #0d1117 is 6.15:1 (WCAG 1.4.3 asks
-    // 4.5:1); github-dark's #6a737d on #24292e was 3.05:1.
-    expect(pre?.getAttribute("style")?.toLowerCase()).toContain(
-      "--shiki-dark-bg:#0d1117",
+    await waitFor(() => {
+      expect(container.querySelector("pre.shiki")).not.toBeNull();
+    });
+    const scroller = container.querySelector("pre.shiki")?.parentElement;
+    expect(scroller).toHaveClass("bg-muted", "rounded-md", "text-sm");
+  });
+
+  it("sets an unhighlighted fence on the same surface", async () => {
+    const { container } = render(
+      <HighlightedPre>
+        <code className="language-not-a-real-lang">x = 1</code>
+      </HighlightedPre>,
     );
-    expect(comment?.getAttribute("style")?.toLowerCase()).toContain(
-      "--shiki-dark:#8b949e",
+
+    await flushHighlight();
+    expect(container.querySelector("pre")).toHaveClass(
+      "bg-muted",
+      "rounded-md",
+      "text-sm",
+      "px-4",
+      "py-3",
     );
   });
 

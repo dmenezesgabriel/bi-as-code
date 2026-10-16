@@ -11,9 +11,40 @@ export default meta;
 
 type Story = StoryObj<typeof HighlightedPre>;
 
+interface FenceLook {
+  pre: HTMLElement;
+  muted: string;
+  background: string;
+  fontSize: string;
+  paddingRight: number;
+}
+
+/** Waits for shiki's `pre` and returns its computed look beside the
+ * `--muted` token it should be painted with. */
+async function fenceLook(canvasElement: HTMLElement): Promise<FenceLook> {
+  await waitFor(
+    () => expect(canvasElement.querySelector("pre.shiki")).not.toBeNull(),
+    { timeout: 4_000 },
+  );
+  const pre = canvasElement.querySelector<HTMLElement>("pre.shiki")!;
+  const probe = document.createElement("div");
+  probe.style.background = "var(--muted)";
+  pre.parentElement!.append(probe);
+  const muted = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  const style = getComputedStyle(pre);
+  return {
+    pre,
+    muted,
+    background: style.backgroundColor,
+    fontSize: style.fontSize,
+    paddingRight: parseFloat(style.paddingRight),
+  };
+}
+
 /** A sql fence resolves through shiki into a themed `pre.shiki` tree —
  * async, so the play waits for the swap rather than asserting on the
- * pre-highlight children. */
+ * pre-highlight children — on the muted surface in small type. */
 export const SqlFence: Story = {
   args: {
     children: (
@@ -23,19 +54,34 @@ export const SqlFence: Story = {
     ),
   },
   play: async ({ canvasElement }) => {
-    await waitFor(
-      () => expect(canvasElement.querySelector("pre.shiki")).not.toBeNull(),
-      { timeout: 4_000 },
-    );
-    await expect(canvasElement.querySelector("pre.shiki")).toHaveTextContent(
-      "select region",
-    );
+    const look = await fenceLook(canvasElement);
+    await expect(look.pre).toHaveTextContent("select region");
+    await expect(look.background).toBe(look.muted);
+    await expect(look.fontSize).toBe("14px");
+  },
+};
+
+/** In dark mode the fence takes the page's dark `--muted`, not shiki's
+ * own blue-black theme background. */
+export const DarkFence: Story = {
+  args: {
+    children: (
+      <code className="language-sql">
+        {"-- revenue by region\nselect region, sum(amount) from orders"}
+      </code>
+    ),
+  },
+  globals: { theme: "dark" },
+  play: async ({ canvasElement }) => {
+    const look = await fenceLook(canvasElement);
+    await expect(look.background).toBe(look.muted);
+    await expect(look.background).not.toBe("rgb(13, 17, 23)");
   },
 };
 
 /** A fence wider than its column scrolls inside itself — the page never
- * scrolls sideways — keeps its background across the whole scroll, and
- * `Tab` reaches it so a keyboard can scroll it too. */
+ * scrolls sideways — keeps its background and right gutter across the
+ * whole scroll, and `Tab` reaches it so a keyboard can scroll it too. */
 export const WideFence: Story = {
   args: {
     children: (
@@ -53,12 +99,9 @@ export const WideFence: Story = {
     ),
   ],
   play: async ({ canvasElement }) => {
-    await waitFor(
-      () => expect(canvasElement.querySelector("pre.shiki")).not.toBeNull(),
-      { timeout: 4_000 },
-    );
-    const pre = canvasElement.querySelector<HTMLElement>("pre.shiki")!;
+    const { pre, paddingRight } = await fenceLook(canvasElement);
     const scroller = pre.parentElement!;
+    await expect(paddingRight).toBeGreaterThan(0);
     await expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
     await expect(pre.offsetWidth).toBe(scroller.scrollWidth);
     await userEvent.tab();

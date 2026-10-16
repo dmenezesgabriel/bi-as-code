@@ -24,6 +24,17 @@ const SHIKI_PRE_FILLS_SCROLL_CLASS = "[&>pre]:min-w-fit";
 // scroller's overflow clip, so its focus ring is drawn inside its edge.
 const SHIKI_PRE_RING_INSET_CLASS = "[&>pre]:focus-visible:-outline-offset-2";
 
+// A fence reads as code on its own surface: `--muted` (which shiki's
+// `pre` also paints through `--shiki-background`), a corner from the
+// `--radius` scale and type a step below the prose.
+const FENCE_SURFACE_CLASS = "rounded-md bg-muted text-sm";
+
+// The padding sits on the `pre`, not the scroller: the `pre` grows to the
+// code's width, so its right gutter scrolls into view with the last
+// column instead of ending at the scroller's edge.
+const FENCE_PADDING_CLASS = "px-4 py-3";
+const SHIKI_PRE_PADDING_CLASS = "[&>pre]:px-4 [&>pre]:py-3";
+
 interface Fence {
   lang: string;
   code: string;
@@ -78,14 +89,18 @@ export function HighlightedPre({
   if (highlighted && highlighted.key === key) {
     return (
       <div
-        className={`${FENCE_SCROLLER_CLASS} ${SHIKI_PRE_FILLS_SCROLL_CLASS} ${SHIKI_PRE_RING_INSET_CLASS}`}
+        className={`${FENCE_SCROLLER_CLASS} ${FENCE_SURFACE_CLASS} ${SHIKI_PRE_PADDING_CLASS} ${SHIKI_PRE_FILLS_SCROLL_CLASS} ${SHIKI_PRE_RING_INSET_CLASS}`}
         tabIndex={0}
         dangerouslySetInnerHTML={{ __html: highlighted.html }}
       />
     );
   }
   return (
-    <pre {...preProps} className={FENCE_SCROLLER_CLASS} tabIndex={0}>
+    <pre
+      {...preProps}
+      className={`${FENCE_SCROLLER_CLASS} ${FENCE_SURFACE_CLASS} ${FENCE_PADDING_CLASS}`}
+      tabIndex={0}
+    >
       {children}
     </pre>
   );

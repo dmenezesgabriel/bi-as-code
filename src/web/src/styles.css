@@ -65,6 +65,27 @@
   --chart-6: #0891b2; /* cyan-600 */
   --chart-7: #db2777; /* pink-600 */
   --chart-8: #65a30d; /* lime-600 */
+
+  /* Syntax colours for shiki's css-variables theme, one set per mode like
+     every other colour token (ADR-0014). The hues are GitHub Primer's, taken
+     in the variants that read at 4.5:1 (WCAG 1.4.3) on the `--muted` fence
+     surface they sit on; the lowest are the light function purple (4.63)
+     and keyword red (4.91). The `--shiki-ansi-*` set is left undefined:
+     only an `ansi` fence emits it. */
+  --shiki-background: var(--muted);
+  --shiki-foreground: #1f2328;
+  --shiki-token-comment: #57606a;
+  --shiki-token-keyword: #cf222e;
+  --shiki-token-string: #0a3069;
+  --shiki-token-string-expression: #116329;
+  --shiki-token-constant: #0550ae;
+  --shiki-token-function: #8250df;
+  --shiki-token-parameter: #953800;
+  --shiki-token-punctuation: #1f2328;
+  --shiki-token-link: #0a3069;
+  --shiki-token-inserted: #116329;
+  --shiki-token-deleted: #82071e;
+  --shiki-token-changed: #953800;
 }
 
 /* One corner radius; `@theme inline` derives the sm/md/lg/xl steps from it,
@@ -129,6 +150,20 @@
   --chart-6: #0891b2; /* cyan-600 */
   --chart-7: #db2777; /* pink-600 */
   --chart-8: #65a30d; /* lime-600 */
+  --shiki-background: var(--muted);
+  --shiki-foreground: #e6edf3;
+  --shiki-token-comment: #8b949e;
+  --shiki-token-keyword: #ff7b72;
+  --shiki-token-string: #a5d6ff;
+  --shiki-token-string-expression: #7ee787;
+  --shiki-token-constant: #79c0ff;
+  --shiki-token-function: #d2a8ff;
+  --shiki-token-parameter: #ffa657;
+  --shiki-token-punctuation: #e6edf3;
+  --shiki-token-link: #a5d6ff;
+  --shiki-token-inserted: #7ee787;
+  --shiki-token-deleted: #ffa198;
+  --shiki-token-changed: #ffa657;
 }
 
 @theme inline {
@@ -199,14 +234,4 @@
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
-}
-
-/* Shiki dual-theme fences: codeToHtml emits the light theme as a literal
-   color plus a --shiki-dark (and --shiki-dark-bg) custom property per
-   token; under .dark the dark values take over. !important beats the
-   inline style shiki leaves on each span. */
-.dark .shiki,
-.dark .shiki span {
-  color: var(--shiki-dark) !important;
-  background-color: var(--shiki-dark-bg) !important;
 }

@@ -115,8 +115,66 @@ for (const colorScheme of ["light", "dark"] as const) {
   });
 }
 
+interface FenceSurface {
+  background: string;
+  muted: string;
+  radius: string;
+  radiusMd: string;
+  padding: number[];
+  fontSize: string;
+}
+
+/** The highlighted fence's look beside the tokens it should resolve to,
+ * each read back through a probe so both sides are computed values. The
+ * corner is probed through the `rounded-md` utility: `@theme inline`
+ * writes the step into the utility and emits no `--radius-md` at runtime. */
+function fenceSurface(pre: Locator): Promise<FenceSurface> {
+  return pre.evaluate((node) => {
+    const probe = document.createElement("div");
+    probe.style.background = "var(--muted)";
+    probe.className = "rounded-md";
+    node.parentElement!.append(probe);
+    const tokens = getComputedStyle(probe);
+    const look = getComputedStyle(node);
+    const surface = {
+      background: look.backgroundColor,
+      muted: tokens.backgroundColor,
+      radius: getComputedStyle(node.parentElement!).borderTopLeftRadius,
+      radiusMd: tokens.borderTopLeftRadius,
+      padding: [
+        look.paddingTop,
+        look.paddingRight,
+        look.paddingBottom,
+        look.paddingLeft,
+      ].map(parseFloat),
+      fontSize: look.fontSize,
+    };
+    probe.remove();
+    return surface;
+  });
+}
+
 for (const colorScheme of ["light", "dark"] as const) {
-  test(`a ${colorScheme} SQL comment reads at text contrast on its fence`, async ({
+  test(`a ${colorScheme} SQL fence sits on the muted surface, rounded, padded and in small type`, async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.emulateMedia({ colorScheme });
+    await page.goto(`${biacDev.url}/weekly-review`);
+    const pre = page.locator("main pre.shiki").first();
+    await expect(pre).toBeVisible();
+
+    const surface = await fenceSurface(pre);
+
+    expect(surface.background).toBe(surface.muted);
+    expect(surface.radius).toBe(surface.radiusMd);
+    expect(Math.min(...surface.padding)).toBeGreaterThan(0);
+    expect(surface.fontSize).toBe("14px");
+    expect(errors).toEqual([]);
+  });
+
+  test(`every ${colorScheme} SQL token reads at text contrast on its fence`, async ({
     page,
     biacDev,
   }) => {
@@ -125,20 +183,30 @@ for (const colorScheme of ["light", "dark"] as const) {
     await page.goto(`${biacDev.url}/weekly-review`);
     // Token spans carry shiki's inline colors; the .line wrapper only
     // inherits the fence foreground.
-    const comment = page
-      .locator("main pre.shiki span[style]", { hasText: /^-- composes/ })
-      .first();
-    await expect(comment).toBeVisible();
+    const fence = page.locator("main pre.shiki").first();
+    await expect(
+      fence.locator("span[style]", { hasText: /^-- composes/ }),
+    ).toBeVisible();
 
-    const colors = await comment.evaluate((span) => ({
-      text: getComputedStyle(span).color,
-      fence: getComputedStyle(span.closest("pre")!).backgroundColor,
+    const colors = await fence.evaluate((pre) => ({
+      tokens: [
+        ...new Set(
+          [...pre.querySelectorAll("span[style]")].map(
+            (span) => getComputedStyle(span).color,
+          ),
+        ),
+      ],
+      fence: getComputedStyle(pre).backgroundColor,
     }));
 
     // WCAG 1.4.3: body-size text needs 4.5:1 against its background.
-    expect(
-      await contrastRatio(page, colors.text, colors.fence),
-    ).toBeGreaterThanOrEqual(4.5);
+    expect(colors.tokens.length).toBeGreaterThan(2);
+    for (const token of colors.tokens) {
+      expect(
+        await contrastRatio(page, token, colors.fence),
+        `${token} on ${colors.fence}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
     expect(errors).toEqual([]);
   });
 }
@@ -244,6 +312,7 @@ interface FenceScroll {
   scrollWidth: number;
   clientWidth: number;
   preWidth: number;
+  prePaddingRight: number;
 }
 
 function fenceScroll(scroller: Locator): Promise<FenceScroll> {
@@ -252,6 +321,9 @@ function fenceScroll(scroller: Locator): Promise<FenceScroll> {
     scrollWidth: node.scrollWidth,
     clientWidth: node.clientWidth,
     preWidth: (node.firstElementChild as HTMLElement).offsetWidth,
+    prePaddingRight: parseFloat(
+      getComputedStyle(node.firstElementChild!).paddingRight,
+    ),
   }));
 }
 
@@ -276,6 +348,9 @@ for (const route of ["/", "/weekly-review"]) {
     expect(scroll.pageOverflow).toBe(0);
     expect(scroll.scrollWidth).toBeGreaterThan(scroll.clientWidth);
     expect(scroll.preWidth).toBe(scroll.scrollWidth);
+    // The gutter is part of the pre's width, so a fence scrolled to its
+    // end still shows it after the last column.
+    expect(scroll.prePaddingRight).toBeGreaterThan(0);
     await expect(scroller).toBeFocused();
     await expect
       .poll(() => scroller.evaluate((node) => node.scrollLeft))
