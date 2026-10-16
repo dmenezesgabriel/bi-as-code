@@ -29,8 +29,10 @@ export function BigValue({
   ...props
 }: BigValueProps): ReactElement {
   const result = useFilteredQueryRows(data, filters);
+  // A cross-filter re-renders the figure in place; tabular digits keep its
+  // width from jittering under the reader's eye as the value changes.
   return (
-    <span className="block">
+    <span className="block tabular-nums">
       <ValueResult name={data} result={result}>
         {(rows) => (
           <BigValueSuccess

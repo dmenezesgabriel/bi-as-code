@@ -154,6 +154,14 @@ describe("prose table", () => {
     expect(screen.getByRole("cell", { name: "Direct" })).toBeVisible();
   });
 
+  it("sets its figures in tabular numerals, as a widget table does", () => {
+    render(<ProseTable />);
+
+    expect(screen.getByRole("table").className.split(" ")).toContain(
+      "tabular-nums",
+    );
+  });
+
   it("keeps a GFM column alignment, which arrives as an inline style", () => {
     render(
       <table>

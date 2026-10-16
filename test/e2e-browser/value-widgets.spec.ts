@@ -69,6 +69,21 @@ test("weekly-review's <BigValue> renders title, $15k scalar, green delta, 13-poi
   expect(errors).toEqual([]);
 });
 
+test("every Overview <BigValue> figure is set in tabular numerals", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const figures = page.locator("span.block > span.flex > span.text-xl");
+  await expect(figures).toHaveText(["$15k", "355", "9.9%"]);
+  for (const figure of await figures.all()) {
+    await expect(figure).toHaveCSS("font-variant-numeric", "tabular-nums");
+  }
+  expect(errors).toEqual([]);
+});
+
 test("<Value> and <Delta> render formatted scalars inside prose", async ({
   page,
   biacDev,

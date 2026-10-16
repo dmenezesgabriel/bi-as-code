@@ -162,6 +162,14 @@ describe("DataTable", () => {
     expect(region).not.toHaveClass("flex-row-reverse");
   });
 
+  it("sets its figures in tabular numerals so digits line up by column", () => {
+    render(<DataTable rows={[{ region: "West", orders: 140 }]} />);
+
+    expect(screen.getByRole("table").className.split(" ")).toContain(
+      "tabular-nums",
+    );
+  });
+
   it("renders numbers num0 and nulls empty by default", () => {
     render(<DataTable rows={[{ region: "West", revenue: 6100, gap: null }]} />);
 

@@ -81,6 +81,19 @@ describe("BigValue", () => {
     expect(screen.getByRole("img")).toBeInTheDocument();
   });
 
+  it("sets the figure and its delta in tabular numerals", async () => {
+    renderBigValue({
+      column: "revenue",
+      fmt: "usd",
+      delta: "wow_pct",
+      deltaFmt: "pct1",
+    });
+
+    const figure = await screen.findByText("$1.2M");
+    expect(figure.closest(".tabular-nums")).not.toBeNull();
+    expect(screen.getByText("+5.2%").closest(".tabular-nums")).not.toBeNull();
+  });
+
   it("renders only the value when no dressing props are set", async () => {
     renderBigValue({ column: "revenue", fmt: "usd" });
 

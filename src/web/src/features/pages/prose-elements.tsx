@@ -70,7 +70,7 @@ export const ProseBlockquote = proseElement("blockquote", "max-w-measure");
 // as an inline `text-align`, which wins over the header's `text-left`.
 export const ProseTable = proseElement(
   "table",
-  "mb-block-gap w-full border-collapse text-sm last:mb-0",
+  "mb-block-gap w-full border-collapse text-sm tabular-nums last:mb-0",
 );
 export const ProseTh = proseElement(
   "th",

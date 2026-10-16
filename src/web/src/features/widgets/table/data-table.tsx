@@ -69,7 +69,7 @@ export function DataTable({
   return (
     <div className="py-2">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        <table className="w-full border-collapse text-sm tabular-nums">
           <thead>
             <tr>
               {shown.map((column) => (

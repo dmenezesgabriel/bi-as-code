@@ -169,6 +169,24 @@ test("allocation's <Table> sits numeric headers flush over their figures", async
   expect(errors).toEqual([]);
 });
 
+test("widget and GFM tables set their figures in tabular numerals", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}nested/allocation`);
+  const widgetCell = tableRegions(page).last().locator("tbody td").first();
+  await expect(widgetCell).toHaveCSS("font-variant-numeric", "tabular-nums");
+
+  await page.goto(`${biacDev.url}weekly-review`);
+  const regionalSplit = page.getByRole("table").filter({
+    has: page.getByRole("columnheader", { name: "WoW change" }),
+  });
+  const gfmCell = regionalSplit.getByRole("cell", { name: "$6,100" });
+  await expect(gfmCell).toHaveCSS("font-variant-numeric", "tabular-nums");
+  expect(errors).toEqual([]);
+});
+
 test("a sorted numeric header keeps its edge over the figures", async ({
   page,
   biacDev,
