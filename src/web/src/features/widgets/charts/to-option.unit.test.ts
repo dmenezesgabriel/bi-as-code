@@ -408,6 +408,15 @@ describe("toChartOption legend, title and aria", () => {
     expect(probe(TWO_SERIES, { title: "Revenue" }).grid?.top).toBe(36);
   });
 
+  it("keeps axis titles inside the canvas, not only the tick labels", () => {
+    const grid = probe(CATEGORIES, {
+      xTitle: "Region",
+      yTitle: "Revenue",
+    }).grid;
+    expect(grid?.outerBoundsMode).toBe("same");
+    expect(grid?.outerBoundsContain).toBe("all");
+  });
+
   it("describes the chart for aria with a generated summary, title or not", () => {
     expect(
       probe(CATEGORIES, { title: "Revenue" }).aria?.label?.description,

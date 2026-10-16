@@ -138,7 +138,7 @@ order by week, region
 
 <Tabs>
   <Tab title="Chart">
-    <ScatterChart data="region_week" x="orders" y="revenue" series="region" title="Orders and revenue per region-week" subtitle="One point per region and week; revenue in US dollars" filters={["region"]} select="crossfilter" />
+    <ScatterChart data="region_week" x="orders" y="revenue" series="region" xTitle="Orders" yTitle="Revenue" title="Orders and revenue per region-week" subtitle="One point per region and week; revenue in US dollars" filters={["region"]} select="crossfilter" />
   </Tab>
   <Tab title="Table">
     <Table data="region_week" filters={["region"]} />

@@ -40,9 +40,6 @@ export function toHeatmapOption(
   return {
     grid: {
       ...grid,
-      // 'all' also contains the axis name — the top-positioned x axis'
-      // `xTitle` would overflow the plot edge under 'axisLabel' alone.
-      outerBoundsContain: "all",
       // The visualMap strip (~10px bar + labels) lives under the plot.
       bottom: legend ? 44 : grid.bottom,
     },

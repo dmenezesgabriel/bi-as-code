@@ -158,15 +158,16 @@ export function safeFormat(
 /** The grid starts under the legend when one is on. */
 export function gridOption(legend: boolean): Record<string, unknown> {
   const top = legend ? 36 : 8;
-  // `containLabel` is deprecated in echarts 6 — the pair below is its
-  // documented equivalent: axis labels stay inside the grid rect.
+  // The grid shrinks until the axis labels *and* axis names fit the rect
+  // (echarts 6 `outerBounds`; 'axisLabel' alone let an end-anchored y title
+  // or a `nameGap`-offset x title paint past the canvas edge).
   return {
     top,
     left: 8,
     right: 16,
     bottom: 8,
     outerBoundsMode: "same",
-    outerBoundsContain: "axisLabel",
+    outerBoundsContain: "all",
   };
 }
 

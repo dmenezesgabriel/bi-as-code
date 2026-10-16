@@ -17,7 +17,7 @@ export interface AppliedOption {
     symbolSize?: unknown;
     barCategoryGap?: unknown;
   }[];
-  xAxis: { type?: string; data?: unknown[] }[];
+  xAxis: { type?: string; name?: string; data?: unknown[] }[];
   yAxis: { max?: number; name?: string; data?: unknown[] }[];
   legend: { selected?: Record<string, boolean> }[];
   visualMap?: { min?: number; max?: number; inRange?: { color?: string[] } }[];
@@ -138,6 +138,72 @@ export function axisTickTexts(
     },
     [hostIndex, axis] as const,
   );
+}
+
+/** One painted canvas string and its box, in the chart host's pixels. */
+export interface PaintedText {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Every string chart host `hostIndex` paints — tick labels, axis names,
+ * legend items, data labels — with its transformed bounding box, and the
+ * canvas size they must fit in. Hidden elements (e.g. ticks thinned by
+ * `hideOverlap`) are left out, so the boxes are what a reader sees.
+ */
+export function paintedTexts(
+  page: Page,
+  hostIndex: number,
+): Promise<{ width: number; height: number; texts: PaintedText[] }> {
+  return page.evaluate((hi) => {
+    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
+      hi
+    ];
+    const chart = (host as unknown as { echartsInstance?: PaintedChart })
+      .echartsInstance;
+    if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
+    const texts = chart
+      .getZr()
+      .storage.getDisplayList(true)
+      .filter(
+        (el) => typeof el.style?.text === "string" && el.style.text !== "",
+      )
+      .map((el) => {
+        const box = el.getBoundingRect().clone();
+        if (el.transform) box.applyTransform(el.transform);
+        const { x, y, width, height } = box;
+        return { text: el.style!.text!, x, y, width, height };
+      });
+    return { width: chart.getWidth(), height: chart.getHeight(), texts };
+  }, hostIndex);
+}
+
+interface PaintedBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  clone(): PaintedBox;
+  applyTransform(matrix: number[]): void;
+}
+
+/** The zrender surface `paintedTexts` walks. */
+interface PaintedChart {
+  getWidth(): number;
+  getHeight(): number;
+  getZr(): {
+    storage: {
+      getDisplayList(update: boolean): {
+        style?: { text?: string };
+        transform?: number[];
+        getBoundingRect(): PaintedBox;
+      }[];
+    };
+  };
 }
 
 /**

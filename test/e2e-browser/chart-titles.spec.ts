@@ -1,6 +1,12 @@
 import type { Page } from "@playwright/test";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
-import { chartHosts, openWeeklyReviewCharts } from "./echart-hosts.js";
+import {
+  chartHosts,
+  openWeeklyReviewCharts,
+  optionAt,
+  paintedTexts,
+  type PaintedText,
+} from "./echart-hosts.js";
 
 const WEEKLY_REVIEW_TITLES = [
   ["Revenue by region", "Sum of order amounts, US dollars"],
@@ -68,3 +74,51 @@ test("chart titles stay out of the page's table of contents", async ({
     "Takeaways",
   ]);
 });
+
+/** Whether two painted boxes share any area — touching edges don't count. */
+function overlaps(a: PaintedText, b: PaintedText): boolean {
+  return (
+    a.x < b.x + b.width &&
+    b.x < a.x + a.width &&
+    a.y < b.y + b.height &&
+    b.y < a.y + a.height
+  );
+}
+
+/** Asserts chart host `hostIndex` paints `name` whole and on its own. */
+async function expectAxisTitleClear(
+  page: Page,
+  hostIndex: number,
+  name: string,
+): Promise<void> {
+  const { width, height, texts } = await paintedTexts(page, hostIndex);
+  const title = texts.find((t) => t.text === name);
+  expect(title, `axis title "${name}" painted`).toBeDefined();
+  expect(title!.x).toBeGreaterThanOrEqual(0);
+  expect(title!.y).toBeGreaterThanOrEqual(0);
+  expect(title!.x + title!.width).toBeLessThanOrEqual(width);
+  expect(title!.y + title!.height).toBeLessThanOrEqual(height);
+  const collisions = texts.filter((t) => t !== title && overlaps(t, title!));
+  expect(collisions.map((t) => t.text)).toEqual([]);
+}
+
+for (const viewport of [
+  { width: 1280, height: 900 },
+  { width: 375, height: 812 },
+]) {
+  test(`axis titles sit whole inside their chart at ${viewport.width} px`, async ({
+    page,
+    biacDev,
+  }) => {
+    await page.setViewportSize(viewport);
+    await openWeeklyReviewCharts(page, biacDev.url);
+
+    const scatter = await optionAt(page, 1);
+    expect(scatter.xAxis[0]?.name).toBe("Orders");
+    expect(scatter.yAxis[0]?.name).toBe("Revenue");
+    await expectAxisTitleClear(page, 1, "Orders");
+    await expectAxisTitleClear(page, 1, "Revenue");
+    // The histogram's default count title.
+    await expectAxisTitleClear(page, 2, "Frequency");
+  });
+}

@@ -26,6 +26,22 @@ describe("toScatterOption", () => {
     expect((option.xAxis as { type?: string }).type).toBe("value");
   });
 
+  it("names the axes from xTitle/yTitle", () => {
+    const option = toScatterOption(
+      toScatterSeries(SCATTER_ROWS, { x: "orders", y: "revenue" }),
+      { ...PROPS, xTitle: "Orders", yTitle: "Revenue" },
+      LIGHT_CHART_TOKENS,
+    );
+    expect(option.xAxis).toMatchObject({
+      name: "Orders",
+      nameLocation: "middle",
+    });
+    expect(option.yAxis).toMatchObject({
+      name: "Revenue",
+      nameLocation: "end",
+    });
+  });
+
   it("keeps string x values on a category axis with the domain", () => {
     const rows = [
       { x: "a", y: 1 },

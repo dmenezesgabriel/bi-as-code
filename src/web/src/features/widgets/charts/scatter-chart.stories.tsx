@@ -75,6 +75,23 @@ export const SizedByRegion: Story = {
   },
 };
 
+/** `xTitle`/`yTitle` name both axes; the grid shrinks so the y title clears
+ * the legend and the x title stays inside the canvas. */
+export const AxisTitles: Story = {
+  args: { series: "region", xTitle: "Orders", yTitle: "Revenue" },
+  decorators: [withQueryData([ORDERS_REGIONAL], dbWith(SCATTER_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      grid?: { outerBoundsContain?: string }[];
+      xAxis?: { name?: string }[];
+      yAxis?: { name?: string }[];
+    }>(canvasElement);
+    expect(option.xAxis?.[0]?.name).toBe("Orders");
+    expect(option.yAxis?.[0]?.name).toBe("Revenue");
+    expect(option.grid?.[0]?.outerBoundsContain).toBe("all");
+  },
+};
+
 /** `filters="region"` wraps the fence's sql with the page filter's bound
  * predicate — `?region=North` seeds the filter, one series remains. */
 export const Filtered: Story = {
