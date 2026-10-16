@@ -135,7 +135,7 @@ function SortableHeader({
       <button
         type="button"
         onClick={() => onSort(column.id)}
-        className="flex items-center gap-1"
+        className="flex items-center gap-1 focus-visible:-outline-offset-2"
       >
         {column.title}
         <SortGlyph direction={active} />

@@ -129,7 +129,7 @@ export function NavToc({ article }: { article: HTMLElement }) {
                 href={`#${heading.id}`}
                 aria-current={heading.id === activeId ? "location" : undefined}
                 className={cn(
-                  "block px-3 py-1 text-sm",
+                  "block px-3 py-1 text-sm focus-visible:-outline-offset-2",
                   heading.id === activeId
                     ? "font-medium text-foreground"
                     : "text-muted-foreground-faded hover:text-foreground",

@@ -83,7 +83,7 @@ export function MultiSelectField({
             {title}
           </label>
         )}
-        <Combobox.InputGroup className="flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2 py-1 text-sm text-foreground select-none hover:bg-accent focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-ring data-disabled:cursor-not-allowed data-disabled:opacity-60">
+        <Combobox.InputGroup className="flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2 py-1 text-sm text-foreground select-none hover:bg-accent focus-ring-within data-disabled:cursor-not-allowed data-disabled:opacity-60">
           <Combobox.Value>
             {(selected: readonly string[]) => (
               <SelectionChips
@@ -144,7 +144,7 @@ export function SingleSelectField({
         )}
         <Combobox.Trigger
           id={id}
-          className="flex h-8 w-full cursor-default items-center justify-between gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60 data-placeholder:text-muted-foreground-faded"
+          className="flex h-8 w-full cursor-default items-center justify-between gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 data-placeholder:text-muted-foreground-faded"
         >
           <Combobox.Value>
             {(selected: string | null) =>

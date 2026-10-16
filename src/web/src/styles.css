@@ -92,7 +92,7 @@
   --sidebar-foreground: #d4d4d4; /* neutral-300 */
   --sidebar-accent: #404040; /* neutral-700 */
   --overlay: rgb(0 0 0 / 50%);
-  --ring: #737373; /* neutral-500 */
+  --ring: #a1a1a1; /* neutral-400 — neutral-500 drops to 2.8:1 on the active sidebar link, under the 3:1 a focus ring needs (WCAG 2.4.13) */
   --popover: #171717; /* neutral-900 */
   --popover-border: #404040; /* neutral-700 */
   --input: #404040; /* neutral-700 — form control borders */
@@ -178,6 +178,23 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* One focus ring for every focusable element — ours, Base UI's, shiki's
+   fence, the chart host — so no stop falls back to the browser's `auto`
+   ring. 2px solid in `--ring` meets WCAG 2.4.13 Focus Appearance (a 2 CSS
+   px perimeter at 3:1 against its neighbour,
+   https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html).
+   `.focus-ring-within` lends the ring to a wrapper whose inner input draws
+   none: the combobox outlines its chips and input together. A control
+   inside an `overflow` clip pulls the ring inward with a negative
+   `outline-offset` utility, which outranks this base layer. */
+@layer base {
+  :focus-visible,
+  .focus-ring-within:has(:focus-visible) {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
 }
 
 /* Shiki dual-theme fences: codeToHtml emits the light theme as a literal

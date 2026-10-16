@@ -73,7 +73,7 @@ export function TextInput({
         }}
         placeholder={placeholder ?? "Enter text..."}
         disabled={!filter}
-        className="h-8 w-full rounded-md border border-input bg-field px-2 text-sm text-foreground placeholder:text-muted-foreground-faded focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
+        className="h-8 w-full rounded-md border border-input bg-field px-2 text-sm text-foreground placeholder:text-muted-foreground-faded disabled:cursor-not-allowed disabled:opacity-60"
       />
     </div>
   );

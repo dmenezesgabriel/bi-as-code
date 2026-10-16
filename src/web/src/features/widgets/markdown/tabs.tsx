@@ -43,7 +43,7 @@ function listClasses(variant: TabsVariant, fullWidth: boolean): string {
 /** Triggers grow only under fullWidth or inside a fitted well list. */
 function triggerClasses(variant: TabsVariant, fullWidth: boolean): string {
   return cn(
-    "relative flex cursor-pointer items-center justify-center text-sm transition-colors",
+    "relative flex cursor-pointer items-center justify-center text-sm transition-colors focus-visible:-outline-offset-2",
     TRIGGER_ACTIVE,
     fullWidth || variant === "well" ? "flex-1" : "flex-none",
     fullWidth ? "p-1" : "p-0.5",

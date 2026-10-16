@@ -15,10 +15,10 @@ import {
 import type { DateRangeProps } from "./types";
 
 const triggerClass =
-  "flex h-8 w-full cursor-default items-center gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60";
+  "flex h-8 w-full cursor-default items-center gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
 
 const fieldClass =
-  "h-7 w-full rounded-md border border-input bg-field px-1.5 text-sm text-foreground focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring";
+  "h-7 w-full rounded-md border border-input bg-field px-1.5 text-sm text-foreground";
 
 /** Evidence's `getDisplayText`: a held preset shows its label, a held
  * expression renders verbatim, and nothing held reads "All Time". */

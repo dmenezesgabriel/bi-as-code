@@ -77,7 +77,7 @@ export const TOKENS: Record<ColorScheme, Record<string, string>> = {
     "--sidebar-foreground": "#d4d4d4",
     "--sidebar-accent": "#404040",
     "--overlay": "rgb(0 0 0 / 50%)",
-    "--ring": "#737373",
+    "--ring": "#a1a1a1",
     "--popover": "#171717",
     "--popover-border": "#404040",
     "--input": "#404040",

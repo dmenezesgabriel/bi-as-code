@@ -72,7 +72,7 @@ export const ProseTd = proseElement(
 // Underlined as well as colored: WCAG 1.4.1 rejects color as the only cue,
 // and each color clears 3:1 against the body text of its theme.
 const LINK =
-  "rounded-sm text-link underline underline-offset-2 hover:decoration-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  "rounded-sm text-link underline underline-offset-2 hover:decoration-2";
 
 /**
  * The markdown `a` override: an absolute-path href goes through the client

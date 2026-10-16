@@ -12,14 +12,17 @@ import { highlightFence } from "./shiki-highlighter";
 // (WCAG 1.4.10 Reflow), and a scrolling region must be reachable by
 // keyboard (axe `scrollable-region-focusable`,
 // https://dequeuniversity.com/rules/axe/4.10/scrollable-region-focusable),
-// so it takes `tabIndex={0}` and the inputs' focus-visible outline.
-const FENCE_SCROLLER_CLASS =
-  "overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+// so it takes `tabIndex={0}` and with it the shared focus ring.
+const FENCE_SCROLLER_CLASS = "overflow-x-auto";
 
 // Shiki paints the fence background on its own `pre`; without this the
 // `pre` stays as wide as the scroller and the background ends where the
 // first screenful of code does once the fence is scrolled sideways.
 const SHIKI_PRE_FILLS_SCROLL_CLASS = "[&>pre]:min-w-fit";
+
+// Shiki's `pre` carries its own `tabindex="0"` and sits inside the
+// scroller's overflow clip, so its focus ring is drawn inside its edge.
+const SHIKI_PRE_RING_INSET_CLASS = "[&>pre]:focus-visible:-outline-offset-2";
 
 interface Fence {
   lang: string;
@@ -75,7 +78,7 @@ export function HighlightedPre({
   if (highlighted && highlighted.key === key) {
     return (
       <div
-        className={`${FENCE_SCROLLER_CLASS} ${SHIKI_PRE_FILLS_SCROLL_CLASS}`}
+        className={`${FENCE_SCROLLER_CLASS} ${SHIKI_PRE_FILLS_SCROLL_CLASS} ${SHIKI_PRE_RING_INSET_CLASS}`}
         tabIndex={0}
         dangerouslySetInnerHTML={{ __html: highlighted.html }}
       />

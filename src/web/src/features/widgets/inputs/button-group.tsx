@@ -6,7 +6,7 @@ import type { ButtonGroupProps } from "./types";
 import { toSelectionArray, useSelectInput } from "./use-select-input";
 
 const toggleClass =
-  "inline-flex h-8 shrink-0 cursor-default items-center border-r border-input px-3 text-sm text-foreground select-none last:border-r-0 hover:bg-accent focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60 data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90";
+  "inline-flex h-8 shrink-0 cursor-default items-center border-r border-input px-3 text-sm text-foreground select-none last:border-r-0 hover:bg-accent focus-visible:z-10 disabled:cursor-not-allowed disabled:opacity-60 data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90";
 
 /**
  * The `<ButtonGroup>` MDX widget — a segmented control filter input: one

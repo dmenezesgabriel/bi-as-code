@@ -57,7 +57,7 @@ function CrumbLabel({ crumb, last }: { crumb: Crumb; last: boolean }) {
     return (
       <Link
         to={crumb.href}
-        className="truncate text-muted-foreground-faded hover:text-foreground"
+        className="truncate text-muted-foreground-faded hover:text-foreground focus-visible:-outline-offset-2"
       >
         {crumb.label}
       </Link>

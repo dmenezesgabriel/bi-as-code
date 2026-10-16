@@ -44,7 +44,7 @@ export function SidebarNav({
       <Link
         to="/"
         onClick={onNavigate}
-        className="block px-4 py-3 text-base font-bold text-foreground"
+        className="block px-4 py-3 text-base font-bold text-foreground focus-visible:-outline-offset-2"
       >
         {siteTitle}
       </Link>
@@ -101,7 +101,7 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "block rounded-sm px-2 py-1.5 text-sm",
+        "block rounded-sm px-2 py-1.5 text-sm focus-visible:-outline-offset-2",
         active
           ? "bg-sidebar-accent/60 font-medium text-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",

@@ -29,8 +29,11 @@ function sameSliderValue(a: SliderValue, b: SliderValue): boolean {
   return a[0] === b[0] && a[1] === b[1];
 }
 
+// Base UI focuses a visually hidden `input[type=range]` inside the thumb
+// (`clip-path: inset(50%)`), which cuts its own outline away; the thumb
+// draws the ring for it.
 const thumbClass =
-  "block size-4 cursor-grab rounded-full border-2 border-primary bg-field shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-dragging:cursor-grabbing disabled:cursor-not-allowed";
+  "block size-4 cursor-grab rounded-full border-2 border-primary bg-field shadow-sm focus-ring-within data-dragging:cursor-grabbing disabled:cursor-not-allowed [&_input]:outline-none";
 
 interface SliderSource {
   /** Finite column extrema, `{}` when the query can't supply them. */
