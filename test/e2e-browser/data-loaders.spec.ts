@@ -65,7 +65,7 @@ test("a failing data loader shows inline errors naming it and its exit code", as
  * Week 1's row as the `<Table>` on /weekly-orders renders it, computed from
  * the loader's own input so the expectation never restates the loader.
  */
-function firstWeekCells(projectDir: string): string[] {
+function firstWeekCells(projectDir: string): [string, string, string] {
   const rows = readFileSync(join(projectDir, "data/orders.csv"), "utf8")
     .trim()
     .split("\n")
@@ -99,6 +99,65 @@ test("a page queries a data loader's output on biac dev", async ({
   const errors = collectConsoleErrors(page);
   await expectWeeklyOrders(page, biacDev.url, biacDev.projectDir);
   expect(errors).toEqual([]);
+});
+
+/** How many times the dev log reports a run of the shipped loader. */
+function weeklyLoaderRuns(log: readonly string[]): number {
+  return log.filter((line) =>
+    line.includes("data loader data/weekly-orders.csv.js →"),
+  ).length;
+}
+
+test("editing a data loader refreshes the open page in place, through a failure and back", async ({
+  page,
+  biacDev,
+}) => {
+  // Arrange
+  const errors = collectConsoleErrors(page);
+  const loaderFile = join(biacDev.projectDir, "data/weekly-orders.csv.js");
+  const original = readFileSync(loaderFile, "utf8");
+  const [week, orders, revenue] = firstWeekCells(biacDev.projectDir);
+  await expectWeeklyOrders(page, biacDev.url, biacDev.projectDir);
+  await page.evaluate(() => ((window as { __mark?: number }).__mark = 1));
+  const cells = page.locator("tbody tr").first().locator("td");
+  const alerts = page.getByRole("alert");
+
+  // Act: every order counts twice.
+  writeFileSync(
+    loaderFile,
+    original.replace("total.orders + 1", "total.orders + 2"),
+  );
+
+  // Assert: the loader re-ran once and the table shows its new output.
+  await expect(cells).toHaveText([week, String(2 * Number(orders)), revenue], {
+    timeout: 15_000,
+  });
+  expect(weeklyLoaderRuns(biacDev.log())).toBe(2);
+
+  // Act: the loader throws.
+  writeFileSync(loaderFile, `throw new Error("boom");\n${original}`);
+
+  // Assert: each call site shows the located loader failure.
+  await expect(alerts).toHaveCount(3, { timeout: 15_000 });
+  for (const alert of await alerts.all()) {
+    await expect(alert).toContainText(
+      "data loader data/weekly-orders.csv.js exited with code 1",
+    );
+    await expect(alert).toContainText("boom");
+  }
+
+  // Act: the loader is fixed.
+  writeFileSync(loaderFile, original);
+
+  // Assert: the original figures return, all without a reload.
+  await expect(cells).toHaveText([week, orders, revenue], { timeout: 15_000 });
+  await expect(alerts).toHaveCount(0);
+  expect(
+    await page.evaluate(() => (window as { __mark?: number }).__mark),
+  ).toBe(1);
+  expect(errors).toEqual([
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+  ]);
 });
 
 test("biac dev serves the loader's output and never its source", async ({
