@@ -1,8 +1,13 @@
 import { createReadStream } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { extname } from "node:path";
+import { extname, relative, sep } from "node:path";
 import type { Connect } from "vite";
 import { decodePathname, resolveContained } from "./contained-path.js";
+import {
+  findDataLoader,
+  isDataLoaderSource,
+  type DataLoaderCache,
+} from "./data-loader.js";
 import { statFile } from "./stat-file.js";
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -17,21 +22,44 @@ const CONTENT_TYPES: Record<string, string> = {
  * copy `biac build` emits, so page SQL never rewrites between modes.
  * Byte ranges are honored because the wasm HTTP filesystem reads parquet
  * footers with ranged GETs; `no-cache` keeps edits visible on refetch.
+ * A path with no file but a `<path>.js` loader beside it serves the
+ * loader's cached output; loader sources themselves are never served.
  *
  * @example
- * server.middlewares.use("/data", serveDataDir(join(root, "data")));
+ * server.middlewares.use(
+ *   "/data",
+ *   serveDataDir(join(root, "data"), createDataLoaderCache(root)),
+ * );
  */
-export function serveDataDir(dataDir: string): Connect.NextHandleFunction {
+export function serveDataDir(
+  dataDir: string,
+  loaders: DataLoaderCache,
+): Connect.NextHandleFunction {
   return (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
     const pathname = decodePathname(req.url);
     if (pathname === null) return writeStatus(res, 400);
     const file = resolveContained(dataDir, pathname);
     if (file === null) return writeStatus(res, 403);
+    if (isDataLoaderSource(file)) return writeStatus(res, 404);
     const stats = statFile(file);
-    if (stats === null) return writeStatus(res, 404);
-    sendFile(req, res, file, stats.size);
+    if (stats !== null) return sendFile(req, res, file, stats.size);
+    const target = relative(dataDir, file).split(sep).join("/");
+    if (findDataLoader(dataDir, target) === null) return writeStatus(res, 404);
+    sendLoaderOutput(req, res, loaders, target).catch(next);
   };
+}
+
+/** Runs the target's loader if its cached output is stale, then serves it. */
+async function sendLoaderOutput(
+  req: IncomingMessage,
+  res: ServerResponse,
+  loaders: DataLoaderCache,
+  target: string,
+): Promise<void> {
+  const output = await loaders.load(target);
+  // load() resolves only after the output was renamed into place.
+  sendFile(req, res, output, statFile(output)!.size);
 }
 
 interface ByteRange {

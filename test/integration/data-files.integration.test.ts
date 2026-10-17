@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ViteDevServer } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -124,5 +126,116 @@ describe("/data/ serving", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-length")).toBe(String(CSV.length));
     expect(await res.text()).toBe("");
+  });
+});
+
+// Every run appends one line to runs.log under the project root (the
+// loader's cwd), so the log counts how many processes a request spawned.
+const LOADER_OUTPUT = "id,amount\n1,10\n2,20\n";
+const COUNTING_LOADER = `
+import { appendFileSync } from "node:fs";
+appendFileSync("runs.log", "run\\n");
+process.stdout.write(${JSON.stringify(LOADER_OUTPUT)});
+`;
+
+function loaderRuns(): number {
+  const log = join(projectRoot!, "runs.log");
+  return existsSync(log) ? readFileSync(log, "utf8").split("\n").length - 1 : 0;
+}
+
+describe("/data/ loader output", () => {
+  it("serves a loader's stdout at the path it generates", async () => {
+    await serve();
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/csv");
+    expect(res.headers.get("content-length")).toBe(
+      String(LOADER_OUTPUT.length),
+    );
+    expect(await res.text()).toBe(LOADER_OUTPUT);
+  });
+
+  it("serves a byte range of the output", async () => {
+    await serve();
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv`, {
+      headers: { range: "bytes=0-3" },
+    });
+
+    expect(res.status).toBe(206);
+    expect(res.headers.get("content-range")).toBe(
+      `bytes 0-3/${LOADER_OUTPUT.length}`,
+    );
+    expect(await res.text()).toBe(LOADER_OUTPUT.slice(0, 4));
+  });
+
+  it("answers HEAD on the output with its length and no body", async () => {
+    await serve();
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv`, { method: "HEAD" });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-length")).toBe(
+      String(LOADER_OUTPUT.length),
+    );
+    expect(await res.text()).toBe("");
+  });
+
+  it("runs the loader once for concurrent ranged requests", async () => {
+    await serve();
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+
+    const responses = await Promise.all(
+      ["bytes=0-3", "bytes=4-7", "bytes=8-"].map((range) =>
+        fetch(`${baseUrl}/data/gen.csv`, { headers: { range } }),
+      ),
+    );
+
+    expect(responses.map((res) => res.status)).toEqual([206, 206, 206]);
+    expect(loaderRuns()).toBe(1);
+  });
+
+  it("serves a static file over the loader beside it", async () => {
+    await serve();
+    writeFile("data/gen.csv", CSV);
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv`);
+
+    expect(await res.text()).toBe(CSV);
+    expect(loaderRuns()).toBe(0);
+  });
+
+  it("404s the loader source", async () => {
+    await serve();
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv.js`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("404s the loader source after its output was generated", async () => {
+    await serve();
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+    await (await fetch(`${baseUrl}/data/gen.csv`)).text();
+
+    const res = await fetch(`${baseUrl}/data/gen.csv.js`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("404s a helper module a loader imports", async () => {
+    await serve();
+    writeFile("data/lib/util.js", "export const secret = 1;\n");
+
+    const res = await fetch(`${baseUrl}/data/lib/util.js`);
+
+    expect(res.status).toBe(404);
   });
 });

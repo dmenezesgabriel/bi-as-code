@@ -34,6 +34,20 @@ export interface DataLoaderCache {
 }
 
 /**
+ * Whether a `data/` path is program source rather than data: a loader or a
+ * module a loader imports. DuckDB never reads `.js`, and a loader may hold
+ * credentials, so such a path is never served or shipped. Case-insensitive
+ * so `a.csv.JS` stays private on a case-insensitive filesystem.
+ *
+ * @example
+ * isDataLoaderSource("quakes.csv.js"); // → true
+ * isDataLoaderSource("quakes.csv"); // → false
+ */
+export function isDataLoaderSource(path: string): boolean {
+  return path.toLowerCase().endsWith(LOADER_EXTENSION);
+}
+
+/**
  * The loader that generates `target` (a posix path relative to `dataDir`),
  * or `null` when a static file already sits at `target` — a real file
  * always wins — or no `<target>.js` exists.

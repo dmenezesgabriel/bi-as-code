@@ -16,6 +16,7 @@ import {
   createDataLoaderCache,
   DataLoaderError,
   findDataLoader,
+  isDataLoaderSource,
 } from "./data-loader.js";
 
 // Every run appends one line to runs.log, resolved against the loader's
@@ -44,6 +45,19 @@ function runCount(root: string): number {
 function cacheDirEntries(root: string): string[] {
   return readdirSync(join(root, ".biac/cache/data"));
 }
+
+describe("isDataLoaderSource", () => {
+  it.each(["a.csv.js", "lib/x.js", "A.CSV.JS"])(
+    "treats %s as private source",
+    (path) => {
+      expect(isDataLoaderSource(path)).toBe(true);
+    },
+  );
+
+  it.each(["a.csv", "a.json", "a.js.csv"])("treats %s as data", (path) => {
+    expect(isDataLoaderSource(path)).toBe(false);
+  });
+});
 
 describe("findDataLoader", () => {
   it("returns the loader beside a target that has no static file", () => {

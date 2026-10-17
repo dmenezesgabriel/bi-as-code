@@ -4,6 +4,7 @@ import { join, resolve, sep } from "node:path";
 import type { Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
+import { createDataLoaderCache } from "./data-loader.js";
 import { discoverPages } from "./discover-pages.js";
 import {
   manifestModuleSource,
@@ -122,7 +123,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
     configureServer(server) {
       // sql: sources resolve to /data/<path> — served from the real
       // directory so dev and the copied build/data/ stay identical.
-      server.middlewares.use("/data", serveDataDir(dataDir));
+      server.middlewares.use(
+        "/data",
+        serveDataDir(dataDir, createDataLoaderCache(root)),
+      );
       // The editor's write path into pages/. configureServer runs for the
       // dev server only — `vite build` and `vite preview` never mount it.
       server.middlewares.use(
