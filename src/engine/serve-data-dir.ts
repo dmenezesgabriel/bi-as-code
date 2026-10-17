@@ -1,8 +1,9 @@
-import { createReadStream, statSync, type Stats } from "node:fs";
+import { createReadStream } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname } from "node:path";
 import type { Connect } from "vite";
 import { decodePathname, resolveContained } from "./contained-path.js";
+import { statFile } from "./stat-file.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".csv": "text/csv",
@@ -31,16 +32,6 @@ export function serveDataDir(dataDir: string): Connect.NextHandleFunction {
     if (stats === null) return writeStatus(res, 404);
     sendFile(req, res, file, stats.size);
   };
-}
-
-/** `null` covers missing entries and directories alike — both are 404 here. */
-function statFile(file: string): Stats | null {
-  try {
-    const stats = statSync(file);
-    return stats.isFile() ? stats : null;
-  } catch {
-    return null;
-  }
 }
 
 interface ByteRange {
