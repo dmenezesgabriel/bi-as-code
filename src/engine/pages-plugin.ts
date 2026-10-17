@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { cp } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
-import type { Plugin } from "vite";
+import type { Logger, Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
-import { createDataLoaderCache } from "./data-loader.js";
+import { createDataLoaderCache, type DataLoaderLog } from "./data-loader.js";
 import { discoverPages } from "./discover-pages.js";
 import {
   manifestModuleSource,
@@ -125,7 +125,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
       // directory so dev and the copied build/data/ stay identical.
       server.middlewares.use(
         "/data",
-        serveDataDir(dataDir, createDataLoaderCache(root)),
+        serveDataDir(
+          dataDir,
+          createDataLoaderCache(root, devLoaderLog(server.config.logger)),
+        ),
       );
       // The editor's write path into pages/. configureServer runs for the
       // dev server only — `vite build` and `vite preview` never mount it.
@@ -247,4 +250,17 @@ function isPageFile(id: string, pagesDirPosix: string): boolean {
 
 function toPosix(path: string): string {
   return path.split(sep).join("/");
+}
+
+/**
+ * Loader runs in the dev terminal: run lines through vite's logger so they
+ * carry its timestamps, the loader's own stderr verbatim — the same stream
+ * a loader run by hand would write to.
+ */
+function devLoaderLog(logger: Logger): DataLoaderLog {
+  return {
+    info: (line) => logger.info(line, { timestamp: true }),
+    error: (line) => logger.error(line, { timestamp: true }),
+    stderr: (chunk) => process.stderr.write(chunk),
+  };
 }

@@ -238,4 +238,20 @@ describe("/data/ loader output", () => {
 
     expect(res.status).toBe(404);
   });
+
+  it("answers a failing loader with a plain-text 500 naming it and its exit code", async () => {
+    await serve();
+    writeFile(
+      "data/bad.csv.js",
+      'process.stderr.write("boom\\n");\nprocess.exit(3);\n',
+    );
+
+    const res = await fetch(`${baseUrl}/data/bad.csv`);
+
+    expect(res.status).toBe(500);
+    expect(res.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(await res.text()).toBe(
+      "data loader data/bad.csv.js exited with code 3, expected 0; stderr:\nboom",
+    );
+  });
 });

@@ -22,6 +22,14 @@ class FakeConnection {
   }
 }
 
+/** A connection whose every query fails the way duckdb's HTTP reader does. */
+class UnreadableSourceConnection extends FakeConnection {
+  override async query(sql: string): Promise<void> {
+    this.queries.push(sql);
+    throw new Error("Failed to open file: data/orders.csv");
+  }
+}
+
 afterEach(() => vi.unstubAllGlobals());
 
 describe("registerSource", () => {
@@ -89,5 +97,94 @@ describe("registerSource", () => {
     expect(connection.queries).toEqual([
       `CREATE OR REPLACE TABLE "we""ird" AS FROM 'data/it''x.csv'`,
     ]);
+  });
+
+  it("does not fetch the source itself when the table registers", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+
+    await registerSource(
+      new FakeFileRegistry(),
+      new FakeConnection(),
+      "orders",
+      "data/orders.csv",
+    );
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("replaces duckdb's error with the server's plain-text reason when the source fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("data loader data/orders.csv.js exited with code 3", {
+            status: 500,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+      ),
+    );
+
+    await expect(
+      registerSource(
+        new FakeFileRegistry(),
+        new UnreadableSourceConnection(),
+        "orders",
+        "data/orders.csv",
+      ),
+    ).rejects.toThrow(
+      `fetch ${location.origin}/data/orders.csv → HTTP 500: data loader data/orders.csv.js exited with code 3`,
+    );
+  });
+
+  it("keeps duckdb's error when the source fetches fine", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("not,a,table", { status: 200 })),
+    );
+
+    await expect(
+      registerSource(
+        new FakeFileRegistry(),
+        new UnreadableSourceConnection(),
+        "orders",
+        "data/orders.csv",
+      ),
+    ).rejects.toThrow("Failed to open file: data/orders.csv");
+  });
+
+  it("keeps duckdb's error when the diagnostic fetch itself fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
+
+    await expect(
+      registerSource(
+        new FakeFileRegistry(),
+        new UnreadableSourceConnection(),
+        "orders",
+        "data/orders.csv",
+      ),
+    ).rejects.toThrow("Failed to open file: data/orders.csv");
+  });
+
+  it("names a missing file's status without a body when the server sends none", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 404 })),
+    );
+
+    await expect(
+      registerSource(
+        new FakeFileRegistry(),
+        new UnreadableSourceConnection(),
+        "orders",
+        "data/orders.csv",
+      ),
+    ).rejects.toThrow(
+      new RegExp(`^fetch ${location.origin}/data/orders\\.csv → HTTP 404$`),
+    );
   });
 });

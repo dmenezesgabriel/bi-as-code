@@ -4,6 +4,7 @@ import { extname, relative, sep } from "node:path";
 import type { Connect } from "vite";
 import { decodePathname, resolveContained } from "./contained-path.js";
 import {
+  DataLoaderError,
   findDataLoader,
   isDataLoaderSource,
   type DataLoaderCache,
@@ -24,6 +25,8 @@ const CONTENT_TYPES: Record<string, string> = {
  * footers with ranged GETs; `no-cache` keeps edits visible on refetch.
  * A path with no file but a `<path>.js` loader beside it serves the
  * loader's cached output; loader sources themselves are never served.
+ * A failing loader answers a plain-text `500` carrying its error, the only
+ * place a page can read why: DuckDB's HTTP reader drops response bodies.
  *
  * @example
  * server.middlewares.use(
@@ -57,9 +60,29 @@ async function sendLoaderOutput(
   loaders: DataLoaderCache,
   target: string,
 ): Promise<void> {
-  const output = await loaders.load(target);
+  let output: string;
+  try {
+    output = await loaders.load(target);
+  } catch (error) {
+    if (!(error instanceof DataLoaderError)) throw error;
+    sendLoaderFailure(res, error);
+    return;
+  }
   // load() resolves only after the output was renamed into place.
   sendFile(req, res, output, statFile(output)!.size);
+}
+
+/**
+ * Answered here rather than passed to `next`, so vite neither logs the
+ * stack (the loader cache already logged the failure) nor opens its error
+ * overlay over pages that may not query this file.
+ */
+function sendLoaderFailure(res: ServerResponse, error: DataLoaderError): void {
+  res.writeHead(500, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "no-cache",
+  });
+  res.end(error.message);
 }
 
 interface ByteRange {

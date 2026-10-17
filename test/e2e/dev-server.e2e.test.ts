@@ -117,4 +117,33 @@ describe("biac dev", () => {
     expect(line).toMatch(/ page reload \S*\/pages\/added\.md/);
     expect(await server.stop()).toBe(0);
   }, 60_000);
+
+  it("logs each data loader run, and a failing loader's error and stderr", async () => {
+    mkdirSync(join(projectRoot!, "data"), { recursive: true });
+    writeFileSync(
+      join(projectRoot!, "data/ok.csv.js"),
+      'process.stdout.write("x\\n1\\n");\n',
+    );
+    writeFileSync(
+      join(projectRoot!, "data/bad.csv.js"),
+      'process.stderr.write("upstream timed out\\n");\nprocess.exit(3);\n',
+    );
+    server = await startDevServer(projectRoot!);
+
+    await (await fetch(`${server.url}data/ok.csv`)).text();
+    await (await fetch(`${server.url}data/bad.csv`)).text();
+    await eventually(async () =>
+      server!.log().some((line) => line.includes("exited with code 3")),
+    );
+
+    const log = server.log().join("\n");
+    expect(log).toMatch(
+      / stdout .*data loader data\/ok\.csv\.js → 4 bytes in \d+ ms/,
+    );
+    expect(log).toMatch(/ stderr upstream timed out/);
+    expect(log).toMatch(
+      / stderr .*data loader data\/bad\.csv\.js exited with code 3, expected 0/,
+    );
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
 });

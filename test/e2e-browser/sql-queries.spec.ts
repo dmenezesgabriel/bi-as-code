@@ -183,14 +183,20 @@ test("a missing sql: source shows an inline error, not a page crash", async ({
 
   // The failed registration lands inline in every call site that renders
   // the `orders` result — the fence's own table, the `<Table>` widget, the
-  // prose `<Value>` and the `<BarChart>` — and quiet: no console errors,
-  // no unhandled rejections, the rest of the page still renders.
+  // prose `<Value>` and the `<BarChart>` — and quiet: no app console
+  // errors, no unhandled rejections, the rest of the page still renders.
   const alerts = page.getByRole("alert");
   await expect(alerts).toHaveCount(4);
   await expect(alerts.first()).toContainText("orders");
-  await expect(alerts.first()).toContainText("data/missing.parquet");
+  await expect(alerts.first()).toContainText(
+    "/data/missing.parquet → HTTP 404",
+  );
   await expect(
     page.getByRole("heading", { name: "Orders overview" }),
   ).toBeVisible();
-  expect(errors).toEqual([]);
+  // The one line is Chromium's own report of the diagnostic GET that
+  // recovers the status duckdb's reader drops; the app logs nothing.
+  expect(errors).toEqual([
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  ]);
 });
