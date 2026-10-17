@@ -43,4 +43,5 @@ Three choices had to be made: which loaders a build runs, where their output is 
 - Adding a loader adds an output to every build, whether or not a page reads it. Removing a loader that nothing reads is how to stop shipping its output.
 - Freshness is the loader file's mtime. An edit to the loader's own inputs (a remote table, a file it reads) is not detected: delete `.biac/cache/` to force a re-run.
 - A `.js` file under `data/` is never served, even one an author meant as a static asset. That is the price of a rule simple enough to trust with a secret. A future reader will be tempted to serve "helper" `.js` files that are not loaders. Don't: a helper is where a connection string ends up.
+- A loader runs with the project root as its working directory (`runLoader` in `src/engine/data-loader.ts`), not the shell's: `biac dev <dir>` takes a root that need not be the cwd, so a relative path like `data/orders.csv` means the same file however `biac` was started.
 - A failing loader runs twice per dev page load, once for DuckDB and once for the diagnostic re-fetch. There is no backoff: two runs are not a storm, and a backoff would hide a fix until it expired.
