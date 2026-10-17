@@ -78,13 +78,13 @@ The 1280 px resting bar wraps into two rows. Absolute tops sit 33 px lower than 
 
 ## Trade-offs and what we adopt
 
-| Axis               | Options seen (repo → approach)                                                                    | Trade-off                                                                                                         | Our choice, and why |
-| ------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------- |
-| Control height     | evidence → 36 px; streamlit → 40 px; ours → 32 px                                                 | 36 px matches our toggle's `h-9` already; 40 px matches our `DOCKED_ROW_HEIGHT` but grows the bar by 8 px per row | open decision 1     |
-| Toggle             | evidence, streamlit → labelless on the control line; framework → label column                     | a label row above the toggle would repeat its inline label                                                        | open decision 2     |
-| Slider fit         | evidence → calibrated label gap; streamlit → track padded to control height                       | evidence's numbers stay right only while the label row's line-height does                                         | open decision 3     |
-| Alignment rule     | evidence → `items-end` + fixed control bottom margin; streamlit → fixed label row + top alignment | bottom alignment lets a growing multi-select push its own label up                                                | open decision 3     |
-| Where sizing lives | evidence → classes repeated per tag; streamlit → shared theme tokens                              | per-widget classes drift (they already have: 32 vs 36 px)                                                         | open decision 4     |
+| Axis               | Options seen (repo → approach)                                                                    | Trade-off                                                                                                         | Our choice, and why                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Control height     | evidence → 36 px; streamlit → 40 px; ours → 32 px                                                 | 36 px matches our toggle's `h-9` already; 40 px matches our `DOCKED_ROW_HEIGHT` but grows the bar by 8 px per row | 36 px — open decision 1                                                        |
+| Toggle             | evidence, streamlit → labelless on the control line; framework → label column                     | a label row above the toggle would repeat its inline label                                                        | labelless on the control line — open decision 2                                |
+| Slider fit         | evidence → calibrated label gap; streamlit → track padded to control height                       | evidence's numbers stay right only while the label row's line-height does                                         | none needed: top alignment lines the slider's label up as-is — open decision 3 |
+| Alignment rule     | evidence → `items-end` + fixed control bottom margin; streamlit → fixed label row + top alignment | bottom alignment lets a growing multi-select push its own label up                                                | `items-start` + one label row — open decision 3                                |
+| Where sizing lives | evidence → classes repeated per tag; streamlit → shared theme tokens                              | per-widget classes drift (they already have: 32 vs 36 px)                                                         | open decision 4                                                                |
 
 ## Gap analysis — what we already have vs the references
 
@@ -106,9 +106,9 @@ None planned. Whichever rule is chosen gets a comment at the shared sizing point
 
 ## Open decisions
 
-1. **Control height**: 32, 36 or 40 px. Evidence for: our toggle and evidence use 36; streamlit uses 40 = `DOCKED_ROW_HEIGHT`. Measure the bar's resting height at 1280 and 375 px for each before choosing.
-2. **Toggle label**: stay labelless on the control line (evidence, streamlit) or take a label row (framework). Default to the two-repo majority unless the screen says otherwise.
-3. **Alignment rule**: keep `items-end` and fit the slider to the row (evidence), or switch to `items-start` with a fixed-height label row (streamlit). Check which keeps the multi-select's label still as chips wrap (demo step 6).
+1. **Control height** — settled in T1: **36 px**. Measured 2026-10-16 (`bin/biac dev`, `playwright-cli` `eval` injecting `height` on the bar's `.h-8`/`.h-9` and `min-height` on `.min-h-8`, then reading `[data-filter-bar]` `getBoundingClientRect().height`): resting bar 158 / 162 / 166 px at 1280 px and 350 / 366 / 382 px at 375 px for 32 / 36 / 40 px. 36 costs 4 px on desktop (row 1 is held at 64 px by the slider until 40), keeps the toggle's existing `h-9` box and matches evidence; 40 doubles the cost for streamlit parity only. `test/e2e-browser/filter-bar-alignment.spec.ts` pins `CONTROL_HEIGHT = 36`.
+2. **Toggle label** — settled in T1: **labelless, on the control line** (evidence, streamlit). Its inline label already names it; a row above would print `Large orders only` twice. Under decision 3 the toggle no longer reaches the control line by bottom alignment: with `items-start` it measured top 585 against `Search regions`' control at 609, so T3 offsets it by one label row (label line-height + gap).
+3. **Alignment rule** — settled in T1: **`items-start` with one label row** (streamlit). Measured 2026-10-16 by swapping the panel's `items-end` for `items-start` via `eval`: on `/nested/allocation` with 3 channels picked, the labels go from 389 / 373 (16 px apart) to 373 / 373; on `/weekly-review` 1280 px, row 1's labels go from 513 / 505 / 513 to 505 / 505 / 505 with no slider change, and the resting bar stays 158 px. Evidence's `items-end` would need the slider recalibrated and still moves the multi-select's label as chips wrap.
 4. **Where the sizing lives**: one shared field shell (label row + control box) used by every input, or shared class constants in `inputs/` plus a geometry test. Pick the smaller diff that leaves one place to change the height.
 
 ## Surface
@@ -122,8 +122,8 @@ None planned. Whichever rule is chosen gets a comment at the shared sizing point
 
 ## Tasks
 
-- [ ] T1 — Measure: a browser spec asserting the label tops are equal and the control boxes share a height and bottom across the `/weekly-review` bar (resting, docked-open, 375 px) and `/nested/allocation`. RED against today's 480/480/472 and 32/36 px. Settle open decisions 1–3 from those numbers.
-- [ ] T2 — One control height and one label row for the label-plus-control inputs (`text-input.tsx`, `date-range.tsx`, `select-fields.tsx`, `button-group.tsx`), from one shared source (open decision 4). Navigate `/weekly-review` and `/nested/allocation` and measure the control heights.
+- [x] T1 — Measure: a browser spec asserting the label tops are equal and the control boxes share a height and bottom across the `/weekly-review` bar (resting, docked-open, 375 px) and `/nested/allocation`. RED against the Baseline table (`Amount` 8 px high, 32/36 px controls). Settle open decisions 1–3 from those numbers. Shipped as `test/e2e-browser/filter-bar-alignment.spec.ts` (helper `test/e2e-browser/field-geometry.ts`), its four tests marked `test.fail`; each later task turns `test.fail` back into `test` for the tests it makes pass.
+- [ ] T2 — One control height and one label row for the label-plus-control inputs (`text-input.tsx`, `date-range.tsx`, `select-fields.tsx`, `button-group.tsx`), from one shared source (open decision 4), and the bar's panel switched from `items-end` to `items-start` in `filter-bar.tsx` (open decision 3; `filter-bar.unit.test.tsx` asserts `items-end` today). Navigate `/weekly-review` and `/nested/allocation` and measure the control heights.
 - [ ] T3 — `<Toggle>` on the control line. Navigate `/weekly-review` and measure the toggle box against `Search regions` (top, bottom, height).
 - [ ] T4 — `<Slider>` (`SliderField` and `PinnedSliderReadout`) on the same label line, plus the multi-select's label held still as chips wrap. Navigate `/weekly-review` (`Amount`) and `/nested/allocation` (pick 3 channels) at 1280 and 375 px, docked panel open.
 
