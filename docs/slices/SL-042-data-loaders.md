@@ -10,7 +10,7 @@ An author writes `data/<name>.<ext>.js` — a program that prints the file to st
 
 ## Demo
 
-1. Cold start: `bin/biac dev`, open the example page whose `sql:` names a loader output (the page and `data/*.csv.js` added by T5) — its figures render; the dev log names the loader run once.
+1. Cold start: `bin/biac dev`, open the example page whose `sql:` names a loader output (`/weekly-orders`, fed by `data/weekly-orders.csv.js`) — its figures render; the dev log names the loader run once.
 2. Reload the page — the figures render again and the dev log shows no second run (cached output, loader unchanged).
 3. `curl -i http://localhost:5175/data/<name>.csv` → `200` with the loader's output; `curl -i http://localhost:5175/data/<name>.csv.js` → `404`.
 4. Break the loader (`process.exit(1)` at its top), `touch` it, reload the page — the page shows a located error naming `data/<name>.csv.js` and its exit code; the dev log carries the same line and the loader's stderr.
@@ -119,7 +119,7 @@ Each settled decision that outlives the slice (D4, D6, D7) is recorded in an ADR
 - [x] T2 — Dev serving: `/data/<name>.csv` serves the loader's output through the existing range/HEAD path, `/data/<name>.csv.js` → 404. Integration tests in `test/integration/data-files.integration.test.ts`; `curl` against `bin/biac dev`. Closes GAP-031, GAP-032.
 - [x] T3 — Dev failure: settle open decisions 2–4; a failing loader shows a located error in the page's blocks and in the dev log. `playwright-cli`: the example page with a broken loader — screenshot, `eval` the block error text, console. Closes GAP-036 (dev).
 - [x] T4 — Build: settle open decision 1; `biac build` runs loaders (re-running stale ones), writes only outputs into `build/data/`, never copies a loader source, and fails naming the loader when one fails. Tests in `test/integration/static-build.integration.test.ts` and `test/e2e/static-build.e2e.test.ts`. Closes GAP-033, GAP-036 (build).
-- [ ] T5 — Example and browser e2e: the example loader + page, `test/e2e-browser/data-loaders.spec.ts` driving the page in dev and preview, the ADR for D4/D6/D7, then the Demo. Closes GAP-034.
+- [x] T5 — Example and browser e2e: the example loader + page, `test/e2e-browser/data-loaders.spec.ts` driving the page in dev and preview, the ADR for D4/D6/D7, then the Demo. Closes GAP-034.
 
 ## Out of scope
 
