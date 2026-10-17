@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
 import { copyFile, cp, mkdir } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
-import type { Logger, Plugin } from "vite";
+import type { Logger, NormalizedHotChannel, Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
+import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
 import {
   createDataLoaderCache,
   isDataLoaderSource,
@@ -66,6 +67,18 @@ export function pagesPlugin(projectRoot: string): Plugin {
   // same source is content-only and must not invalidate it.
   let servedManifest: string | undefined;
   let isDevServer = false;
+  // Watched data/ file → the mtime last pushed for it, so chokidar's
+  // repeated events for one write push a single update.
+  const sentDataVersions = new Map<string, number>();
+  // Vite has one HMR channel, not one per page: every open page gets the
+  // update and drops paths its queries do not read.
+  const pushDataUpdate = (hot: NormalizedHotChannel, file: string): boolean => {
+    const update = dataUpdateFor(file, dataDir, sentDataVersions.get(file));
+    if (!update) return false;
+    sentDataVersions.set(file, update.version);
+    hot.send(DATA_UPDATE_EVENT, update);
+    return true;
+  };
   // Build only: each loader target → its up-to-date output in the cache.
   let loaderOutputs: Map<string, string> = new Map();
 
@@ -167,6 +180,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
       await copyLoaderOutputs(loaderOutputs, join(dir, "data"));
     },
     hotUpdate({ file, modules }) {
+      // No module changed, so none is handed back to vite. Only the client
+      // environment pushes: vite runs this hook once per environment.
+      const isClient = this.environment.name === "client";
+      if (isClient && pushDataUpdate(this.environment.hot, file)) return [];
       if (file === configFile) {
         configPromise = undefined;
         const graph = this.environment.moduleGraph;

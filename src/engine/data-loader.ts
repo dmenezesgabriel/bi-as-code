@@ -62,6 +62,17 @@ export function isDataLoaderSource(path: string): boolean {
 }
 
 /**
+ * The posix target a loader source (relative to `data/`) generates — its
+ * path without the loader extension.
+ *
+ * @example
+ * dataLoaderTarget("nested/b.parquet.js"); // → "nested/b.parquet"
+ */
+export function dataLoaderTarget(loader: string): string {
+  return loader.slice(0, -LOADER_EXTENSION.length).split(sep).join("/");
+}
+
+/**
  * The loader that generates `target` (a posix path relative to `dataDir`),
  * or `null` when a static file already sits at `target` — a real file
  * always wins — or no `<target>.js` exists. A target keeps its own
@@ -90,9 +101,7 @@ export function listDataLoaderTargets(dataDir: string): string[] {
   if (!existsSync(dataDir)) return [];
   return readdirSync(dataDir, { recursive: true, encoding: "utf8" })
     .filter(isDataLoaderSource)
-    .map((loader) =>
-      loader.slice(0, -LOADER_EXTENSION.length).split(sep).join("/"),
-    )
+    .map(dataLoaderTarget)
     .filter((target) => findDataLoader(dataDir, target) !== null)
     .sort();
 }

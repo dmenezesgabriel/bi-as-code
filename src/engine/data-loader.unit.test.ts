@@ -14,6 +14,7 @@ import {
 } from "../../test/lib/temp-project.js";
 import {
   createDataLoaderCache,
+  dataLoaderTarget,
   DataLoaderError,
   findDataLoader,
   isDataLoaderSource,
@@ -78,6 +79,15 @@ describe("isDataLoaderSource", () => {
 
   it.each(["a.csv", "a.json", "a.js.csv"])("treats %s as data", (path) => {
     expect(isDataLoaderSource(path)).toBe(false);
+  });
+});
+
+describe("dataLoaderTarget", () => {
+  it.each([
+    ["a.csv.js", "a.csv"],
+    [join("nested", "b.parquet.js"), "nested/b.parquet"],
+  ])("maps %s to %s", (loader, target) => {
+    expect(dataLoaderTarget(loader)).toBe(target);
   });
 });
 
