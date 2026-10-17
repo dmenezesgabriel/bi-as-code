@@ -50,7 +50,11 @@ import {
 } from "./prose-elements";
 import { QueryRegistryProvider } from "./query-registry";
 import { SqlBlockPre } from "./sql-block";
-import type { CompiledPageModule, MdxComponentMap } from "./types";
+import type {
+  CompiledPageModule,
+  DataUpdateSubscription,
+  MdxComponentMap,
+} from "./types";
 import { useDocumentTitle } from "./use-document-title";
 
 /**
@@ -131,9 +135,12 @@ const mdxComponents: MdxComponentMap = {
 export function MarkdownPage({
   page,
   siteTitle,
+  dataUpdates,
 }: {
   page: CompiledPageModule;
   siteTitle: string;
+  /** `biac dev`'s data-change channel; absent in a build. */
+  dataUpdates?: DataUpdateSubscription;
 }) {
   useDocumentTitle(page.title, siteTitle);
   const [article, setArticle] = useState<HTMLElement | null>(null);
@@ -150,7 +157,7 @@ export function MarkdownPage({
         style={{ "--docked-row-height": DOCKED_ROW_HEIGHT } as CSSProperties}
         className="mx-auto w-full min-w-0 max-w-4xl space-y-block-gap [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 has-[[data-filter-bar]]:[&_h2]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)] has-[[data-filter-bar]]:[&_h3]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)]"
       >
-        <PageBody page={page} />
+        <PageBody page={page} dataUpdates={dataUpdates} />
       </main>
       {page.frontmatter.table_of_contents !== false && article && (
         <NavToc article={article} />
@@ -180,7 +187,13 @@ function pageVersion(content: object): number {
  * The registry sits outside the filter scope so a page swap re-runs only
  * the fences whose SQL changed.
  */
-function PageBody({ page }: { page: CompiledPageModule }) {
+function PageBody({
+  page,
+  dataUpdates,
+}: {
+  page: CompiledPageModule;
+  dataUpdates: DataUpdateSubscription | undefined;
+}) {
   const search = useSearch({ strict: false });
   // The editor's flag is not a page parameter, so `{{params.*}}` never sees
   // it. Memoized because the registry re-interpolates whenever `params` is
@@ -201,6 +214,7 @@ function PageBody({ page }: { page: CompiledPageModule }) {
       sqlBlocks={page.sqlBlocks}
       sqlTables={page.sqlTables}
       params={params}
+      dataUpdates={dataUpdates}
     >
       {scoped}
     </QueryRegistryProvider>

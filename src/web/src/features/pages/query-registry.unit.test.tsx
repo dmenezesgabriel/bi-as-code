@@ -1,10 +1,11 @@
 import { StrictMode, useEffect } from "react";
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Layer } from "effect";
 import { DuckDb } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
+import { FakeDataUpdates } from "./fake-data-updates";
 import {
   QueryRegistryProvider,
   useQueryResults,
@@ -38,12 +39,18 @@ function renderRegistry({
   params = {} as Record<string, unknown>,
   db = new FakeDuckDb(),
   strict = false,
+  dataUpdates = undefined as FakeDataUpdates | undefined,
 } = {}) {
   const resultsRef: { current: Results } = { current: {} };
   const layer = Layer.succeed(DuckDb, db);
   const tree = (p: Record<string, unknown>) => (
     <DataRuntimeProvider layer={layer}>
-      <QueryRegistryProvider sqlBlocks={blocks} sqlTables={tables} params={p}>
+      <QueryRegistryProvider
+        sqlBlocks={blocks}
+        sqlTables={tables}
+        params={p}
+        dataUpdates={dataUpdates?.subscription}
+      >
         <ResultsProbe onChange={(r) => (resultsRef.current = r)} />
       </QueryRegistryProvider>
     </DataRuntimeProvider>
@@ -307,5 +314,67 @@ describe("QueryRegistryProvider", () => {
       "select * from orders where r = ?",
     );
     expect(source?.interpolated.q?.params).toEqual(["West"]);
+  });
+});
+
+describe("QueryRegistryProvider data updates", () => {
+  const blocks = [{ name: "q", sql: "select * from orders" }];
+  const tables = { orders: "data/orders.csv" };
+
+  async function renderSettled(db = new FakeDuckDb()) {
+    const dataUpdates = new FakeDataUpdates();
+    const rendered = renderRegistry({ db, blocks, tables, dataUpdates });
+    await waitFor(() =>
+      expect(rendered.resultsRef.current.q?.status).not.toBe("loading"),
+    );
+    return { ...rendered, dataUpdates };
+  }
+
+  it("re-registers the tables and re-runs the blocks when a source it reads changes", async () => {
+    const { db, resultsRef, dataUpdates } = await renderSettled();
+    db.rows = [{ n: 2 }];
+
+    act(() => dataUpdates.emit({ path: "data/orders.csv", version: 2 }));
+
+    await waitFor(() =>
+      expect(resultsRef.current.q).toEqual({
+        status: "success",
+        rows: [{ n: 2 }],
+      }),
+    );
+    expect(db.registered).toHaveLength(2);
+    expect(db.queries).toHaveLength(2);
+  });
+
+  it("ignores a change to a file the page does not read", async () => {
+    const { db, dataUpdates } = await renderSettled();
+
+    act(() => dataUpdates.emit({ path: "data/flights.parquet", version: 2 }));
+
+    // A matching path registers within a macrotask (see the test above).
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(db.registered).toHaveLength(1);
+    expect(db.queries).toHaveLength(1);
+  });
+
+  it("recovers from a failed registration once the source changes again", async () => {
+    const db = new FakeDuckDb();
+    db.registerCause = new Error("HTTP 500");
+    const { resultsRef, dataUpdates } = await renderSettled(db);
+    expect(resultsRef.current.q?.status).toBe("error");
+    db.registerCause = null;
+
+    act(() => dataUpdates.emit({ path: "data/orders.csv", version: 2 }));
+
+    await waitFor(() => expect(resultsRef.current.q?.status).toBe("success"));
+  });
+
+  it("unsubscribes on unmount", async () => {
+    const { dataUpdates, unmount } = await renderSettled();
+    expect(dataUpdates.listenerCount).toBe(1);
+
+    unmount();
+
+    expect(dataUpdates.listenerCount).toBe(0);
   });
 });

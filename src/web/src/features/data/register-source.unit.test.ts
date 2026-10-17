@@ -3,8 +3,15 @@ import { registerSource } from "./register-source";
 
 class FakeFileRegistry {
   readonly urls: { name: string; url: string }[] = [];
+  /** Every call in order, e.g. `["drop data/a.csv", "register data/a.csv"]`. */
+  readonly calls: string[] = [];
   async registerFileURL(name: string, url: string): Promise<void> {
     this.urls.push({ name, url });
+    this.calls.push(`register ${name}`);
+  }
+  async dropFile(name: string): Promise<null> {
+    this.calls.push(`drop ${name}`);
+    return null;
   }
 }
 
@@ -53,6 +60,14 @@ describe("registerSource", () => {
       expect(connection.inserted).toEqual([]);
     },
   );
+
+  it("drops the file before registering it, so a re-registration re-reads it", async () => {
+    const files = new FakeFileRegistry();
+
+    await registerSource(files, new FakeConnection(), "orders", "data/a.csv");
+
+    expect(files.calls).toEqual(["drop data/a.csv", "register data/a.csv"]);
+  });
 
   it("fetches an arrow file in full and inserts its IPC stream", async () => {
     const files = new FakeFileRegistry();

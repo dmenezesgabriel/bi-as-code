@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -16,6 +17,7 @@ import { DataRuntimeProvider } from "../data/runtime";
 import { mountedView } from "../editor/editor-test-view";
 import { FakePageSourcePort } from "../editor/fake-page-source-port";
 import type { PageSourcePort } from "../editor/types";
+import { FakeDataUpdates } from "./fake-data-updates";
 import { buildPageRouter } from "./page-router";
 import type {
   CompiledPageModule,
@@ -96,6 +98,7 @@ function renderRouter(
   siteConfig: BiacConfig = site,
   db?: DuckDbService,
   pageSource?: PageSourcePort,
+  dataUpdates?: FakeDataUpdates,
 ) {
   const router = buildPageRouter(
     entries,
@@ -103,6 +106,7 @@ function renderRouter(
     tree,
     createMemoryHistory({ initialEntries: [initialPath] }),
     pageSource,
+    dataUpdates?.subscription,
   );
   const app = <RouterProvider router={router} />;
   render(
@@ -194,6 +198,36 @@ describe("buildPageRouter", () => {
       { name: "shared", source: "data/shared.parquet" },
       { name: "local", source: "data/local.csv" },
     ]);
+  });
+
+  it("re-registers a page's sql tables when the data channel reports a source change", async () => {
+    // Arrange
+    const db = new FakeDuckDb();
+    const dataUpdates = new FakeDataUpdates();
+    const sqlPage: CompiledPageModule = {
+      default: () => <p>sql page</p>,
+      frontmatter: {},
+      title: "Sql",
+      sqlBlocks: [{ name: "q", sql: "select * from local" }],
+      sqlTables: { local: "data/local.csv" },
+    };
+    renderRouter(
+      [pageEntry("/sql", async () => sqlPage)],
+      "/sql",
+      navTree,
+      site,
+      db,
+      undefined,
+      dataUpdates,
+    );
+    await waitFor(() => expect(db.queries).toHaveLength(1));
+
+    // Act
+    act(() => dataUpdates.emit({ path: "data/local.csv", version: 2 }));
+
+    // Assert
+    await waitFor(() => expect(db.queries).toHaveLength(2));
+    expect(db.registered).toHaveLength(2);
   });
 
   it("renders an in-page error when a page module fails to load", async () => {

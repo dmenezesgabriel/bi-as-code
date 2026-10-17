@@ -10,8 +10,8 @@ type ArrowInsertOptions = Parameters<
   AsyncDuckDBConnection["insertArrowFromIPCStream"]
 >[1];
 
-/** The `registerFileURL` slice of `AsyncDuckDB` — injectable so tests fake it. */
-export type FileRegistry = Pick<AsyncDuckDB, "registerFileURL">;
+/** The file-registration slice of `AsyncDuckDB` — injectable so tests fake it. */
+export type FileRegistry = Pick<AsyncDuckDB, "registerFileURL" | "dropFile">;
 
 /**
  * The slice of `AsyncDuckDBConnection` registration needs — declared rather
@@ -37,7 +37,7 @@ export interface RegistrationConnection {
  * a missing file then fails registration naming the source and its HTTP
  * status, and cross-filter re-queries never re-scan HTTP. `OR REPLACE`
  * keeps registration idempotent: project-wide tables re-register on every
- * page mount.
+ * page mount, and a changed file re-registers under `biac dev`.
  */
 export async function registerSource(
   files: FileRegistry,
@@ -46,6 +46,12 @@ export async function registerSource(
   source: string,
 ): Promise<void> {
   const url = new URL(`/${source}`, location.origin).href;
+  // duckdb-wasm 1.32.0, measured in the browser: re-registering a name at
+  // the same URL is a no-op that keeps reading the file's first bytes, and
+  // at another URL it throws "File already registered". Dropping first
+  // makes every registration read the file as it is now (with the external
+  // file cache off — `duckdb-live.ts`).
+  await files.dropFile(source);
   await files.registerFileURL(source, url, DuckDBDataProtocol.HTTP, false);
   if (source.endsWith(".arrow")) {
     const response = await fetch(url);

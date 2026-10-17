@@ -1,6 +1,7 @@
 import { pages, navTree, subscribePageUpdates } from "virtual:biac-pages";
 import { config } from "virtual:biac-config";
 import { pageSourceClient } from "./features/editor/page-source-client";
+import { hmrDataUpdates } from "./features/pages/data-updates";
 import { buildPageRouter } from "./features/pages/page-router";
 
 // Only the dev server mounts the page-source endpoint, and only the dev
@@ -9,6 +10,9 @@ import { buildPageRouter } from "./features/pages/page-router";
 const pageSource = import.meta.hot
   ? pageSourceClient((url, init) => fetch(url, init))
   : undefined;
+const dataUpdates = import.meta.hot
+  ? hmrDataUpdates(import.meta.hot)
+  : undefined;
 
 export const router = buildPageRouter(
   pages,
@@ -16,6 +20,7 @@ export const router = buildPageRouter(
   navTree,
   undefined,
   pageSource,
+  dataUpdates,
 );
 
 // A hot-swapped page re-runs the matched route's loader, which now resolves

@@ -79,6 +79,17 @@ export type QueryResult =
 /** Table name → `data/` file path relative to the project root. */
 export type SqlTableMap = Record<string, string>;
 
+/** A changed `data/` file under `biac dev`: its served path and mtime. */
+export interface DataUpdate {
+  readonly path: string;
+  readonly version: number;
+}
+
+/** Calls `onUpdate` for every data change until the returned unsubscribe runs. */
+export type DataUpdateSubscription = (
+  onUpdate: (update: DataUpdate) => void,
+) => () => void;
+
 export interface MdxPageProps {
   components?: MdxComponentMap;
 }

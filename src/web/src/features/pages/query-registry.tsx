@@ -12,7 +12,12 @@ import { DuckDb } from "../data/data-service";
 import { useDataRuntime } from "../data/runtime";
 import { interpolateQuery, type InterpolatedQuery } from "./interpolate";
 import { runBlock } from "./run-block";
-import type { QueryResult, SqlBlock, SqlTableMap } from "./types";
+import type {
+  DataUpdateSubscription,
+  QueryResult,
+  SqlBlock,
+  SqlTableMap,
+} from "./types";
 
 /**
  * name → latest `QueryResult`. A name is present from mount (seeded
@@ -70,6 +75,10 @@ export function useQuerySource(): QuerySource {
  * queries: each stops reading at its next batch (run-query's interrupt
  * handler).
  *
+ * Under `biac dev`, `dataUpdates` reports each changed `data/` file; a
+ * change to one of `sqlTables`' sources re-registers them all and publishes
+ * a new registration, so every block and filtered consumer re-runs in place.
+ *
  * @example
  * <QueryRegistryProvider sqlBlocks={page.sqlBlocks} sqlTables={page.sqlTables} params={search}>
  *   <Content components={mdxComponents} />
@@ -79,34 +88,22 @@ export function QueryRegistryProvider({
   sqlBlocks,
   sqlTables,
   params,
+  dataUpdates,
   children,
 }: {
   sqlBlocks: readonly SqlBlock[];
   sqlTables: SqlTableMap;
   params: Readonly<Record<string, unknown>>;
+  dataUpdates?: DataUpdateSubscription;
   children: ReactNode;
 }) {
   const runtime = useDataRuntime();
   const [results, setResults] = useState<Record<string, QueryResult>>(() =>
     initialResults(sqlBlocks),
   );
-  const registration = useRef<{
-    sig: string;
-    done: Promise<Exit.Exit<void, unknown>>;
-  } | null>(null);
-  const [registered, setRegistered] = useState<Promise<
-    Exit.Exit<void, unknown>
-  > | null>(null);
+  const registered = useTableRegistration(sqlTables, dataUpdates);
   const interpolated = useStableInterpolation(sqlBlocks, params);
   const blockRuns = useRef<BlockRuns | null>(null);
-
-  useEffect(() => {
-    const sig = signatureOf(sqlTables);
-    if (registration.current?.sig === sig) return;
-    const done = runtime.runPromiseExit(registerAll(sqlTables));
-    registration.current = { sig, done };
-    setRegistered(done);
-  }, [runtime, sqlTables]);
 
   useEffect(() => {
     if (!registered) return;
@@ -140,6 +137,41 @@ export function QueryRegistryProvider({
       </QuerySourceContext.Provider>
     </QueryResultsContext.Provider>
   );
+}
+
+type Registration = Promise<Exit.Exit<void, unknown>>;
+
+/**
+ * The page's current table registration: created on mount (once per
+ * source-set signature), and replaced whenever `dataUpdates` reports a
+ * change to one of `sqlTables`' sources. The dev server broadcasts every
+ * data change to every open page, so each page drops paths it does not
+ * read. The whole set re-registers so a page whose last registration
+ * failed recovers too.
+ */
+function useTableRegistration(
+  sqlTables: SqlTableMap,
+  dataUpdates: DataUpdateSubscription | undefined,
+): Registration | null {
+  const runtime = useDataRuntime();
+  const registration = useRef<{ sig: string; done: Registration } | null>(null);
+  const [registered, setRegistered] = useState<Registration | null>(null);
+
+  useEffect(() => {
+    const sig = signatureOf(sqlTables);
+    const register = () => {
+      const done = runtime.runPromiseExit(registerAll(sqlTables));
+      registration.current = { sig, done };
+      setRegistered(done);
+    };
+    if (registration.current?.sig !== sig) register();
+    if (!dataUpdates) return;
+    const sources = new Set(Object.values(sqlTables));
+    return dataUpdates((update) => {
+      if (sources.has(update.path)) register();
+    });
+  }, [runtime, sqlTables, dataUpdates]);
+  return registered;
 }
 
 /**

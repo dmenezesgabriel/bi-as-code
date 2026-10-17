@@ -14,7 +14,11 @@ import { EditablePage } from "./editable-page";
 import { MarkdownPage } from "./markdown-page";
 import { NotFoundPage } from "./not-found-page";
 import { PageError } from "./page-error";
-import type { CompiledPageModule, ManifestPageEntry } from "./types";
+import type {
+  CompiledPageModule,
+  DataUpdateSubscription,
+  ManifestPageEntry,
+} from "./types";
 import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 
@@ -28,7 +32,8 @@ import type { NavTree } from "virtual:biac-pages";
  * into chrome consumers — the title becomes the document-title fallback and
  * `nav.sidebar` gates the sidebar; `navTree` feeds the sidebar nav.
  * `pageSource` — passed only by `biac dev` — lets `?edit` open a page in the
- * source editor.
+ * source editor; `dataUpdates` — likewise dev-only — re-runs a page's
+ * queries when a data file it reads changes.
  *
  * @example
  * // src/web/src/router.tsx
@@ -42,6 +47,7 @@ export function buildPageRouter(
   navTree: NavTree,
   history?: RouterHistory,
   pageSource?: PageSourcePort,
+  dataUpdates?: DataUpdateSubscription,
 ) {
   const rootRoute = createRootRoute({
     component: () => (
@@ -54,7 +60,9 @@ export function buildPageRouter(
     notFoundComponent: NotFoundPage,
   });
   const routeTree = rootRoute.addChildren(
-    pages.map((entry) => pageRoute(rootRoute, entry, site, pageSource)),
+    pages.map((entry) =>
+      pageRoute(rootRoute, entry, site, pageSource, dataUpdates),
+    ),
   );
   // Filter inputs persist through `history.replaceState`, which the router's
   // history wrapper reports as a REPLACE navigation — and every committed
@@ -83,6 +91,7 @@ function pageRoute(
   entry: ManifestPageEntry,
   site: BiacConfig,
   pageSource: PageSourcePort | undefined,
+  dataUpdates: DataUpdateSubscription | undefined,
 ): AnyRoute {
   const route = createRoute({
     getParentRoute: () => rootRoute,
@@ -95,7 +104,7 @@ function pageRoute(
           {"compileError" in mod ? (
             <CompileErrorPage error={mod.compileError} />
           ) : (
-            <CompiledPage mod={mod} site={site} />
+            <CompiledPage mod={mod} site={site} dataUpdates={dataUpdates} />
           )}
         </EditablePage>
       );
@@ -108,9 +117,10 @@ type CompiledPageProps = {
   /** The compiled page module the route's loader resolved to. */
   mod: CompiledPageModule;
   site: BiacConfig;
+  dataUpdates: DataUpdateSubscription | undefined;
 };
 
-function CompiledPage({ mod, site }: CompiledPageProps) {
+function CompiledPage({ mod, site, dataUpdates }: CompiledPageProps) {
   // The loader resolves to the compiled page module, so named exports
   // (title, sqlBlocks) reach the renderer alongside the MDX component.
   // Config-level tables merge under the page's own — a name collision
@@ -121,5 +131,11 @@ function CompiledPage({ mod, site }: CompiledPageProps) {
     () => ({ ...site.sqlTables, ...mod.sqlTables }),
     [site.sqlTables, mod.sqlTables],
   );
-  return <MarkdownPage page={{ ...mod, sqlTables }} siteTitle={site.title} />;
+  return (
+    <MarkdownPage
+      page={{ ...mod, sqlTables }}
+      siteTitle={site.title}
+      dataUpdates={dataUpdates}
+    />
+  );
 }
