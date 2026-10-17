@@ -95,6 +95,25 @@ function expectLabelAndControlLines(measured: readonly FieldGeometry[]): void {
   );
 }
 
+/** One input per row, each label the same distance above a box of one height. */
+function expectStackedFields(measured: readonly FieldGeometry[]): void {
+  expect(flexLines(measured)).toHaveLength(measured.length);
+  expectShared(
+    measured,
+    (f) =>
+      f.control && f.labelTop !== undefined
+        ? f.control.top - f.labelTop
+        : undefined,
+    "label-to-control distance",
+  );
+  expectShared(
+    measured,
+    (f) => f.control?.height,
+    "control heights",
+    CONTROL_HEIGHT,
+  );
+}
+
 async function openDockedFilters(page: Page): Promise<void> {
   await page.evaluate(() => window.scrollTo(0, 900));
   const filters = page.getByRole("button", { name: "Filters", exact: true });
@@ -150,23 +169,27 @@ test("at 375px the opened docked bar stacks its inputs with one label gap and on
   await openDockedFilters(page);
 
   const measured = await measureFields(weeklyReviewFields(page));
-  expect(flexLines(measured)).toHaveLength(measured.length);
-  expectShared(
-    measured,
-    (f) =>
-      f.control && f.labelTop !== undefined
-        ? f.control.top - f.labelTop
-        : undefined,
-    "label-to-control distance",
-  );
-  expectShared(
-    measured,
-    (f) => f.control?.height,
-    "control heights",
-    CONTROL_HEIGHT,
-  );
+  expectStackedFields(measured);
   expect(errors).toEqual([]);
 });
+
+/** Opens /nested/allocation with the button group's options loaded. */
+async function gotoAllocation(page: Page, url: string): Promise<void> {
+  await page.goto(`${url}nested/allocation`);
+  await expect(page.getByRole("button", { name: "Partner" })).toBeEnabled();
+}
+
+/** Picks three channels in the multi-select, so its chips wrap the box taller. */
+async function pickThreeChannels(page: Page): Promise<void> {
+  await page.getByRole("combobox", { name: "Channel", exact: true }).click();
+  for (const channel of ["Direct", "Marketplace", "Partner"]) {
+    await page.getByRole("option", { name: channel }).click();
+  }
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(() => urlParam(page, "channel"))
+    .toBe('["Direct","Marketplace","Partner"]');
+}
 
 test("the allocation button group and multi-select share a label line that holds as chips wrap", async ({
   page,
@@ -175,21 +198,12 @@ test("the allocation button group and multi-select share a label line that holds
   test.slow();
   const errors = collectConsoleErrors(page);
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(`${biacDev.url}nested/allocation`);
-  const multi = page.getByRole("combobox", { name: "Channel", exact: true });
-  await expect(page.getByRole("button", { name: "Partner" })).toBeEnabled();
+  await gotoAllocation(page, biacDev.url);
 
   const before = await measureFields(allocationFields(page));
   expectLabelAndControlLines(before);
 
-  await multi.click();
-  for (const channel of ["Direct", "Marketplace", "Partner"]) {
-    await page.getByRole("option", { name: channel }).click();
-  }
-  await page.keyboard.press("Escape");
-  await expect
-    .poll(() => urlParam(page, "channel"))
-    .toBe('["Direct","Marketplace","Partner"]');
+  await pickThreeChannels(page);
 
   // Three chips wrap the multi-select to a taller box; its label stays put
   // and the button group's label stays beside it.
@@ -201,5 +215,26 @@ test("the allocation button group and multi-select share a label line that holds
     before[1]!.labelTop,
   );
   expectShared(after, (f) => f.control?.top, "control tops after picking");
+  expect(errors).toEqual([]);
+});
+
+// The page is too short to scroll its bar past the dock line, so at 375px
+// the stacked inputs are measured at rest.
+test("at 375px the allocation multi-select keeps its label still as chips wrap", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 375, height: 667 });
+  await gotoAllocation(page, biacDev.url);
+
+  const before = await measureFields(allocationFields(page));
+  expectStackedFields(before);
+
+  await pickThreeChannels(page);
+
+  const after = await measureFields(allocationFields(page));
+  expect(after.map((f) => f.labelTop)).toEqual(before.map((f) => f.labelTop));
   expect(errors).toEqual([]);
 });

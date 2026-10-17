@@ -2,8 +2,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, userEvent, waitFor } from "storybook/test";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
-import { withPageFilters } from "../../../../.storybook/decorators";
+import { FakeDuckDb } from "../../data/fake-duckdb";
+import {
+  withPageFilters,
+  withQueryData,
+} from "../../../../.storybook/decorators";
 import { FilterBar } from "./filter-bar";
+import { Slider } from "./slider";
 import { TextInput } from "./text-input";
 import { Toggle } from "./toggle";
 import type { FilterBarProps } from "./types";
@@ -54,6 +59,34 @@ export const Default: Story = {
     await expect(bar.className).toContain("border-transparent");
     await expect(bar.className).not.toContain(" bg-background");
     await expect(canvas.queryByRole("button", { name: "Filters" })).toBeNull();
+  },
+};
+
+/** A slider whose domain collapsed to one value keeps the label line and
+ * the 64 px footprint of a live slider, so its neighbours' labels and the
+ * row's height stay where they were. */
+export const PinnedSliderOnLabelLine: Story = {
+  args: {
+    children: [
+      <TextInput key="region" id="region" title="Region" />,
+      <Slider key="amount" id="amount" title="Amount" min={40} max={40} />,
+    ],
+  },
+  decorators: [
+    withQueryData([], FakeDuckDb.withRows([])),
+    withPageFilters(new FakeFilterUrlPort("")),
+    (Story) => (
+      <div className="pt-20">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const note = await canvas.findByText("only one value in range");
+    const top = (text: string) =>
+      canvas.getByText(text).getBoundingClientRect().top;
+    await expect(top("Amount")).toBe(top("Region"));
+    await expect(note.parentElement!.getBoundingClientRect().height).toBe(64);
   },
 };
 

@@ -16,6 +16,7 @@ import { usePageFilter } from "../../filters/use-page-filter";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
+import { FIELD_LABEL_TEXT } from "./field-line";
 import { Slider } from "./slider";
 import type { SliderProps } from "./types";
 
@@ -125,6 +126,22 @@ async function expectPinnedReadout(value: string): Promise<void> {
   expect(screen.getAllByText(value)).toHaveLength(1);
   expect(screen.queryByRole("slider")).toBeNull();
 }
+
+describe("Slider — field", () => {
+  it("sets its label in the filter bar's label type", async () => {
+    renderSlider();
+
+    await screen.findByRole("slider", { name: "Amount" });
+    expect(screen.getByText("Amount")).toHaveClass(FIELD_LABEL_TEXT);
+  });
+
+  it("keeps the label type when the domain pins to one value", async () => {
+    renderSlider({ data: undefined, valueColumn: undefined, min: 40, max: 40 });
+
+    await expectPinnedReadout("40");
+    expect(screen.getByText("Amount")).toHaveClass(FIELD_LABEL_TEXT);
+  });
+});
 
 describe("Slider — bounds source", () => {
   it("derives min/max from the fence's valueColumn rows", async () => {

@@ -11,6 +11,7 @@ import type { FilterIds } from "../../filters/filter-ids";
 import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
 import { usePageFilter } from "../../filters/use-page-filter";
 import { WidgetError } from "../markdown/states";
+import { FIELD_LABEL_TEXT } from "./field-line";
 import { titleCase } from "./option-items";
 import {
   clampSliderValue,
@@ -205,7 +206,7 @@ function SliderField({
         disabled={disabled}
       >
         <div className="mb-1 flex items-baseline justify-between gap-2">
-          <SliderPrimitive.Label className="cursor-default truncate text-sm font-medium text-label">
+          <SliderPrimitive.Label className={FIELD_LABEL_TEXT}>
             {label}
           </SliderPrimitive.Label>
           <SliderPrimitive.Value className="shrink-0 text-sm font-normal text-muted-foreground-faded" />
@@ -242,9 +243,9 @@ function SliderField({
 
 /**
  * The one-value face — the label, the value and a note in place of a
- * track. `min-h-16` holds `SliderField`'s 64 px footprint: the filter bar
- * aligns its items to the bottom, so a shorter box would drop the label
- * below its neighbours and shift the row whenever the domain collapses.
+ * track. `min-h-16` holds `SliderField`'s 64 px footprint: a slider can be
+ * the tallest input on a filter-bar row, so a shorter box would shrink the
+ * row and shift the page below whenever the domain collapses.
  * Plain text, not a Base UI root: nothing can be slid.
  */
 function PinnedSliderReadout({
@@ -257,7 +258,7 @@ function PinnedSliderReadout({
   return (
     <div className="relative min-h-16 w-64">
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-medium text-label">{label}</span>
+        <span className={FIELD_LABEL_TEXT}>{label}</span>
         <span className="shrink-0 text-sm font-normal text-muted-foreground-faded">
           {value}
         </span>

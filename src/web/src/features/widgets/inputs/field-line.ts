@@ -1,4 +1,12 @@
 /**
+ * The type of every input's label. The slider sets it in a flex row that
+ * also carries the live value; that row keeps `mb-1`, so it is as tall as
+ * {@link FIELD_LABEL_ROW} and its label sits on the same line.
+ */
+export const FIELD_LABEL_TEXT =
+  "cursor-default truncate text-sm font-medium text-label";
+
+/**
  * The two lines a reader scans a `<FilterBar>` row by: every input's label
  * on one, every control box on the other. The bar aligns its children to the
  * top (`items-start`), so one single-row label (`truncate` keeps a long title
@@ -9,8 +17,7 @@
  * Tailwind reads class names literally, so the height lives here as both its
  * fixed and its minimum form: a multi-select grows past it as chips wrap.
  */
-export const FIELD_LABEL_ROW =
-  "mb-1 block cursor-default truncate text-sm font-medium text-label";
+export const FIELD_LABEL_ROW = `mb-1 block ${FIELD_LABEL_TEXT}`;
 
 /**
  * Drops a box with no label row by {@link FIELD_LABEL_ROW}'s height — its
