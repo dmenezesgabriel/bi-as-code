@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync, readdirSync } from "node:fs";
 import { mkdir, open, rename, unlink } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, extname, join, sep } from "node:path";
 import { statFile } from "./stat-file.js";
 
 /** Loader extension → the file it generates sits beside it without it. */
@@ -63,15 +64,37 @@ export function isDataLoaderSource(path: string): boolean {
 /**
  * The loader that generates `target` (a posix path relative to `dataDir`),
  * or `null` when a static file already sits at `target` — a real file
- * always wins — or no `<target>.js` exists.
+ * always wins — or no `<target>.js` exists. A target keeps its own
+ * extension (`quakes.csv` ← `quakes.csv.js`), so a helper module such as
+ * `lib/fetch.js` is never run as the loader of `lib/fetch`.
  *
  * @example
  * findDataLoader("/site/data", "quakes.csv"); // → "/site/data/quakes.csv.js"
  */
 export function findDataLoader(dataDir: string, target: string): string | null {
+  if (extname(target) === "") return null;
   if (statFile(join(dataDir, target))) return null;
   const loader = join(dataDir, `${target}${LOADER_EXTENSION}`);
   return statFile(loader) ? loader : null;
+}
+
+/**
+ * Every target under `dataDir` that a loader generates, as sorted posix
+ * paths — the same set `findDataLoader` serves in dev, so a built site
+ * ships every output a dev page could fetch.
+ *
+ * @example
+ * listDataLoaderTargets("/site/data"); // → ["nested/b.parquet", "quakes.csv"]
+ */
+export function listDataLoaderTargets(dataDir: string): string[] {
+  if (!existsSync(dataDir)) return [];
+  return readdirSync(dataDir, { recursive: true, encoding: "utf8" })
+    .filter(isDataLoaderSource)
+    .map((loader) =>
+      loader.slice(0, -LOADER_EXTENSION.length).split(sep).join("/"),
+    )
+    .filter((target) => findDataLoader(dataDir, target) !== null)
+    .sort();
 }
 
 /**

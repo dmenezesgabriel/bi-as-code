@@ -1,4 +1,10 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  utimesSync,
+} from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { build } from "@/cli/commands/build.js";
@@ -13,6 +19,17 @@ import {
 const PAGE_MARKER = "static-build-marker-7f3a";
 const CSV = "id,region,amount\n1,West,10\n2,East,20\n";
 const PARQUET_STUB = Buffer.from([0x50, 0x41, 0x52, 0x31, 0xde, 0xad]);
+
+// The loader imports a helper beside it, and every run appends one line to
+// runs.log under the project root (its cwd) so a test can count runs.
+const HELPER = 'export const rows = "id,amount\\n1,10\\n";\n';
+const LOADER_OUTPUT = "id,amount\n1,10\n";
+const COUNTING_LOADER = `
+import { appendFileSync } from "node:fs";
+import { rows } from "./lib/rows.js";
+appendFileSync("runs.log", "run\\n");
+process.stdout.write(rows);
+`;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -118,5 +135,62 @@ describe("biac build", () => {
 
     expect(existsSync(join(root, "build", "index.html"))).toBe(true);
     expect(existsSync(join(root, "build", "data"))).toBe(false);
+  }, 120_000);
+});
+
+function projectWithLoader(): string {
+  const root = makeTempProject();
+  writeProjectFile(root, "pages/index.md", "# Loaders\n");
+  writeProjectFile(root, "data/gen.csv.js", COUNTING_LOADER);
+  writeProjectFile(root, "data/lib/rows.js", HELPER);
+  vi.spyOn(console, "log").mockImplementation(() => undefined);
+  return root;
+}
+
+function loaderRuns(root: string): number {
+  const log = join(root, "runs.log");
+  return existsSync(log) ? readFileSync(log, "utf8").split("\n").length - 1 : 0;
+}
+
+describe("biac build — data loaders", () => {
+  it("writes a loader's stdout at its target and ships no loader source", async () => {
+    const root = projectWithLoader();
+
+    await build([root]);
+
+    const outData = join(root, "build", "data");
+    expect(readFileSync(join(outData, "gen.csv"), "utf8")).toBe(LOADER_OUTPUT);
+    expect(buildFilesContaining(outData, "")).toEqual(["gen.csv"]);
+  }, 120_000);
+
+  it("fails naming the loader and its exit code, before writing the site", async () => {
+    const root = projectWithLoader();
+    writeProjectFile(root, "data/broken.csv.js", "process.exit(3);\n");
+
+    await expect(build([root])).rejects.toThrow(
+      /data\/broken\.csv\.js exited with code 3/,
+    );
+    expect(existsSync(join(root, "build", "index.html"))).toBe(false);
+  }, 120_000);
+
+  it("reuses a fresh output and re-runs a loader edited since", async () => {
+    const root = projectWithLoader();
+    await build([root]);
+    await build([root]);
+    const runsWhileFresh = loaderRuns(root);
+    writeProjectFile(
+      root,
+      "data/gen.csv.js",
+      COUNTING_LOADER.replace("write(rows)", 'write("id\\n2\\n")'),
+    );
+    const later = new Date(Date.now() + 5_000);
+    utimesSync(join(root, "data/gen.csv.js"), later, later);
+
+    await build([root]);
+
+    expect(runsWhileFresh).toBe(1);
+    expect(loaderRuns(root)).toBe(2);
+    const output = join(root, "build", "data", "gen.csv");
+    expect(readFileSync(output, "utf8")).toBe("id\n2\n");
   }, 120_000);
 });

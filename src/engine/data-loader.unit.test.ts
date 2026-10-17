@@ -17,6 +17,7 @@ import {
   DataLoaderError,
   findDataLoader,
   isDataLoaderSource,
+  listDataLoaderTargets,
   type DataLoaderLog,
 } from "./data-loader.js";
 
@@ -100,6 +101,44 @@ describe("findDataLoader", () => {
     const root = makeTempProject("biac-loader-");
 
     expect(findDataLoader(join(root, "data"), "a.csv")).toBeNull();
+  });
+
+  it("returns null for a target without its own extension, so a helper module never runs", () => {
+    const root = makeTempProject("biac-loader-");
+    writeProjectFile(root, "data/lib/helper.js", COUNTING_LOADER);
+
+    expect(findDataLoader(join(root, "data"), "lib/helper")).toBeNull();
+  });
+});
+
+describe("listDataLoaderTargets", () => {
+  it("lists every loader's target under data/, nested ones included, sorted", () => {
+    const root = projectWithLoader(COUNTING_LOADER);
+    writeProjectFile(root, "data/nested/deep/b.parquet.js", COUNTING_LOADER);
+
+    const targets = listDataLoaderTargets(join(root, "data"));
+
+    expect(targets).toEqual(["a.csv", "nested/deep/b.parquet"]);
+  });
+
+  it("skips a loader shadowed by a static file at its target", () => {
+    const root = projectWithLoader(COUNTING_LOADER);
+    writeProjectFile(root, "data/a.csv", "x\n1\n");
+
+    expect(listDataLoaderTargets(join(root, "data"))).toEqual([]);
+  });
+
+  it("skips a helper module whose name has no data extension", () => {
+    const root = projectWithLoader(COUNTING_LOADER);
+    writeProjectFile(root, "data/lib/helper.js", "export const x = 1;\n");
+
+    expect(listDataLoaderTargets(join(root, "data"))).toEqual(["a.csv"]);
+  });
+
+  it("returns no targets for a project without data/", () => {
+    const root = makeTempProject("biac-loader-");
+
+    expect(listDataLoaderTargets(join(root, "data"))).toEqual([]);
   });
 });
 

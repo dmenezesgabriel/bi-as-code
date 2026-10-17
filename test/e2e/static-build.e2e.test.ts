@@ -10,9 +10,15 @@ import {
   type DevServer,
 } from "../lib/dev-server.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
-import { cleanupProjects, makeTempProject } from "../lib/temp-project.js";
+import {
+  cleanupProjects,
+  makeTempProject,
+  writeProjectFile,
+} from "../lib/temp-project.js";
 
 const biac = fileURLToPath(new URL("../../bin/biac", import.meta.url));
+const LOADER_OUTPUT = "id,amount\n1,10\n";
+const LOADER = `process.stdout.write(${JSON.stringify(LOADER_OUTPUT)});\n`;
 
 beforeAll(() => {
   // The e2e exercises the shipped artifact: bin/biac runs dist/cli, never src.
@@ -36,6 +42,19 @@ describe("biac build", () => {
     expect(stdout).toContain(`wrote ${join(root, "build")}`);
     expect(existsSync(join(root, "build", "index.html"))).toBe(true);
   }, 120_000);
+
+  it("exits 1 naming a failing data loader and its exit code", () => {
+    const root = makeTempProject("biac-e2e-build-broken-");
+    writeProjectFile(root, "pages/index.md", "# Broken loader\n");
+    writeProjectFile(root, "data/broken.csv.js", "process.exit(3);\n");
+
+    const run = spawnSync(process.execPath, [biac, "build", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("data/broken.csv.js exited with code 3");
+  }, 120_000);
 });
 
 describe("biac preview", () => {
@@ -45,6 +64,7 @@ describe("biac preview", () => {
   beforeAll(() => {
     root = makeTempProject("biac-e2e-preview-");
     copyShippedProject(root);
+    writeProjectFile(root, "data/gen.csv.js", LOADER);
     buildProject(root);
   }, 120_000);
 
@@ -52,7 +72,7 @@ describe("biac preview", () => {
     server?.kill();
   });
 
-  it("serves the build: pages, ranged data reads, SPA fallback, clean SIGINT", async () => {
+  it("serves the build: pages, ranged data reads, loader output, SPA fallback, clean SIGINT", async () => {
     server = await startBiacServer("preview", root);
 
     const page = await fetch(`${server.url}weekly-review`);
@@ -72,6 +92,13 @@ describe("biac preview", () => {
       `bytes 0-3/${statSync(parquet).size}`,
     );
     expect(await ranged.text()).toBe("PAR1");
+
+    const generated = await fetch(`${server.url}data/gen.csv`);
+    expect(generated.status).toBe(200);
+    expect(await generated.text()).toBe(LOADER_OUTPUT);
+    // The loader source was never copied: its path falls through to the shell.
+    const source = await fetch(`${server.url}data/gen.csv.js`);
+    expect(await source.text()).toBe(shell);
 
     const unknown = await fetch(`${server.url}nope`);
     expect(unknown.status).toBe(200);

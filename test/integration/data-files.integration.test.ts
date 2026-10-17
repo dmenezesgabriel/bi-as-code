@@ -239,6 +239,16 @@ describe("/data/ loader output", () => {
     expect(res.status).toBe(404);
   });
 
+  it("404s a helper module's extensionless path without running it", async () => {
+    await serve();
+    writeFile("data/lib/util.js", COUNTING_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/lib/util`);
+
+    expect(res.status).toBe(404);
+    expect(loaderRuns()).toBe(0);
+  });
+
   it("answers a failing loader with a plain-text 500 naming it and its exit code", async () => {
     await serve();
     writeFile(

@@ -1,10 +1,15 @@
 import { existsSync } from "node:fs";
-import { cp } from "node:fs/promises";
-import { join, resolve, sep } from "node:path";
+import { copyFile, cp, mkdir } from "node:fs/promises";
+import { dirname, join, resolve, sep } from "node:path";
 import type { Logger, Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
-import { createDataLoaderCache, type DataLoaderLog } from "./data-loader.js";
+import {
+  createDataLoaderCache,
+  isDataLoaderSource,
+  listDataLoaderTargets,
+  type DataLoaderLog,
+} from "./data-loader.js";
 import { discoverPages } from "./discover-pages.js";
 import {
   manifestModuleSource,
@@ -16,6 +21,7 @@ import {
 } from "./page-compile-error.js";
 import { pageSourceEndpoint } from "./page-source-endpoint.js";
 import { serveDataDir } from "./serve-data-dir.js";
+import { statFile } from "./stat-file.js";
 import type { BiacConfig, SqlTableMap } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
@@ -60,6 +66,8 @@ export function pagesPlugin(projectRoot: string): Plugin {
   // same source is content-only and must not invalidate it.
   let servedManifest: string | undefined;
   let isDevServer = false;
+  // Build only: each loader target → its up-to-date output in the cache.
+  let loaderOutputs: Map<string, string> = new Map();
 
   return {
     name: "biac:pages",
@@ -79,6 +87,15 @@ export function pagesPlugin(projectRoot: string): Plugin {
       // workspace root.
       config.server.fs.allow.push(root);
       isDevServer = config.command === "serve";
+    },
+    // Loaders run before bundling, so a broken one fails the build in the
+    // time it takes to run, and leaves no half-written build/ behind.
+    async buildStart() {
+      if (isDevServer) return;
+      loaderOutputs = await runDataLoaders(
+        root,
+        viteLoaderLog(this.environment.logger),
+      );
     },
     resolveId(id) {
       if (id === VIRTUAL_MANIFEST_ID) return RESOLVED_MANIFEST_ID;
@@ -127,7 +144,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
         "/data",
         serveDataDir(
           dataDir,
-          createDataLoaderCache(root, devLoaderLog(server.config.logger)),
+          createDataLoaderCache(root, viteLoaderLog(server.config.logger)),
         ),
       );
       // The editor's write path into pages/. configureServer runs for the
@@ -147,6 +164,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
         );
       }
       await copyDataDir(dataDir, join(dir, "data"));
+      await copyLoaderOutputs(loaderOutputs, join(dir, "data"));
     },
     hotUpdate({ file, modules }) {
       if (file === configFile) {
@@ -184,12 +202,49 @@ export function pagesPlugin(projectRoot: string): Plugin {
 /**
  * Copies the whole `data/` tree unhashed: `sql:` sources fetch `/data/<path>`
  * in dev and in the built site alike, so page SQL never rewrites. Symlinks
- * are followed because the dev mount serves their targets too. A project
- * without `data/` copies nothing.
+ * are followed because the dev mount serves their targets too. Loader
+ * sources and the modules they import are program code that may hold
+ * credentials, so they are never copied. A project without `data/` copies
+ * nothing.
  */
 async function copyDataDir(dataDir: string, outDataDir: string): Promise<void> {
   if (!existsSync(dataDir)) return;
-  await cp(dataDir, outDataDir, { recursive: true, dereference: true });
+  await cp(dataDir, outDataDir, {
+    recursive: true,
+    dereference: true,
+    filter: (source) => !(isDataLoaderSource(source) && statFile(source)),
+  });
+}
+
+/**
+ * Runs every loader under `<root>/data/` one after another, re-running
+ * only those edited since their cached output, and maps each target to
+ * that output. Every loader runs, not only those a page names: dev serves
+ * any loader's output at `/data/<target>`, so the build ships the same set.
+ */
+async function runDataLoaders(
+  root: string,
+  log: DataLoaderLog,
+): Promise<Map<string, string>> {
+  const cache = createDataLoaderCache(root, log);
+  const outputs = new Map<string, string>();
+  for (const target of listDataLoaderTargets(join(root, "data"))) {
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- one at a time keeps each loader's forwarded stderr contiguous and spares the remote APIs loaders call
+    outputs.set(target, await cache.load(target));
+  }
+  return outputs;
+}
+
+/** Writes each loader output at its target path under `build/data/`. */
+async function copyLoaderOutputs(
+  outputs: Map<string, string>,
+  outDataDir: string,
+): Promise<void> {
+  for (const [target, output] of outputs) {
+    const destination = join(outDataDir, target);
+    await mkdir(dirname(destination), { recursive: true });
+    await copyFile(output, destination);
+  }
 }
 
 /**
@@ -253,11 +308,11 @@ function toPosix(path: string): string {
 }
 
 /**
- * Loader runs in the dev terminal: run lines through vite's logger so they
- * carry its timestamps, the loader's own stderr verbatim — the same stream
- * a loader run by hand would write to.
+ * Loader runs in the dev terminal and the build output: run lines through
+ * vite's logger so they carry its timestamps, the loader's own stderr
+ * verbatim — the same stream a loader run by hand would write to.
  */
-function devLoaderLog(logger: Logger): DataLoaderLog {
+function viteLoaderLog(logger: Logger): DataLoaderLog {
   return {
     info: (line) => logger.info(line, { timestamp: true }),
     error: (line) => logger.error(line, { timestamp: true }),
