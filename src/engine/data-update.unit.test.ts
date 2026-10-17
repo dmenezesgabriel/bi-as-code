@@ -6,6 +6,7 @@ import {
   makeTempProject,
   writeProjectFile,
 } from "../../test/lib/temp-project.js";
+import { DEFAULT_INTERPRETERS } from "./data-loader-interpreters.js";
 import { dataUpdateFor } from "./data-update.js";
 
 afterEach(() => {
@@ -23,7 +24,12 @@ describe("dataUpdateFor — targets", () => {
     const root = projectWith("data/a.csv", "x\n1\n");
     const file = join(root, "data/a.csv");
 
-    const update = dataUpdateFor(file, join(root, "data"), undefined);
+    const update = dataUpdateFor(
+      file,
+      join(root, "data"),
+      undefined,
+      DEFAULT_INTERPRETERS,
+    );
 
     expect(update).toEqual({
       path: "data/a.csv",
@@ -38,6 +44,7 @@ describe("dataUpdateFor — targets", () => {
       join(root, "data/sub/a.csv"),
       join(root, "data"),
       undefined,
+      DEFAULT_INTERPRETERS,
     );
 
     expect(update?.path).toBe("data/sub/a.csv");
@@ -50,6 +57,20 @@ describe("dataUpdateFor — targets", () => {
       join(root, "data/x.csv.js"),
       join(root, "data"),
       undefined,
+      DEFAULT_INTERPRETERS,
+    );
+
+    expect(update?.path).toBe("data/x.csv");
+  });
+
+  it("maps a loader in another language to the target it generates", () => {
+    const root = projectWith("data/x.csv.py", 'print("x")\n');
+
+    const update = dataUpdateFor(
+      join(root, "data/x.csv.py"),
+      join(root, "data"),
+      undefined,
+      DEFAULT_INTERPRETERS,
     );
 
     expect(update?.path).toBe("data/x.csv");
@@ -64,6 +85,7 @@ describe("dataUpdateFor — ignored changes", () => {
       join(root, "pages/index.md"),
       join(root, "data"),
       undefined,
+      DEFAULT_INTERPRETERS,
     );
 
     expect(update).toBeNull();
@@ -76,6 +98,7 @@ describe("dataUpdateFor — ignored changes", () => {
       join(root, "data"),
       join(root, "data"),
       undefined,
+      DEFAULT_INTERPRETERS,
     );
 
     expect(update).toBeNull();
@@ -88,6 +111,7 @@ describe("dataUpdateFor — ignored changes", () => {
       join(root, "data/a.csv"),
       join(root, "data"),
       undefined,
+      DEFAULT_INTERPRETERS,
     );
 
     expect(update).toBeNull();
@@ -100,6 +124,7 @@ describe("dataUpdateFor — ignored changes", () => {
       join(root, "data/gone.csv"),
       join(root, "data"),
       undefined,
+      DEFAULT_INTERPRETERS,
     );
 
     expect(update).toBeNull();
@@ -115,6 +140,7 @@ describe("dataUpdateFor — mtime guard", () => {
       file,
       join(root, "data"),
       statSync(file).mtimeMs,
+      DEFAULT_INTERPRETERS,
     );
 
     expect(update).toBeNull();
@@ -127,7 +153,12 @@ describe("dataUpdateFor — mtime guard", () => {
     const later = new Date(Date.now() + 60_000);
     utimesSync(file, later, later);
 
-    const update = dataUpdateFor(file, join(root, "data"), sent);
+    const update = dataUpdateFor(
+      file,
+      join(root, "data"),
+      sent,
+      DEFAULT_INTERPRETERS,
+    );
 
     expect(update?.version).toBe(statSync(file).mtimeMs);
   });

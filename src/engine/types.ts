@@ -119,3 +119,12 @@ export interface PageCompileError {
   line?: number;
   column?: number;
 }
+
+/**
+ * Data loader interpreters: a loader's last extension (`.py`) → the argv
+ * it runs with, the loader's path appended. An empty argv runs the loader
+ * file itself.
+ */
+export type DataLoaderInterpreters = Readonly<
+  Record<string, readonly string[]>
+>;

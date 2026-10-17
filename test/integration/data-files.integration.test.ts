@@ -265,3 +265,41 @@ describe("/data/ loader output", () => {
     );
   });
 });
+
+describe("/data/ loaders in other languages", () => {
+  const PYTHON_LOADER = `print(${JSON.stringify(LOADER_OUTPUT.trimEnd())})\n`;
+
+  it("serves a Python loader's stdout at the path it generates", async () => {
+    await serve();
+    writeFile("data/gen.csv.py", PYTHON_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/csv");
+    expect(await res.text()).toBe(LOADER_OUTPUT);
+  });
+
+  it("404s the Python loader source", async () => {
+    await serve();
+    writeFile("data/gen.csv.py", PYTHON_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv.py`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("answers two loaders for one target with a plain-text 500 naming both", async () => {
+    await serve();
+    writeFile("data/gen.csv.js", COUNTING_LOADER);
+    writeFile("data/gen.csv.py", PYTHON_LOADER);
+
+    const res = await fetch(`${baseUrl}/data/gen.csv`);
+
+    expect(res.status).toBe(500);
+    expect(await res.text()).toBe(
+      "data/gen.csv has 2 data loaders, expected 1: data/gen.csv.js, data/gen.csv.py",
+    );
+    expect(loaderRuns()).toBe(0);
+  });
+});

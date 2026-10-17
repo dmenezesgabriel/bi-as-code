@@ -1,18 +1,29 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir, open, rename, unlink } from "node:fs/promises";
-import { dirname, extname, join, sep } from "node:path";
+import { dirname, extname, join, relative, sep } from "node:path";
+import { loaderCommand, loaderExtension } from "./data-loader-interpreters.js";
 import { statFile } from "./stat-file.js";
+import type { DataLoaderInterpreters } from "./types.js";
 
-/** Loader extension → the file it generates sits beside it without it. */
-const LOADER_EXTENSION = ".js";
 const STDERR_TAIL_LINES = 20;
+
+/**
+ * A data loader that could not produce its output, with a message that
+ * names the loader — what a dev `500` or a failed build shows.
+ */
+export class DataLoaderFailure extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DataLoaderFailure";
+  }
+}
 
 /**
  * A data loader that exited non-zero. Carries what a dev error or a failed
  * build needs to locate the failure without scrolling the terminal.
  */
-export class DataLoaderError extends Error {
+export class DataLoaderError extends DataLoaderFailure {
   constructor(
     /** Project-relative posix path, e.g. "data/quakes.csv.js". */
     readonly loader: string,
@@ -49,16 +60,20 @@ export interface DataLoaderCache {
 
 /**
  * Whether a `data/` path is program source rather than data: a loader or a
- * module a loader imports. DuckDB never reads `.js`, and a loader may hold
- * credentials, so such a path is never served or shipped. Case-insensitive
- * so `a.csv.JS` stays private on a case-insensitive filesystem.
+ * module a loader imports, i.e. any extension an interpreter runs. DuckDB
+ * never reads those, and a loader may hold credentials, so such a path is
+ * never served or shipped. Case-insensitive so `a.csv.PY` stays private on
+ * a case-insensitive filesystem.
  *
  * @example
- * isDataLoaderSource("quakes.csv.js"); // → true
- * isDataLoaderSource("quakes.csv"); // → false
+ * isDataLoaderSource("quakes.csv.py", DEFAULT_INTERPRETERS); // → true
+ * isDataLoaderSource("quakes.csv", DEFAULT_INTERPRETERS); // → false
  */
-export function isDataLoaderSource(path: string): boolean {
-  return path.toLowerCase().endsWith(LOADER_EXTENSION);
+export function isDataLoaderSource(
+  path: string,
+  interpreters: DataLoaderInterpreters,
+): boolean {
+  return loaderExtension(path, interpreters) !== null;
 }
 
 /**
@@ -66,27 +81,61 @@ export function isDataLoaderSource(path: string): boolean {
  * path without the loader extension.
  *
  * @example
- * dataLoaderTarget("nested/b.parquet.js"); // → "nested/b.parquet"
+ * dataLoaderTarget("nested/b.parquet.py", DEFAULT_INTERPRETERS);
+ * // → "nested/b.parquet"
  */
-export function dataLoaderTarget(loader: string): string {
-  return loader.slice(0, -LOADER_EXTENSION.length).split(sep).join("/");
+export function dataLoaderTarget(
+  loader: string,
+  interpreters: DataLoaderInterpreters,
+): string {
+  const ext = loaderExtension(loader, interpreters) ?? "";
+  return loader
+    .slice(0, loader.length - ext.length)
+    .split(sep)
+    .join("/");
 }
 
 /**
  * The loader that generates `target` (a posix path relative to `dataDir`),
  * or `null` when a static file already sits at `target` — a real file
- * always wins — or no `<target>.js` exists. A target keeps its own
- * extension (`quakes.csv` ← `quakes.csv.js`), so a helper module such as
- * `lib/fetch.js` is never run as the loader of `lib/fetch`.
+ * always wins — or no `<target><ext>` exists for a registered extension.
+ * A target keeps its own extension (`quakes.csv` ← `quakes.csv.py`), so a
+ * helper module such as `lib/fetch.py` is never run as the loader of
+ * `lib/fetch`. Two loaders for one target throw rather than one silently
+ * shadowing the other.
  *
  * @example
- * findDataLoader("/site/data", "quakes.csv"); // → "/site/data/quakes.csv.js"
+ * findDataLoader("/site/data", "quakes.csv", DEFAULT_INTERPRETERS);
+ * // → "/site/data/quakes.csv.py"
  */
-export function findDataLoader(dataDir: string, target: string): string | null {
+export function findDataLoader(
+  dataDir: string,
+  target: string,
+  interpreters: DataLoaderInterpreters,
+): string | null {
   if (extname(target) === "") return null;
   if (statFile(join(dataDir, target))) return null;
-  const loader = join(dataDir, `${target}${LOADER_EXTENSION}`);
-  return statFile(loader) ? loader : null;
+  const loaders = Object.keys(interpreters)
+    .map((ext) => join(dataDir, `${target}${ext}`))
+    .filter((loader) => statFile(loader) !== null);
+  if (loaders.length > 1) throw ambiguousLoaders(dataDir, target, loaders);
+  return loaders[0] ?? null;
+}
+
+/** `dataDir/a.csv.py` as the project-relative posix `data/a.csv.py` messages name. */
+function projectDataPath(dataDir: string, file: string): string {
+  return join("data", relative(dataDir, file)).split(sep).join("/");
+}
+
+function ambiguousLoaders(
+  dataDir: string,
+  target: string,
+  loaders: string[],
+): DataLoaderFailure {
+  const named = loaders.map((loader) => projectDataPath(dataDir, loader));
+  return new DataLoaderFailure(
+    `data/${target} has ${loaders.length} data loaders, expected 1: ${named.join(", ")}`,
+  );
 }
 
 /**
@@ -95,14 +144,19 @@ export function findDataLoader(dataDir: string, target: string): string | null {
  * ships every output a dev page could fetch.
  *
  * @example
- * listDataLoaderTargets("/site/data"); // → ["nested/b.parquet", "quakes.csv"]
+ * listDataLoaderTargets("/site/data", DEFAULT_INTERPRETERS);
+ * // → ["nested/b.parquet", "quakes.csv"]
  */
-export function listDataLoaderTargets(dataDir: string): string[] {
+export function listDataLoaderTargets(
+  dataDir: string,
+  interpreters: DataLoaderInterpreters,
+): string[] {
   if (!existsSync(dataDir)) return [];
-  return readdirSync(dataDir, { recursive: true, encoding: "utf8" })
-    .filter(isDataLoaderSource)
-    .map(dataLoaderTarget)
-    .filter((target) => findDataLoader(dataDir, target) !== null)
+  const targets = readdirSync(dataDir, { recursive: true, encoding: "utf8" })
+    .filter((path) => isDataLoaderSource(path, interpreters))
+    .map((path) => dataLoaderTarget(path, interpreters));
+  return [...new Set(targets)]
+    .filter((target) => findDataLoader(dataDir, target, interpreters) !== null)
     .sort();
 }
 
@@ -117,19 +171,21 @@ export function listDataLoaderTargets(dataDir: string): string[] {
  * Each run is reported to `log`; a cache hit reports nothing.
  *
  * @example
- * const cache = createDataLoaderCache("/site", terminalLog);
+ * const cache = createDataLoaderCache("/site", terminalLog, DEFAULT_INTERPRETERS);
  * await cache.load("quakes.csv"); // → "/site/.biac/cache/data/quakes.csv"
  */
 export function createDataLoaderCache(
   projectRoot: string,
   log: DataLoaderLog,
+  interpreters: DataLoaderInterpreters,
 ): DataLoaderCache {
   const running = new Map<string, Promise<string>>();
+  const runContext: LoaderRunContext = { projectRoot, log, interpreters };
   return {
     load(target) {
       const inFlight = running.get(target);
       if (inFlight) return inFlight;
-      const run = loadFresh(projectRoot, target, log).finally(() =>
+      const run = loadFresh(runContext, target).finally(() =>
         running.delete(target),
       );
       running.set(target, run);
@@ -138,36 +194,39 @@ export function createDataLoaderCache(
   };
 }
 
+/** What every loader run of one cache shares. */
+interface LoaderRunContext {
+  projectRoot: string;
+  log: DataLoaderLog;
+  interpreters: DataLoaderInterpreters;
+}
+
 async function loadFresh(
-  projectRoot: string,
+  context: LoaderRunContext,
   target: string,
-  log: DataLoaderLog,
 ): Promise<string> {
-  const loader = join(projectRoot, "data", `${target}${LOADER_EXTENSION}`);
-  const output = join(projectRoot, ".biac", "cache", "data", target);
-  const loaderStats = statFile(loader);
-  if (!loaderStats) throw new Error(`no data loader at ${loader}`);
+  const dataDir = join(context.projectRoot, "data");
+  const loader = findDataLoader(dataDir, target, context.interpreters);
+  if (!loader) throw new Error(`no data loader for ${join(dataDir, target)}`);
+  const output = join(context.projectRoot, ".biac", "cache", "data", target);
   const outputStats = statFile(output);
-  if (outputStats && outputStats.mtimeMs >= loaderStats.mtimeMs) return output;
-  await runReported(
-    projectRoot,
-    `data/${target}${LOADER_EXTENSION}`,
-    output,
-    log,
-  );
+  if (outputStats && outputStats.mtimeMs >= statFile(loader)!.mtimeMs) {
+    return output;
+  }
+  await runReported(context, projectDataPath(dataDir, loader), output);
   return output;
 }
 
 /** Runs the loader into `output`, logging the outcome either way. */
 async function runReported(
-  projectRoot: string,
+  context: LoaderRunContext,
   loader: string,
   output: string,
-  log: DataLoaderLog,
 ): Promise<void> {
+  const { log } = context;
   const started = performance.now();
   try {
-    await runIntoFile(projectRoot, loader, output, log);
+    await runIntoFile(context, loader, output);
   } catch (error) {
     log.error(error instanceof Error ? error.message : String(error));
     throw error;
@@ -182,16 +241,15 @@ async function runReported(
 
 /** Writes the loader's stdout to a temp file, renamed over `output` only on success. */
 async function runIntoFile(
-  projectRoot: string,
+  context: LoaderRunContext,
   loader: string,
   output: string,
-  log: DataLoaderLog,
 ): Promise<void> {
   await mkdir(dirname(output), { recursive: true });
   const temp = `${output}.${process.pid}.tmp`;
   const file = await open(temp, "w");
   try {
-    await runLoader(projectRoot, loader, file.fd, log);
+    await runLoader(context, loader, file.fd);
   } catch (error) {
     await unlink(temp);
     throw error;
@@ -201,26 +259,37 @@ async function runIntoFile(
   await rename(temp, output);
 }
 
-/** Runs the loader with the node running biac, so no `PATH` lookup is involved. */
+/** Runs the loader with its extension's interpreter, from the project root. */
 function runLoader(
-  projectRoot: string,
+  context: LoaderRunContext,
   loader: string,
   stdoutFd: number,
-  log: DataLoaderLog,
 ): Promise<void> {
-  const child = spawn(process.execPath, [loader], {
-    cwd: projectRoot,
+  const [command, ...args] = loaderCommand(loader, context.interpreters);
+  const child = spawn(command!, args, {
+    cwd: context.projectRoot,
     stdio: ["ignore", stdoutFd, "pipe"],
     windowsHide: true,
   });
-  const stderrTail = collectStderrTail(child, log);
+  const stderrTail = collectStderrTail(child, context.log);
   return new Promise((resolve, reject) => {
-    child.on("error", reject);
+    child.on("error", (error: NodeJS.ErrnoException) =>
+      reject(
+        error.code === "ENOENT" ? missingCommand(loader, command!) : error,
+      ),
+    );
     child.on("close", (code) => {
       if (code === 0) return resolve();
       reject(new DataLoaderError(loader, code ?? -1, stderrTail()));
     });
   });
+}
+
+/** The raw `spawn ENOENT` names neither the loader nor what to install. */
+function missingCommand(loader: string, command: string): DataLoaderFailure {
+  return new DataLoaderFailure(
+    `data loader ${loader} could not start: command ${JSON.stringify(command)} not found on PATH`,
+  );
 }
 
 /**

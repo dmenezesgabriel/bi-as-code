@@ -4,12 +4,13 @@ import { extname, relative, sep } from "node:path";
 import type { Connect } from "vite";
 import { decodePathname, resolveContained } from "./contained-path.js";
 import {
-  DataLoaderError,
+  DataLoaderFailure,
   findDataLoader,
   isDataLoaderSource,
   type DataLoaderCache,
 } from "./data-loader.js";
 import { statFile } from "./stat-file.js";
+import type { DataLoaderInterpreters } from "./types.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".csv": "text/csv",
@@ -23,20 +24,27 @@ const CONTENT_TYPES: Record<string, string> = {
  * copy `biac build` emits, so page SQL never rewrites between modes.
  * Byte ranges are honored because the wasm HTTP filesystem reads parquet
  * footers with ranged GETs; `no-cache` keeps edits visible on refetch.
- * A path with no file but a `<path>.js` loader beside it serves the
- * loader's cached output; loader sources themselves are never served.
- * A failing loader answers a plain-text `500` carrying its error, the only
- * place a page can read why: DuckDB's HTTP reader drops response bodies.
+ * A path with no file but a loader beside it (`<path><ext>` for any
+ * extension in `interpreters`) serves the loader's cached output; loader
+ * sources themselves are never served. A failing loader — non-zero exit,
+ * interpreter not on `PATH`, or a second loader for the same path —
+ * answers a plain-text `500` carrying its error, the only place a page can
+ * read why: DuckDB's HTTP reader drops response bodies.
  *
  * @example
  * server.middlewares.use(
  *   "/data",
- *   serveDataDir(join(root, "data"), createDataLoaderCache(root)),
+ *   serveDataDir(
+ *     join(root, "data"),
+ *     createDataLoaderCache(root, log, DEFAULT_INTERPRETERS),
+ *     DEFAULT_INTERPRETERS,
+ *   ),
  * );
  */
 export function serveDataDir(
   dataDir: string,
   loaders: DataLoaderCache,
+  interpreters: DataLoaderInterpreters,
 ): Connect.NextHandleFunction {
   return (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
@@ -44,27 +52,44 @@ export function serveDataDir(
     if (pathname === null) return writeStatus(res, 400);
     const file = resolveContained(dataDir, pathname);
     if (file === null) return writeStatus(res, 403);
-    if (isDataLoaderSource(file)) return writeStatus(res, 404);
+    if (isDataLoaderSource(file, interpreters)) return writeStatus(res, 404);
     const stats = statFile(file);
     if (stats !== null) return sendFile(req, res, file, stats.size);
     const target = relative(dataDir, file).split(sep).join("/");
-    if (findDataLoader(dataDir, target) === null) return writeStatus(res, 404);
-    sendLoaderOutput(req, res, loaders, target).catch(next);
+    sendLoaderOutput(
+      req,
+      res,
+      { dataDir, loaders, interpreters },
+      target,
+    ).catch(next);
   };
 }
 
-/** Runs the target's loader if its cached output is stale, then serves it. */
+/** Where `serveDataDir` finds and runs loaders. */
+interface DataDirLoaders {
+  dataDir: string;
+  loaders: DataLoaderCache;
+  interpreters: DataLoaderInterpreters;
+}
+
+/**
+ * Runs the target's loader if its cached output is stale, then serves it;
+ * `404` when no loader generates the target.
+ */
 async function sendLoaderOutput(
   req: IncomingMessage,
   res: ServerResponse,
-  loaders: DataLoaderCache,
+  { dataDir, loaders, interpreters }: DataDirLoaders,
   target: string,
 ): Promise<void> {
   let output: string;
   try {
+    if (findDataLoader(dataDir, target, interpreters) === null) {
+      return writeStatus(res, 404);
+    }
     output = await loaders.load(target);
   } catch (error) {
-    if (!(error instanceof DataLoaderError)) throw error;
+    if (!(error instanceof DataLoaderFailure)) throw error;
     sendLoaderFailure(res, error);
     return;
   }
@@ -77,7 +102,10 @@ async function sendLoaderOutput(
  * stack (the loader cache already logged the failure) nor opens its error
  * overlay over pages that may not query this file.
  */
-function sendLoaderFailure(res: ServerResponse, error: DataLoaderError): void {
+function sendLoaderFailure(
+  res: ServerResponse,
+  error: DataLoaderFailure,
+): void {
   res.writeHead(500, {
     "Content-Type": "text/plain; charset=utf-8",
     "Cache-Control": "no-cache",

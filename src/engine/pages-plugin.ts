@@ -5,6 +5,7 @@ import type { Logger, NormalizedHotChannel, Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
+import { DEFAULT_INTERPRETERS } from "./data-loader-interpreters.js";
 import {
   createDataLoaderCache,
   isDataLoaderSource,
@@ -73,7 +74,12 @@ export function pagesPlugin(projectRoot: string): Plugin {
   // Vite has one HMR channel, not one per page: every open page gets the
   // update and drops paths its queries do not read.
   const pushDataUpdate = (hot: NormalizedHotChannel, file: string): boolean => {
-    const update = dataUpdateFor(file, dataDir, sentDataVersions.get(file));
+    const update = dataUpdateFor(
+      file,
+      dataDir,
+      sentDataVersions.get(file),
+      DEFAULT_INTERPRETERS,
+    );
     if (!update) return false;
     sentDataVersions.set(file, update.version);
     hot.send(DATA_UPDATE_EVENT, update);
@@ -157,7 +163,12 @@ export function pagesPlugin(projectRoot: string): Plugin {
         "/data",
         serveDataDir(
           dataDir,
-          createDataLoaderCache(root, viteLoaderLog(server.config.logger)),
+          createDataLoaderCache(
+            root,
+            viteLoaderLog(server.config.logger),
+            DEFAULT_INTERPRETERS,
+          ),
+          DEFAULT_INTERPRETERS,
         ),
       );
       // The editor's write path into pages/. configureServer runs for the
@@ -229,7 +240,8 @@ async function copyDataDir(dataDir: string, outDataDir: string): Promise<void> {
   await cp(dataDir, outDataDir, {
     recursive: true,
     dereference: true,
-    filter: (source) => !(isDataLoaderSource(source) && statFile(source)),
+    filter: (source) =>
+      !(isDataLoaderSource(source, DEFAULT_INTERPRETERS) && statFile(source)),
   });
 }
 
@@ -243,9 +255,10 @@ async function runDataLoaders(
   root: string,
   log: DataLoaderLog,
 ): Promise<Map<string, string>> {
-  const cache = createDataLoaderCache(root, log);
+  const cache = createDataLoaderCache(root, log, DEFAULT_INTERPRETERS);
   const outputs = new Map<string, string>();
-  for (const target of listDataLoaderTargets(join(root, "data"))) {
+  const dataDir = join(root, "data");
+  for (const target of listDataLoaderTargets(dataDir, DEFAULT_INTERPRETERS)) {
     // eslint-disable-next-line react-doctor/async-await-in-loop -- one at a time keeps each loader's forwarded stderr contiguous and spares the remote APIs loaders call
     outputs.set(target, await cache.load(target));
   }
