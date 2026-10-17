@@ -5,6 +5,7 @@ import { Popover } from "../../../components/popover";
 import type { Filter } from "../../filters/filter";
 import { usePageFilter } from "../../filters/use-page-filter";
 import { WidgetError } from "../markdown/states";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import { titleCase } from "./option-items";
 import {
   DATE_RANGE_PRESETS,
@@ -14,8 +15,7 @@ import {
 } from "./resolve-date-range";
 import type { DateRangeProps } from "./types";
 
-const triggerClass =
-  "flex h-8 w-full cursor-default items-center gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
+const triggerClass = `flex ${FIELD_CONTROL_HEIGHT} w-full cursor-default items-center gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60`;
 
 const fieldClass =
   "h-7 w-full rounded-md border border-input bg-field px-1.5 text-sm text-foreground";
@@ -121,10 +121,7 @@ export function DateRange({
 
   return (
     <div className="relative w-64">
-      <label
-        htmlFor={id}
-        className="mb-1 block cursor-default truncate text-sm font-medium text-label"
-      >
+      <label htmlFor={id} className={FIELD_LABEL_ROW}>
         {title ?? titleCase(id)}
       </label>
       <Popover.Root open={open} onOpenChange={setOpen}>

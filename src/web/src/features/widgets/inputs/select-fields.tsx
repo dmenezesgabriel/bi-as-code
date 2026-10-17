@@ -10,7 +10,13 @@ import {
   SearchIcon,
   XIcon,
 } from "../../../components/icons";
+import { cn } from "../../../lib/cn";
 import type { Filter } from "../../filters/filter";
+import {
+  FIELD_CONTROL_HEIGHT,
+  FIELD_CONTROL_MIN_HEIGHT,
+  FIELD_LABEL_ROW,
+} from "./field-line";
 import type { OptionItem, SelectValue } from "./types";
 
 /** Case-insensitive substring match over value and label — evidence's `filteredOptions`. */
@@ -76,14 +82,16 @@ export function MultiSelectField({
         disabled={loading || !filter}
       >
         {title !== undefined && (
-          <label
-            htmlFor={id}
-            className="mb-1 block cursor-default text-sm font-medium text-label"
-          >
+          <label htmlFor={id} className={FIELD_LABEL_ROW}>
             {title}
           </label>
         )}
-        <Combobox.InputGroup className="flex min-h-8 w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2 py-1 text-sm text-foreground select-none hover:bg-accent focus-ring-within data-disabled:cursor-not-allowed data-disabled:opacity-60">
+        <Combobox.InputGroup
+          className={cn(
+            FIELD_CONTROL_MIN_HEIGHT,
+            "flex w-full cursor-text flex-wrap items-center gap-1 rounded-md border border-input bg-field px-2 py-1 text-sm text-foreground select-none hover:bg-accent focus-ring-within data-disabled:cursor-not-allowed data-disabled:opacity-60",
+          )}
+        >
           <Combobox.Value>
             {(selected: readonly string[]) => (
               <SelectionChips
@@ -138,13 +146,14 @@ export function SingleSelectField({
         disabled={loading || !filter}
       >
         {title !== undefined && (
-          <Combobox.Label className="mb-1 block cursor-default text-sm font-medium text-label">
-            {title}
-          </Combobox.Label>
+          <Combobox.Label className={FIELD_LABEL_ROW}>{title}</Combobox.Label>
         )}
         <Combobox.Trigger
           id={id}
-          className="flex h-8 w-full cursor-default items-center justify-between gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 data-placeholder:text-muted-foreground-faded"
+          className={cn(
+            FIELD_CONTROL_HEIGHT,
+            "flex w-full cursor-default items-center justify-between gap-2 rounded-md border border-input bg-field px-2 text-sm text-foreground select-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 data-placeholder:text-muted-foreground-faded",
+          )}
         >
           <Combobox.Value>
             {(selected: string | null) =>

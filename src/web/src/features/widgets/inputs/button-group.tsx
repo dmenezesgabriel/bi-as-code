@@ -1,12 +1,14 @@
 import type { ReactElement } from "react";
 import { Toggle, ToggleGroup } from "../../../components/toggle-group";
 import { LoaderCircleIcon } from "../../../components/icons";
+import { cn } from "../../../lib/cn";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import { titleCase } from "./option-items";
 import type { ButtonGroupProps } from "./types";
 import { toSelectionArray, useSelectInput } from "./use-select-input";
 
 const toggleClass =
-  "inline-flex h-8 shrink-0 cursor-default items-center border-r border-input px-3 text-sm text-foreground select-none last:border-r-0 hover:bg-accent focus-visible:z-10 disabled:cursor-not-allowed disabled:opacity-60 data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90";
+  "inline-flex shrink-0 cursor-default items-center border-r border-input px-3 text-sm text-foreground select-none last:border-r-0 hover:bg-accent focus-visible:z-10 disabled:cursor-not-allowed disabled:opacity-60 data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90";
 
 /**
  * The `<ButtonGroup>` MDX widget — a segmented control filter input: one
@@ -40,7 +42,7 @@ export function ButtonGroup({
   const labelId = `${props.id}-label`;
   return (
     <div className="relative max-w-full">
-      <span id={labelId} className="mb-1 block text-sm font-medium text-label">
+      <span id={labelId} className={FIELD_LABEL_ROW}>
         {label}
       </span>
       <div className="overflow-x-auto pb-1">
@@ -53,7 +55,10 @@ export function ButtonGroup({
           multiple={multiple}
           disabled={loading || !filter || items.length === 0}
           aria-labelledby={labelId}
-          className="inline-flex w-fit items-stretch overflow-hidden rounded-md border border-input bg-field data-disabled:opacity-80"
+          className={cn(
+            FIELD_CONTROL_HEIGHT,
+            "inline-flex w-fit items-stretch overflow-hidden rounded-md border border-input bg-field data-disabled:opacity-80",
+          )}
         >
           {items.length === 0 ? (
             <Toggle value="__empty" disabled className={toggleClass}>

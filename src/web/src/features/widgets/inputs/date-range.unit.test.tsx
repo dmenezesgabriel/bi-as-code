@@ -6,6 +6,7 @@ import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import { lastWrittenParam } from "./select-harness";
 import { DateRange } from "./date-range";
 import type { DateRangeProps } from "./types";
@@ -73,6 +74,13 @@ describe("DateRange — rendering", () => {
   it("labels itself titleCase(id) when title is absent", () => {
     renderDateRange({ title: undefined });
     expect(screen.getByText("Ordered")).toBeDefined();
+  });
+
+  it("sits on the filter bar's label row and control height", () => {
+    renderDateRange();
+
+    expect(screen.getByText("Ordered")).toHaveClass(FIELD_LABEL_ROW);
+    expect(trigger()).toHaveClass(FIELD_CONTROL_HEIGHT);
   });
 
   it("renders an inline alert for an unrecognized initialValue", async () => {

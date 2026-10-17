@@ -110,101 +110,96 @@ async function gotoWeeklyReview(page: Page, url: string): Promise<void> {
   await expect(page.getByRole("slider", { name: "Maximum" })).toBeVisible();
 }
 
-// Expected to fail until the inputs share one control height and label row:
-// Amount's label sits 8 px above Region's and Ordered's, controls are 32 px.
-test.fail(
-  "the resting weekly-review bar puts its labels on one line and its controls on another, one height",
-  async ({ page, biacDev }) => {
-    test.slow();
-    const errors = collectConsoleErrors(page);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await gotoWeeklyReview(page, biacDev.url);
+test("the resting weekly-review bar puts its labels on one line and its controls on another, one height", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await gotoWeeklyReview(page, biacDev.url);
 
-    expectLabelAndControlLines(await measureFields(weeklyReviewFields(page)));
-    expect(errors).toEqual([]);
-  },
-);
+  expectLabelAndControlLines(await measureFields(weeklyReviewFields(page)));
+  expect(errors).toEqual([]);
+});
 
-// Expected to fail until the inputs share one label row: Amount's label
-// sits 8 px above Region's inside the opened panel.
-test.fail(
-  "the opened docked weekly-review bar keeps one label line and one control line",
-  async ({ page, biacDev }) => {
-    test.slow();
-    const errors = collectConsoleErrors(page);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await gotoWeeklyReview(page, biacDev.url);
-    await openDockedFilters(page);
+// The opened panel wraps the toggle onto a row of its own, so no neighbour's
+// control line is there for it to miss.
+test("the opened docked weekly-review bar keeps one label line and one control line", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await gotoWeeklyReview(page, biacDev.url);
+  await openDockedFilters(page);
 
-    expectLabelAndControlLines(await measureFields(weeklyReviewFields(page)));
-    expect(errors).toEqual([]);
-  },
-);
+  expectLabelAndControlLines(await measureFields(weeklyReviewFields(page)));
+  expect(errors).toEqual([]);
+});
 
-// Expected to fail until the inputs share one control height: 32 px boxes.
-test.fail(
-  "at 375px the opened docked bar stacks its inputs with one label gap and one control height",
-  async ({ page, biacDev }) => {
-    test.slow();
-    const errors = collectConsoleErrors(page);
-    await page.setViewportSize({ width: 375, height: 667 });
-    await gotoWeeklyReview(page, biacDev.url);
-    await openDockedFilters(page);
+test("at 375px the opened docked bar stacks its inputs with one label gap and one control height", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 375, height: 667 });
+  await gotoWeeklyReview(page, biacDev.url);
+  await openDockedFilters(page);
 
-    const measured = await measureFields(weeklyReviewFields(page));
-    expect(flexLines(measured)).toHaveLength(measured.length);
-    expectShared(
-      measured,
-      (f) =>
-        f.control && f.labelTop !== undefined
-          ? f.control.top - f.labelTop
-          : undefined,
-      "label-to-control distance",
-    );
-    expectShared(
-      measured,
-      (f) => f.control?.height,
-      "control heights",
-      CONTROL_HEIGHT,
-    );
-    expect(errors).toEqual([]);
-  },
-);
+  const measured = await measureFields(weeklyReviewFields(page));
+  expect(flexLines(measured)).toHaveLength(measured.length);
+  expectShared(
+    measured,
+    (f) =>
+      f.control && f.labelTop !== undefined
+        ? f.control.top - f.labelTop
+        : undefined,
+    "label-to-control distance",
+  );
+  expectShared(
+    measured,
+    (f) => f.control?.height,
+    "control heights",
+    CONTROL_HEIGHT,
+  );
+  expect(errors).toEqual([]);
+});
 
-// Expected to fail until labels hold their line: the multi-select's label
-// sits 6 px below the button group's, then 16 px above it with 3 chips.
-test.fail(
-  "the allocation button group and multi-select share a label line that holds as chips wrap",
-  async ({ page, biacDev }) => {
-    test.slow();
-    const errors = collectConsoleErrors(page);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(`${biacDev.url}nested/allocation`);
-    const multi = page.getByRole("combobox", { name: "Channel", exact: true });
-    await expect(page.getByRole("button", { name: "Partner" })).toBeEnabled();
+test("the allocation button group and multi-select share a label line that holds as chips wrap", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`${biacDev.url}nested/allocation`);
+  const multi = page.getByRole("combobox", { name: "Channel", exact: true });
+  await expect(page.getByRole("button", { name: "Partner" })).toBeEnabled();
 
-    const before = await measureFields(allocationFields(page));
-    expectLabelAndControlLines(before);
+  const before = await measureFields(allocationFields(page));
+  expectLabelAndControlLines(before);
 
-    await multi.click();
-    for (const channel of ["Direct", "Marketplace", "Partner"]) {
-      await page.getByRole("option", { name: channel }).click();
-    }
-    await page.keyboard.press("Escape");
-    await expect
-      .poll(() => urlParam(page, "channel"))
-      .toBe('["Direct","Marketplace","Partner"]');
+  await multi.click();
+  for (const channel of ["Direct", "Marketplace", "Partner"]) {
+    await page.getByRole("option", { name: channel }).click();
+  }
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(() => urlParam(page, "channel"))
+    .toBe('["Direct","Marketplace","Partner"]');
 
-    // Three chips wrap the multi-select to a taller box; its label stays put
-    // and the button group's label stays beside it.
-    const after = await measureFields(allocationFields(page));
-    expectShared(
-      after,
-      (f) => f.labelTop,
-      "label tops after picking",
-      before[1]!.labelTop,
-    );
-    expectShared(after, (f) => f.control?.top, "control tops after picking");
-    expect(errors).toEqual([]);
-  },
-);
+  // Three chips wrap the multi-select to a taller box; its label stays put
+  // and the button group's label stays beside it.
+  const after = await measureFields(allocationFields(page));
+  expectShared(
+    after,
+    (f) => f.labelTop,
+    "label tops after picking",
+    before[1]!.labelTop,
+  );
+  expectShared(after, (f) => f.control?.top, "control tops after picking");
+  expect(errors).toEqual([]);
+});

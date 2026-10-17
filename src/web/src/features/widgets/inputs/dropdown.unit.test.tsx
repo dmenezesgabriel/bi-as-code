@@ -6,6 +6,7 @@ import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import { Dropdown } from "./dropdown";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import {
   clearViaPopup,
   clickOption,
@@ -44,6 +45,15 @@ function renderDropdown(
     { db: fakeDb(), blocks: [ORDERS], ...opts },
   );
 }
+
+describe("Dropdown — field", () => {
+  it("sits on the filter bar's label row and control height", () => {
+    renderDropdown({ title: "Region" });
+
+    expect(screen.getByText("Region")).toHaveClass(FIELD_LABEL_ROW);
+    expect(comboboxField()).toHaveClass(FIELD_CONTROL_HEIGHT);
+  });
+});
 
 describe("Dropdown — option source", () => {
   it("lists distinct valueColumn values in fence order", async () => {

@@ -6,6 +6,7 @@ import { useFilteredQueryRows } from "../../filters/use-filtered-query-rows";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW_OFFSET } from "./field-line";
 import { ParamsBridge } from "./params-bridge";
 import { lastWrittenParam } from "./select-harness";
 import { Toggle } from "./toggle";
@@ -97,6 +98,15 @@ describe("Toggle — rendering", () => {
   it("labels itself titleCase(id) when label is absent", () => {
     renderToggle({ label: undefined });
     expect(switchEl("Large Orders")).toBeDefined();
+  });
+
+  it("drops its labelless box one label row onto the bar's control line", () => {
+    renderToggle();
+
+    expect(switchEl().parentElement).toHaveClass(
+      FIELD_LABEL_ROW_OFFSET,
+      FIELD_CONTROL_HEIGHT,
+    );
   });
 });
 

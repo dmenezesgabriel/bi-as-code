@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
+import { FIELD_CONTROL_MIN_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import { MultiSelect } from "./multi-select";
 import {
   CHANNEL_MIX,
@@ -49,6 +50,15 @@ function removeButton(value: string) {
 function lastParam(port: FakeFilterUrlPort): string | null {
   return port.written.at(-1)?.searchParams.get("channel") ?? null;
 }
+
+describe("MultiSelect — field", () => {
+  it("sits on the filter bar's label row and grows from its control height", () => {
+    renderMultiSelect({ title: "Channel" });
+
+    expect(screen.getByText("Channel")).toHaveClass(FIELD_LABEL_ROW);
+    expect(screen.getByRole("group")).toHaveClass(FIELD_CONTROL_MIN_HEIGHT);
+  });
+});
 
 describe("MultiSelect — option source", () => {
   it("lists distinct valueColumn values in fence order", async () => {

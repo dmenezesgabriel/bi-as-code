@@ -4,6 +4,7 @@ import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { ButtonGroup } from "./button-group";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import {
   CHANNEL_MIX,
   CHANNEL_ROWS,
@@ -90,6 +91,16 @@ async function expectAlert(...fragments: string[]): Promise<void> {
   }
   expect(screen.queryByRole("group")).toBeNull();
 }
+
+describe("ButtonGroup — field", () => {
+  it("sits on the filter bar's label row and control height", () => {
+    renderButtonGroup();
+
+    expect(screen.getByText("Channel")).toHaveClass(FIELD_LABEL_ROW);
+    // The bordered group is the box; its buttons stretch to fill it.
+    expect(channelGroup()).toHaveClass(FIELD_CONTROL_HEIGHT);
+  });
+});
 
 describe("ButtonGroup — option source", () => {
   it("renders distinct valueColumn values in fence order as toggle buttons", async () => {

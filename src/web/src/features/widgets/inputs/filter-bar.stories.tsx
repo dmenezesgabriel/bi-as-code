@@ -47,7 +47,7 @@ export const Default: Story = {
     const inputs = canvas.getByText("Region").parentElement!;
     const bar = inputs.closest(".sticky")!;
     await firstIntersectionReading(bar.previousElementSibling!);
-    for (const cls of ["flex-row", "items-end", "gap-4"]) {
+    for (const cls of ["flex-row", "items-start", "gap-4"]) {
       await expect(inputs.className).toContain(cls);
     }
     await expect(bar.className).toContain("top-(--dock-top,4rem)");

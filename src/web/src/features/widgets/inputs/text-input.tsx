@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { Input } from "../../../components/input";
+import { cn } from "../../../lib/cn";
 import { usePageFilter } from "../../filters/use-page-filter";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import { titleCase } from "./option-items";
 import type { TextInputProps } from "./types";
 
@@ -57,10 +59,7 @@ export function TextInput({
 
   return (
     <div className="relative w-64">
-      <label
-        htmlFor={id}
-        className="mb-1 block cursor-default truncate text-sm font-medium text-label"
-      >
+      <label htmlFor={id} className={FIELD_LABEL_ROW}>
         {title ?? titleCase(id)}
       </label>
       <Input
@@ -73,7 +72,10 @@ export function TextInput({
         }}
         placeholder={placeholder ?? "Enter text..."}
         disabled={!filter}
-        className="h-8 w-full rounded-md border border-input bg-field px-2 text-sm text-foreground placeholder:text-muted-foreground-faded disabled:cursor-not-allowed disabled:opacity-60"
+        className={cn(
+          FIELD_CONTROL_HEIGHT,
+          "w-full rounded-md border border-input bg-field px-2 text-sm text-foreground placeholder:text-muted-foreground-faded disabled:cursor-not-allowed disabled:opacity-60",
+        )}
       />
     </div>
   );

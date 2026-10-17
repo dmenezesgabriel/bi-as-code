@@ -98,7 +98,7 @@ describe("FilterBar", () => {
         "flex",
         "flex-row",
         "flex-wrap",
-        "items-end",
+        "items-start",
         "gap-4",
       ]) {
         expect(inputsPanel().className).toContain(cls);

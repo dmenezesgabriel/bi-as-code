@@ -96,7 +96,7 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
           keepMounted
           {...panelFocusProps}
           className={cn(
-            "flex flex-row flex-wrap items-end gap-4",
+            "flex flex-row flex-wrap items-start gap-4",
             !resting &&
               cn(
                 CARD_FACE,

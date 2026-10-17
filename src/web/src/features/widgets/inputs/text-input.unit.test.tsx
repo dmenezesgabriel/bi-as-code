@@ -8,6 +8,7 @@ import { usePageFilter } from "../../filters/use-page-filter";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
+import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
 import { ParamsBridge } from "./params-bridge";
 import { expectParamCleared, lastWrittenParam } from "./select-harness";
 import { TextInput } from "./text-input";
@@ -100,6 +101,13 @@ describe("TextInput — field", () => {
   it("honors the placeholder prop", () => {
     renderTextInput({ placeholder: "Find an order" });
     expect(field()).toHaveAttribute("placeholder", "Find an order");
+  });
+
+  it("sits on the filter bar's label row and control height", () => {
+    renderTextInput();
+
+    expect(screen.getByText("Search")).toHaveClass(FIELD_LABEL_ROW);
+    expect(field()).toHaveClass(FIELD_CONTROL_HEIGHT);
   });
 });
 
