@@ -1,6 +1,6 @@
 # SL-044 — Data loaders in Python, shell and TypeScript, plus an `interpreters` map
 
-Milestone: Phase 3 — Data loaders · State: open · Depends on: SL-042, SL-043 · Closes: GAP-038
+Milestone: Phase 3 — Data loaders · State: partial — awaits its demo · Depends on: SL-042, SL-043 · Closes: GAP-038
 
 ## Outcome
 
@@ -8,14 +8,14 @@ A user can write a data loader in Python (`data/<name>.<ext>.py`), shell (`.sh`)
 
 ## Demo
 
-1. Cold start: `bin/biac dev`, open the example page fed by the new loaders (T3 names it). Its tables come from `data/<x>.csv.py` and `data/<y>.csv.sh`; the dev log shows one run line per loader, each naming its file, output size and duration.
-2. `curl -i http://localhost:5175/data/<x>.csv.py` and `.../<y>.csv.sh` → `404`. `curl -i .../data/<x>.csv` → `200 text/csv`, the Python loader's stdout.
+1. Cold start: `bin/biac dev`, open `/regional-orders`. Its tables come from `data/region-revenue.csv.py` and `data/daily-orders.csv.sh`; the dev log shows one run line per loader, each naming its file, output size and duration.
+2. `curl -i http://localhost:5175/data/region-revenue.csv.py` and `.../daily-orders.csv.sh` → `404`. `curl -i .../data/region-revenue.csv` → `200 text/csv`, the Python loader's stdout.
 3. Edit the `.py` loader so it emits different figures and save: the open page shows them with no reload (`window.__mark` set before the edit is still `1`).
-4. Break it (`raise SystemExit(3)` at the top) and save: the page shows the located error (`data loader data/<x>.csv.py exited with code 3, expected 0`). Restore it.
-5. In `biac.config.ts` set `interpreters: { ".py": null }` and save: `/data/<x>.csv` → `404` and the page shows that table as unreadable. Remove the line: it comes back.
-6. Add a second loader for the same target (`data/<x>.csv.js` beside `data/<x>.csv.py`): `/data/<x>.csv` answers `500` naming both files. Delete it.
-7. `bin/biac build`: exit 0, `find build/data -name '*.py' -o -name '*.sh' -o -name '*.ts'` prints nothing, `build/data/<x>.csv` and `build/data/<y>.csv` hold the outputs. `bin/biac preview`: the page renders the same figures.
-8. Rename `python3` out of reach (`PATH=/usr/bin/nonexistent bin/biac build` with an absolute node, or a config `".py": ["python-missing"]`): the build fails naming the loader and the missing command.
+4. Break it (`raise SystemExit(3)` at the top) and save: the page shows the located error (`data loader data/region-revenue.csv.py exited with code 3, expected 0`). Restore it.
+5. In `biac.config.ts` set `interpreters: { ".py": null }` and save: `/data/region-revenue.csv` → `404` and the page shows that table as unreadable. Remove the line: it comes back.
+6. Add a second loader for the same target (`data/region-revenue.csv.js` beside `data/region-revenue.csv.py`): `/data/region-revenue.csv` answers `500` naming both files. Delete it.
+7. `bin/biac build`: exit 0, `find build/data -name '*.py' -o -name '*.sh' -o -name '*.ts'` prints nothing, `build/data/region-revenue.csv` and `build/data/daily-orders.csv` hold the outputs. `bin/biac preview`: the page renders the same figures.
+8. Stop `bin/biac dev`, set `interpreters: { ".py": ["python-missing"] }`, `rm -rf .biac/cache` (a cached output newer than its loader is reused without a run, so a warm cache never reaches the interpreter) and `bin/biac build`: exit 1, `data loader data/region-revenue.csv.py could not start: command "python-missing" not found on PATH`. Restore the config.
 
 ## Who else implements this
 
@@ -110,7 +110,7 @@ None open: D1 and D3 were decided by the user in the session that wrote this PRD
 
 - [x] T1 — Loaders in every default language: `src/engine/data-loader-interpreters.ts` holds framework's 12 defaults (D1, D2) and resolves a target to exactly one loader or a located ambiguity error (D3); `src/engine/data-loader.ts` spawns the resolved argv with a located `ENOENT` error (D4); `isDataLoaderSource`/`dataLoaderTarget`/`findDataLoader`/`listDataLoaderTargets` and `dataUpdateFor` take the table (D5, D6); `engines.node` → `>=24.12.0`; ADR-0017 amended. RED first: unit tests with `.py`/`.sh`/`.ts`/`.exe` fixtures and an integration test that `serveDataDir` serves a `.py` output and 404s its source. `playwright-cli`: on a scratch copy with `data/probe.csv.py`, a page's `sql:` names `data/probe.csv` and renders its rows; editing the `.py` refreshes it.
 - [x] T2 — `interpreters` in `biac.config.ts`: `readInterpreters` in `src/engine/biac-config.ts` validates `{".ext": string[] | null}` (message names the field, the expected shape and the value; a key must start with `.`, an argv entry must be a string), merges over the defaults, and `src/engine/pages-plugin.ts` resolves it from `getConfig()` in dev and build (D7). RED first: config unit tests and an integration test where a config adds `.pl` and disables `.py`. `playwright-cli`: demo step 5.
-- [ ] T3 — Example and e2e: a `pages/` page fed by `data/<x>.csv.py` and `data/<y>.csv.sh` reading `data/orders.csv`; `test/e2e-browser/data-loaders.spec.ts` renders it on `biac dev` and off `biac build` + `biac preview` and asserts the sources 404; GAP-038 closed in `docs/research/data-loaders.md` with its measurement; backlog row → awaiting demo. `playwright-cli`: the full Demo at 1280 and 375 px.
+- [x] T3 — Example and e2e: `pages/regional-orders.md` fed by `data/region-revenue.csv.py` and `data/daily-orders.csv.sh` reading `data/orders.csv`; `test/e2e-browser/data-loaders.spec.ts` renders it on `biac dev` and off `biac build` + `biac preview` and asserts the sources 404; GAP-038 closed in `docs/research/data-loaders.md` with its measurement; backlog row → awaiting demo. `playwright-cli`: the full Demo at 1280 and 375 px.
 
 ## Out of scope
 
