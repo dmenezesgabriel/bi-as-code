@@ -3,6 +3,7 @@ import {
   DEFAULT_INTERPRETERS,
   loaderCommand,
   loaderExtension,
+  mergeInterpreters,
 } from "./data-loader-interpreters.js";
 
 describe("DEFAULT_INTERPRETERS", () => {
@@ -23,6 +24,34 @@ describe("DEFAULT_INTERPRETERS", () => {
 
   it("runs an .exe loader as the file itself", () => {
     expect(DEFAULT_INTERPRETERS[".exe"]).toEqual([]);
+  });
+});
+
+describe("mergeInterpreters", () => {
+  it("adds a language over the defaults", () => {
+    const merged = mergeInterpreters({ ".pl": ["perl"] });
+
+    expect(merged).toEqual({ ...DEFAULT_INTERPRETERS, ".pl": ["perl"] });
+  });
+
+  it("replaces a default language's argv", () => {
+    const merged = mergeInterpreters({ ".py": ["python3.12"] });
+
+    expect(merged[".py"]).toEqual(["python3.12"]);
+  });
+
+  it("drops a language mapped to null", () => {
+    const merged = mergeInterpreters({ ".py": null, ".pl": null });
+
+    expect(Object.keys(merged)).not.toContain(".py");
+    expect(Object.keys(merged)).not.toContain(".pl");
+    expect(Object.keys(merged)).toHaveLength(11);
+  });
+
+  it("leaves the defaults untouched", () => {
+    mergeInterpreters({ ".py": null });
+
+    expect(DEFAULT_INTERPRETERS[".py"]).toEqual(["python3"]);
   });
 });
 

@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   listenPagesServer,
   makePagesServer,
+  waitForWatch,
 } from "../lib/pages-vite-server.js";
 import {
   cleanupProjects,
@@ -28,8 +29,10 @@ afterEach(async () => {
   cleanupProjects();
 });
 
-async function serve(): Promise<void> {
+/** Starts a dev server on a fresh project, after `seed` writes the files it must start with. */
+async function serve(seed: () => void = () => undefined): Promise<void> {
   projectRoot = makeTempProject();
+  seed();
   server = await makePagesServer(projectRoot);
   const http = await listenPagesServer(server);
   baseUrl = http.url;
@@ -301,5 +304,63 @@ describe("/data/ loaders in other languages", () => {
       "data/gen.csv has 2 data loaders, expected 1: data/gen.csv.js, data/gen.csv.py",
     );
     expect(loaderRuns()).toBe(0);
+  });
+});
+
+describe("/data/ loaders with interpreters from biac.config.ts", () => {
+  const PERL_LOADER = `print ${JSON.stringify(LOADER_OUTPUT)};\n`;
+  const PYTHON_LOADER = `print(${JSON.stringify(LOADER_OUTPUT.trimEnd())})\n`;
+  const PERL_ON_PYTHON_OFF =
+    'export default { interpreters: { ".pl": ["perl"], ".py": null } };\n';
+
+  // The config exists before the server starts, as in a real project:
+  // the watcher lists only files that were there when it scanned.
+  function serveWithInterpreters(): Promise<void> {
+    return serve(() => {
+      writeFile("biac.config.ts", PERL_ON_PYTHON_OFF);
+      writeFile("data/gen.csv.pl", PERL_LOADER);
+      writeFile("data/py.csv.py", PYTHON_LOADER);
+    });
+  }
+
+  it("serves the output of a loader in a language the config adds", async () => {
+    await serveWithInterpreters();
+
+    const res = await fetch(`${baseUrl}/data/gen.csv`);
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(LOADER_OUTPUT);
+  });
+
+  it("404s the source of a loader in a language the config adds", async () => {
+    await serveWithInterpreters();
+
+    const res = await fetch(`${baseUrl}/data/gen.csv.pl`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("serves a file in a language the config disables as ordinary data", async () => {
+    await serveWithInterpreters();
+
+    const target = await fetch(`${baseUrl}/data/py.csv`);
+    const source = await fetch(`${baseUrl}/data/py.csv.py`);
+
+    expect(target.status).toBe(404);
+    expect(source.status).toBe(200);
+    expect(await source.text()).toBe(PYTHON_LOADER);
+  });
+
+  it("applies an edited interpreters map without a restart", async () => {
+    await serveWithInterpreters();
+    await waitForWatch(server!, projectRoot!, "biac.config.ts");
+    expect((await fetch(`${baseUrl}/data/py.csv`)).status).toBe(404);
+
+    writeFileSync(join(projectRoot!, "biac.config.ts"), "export default {};\n");
+
+    await expect
+      .poll(async () => (await fetch(`${baseUrl}/data/py.csv`)).status)
+      .toBe(200);
+    expect((await fetch(`${baseUrl}/data/py.csv.py`)).status).toBe(404);
   });
 });

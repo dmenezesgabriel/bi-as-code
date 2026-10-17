@@ -46,7 +46,8 @@ function cacheFor(
   log = new RecordingLoaderLog(),
   interpreters = DEFAULT_INTERPRETERS,
 ) {
-  return createDataLoaderCache(root, log, interpreters);
+  const cache = createDataLoaderCache(root, log);
+  return { load: (target: string) => cache.load(target, interpreters) };
 }
 
 // Every run appends one line to runs.log, resolved against the loader's
@@ -303,6 +304,19 @@ describe("load — languages", () => {
       'data loader data/a.csv.py could not start: command "biac-missing-command" not found on PATH',
     );
     expect(log.errors).toEqual([(error as Error).message]);
+  });
+
+  it("runs each load with the interpreters that load is given", async () => {
+    const root = makeTempProject("biac-loader-");
+    writeProjectFile(root, "data/a.csv.py", PYTHON_LOADER);
+    const cache = createDataLoaderCache(root, new RecordingLoaderLog());
+    const missing = { ".py": ["biac-missing-command"] };
+    const failed = await cache.load("a.csv", missing).catch(() => "failed");
+
+    const output = await cache.load("a.csv", DEFAULT_INTERPRETERS);
+
+    expect(failed).toBe("failed");
+    expect(readFileSync(output, "utf8")).toBe("x,y\n1,2\n");
   });
 });
 

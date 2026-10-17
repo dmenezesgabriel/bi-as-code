@@ -88,6 +88,8 @@ export interface BiacConfig {
   nav: BiacNavConfig;
   /** Project-wide `sql:` tables — name → `data/` file path; merged with each page's own `sql:` map in the client registry. */
   sqlTables: SqlTableMap;
+  /** Loader languages: the defaults with the project's `interpreters` merged over them. Engine-only — never sent to the browser. */
+  interpreters: DataLoaderInterpreters;
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   writeProjectFile,
 } from "../../test/lib/temp-project.js";
 import { loadBiacConfig } from "./biac-config.js";
+import { DEFAULT_INTERPRETERS } from "./data-loader-interpreters.js";
 
 let projectRoot: string | undefined;
 
@@ -31,6 +32,7 @@ describe("missing or empty config", () => {
       theme: "system",
       nav: { sidebar: true },
       sqlTables: {},
+      interpreters: DEFAULT_INTERPRETERS,
     });
   });
 
@@ -43,6 +45,7 @@ describe("missing or empty config", () => {
       theme: "system",
       nav: { sidebar: true },
       sqlTables: {},
+      interpreters: DEFAULT_INTERPRETERS,
     });
   });
 });
@@ -84,6 +87,7 @@ describe("field handling", () => {
       theme: "system",
       nav: { sidebar: true },
       sqlTables: {},
+      interpreters: DEFAULT_INTERPRETERS,
     });
   });
 
@@ -97,6 +101,48 @@ describe("field handling", () => {
     await expect(loadBiacConfig(root)).resolves.toMatchObject({
       sqlTables: { orders: "data/orders.parquet" },
     });
+  });
+});
+
+describe("interpreters", () => {
+  it("adds a loader language", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default { interpreters: { ".pl": ["perl"] } };\n',
+    );
+
+    const { interpreters } = await loadBiacConfig(root);
+
+    expect(interpreters).toEqual({ ...DEFAULT_INTERPRETERS, ".pl": ["perl"] });
+  });
+
+  it("disables a default language with null", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { interpreters: { ".py": null } };\n');
+
+    const { interpreters } = await loadBiacConfig(root);
+
+    expect(interpreters).not.toHaveProperty(".py");
+    expect(interpreters[".sh"]).toEqual(["sh"]);
+  });
+
+  it("replaces a default language's argv", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { interpreters: { ".ts": ["tsx"] } };\n');
+
+    const { interpreters } = await loadBiacConfig(root);
+
+    expect(interpreters[".ts"]).toEqual(["tsx"]);
+  });
+
+  it("accepts an empty argv, which runs the loader file itself", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { interpreters: { ".bin": [] } };\n');
+
+    const { interpreters } = await loadBiacConfig(root);
+
+    expect(interpreters[".bin"]).toEqual([]);
   });
 });
 
@@ -184,4 +230,35 @@ describe("validation", () => {
       /sql: expected a non-empty table name.*got ""/,
     );
   });
+
+  it.each([
+    [
+      "a non-object interpreters",
+      '[".py"]',
+      'interpreters: expected an object mapping ".ext" to an argv string[] or null, got [".py"]',
+    ],
+    [
+      "a key without a leading dot",
+      '{ py: ["python3"] }',
+      'interpreters key: expected an extension starting with ".", got "py"',
+    ],
+    [
+      "an argv that is not an array",
+      '{ ".py": "python3" }',
+      'interpreters[".py"]: expected an array of strings or null, got "python3"',
+    ],
+    [
+      "an argv entry that is not a string",
+      '{ ".py": ["python3", 3] }',
+      'interpreters[".py"]: expected an array of strings or null, got ["python3",3]',
+    ],
+  ])(
+    "throws naming the value and expected shape for %s",
+    async (_case, interpreters, message) => {
+      const root = makeProject();
+      writeConfig(root, `export default { interpreters: ${interpreters} };\n`);
+
+      await expect(loadBiacConfig(root)).rejects.toThrow(message);
+    },
+  );
 });

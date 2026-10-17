@@ -397,6 +397,20 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"sqlTables":{"orders":"data/orders.csv"}');
   });
 
+  it("keeps the loader interpreters out of the browser", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { interpreters: { ".pl": ["perl"] } };\n',
+    );
+    const dev = await makeServer(root);
+
+    const code = await loadConfigModule(dev);
+
+    expect(code).not.toContain("interpreters");
+    expect(code).not.toContain(process.execPath);
+  });
+
   it("serves defaults when biac.config.ts is absent", async () => {
     const root = makeProject();
     const dev = await makeServer(root);

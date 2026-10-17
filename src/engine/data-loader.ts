@@ -54,8 +54,8 @@ export interface DataLoaderLog {
 
 /** Runs data loaders on demand and caches their output under the project root. */
 export interface DataLoaderCache {
-  /** Absolute path of the target's up-to-date output, running its loader if stale. */
-  load(target: string): Promise<string>;
+  /** Absolute path of the target's up-to-date output, running its loader with `interpreters` if stale. */
+  load(target: string, interpreters: DataLoaderInterpreters): Promise<string>;
 }
 
 /**
@@ -163,28 +163,31 @@ export function listDataLoaderTargets(
 /**
  * A cache of loader outputs at `.biac/cache/data/<target>` — outside
  * `data/` so the dev mount never serves it and the build never copies it.
- * An output is fresh while its mtime is at least the loader's; concurrent
- * loads of one target share a single run, because DuckDB's HTTP filesystem
- * issues several ranged GETs for one file at once.
+ * An output is fresh while its mtime is at least the loader's, so a new
+ * argv for its language in `interpreters` re-runs nothing until the loader
+ * is edited or `.biac/cache/` deleted. Concurrent loads of one target share
+ * a single run, because DuckDB's HTTP filesystem issues several ranged GETs
+ * for one file at once. Each load takes the interpreter table, so an edited
+ * `biac.config.ts` applies to the next request.
  *
  * @example
  * Each run is reported to `log`; a cache hit reports nothing.
  *
  * @example
- * const cache = createDataLoaderCache("/site", terminalLog, DEFAULT_INTERPRETERS);
- * await cache.load("quakes.csv"); // → "/site/.biac/cache/data/quakes.csv"
+ * const cache = createDataLoaderCache("/site", terminalLog);
+ * await cache.load("quakes.csv", DEFAULT_INTERPRETERS);
+ * // → "/site/.biac/cache/data/quakes.csv"
  */
 export function createDataLoaderCache(
   projectRoot: string,
   log: DataLoaderLog,
-  interpreters: DataLoaderInterpreters,
 ): DataLoaderCache {
   const running = new Map<string, Promise<string>>();
-  const runContext: LoaderRunContext = { projectRoot, log, interpreters };
   return {
-    load(target) {
+    load(target, interpreters) {
       const inFlight = running.get(target);
       if (inFlight) return inFlight;
+      const runContext: LoaderRunContext = { projectRoot, log, interpreters };
       const run = loadFresh(runContext, target).finally(() =>
         running.delete(target),
       );
@@ -194,7 +197,7 @@ export function createDataLoaderCache(
   };
 }
 
-/** What every loader run of one cache shares. */
+/** What one loader run needs. */
 interface LoaderRunContext {
   projectRoot: string;
   log: DataLoaderLog;

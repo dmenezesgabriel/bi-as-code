@@ -5,7 +5,6 @@ import type { Logger, NormalizedHotChannel, Plugin } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
-import { DEFAULT_INTERPRETERS } from "./data-loader-interpreters.js";
 import {
   createDataLoaderCache,
   isDataLoaderSource,
@@ -24,7 +23,11 @@ import {
 import { pageSourceEndpoint } from "./page-source-endpoint.js";
 import { serveDataDir } from "./serve-data-dir.js";
 import { statFile } from "./stat-file.js";
-import type { BiacConfig, SqlTableMap } from "./types.js";
+import type {
+  BiacConfig,
+  DataLoaderInterpreters,
+  SqlTableMap,
+} from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = `\0${VIRTUAL_MANIFEST_ID}`;
@@ -73,12 +76,15 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const sentDataVersions = new Map<string, number>();
   // Vite has one HMR channel, not one per page: every open page gets the
   // update and drops paths its queries do not read.
-  const pushDataUpdate = (hot: NormalizedHotChannel, file: string): boolean => {
+  const pushDataUpdate = async (
+    hot: NormalizedHotChannel,
+    file: string,
+  ): Promise<boolean> => {
     const update = dataUpdateFor(
       file,
       dataDir,
       sentDataVersions.get(file),
-      DEFAULT_INTERPRETERS,
+      (await getConfig()).interpreters,
     );
     if (!update) return false;
     sentDataVersions.set(file, update.version);
@@ -114,6 +120,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
       loaderOutputs = await runDataLoaders(
         root,
         viteLoaderLog(this.environment.logger),
+        (await getConfig()).interpreters,
       );
     },
     resolveId(id) {
@@ -163,12 +170,8 @@ export function pagesPlugin(projectRoot: string): Plugin {
         "/data",
         serveDataDir(
           dataDir,
-          createDataLoaderCache(
-            root,
-            viteLoaderLog(server.config.logger),
-            DEFAULT_INTERPRETERS,
-          ),
-          DEFAULT_INTERPRETERS,
+          createDataLoaderCache(root, viteLoaderLog(server.config.logger)),
+          async () => (await getConfig()).interpreters,
         ),
       );
       // The editor's write path into pages/. configureServer runs for the
@@ -187,14 +190,16 @@ export function pagesPlugin(projectRoot: string): Plugin {
           `biac:pages needs a build output directory to copy data/ into, got output.dir=${dir} (expected a path string)`,
         );
       }
-      await copyDataDir(dataDir, join(dir, "data"));
+      const { interpreters } = await getConfig();
+      await copyDataDir(dataDir, join(dir, "data"), interpreters);
       await copyLoaderOutputs(loaderOutputs, join(dir, "data"));
     },
-    hotUpdate({ file, modules }) {
+    async hotUpdate({ file, modules }) {
       // No module changed, so none is handed back to vite. Only the client
       // environment pushes: vite runs this hook once per environment.
       const isClient = this.environment.name === "client";
-      if (isClient && pushDataUpdate(this.environment.hot, file)) return [];
+      if (isClient && (await pushDataUpdate(this.environment.hot, file)))
+        return [];
       if (file === configFile) {
         configPromise = undefined;
         const graph = this.environment.moduleGraph;
@@ -235,13 +240,17 @@ export function pagesPlugin(projectRoot: string): Plugin {
  * credentials, so they are never copied. A project without `data/` copies
  * nothing.
  */
-async function copyDataDir(dataDir: string, outDataDir: string): Promise<void> {
+async function copyDataDir(
+  dataDir: string,
+  outDataDir: string,
+  interpreters: DataLoaderInterpreters,
+): Promise<void> {
   if (!existsSync(dataDir)) return;
   await cp(dataDir, outDataDir, {
     recursive: true,
     dereference: true,
     filter: (source) =>
-      !(isDataLoaderSource(source, DEFAULT_INTERPRETERS) && statFile(source)),
+      !(isDataLoaderSource(source, interpreters) && statFile(source)),
   });
 }
 
@@ -254,13 +263,14 @@ async function copyDataDir(dataDir: string, outDataDir: string): Promise<void> {
 async function runDataLoaders(
   root: string,
   log: DataLoaderLog,
+  interpreters: DataLoaderInterpreters,
 ): Promise<Map<string, string>> {
-  const cache = createDataLoaderCache(root, log, DEFAULT_INTERPRETERS);
+  const cache = createDataLoaderCache(root, log);
   const outputs = new Map<string, string>();
   const dataDir = join(root, "data");
-  for (const target of listDataLoaderTargets(dataDir, DEFAULT_INTERPRETERS)) {
+  for (const target of listDataLoaderTargets(dataDir, interpreters)) {
     // eslint-disable-next-line react-doctor/async-await-in-loop -- one at a time keeps each loader's forwarded stderr contiguous and spares the remote APIs loaders call
-    outputs.set(target, await cache.load(target));
+    outputs.set(target, await cache.load(target, interpreters));
   }
   return outputs;
 }
@@ -295,8 +305,18 @@ async function compiledOrErrorModule(
   }
 }
 
+/**
+ * The browser's `virtual:biac-config`. Interpreters stay behind: they
+ * hold host paths (`process.execPath`) and the module ships in the build.
+ */
 function configModuleSource(config: BiacConfig): string {
-  return `export const config = ${JSON.stringify(config)};\n`;
+  const browserConfig: Omit<BiacConfig, "interpreters"> = {
+    title: config.title,
+    theme: config.theme,
+    nav: config.nav,
+    sqlTables: config.sqlTables,
+  };
+  return `export const config = ${JSON.stringify(browserConfig)};\n`;
 }
 
 /**

@@ -29,6 +29,26 @@ export const DEFAULT_INTERPRETERS: DataLoaderInterpreters = {
 };
 
 /**
+ * The interpreter table a project runs with: `overrides` spread over the
+ * defaults, an extension mapped to `null` dropped so its files are
+ * ordinary data again.
+ *
+ * @example
+ * mergeInterpreters({ ".pl": ["perl"], ".py": null });
+ * // → the defaults without ".py", plus ".pl": ["perl"]
+ */
+export function mergeInterpreters(
+  overrides: Readonly<Record<string, readonly string[] | null>>,
+): DataLoaderInterpreters {
+  const merged = { ...DEFAULT_INTERPRETERS, ...overrides };
+  return Object.fromEntries(
+    Object.entries(merged).filter(
+      (entry): entry is [string, readonly string[]] => entry[1] !== null,
+    ),
+  );
+}
+
+/**
  * The registered extension `path` ends with, compared case-insensitively
  * so `a.csv.PY` counts as program source on a case-insensitive
  * filesystem; `null` when no interpreter runs it.

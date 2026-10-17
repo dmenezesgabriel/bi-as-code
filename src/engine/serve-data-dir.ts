@@ -29,22 +29,24 @@ const CONTENT_TYPES: Record<string, string> = {
  * sources themselves are never served. A failing loader — non-zero exit,
  * interpreter not on `PATH`, or a second loader for the same path —
  * answers a plain-text `500` carrying its error, the only place a page can
- * read why: DuckDB's HTTP reader drops response bodies.
+ * read why: DuckDB's HTTP reader drops response bodies. The interpreter
+ * table is resolved on every request, so an edited `interpreters` map in
+ * `biac.config.ts` applies without a restart.
  *
  * @example
  * server.middlewares.use(
  *   "/data",
  *   serveDataDir(
  *     join(root, "data"),
- *     createDataLoaderCache(root, log, DEFAULT_INTERPRETERS),
- *     DEFAULT_INTERPRETERS,
+ *     createDataLoaderCache(root, log),
+ *     async () => DEFAULT_INTERPRETERS,
  *   ),
  * );
  */
 export function serveDataDir(
   dataDir: string,
   loaders: DataLoaderCache,
-  interpreters: DataLoaderInterpreters,
+  currentInterpreters: () => Promise<DataLoaderInterpreters>,
 ): Connect.NextHandleFunction {
   return (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
@@ -52,16 +54,11 @@ export function serveDataDir(
     if (pathname === null) return writeStatus(res, 400);
     const file = resolveContained(dataDir, pathname);
     if (file === null) return writeStatus(res, 403);
-    if (isDataLoaderSource(file, interpreters)) return writeStatus(res, 404);
-    const stats = statFile(file);
-    if (stats !== null) return sendFile(req, res, file, stats.size);
-    const target = relative(dataDir, file).split(sep).join("/");
-    sendLoaderOutput(
-      req,
-      res,
-      { dataDir, loaders, interpreters },
-      target,
-    ).catch(next);
+    currentInterpreters()
+      .then((interpreters) =>
+        serveDataFile(req, res, { dataDir, loaders, interpreters }, file),
+      )
+      .catch(next);
   };
 }
 
@@ -70,6 +67,25 @@ interface DataDirLoaders {
   dataDir: string;
   loaders: DataLoaderCache;
   interpreters: DataLoaderInterpreters;
+}
+
+/**
+ * Serves `file` when it is data, its loader's output when only a loader
+ * generates it, and `404` for a loader source.
+ */
+async function serveDataFile(
+  req: IncomingMessage,
+  res: ServerResponse,
+  context: DataDirLoaders,
+  file: string,
+): Promise<void> {
+  if (isDataLoaderSource(file, context.interpreters)) {
+    return writeStatus(res, 404);
+  }
+  const stats = statFile(file);
+  if (stats !== null) return sendFile(req, res, file, stats.size);
+  const target = relative(context.dataDir, file).split(sep).join("/");
+  await sendLoaderOutput(req, res, context, target);
 }
 
 /**
@@ -87,7 +103,7 @@ async function sendLoaderOutput(
     if (findDataLoader(dataDir, target, interpreters) === null) {
       return writeStatus(res, 404);
     }
-    output = await loaders.load(target);
+    output = await loaders.load(target, interpreters);
   } catch (error) {
     if (!(error instanceof DataLoaderFailure)) throw error;
     sendLoaderFailure(res, error);

@@ -193,4 +193,28 @@ describe("biac build — data loaders", () => {
     const output = join(root, "build", "data", "gen.csv");
     expect(readFileSync(output, "utf8")).toBe("id\n2\n");
   }, 120_000);
+
+  it("runs and keeps private the languages biac.config.ts adds, and ships the ones it disables", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", "# Loaders\n");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default { interpreters: { ".pl": ["perl"], ".py": null } };\n',
+    );
+    writeProjectFile(root, "data/gen.csv.pl", 'print "id\\n7\\n";\n');
+    writeProjectFile(root, "data/py.csv.py", 'print("id")\n');
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await build([root]);
+
+    const outData = join(root, "build", "data");
+    expect(readFileSync(join(outData, "gen.csv"), "utf8")).toBe("id\n7\n");
+    expect(buildFilesContaining(outData, "").sort()).toEqual([
+      "gen.csv",
+      "py.csv.py",
+    ]);
+    const outDir = join(root, "build");
+    expect(assetsContaining(outDir, process.execPath)).toEqual([]);
+  }, 120_000);
 });
