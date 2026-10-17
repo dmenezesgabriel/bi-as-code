@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import {
   mkdtempSync,
   readdirSync,
@@ -14,7 +14,12 @@ import {
   type DevServer,
 } from "../lib/dev-server.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
-import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import {
+  collectConsoleErrors,
+  expect,
+  resultTables,
+  test,
+} from "./dev-server.fixture.js";
 import { chartHosts } from "./echart-hosts.js";
 
 const FAILING_LOADER = `process.stderr.write("upstream timed out\\n");
@@ -61,18 +66,34 @@ test("a failing data loader shows inline errors naming it and its exit code", as
   ]);
 });
 
+/** One row of `data/orders.csv`, the input every example loader reads. */
+interface OrderRow {
+  week: string;
+  date: string;
+  region: string;
+  amount: number;
+}
+
+/** `data/orders.csv`'s rows after the header. */
+function readOrders(projectDir: string): OrderRow[] {
+  return readFileSync(join(projectDir, "data/orders.csv"), "utf8")
+    .trim()
+    .split("\n")
+    .slice(1)
+    .map((line) => {
+      const [, week = "", date = "", region = "", amount = ""] =
+        line.split(",");
+      return { week, date, region, amount: Number(amount) };
+    });
+}
+
 /**
  * Week 1's row as the `<Table>` on /weekly-orders renders it, computed from
  * the loader's own input so the expectation never restates the loader.
  */
 function firstWeekCells(projectDir: string): [string, string, string] {
-  const rows = readFileSync(join(projectDir, "data/orders.csv"), "utf8")
-    .trim()
-    .split("\n")
-    .slice(1)
-    .map((line) => line.split(","))
-    .filter(([, week]) => week === "1");
-  const revenue = rows.reduce((sum, row) => sum + Number(row[4]), 0);
+  const rows = readOrders(projectDir).filter(({ week }) => week === "1");
+  const revenue = rows.reduce((sum, { amount }) => sum + amount, 0);
   return ["1", String(rows.length), revenue.toLocaleString("en-US")];
 }
 
@@ -172,6 +193,128 @@ test("biac dev serves the loader's output and never its source", async ({
   expect(source.status()).toBe(404);
 });
 
+/**
+ * Each region's row as the regions `<Table>` on /regional-orders renders
+ * it, alphabetical, computed from the loaders' input so the expectation
+ * never restates the Python loader.
+ */
+function regionCells(projectDir: string): string[][] {
+  const totals = new Map<string, { orders: number; revenue: number }>();
+  for (const { region, amount } of readOrders(projectDir)) {
+    const total = totals.get(region) ?? { orders: 0, revenue: 0 };
+    totals.set(region, {
+      orders: total.orders + 1,
+      revenue: total.revenue + amount,
+    });
+  }
+  return [...totals]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([region, { orders, revenue }]) => [
+      region,
+      String(orders),
+      revenue.toLocaleString("en-US"),
+    ]);
+}
+
+/**
+ * The days the shell loader emits one row for, earliest first, each with
+ * its order count — computed from the loader's input, like `regionCells`.
+ */
+function dayCells(projectDir: string): string[][] {
+  const counts = new Map<string, number>();
+  for (const { date } of readOrders(projectDir)) {
+    counts.set(date, (counts.get(date) ?? 0) + 1);
+  }
+  return [...counts]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, orders]) => [date, String(orders)]);
+}
+
+/** Asserts the Python loader's table shows one row per region. */
+async function expectRegionTable(
+  table: Locator,
+  projectDir: string,
+): Promise<void> {
+  const expected = regionCells(projectDir);
+  await expect(table.locator("tbody tr")).toHaveCount(expected.length);
+  for (const [index, cells] of expected.entries()) {
+    await expect(table.locator("tbody tr").nth(index).locator("td")).toHaveText(
+      cells,
+    );
+  }
+}
+
+/** Asserts the shell loader's table pages through one row per day. */
+async function expectDayTable(
+  page: Page,
+  table: Locator,
+  projectDir: string,
+): Promise<void> {
+  const expected = dayCells(projectDir);
+  const [firstDay] = expected;
+  if (!firstDay)
+    throw new Error(`data/orders.csv in ${projectDir} has no rows`);
+  await expect(
+    page.getByText(
+      `Page 1 of ${Math.ceil(expected.length / 10)} · ${expected.length} rows`,
+    ),
+  ).toBeVisible();
+  await expect(table.locator("tbody tr")).toHaveCount(10);
+  await expect(table.locator("tbody tr").first().locator("td")).toHaveText(
+    firstDay,
+  );
+}
+
+/**
+ * Opens /regional-orders and asserts both tables — one fed by a Python
+ * loader, one by a shell loader — and both charts render.
+ */
+async function expectRegionalOrders(
+  page: Page,
+  baseUrl: string,
+  projectDir: string,
+): Promise<void> {
+  await page.goto(`${baseUrl}regional-orders`);
+  await expect(
+    page.getByRole("heading", { name: "Regional orders" }),
+  ).toBeVisible();
+  await expectRegionTable(resultTables(page).nth(0), projectDir);
+  await expectDayTable(page, resultTables(page).nth(1), projectDir);
+  await expect(chartHosts(page)).toHaveCount(2);
+}
+
+/** How many times the dev log reports a run of `loader`. */
+function loaderRuns(log: readonly string[], loader: string): number {
+  return log.filter((line) => line.includes(`data loader ${loader} →`)).length;
+}
+
+test("a page queries Python and shell loaders' outputs on biac dev", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await expectRegionalOrders(page, biacDev.url, biacDev.projectDir);
+  expect(loaderRuns(biacDev.log(), "data/region-revenue.csv.py")).toBe(1);
+  expect(loaderRuns(biacDev.log(), "data/daily-orders.csv.sh")).toBe(1);
+  expect(errors).toEqual([]);
+});
+
+test("biac dev serves Python and shell loaders' outputs and never their sources", async ({
+  request,
+  biacDev,
+}) => {
+  const output = await request.get(`${biacDev.url}data/region-revenue.csv`);
+  expect(output.status()).toBe(200);
+  expect(output.headers()["content-type"]).toContain("text/csv");
+  expect(await output.text()).toMatch(/^region,orders,revenue\n/);
+  for (const source of [
+    "data/region-revenue.csv.py",
+    "data/daily-orders.csv.sh",
+  ]) {
+    expect((await request.get(`${biacDev.url}${source}`)).status()).toBe(404);
+  }
+});
+
 test.describe("off the static build", () => {
   let projectDir: string;
   let preview: DevServer;
@@ -188,12 +331,18 @@ test.describe("off the static build", () => {
     rmSync(projectDir, { recursive: true, force: true });
   });
 
-  test("the build ships the loader's output and no loader source", () => {
+  test("the build ships every loader's output and no loader source", () => {
     const shipped = readdirSync(join(projectDir, "build/data"), {
       recursive: true,
     }).map(String);
-    expect(shipped).toContain("weekly-orders.csv");
-    expect(shipped.filter((name) => name.endsWith(".js"))).toEqual([]);
+    expect(shipped).toEqual(
+      expect.arrayContaining([
+        "weekly-orders.csv",
+        "region-revenue.csv",
+        "daily-orders.csv",
+      ]),
+    );
+    expect(shipped.filter((name) => /\.(js|py|sh)$/.test(name))).toEqual([]);
   });
 
   test("the page renders the same figures off biac preview", async ({
@@ -201,6 +350,14 @@ test.describe("off the static build", () => {
   }) => {
     const errors = collectConsoleErrors(page);
     await expectWeeklyOrders(page, preview.url, projectDir);
+    expect(errors).toEqual([]);
+  });
+
+  test("Python and shell loaders' outputs render off biac preview", async ({
+    page,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await expectRegionalOrders(page, preview.url, projectDir);
     expect(errors).toEqual([]);
   });
 });
