@@ -1,10 +1,10 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { contrastRatio } from "../../src/engine/contrast-ratio.js";
 import {
-  contrastRatio,
   minimumSeparation,
   type ColourVision,
 } from "./palette-separability.js";
+import { ruleBody, tokenIn } from "./stylesheet-tokens.js";
 
 // The floors the series palette is chosen against: Okabe–Ito parity for
 // separability (its worst case, tritan, measures 16.1) and WCAG 2.2 SC
@@ -20,32 +20,11 @@ const VISIONS: readonly ColourVision[] = [
   "tritan",
 ];
 
-const STYLESHEET = readFileSync(
-  new URL("../../src/web/src/styles.css", import.meta.url),
-  "utf8",
-);
-
 type ModePalette = {
   readonly background: string;
   readonly labelInside: string;
   readonly series: readonly string[];
 };
-
-function ruleBody(selector: string): string {
-  const start = STYLESHEET.indexOf(`${selector} {`);
-  if (start < 0) {
-    throw new Error(`Expected a "${selector} {" rule in styles.css`);
-  }
-  return STYLESHEET.slice(start, STYLESHEET.indexOf("}", start));
-}
-
-function tokenIn(body: string, name: string): string {
-  const match = new RegExp(`${name}:\\s*(#[0-9a-f]{6})`, "i").exec(body);
-  if (!match?.[1]) {
-    throw new Error(`Expected "${name}: #rrggbb" in the rule, got none`);
-  }
-  return match[1];
-}
 
 function modePalette(selector: string): ModePalette {
   const body = ruleBody(selector);

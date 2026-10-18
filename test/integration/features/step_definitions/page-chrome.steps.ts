@@ -118,6 +118,49 @@ Then('the manifest module names the nested folder "Planning"', async () => {
   );
 });
 
+When("I brand the primary colour in biac.config.ts", () => {
+  assert.ok(projectRoot, "project must exist");
+  writeFileSync(
+    join(projectRoot, "biac.config.ts"),
+    'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } } } };\n',
+  );
+});
+
+Then("the HTML shell sets the brand colours in the body", async () => {
+  await eventually(async () =>
+    /<body>\s*<style>:root,\n\.light \{\n {2}--primary: #154886;/.test(
+      await getOk(server!.url),
+    ),
+  );
+});
+
+When(
+  "I set a brand background under its contrast floor in biac.config.ts",
+  () => {
+    assert.ok(projectRoot, "project must exist");
+    writeFileSync(
+      join(projectRoot, "biac.config.ts"),
+      'export default {\n  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },\n};\n',
+    );
+  },
+);
+
+Then(
+  "the HTML shell fails naming the colour, its floor and its line",
+  async () => {
+    await eventually(async () => {
+      const res = await fetch(server!.url);
+      const html = await res.text();
+      return (
+        res.status === 500 &&
+        html.includes(
+          "Invalid biac.config.ts:2:36 — brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11)",
+        )
+      );
+    });
+  },
+);
+
 Then("the server stops on SIGINT", async () => {
   assert.ok(server, "server must be running");
   assert.equal(await server.stop(), 0);

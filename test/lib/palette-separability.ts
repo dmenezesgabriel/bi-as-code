@@ -1,10 +1,12 @@
 /**
  * How far apart a series palette's colours stay for readers with and
  * without colour-vision deficiency, and how they contrast with the page:
- * Machado severity-1.0 simulation, CIE76 ΔE in CIELAB (D65), and WCAG 2.2
- * contrast. Inputs are `#rrggbb` hexes, the form every `--chart-*` and
+ * Machado severity-1.0 simulation and CIE76 ΔE in CIELAB (D65); WCAG 2.2
+ * contrast is `src/engine/contrast-ratio.ts`. Inputs are `#rrggbb` hexes, the form every `--chart-*` and
  * `--background` token takes in `src/web/src/styles.css`.
  */
+
+import { toLinearSrgb } from "../../src/engine/contrast-ratio.js";
 
 export type ColourVision = "normal" | "protan" | "deutan" | "tritan";
 
@@ -54,8 +56,6 @@ const LINEAR_SRGB_TO_XYZ: Matrix3 = [
 ];
 const D65_WHITE = [0.95047, 1, 1.08883] as const;
 
-const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
-
 /**
  * The colour a reader with the given vision perceives, as linear sRGB.
  *
@@ -66,7 +66,7 @@ export function simulateColourVision(
   hex: string,
   vision: ColourVision,
 ): LinearRgb {
-  const linear = mapTriple(parseHex(hex), srgbToLinear);
+  const linear = toLinearSrgb(hex);
   if (vision === "normal") return linear;
   return mapTriple(multiply(MACHADO_SEVERITY_1[vision], linear), clampUnit);
 }
@@ -100,19 +100,6 @@ export function deltaE76(first: Cielab, second: Cielab): number {
 }
 
 /**
- * WCAG 2.2 contrast ratio between two colours, in either order.
- *
- * @example
- * contrastRatio("#000000", "#ffffff"); // → 21
- */
-export function contrastRatio(firstHex: string, secondHex: string): number {
-  const first = relativeLuminance(firstHex);
-  const second = relativeLuminance(secondHex);
-  const [lighter, darker] = [Math.max(first, second), Math.min(first, second)];
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-/**
  * The closest pair of a palette under the given vision, and its ΔE.
  *
  * @example
@@ -141,28 +128,6 @@ export function minimumSeparation(
       ),
     )
     .reduce((closest, pair) => (pair.deltaE < closest.deltaE ? pair : closest));
-}
-
-// Gamma-encoded sRGB channels in [0, 1].
-function parseHex(hex: string): Triple {
-  if (!HEX_COLOUR.test(hex)) {
-    throw new Error(`Expected a "#rrggbb" colour, got "${hex}"`);
-  }
-  const packed = parseInt(hex.slice(1), 16);
-  const channel = (shift: number): number => ((packed >> shift) & 0xff) / 255;
-  return [channel(16), channel(8), channel(0)];
-}
-
-function relativeLuminance(hex: string): number {
-  const [red, green, blue] = mapTriple(parseHex(hex), srgbToLinear);
-  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-}
-
-// The sRGB transfer function (IEC 61966-2-1), as WCAG 2.2 defines it.
-function srgbToLinear(encoded: number): number {
-  return encoded <= 0.04045
-    ? encoded / 12.92
-    : ((encoded + 0.055) / 1.055) ** 2.4;
 }
 
 // CIE 1976 L*a*b* companding, with its linear segment near black.

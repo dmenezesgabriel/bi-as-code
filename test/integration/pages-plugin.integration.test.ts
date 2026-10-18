@@ -569,6 +569,37 @@ describe("virtual:biac-config", () => {
     );
   });
 
+  it("injects the brand colours as the body's first element, after every head stylesheet", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } } } };\n',
+    );
+    const dev = await makeServer(root);
+
+    const html = await dev.transformIndexHtml(
+      "/",
+      '<html><head><link rel="stylesheet" href="/styles.css"></head><body><div id="root"></div></body></html>',
+    );
+
+    const body = html.slice(html.indexOf("<body>"));
+    expect(body).toMatch(
+      /^<body>\s*<style>:root,\n\.light \{\n {2}--primary: #154886;\n\}\n\.dark \{\n {2}--primary: #60a5fa;\n\}\n<\/style>\s*<div id="root">/,
+    );
+  });
+
+  it("injects no brand style when the project sets no brand colour", async () => {
+    const root = makeProject();
+    const dev = await makeServer(root);
+
+    const html = await dev.transformIndexHtml(
+      "/",
+      "<html><head></head><body></body></html>",
+    );
+
+    expect(html).not.toContain("<style>");
+  });
+
   it("injects system into index.html when biac.config.ts is absent", async () => {
     const root = makeProject();
     const dev = await makeServer(root);

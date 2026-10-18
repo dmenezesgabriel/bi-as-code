@@ -5,7 +5,12 @@ import {
   makeTempProject,
   writeProjectFile,
 } from "../../test/lib/temp-project.js";
-import { invalid, locatedError, unknownKey } from "./biac-config-error.js";
+import {
+  contrastTooLow,
+  invalid,
+  locatedError,
+  unknownKey,
+} from "./biac-config-error.js";
 
 afterEach(() => {
   cleanupProjects();
@@ -24,6 +29,25 @@ describe("field errors", () => {
     expect(error).toMatchObject({
       keyPath: ["title"],
       message: "title: expected a string, got 42",
+    });
+  });
+
+  it("names a colour under its contrast floor, its neighbour and the key to change", () => {
+    const error = contrastTooLow({
+      keyPath: ["brand", "colors", "primary", "light"],
+      colour: "#8a8a8a",
+      against: "--primary-foreground",
+      againstColour: "#ffffff",
+      ratio: 3.4567,
+      floor: 4.5,
+      criterion: "1.4.3",
+      fixes: ["brand.colors.primary.light"],
+    });
+
+    expect(error).toMatchObject({
+      keyPath: ["brand", "colors", "primary", "light"],
+      message:
+        "brand.colors.primary.light: #8a8a8a against --primary-foreground #ffffff measures 3.45:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.primary.light",
     });
   });
 

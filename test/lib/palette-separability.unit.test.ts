@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  contrastRatio,
   deltaE76,
   minimumSeparation,
   simulateColourVision,
@@ -131,25 +130,5 @@ describe("deltaE76", () => {
     const white = toCielab([1, 1, 1]);
 
     expect(deltaE76(black, white)).toBeCloseTo(100, 2);
-  });
-});
-
-describe("contrastRatio", () => {
-  it.each([
-    ["#000000", "#ffffff", 21],
-    ["#F0E442", "#ffffff", 1.32],
-    ["#000000", "#0a0a0a", 1.06],
-  ] as const)("measures %s against %s", (foreground, background, expected) => {
-    const ratio = contrastRatio(foreground, background);
-
-    expect(ratio).toBeCloseTo(expected, 2);
-  });
-
-  it("is symmetric in its arguments", () => {
-    const forward = contrastRatio("#2563eb", "#ffffff");
-
-    const backward = contrastRatio("#ffffff", "#2563eb");
-
-    expect(backward).toBe(forward);
   });
 });

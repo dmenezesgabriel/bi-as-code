@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import { readFileSync } from "node:fs";
 import { closestKey } from "./closest-key.js";
 import { findConfigKeyPosition } from "./config-key-position.js";
+import type { ContrastShortfall } from "./types.js";
 
 /** A bad `biac.config.ts` field, before its position in the file is known. */
 export class ConfigFieldError extends Error {
@@ -29,6 +30,25 @@ export function invalid(
   return new ConfigFieldError(
     keyPath,
     `${field}: expected ${expected}, got ${JSON.stringify(value)}`,
+  );
+}
+
+/**
+ * Names a brand colour under its WCAG floor: the colour, its neighbour, the
+ * measured ratio and the floor, and which keys to change. The ratio is
+ * truncated, never rounded, so a 2.996:1 shortfall cannot read as "3.00:1".
+ *
+ * @example
+ * contrastTooLow({ keyPath: ["brand", "colors", "background", "light"], colour: "#fdf6e3",
+ *   against: "--chart-4", againstColour: "#cc79a7", ratio: 2.84, floor: 3,
+ *   criterion: "1.4.11", fixes: ["brand.colors.background.light"] }).message;
+ * // "brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.84:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light"
+ */
+export function contrastTooLow(shortfall: ContrastShortfall): ConfigFieldError {
+  const measured = (Math.floor(shortfall.ratio * 100) / 100).toFixed(2);
+  return new ConfigFieldError(
+    shortfall.keyPath,
+    `${shortfall.keyPath.join(".")}: ${shortfall.colour} against ${shortfall.against} ${shortfall.againstColour} measures ${measured}:1, expected at least ${shortfall.floor}:1 (WCAG 2.2 SC ${shortfall.criterion}) — change ${shortfall.fixes.join(" or ")}`,
   );
 }
 

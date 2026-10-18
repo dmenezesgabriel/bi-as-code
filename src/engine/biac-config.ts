@@ -5,8 +5,9 @@ import {
   ConfigFieldError,
   invalid,
   locatedError,
-  unknownKey,
 } from "./biac-config-error.js";
+import { readBrand } from "./brand-config.js";
+import { isRecord, rejectUnknownKeys } from "./config-shape.js";
 import {
   DEFAULT_INTERPRETERS,
   mergeInterpreters,
@@ -35,6 +36,7 @@ const DEFAULTS: BiacConfig = {
     table_of_contents_label: "On this page",
   },
   directories: {},
+  brand: { colors: {} },
 };
 
 // The keys of the closed objects. An unknown one throws rather than
@@ -51,6 +53,7 @@ const CONFIG_KEYS = [
   "interpreters",
   "layout",
   "directories",
+  "brand",
 ] as const;
 const NAV_KEYS = ["sidebar"] as const;
 const LAYOUT_KEYS = [
@@ -137,6 +140,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
     interpreters: readInterpreters(raw),
     layout: readLayout(raw),
     directories: readDirectories(raw),
+    brand: readBrand(raw),
   };
 }
 
@@ -315,19 +319,4 @@ function isStringArray(value: unknown): value is string[] {
   return (
     Array.isArray(value) && value.every((entry) => typeof entry === "string")
   );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function rejectUnknownKeys(
-  spec: Record<string, unknown>,
-  accepted: readonly string[],
-  parentPath: readonly string[],
-): void {
-  const known = new Set(accepted);
-  const unknown = Object.keys(spec).find((key) => !known.has(key));
-  if (unknown === undefined) return;
-  throw unknownKey(unknown, parentPath, accepted);
 }

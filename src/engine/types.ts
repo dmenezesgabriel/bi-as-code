@@ -94,6 +94,41 @@ export type SqlTableMap = Record<string, string>;
  */
 export type BiacTheme = "light" | "dark" | "system";
 
+/** A concrete colour mode — the class `useTheme` puts on `<html>`. */
+export type ColourMode = Exclude<BiacTheme, "system">;
+
+/** One `#rrggbb` colour per mode, lower-cased by the loader. */
+export type ModeColour = Readonly<Record<ColourMode, string>>;
+
+/** `brand.colors`: each key replaces the theme token of the same name. */
+export interface BrandColours {
+  /** `--primary` — filled, selected and checked controls. */
+  primary?: ModeColour;
+  /** `--background` — the page surface and the chart canvas. */
+  background?: ModeColour;
+}
+
+/** A brand colour measured under its contrast floor against a neighbour. */
+export interface ContrastShortfall {
+  /** Where the failing brand colour is written, e.g. `brand.colors.primary.light`. */
+  keyPath: readonly string[];
+  colour: string;
+  /** The neighbour: a theme token name, or the other brand key's dotted path. */
+  against: string;
+  againstColour: string;
+  ratio: number;
+  floor: number;
+  /** The WCAG 2.2 success criterion the floor comes from, e.g. `1.4.11`. */
+  criterion: string;
+  /** Every brand key the author can change to clear the floor. */
+  fixes: readonly string[];
+}
+
+/** `biac.config.ts`'s optional `brand` block. */
+export interface BrandTheme {
+  colors: BrandColours;
+}
+
 /** Chrome/navigation settings from `biac.config.ts`'s optional `nav` block. */
 export interface BiacNavConfig {
   /** False removes the sidebar entirely — content spans the viewport. */
@@ -117,6 +152,8 @@ export interface BiacConfig {
   layout: Required<PageLayout>;
   /** Sidebar folder titles. Engine-only — they reach the browser inside the manifest's `navTree`. */
   directories: DirectoryTitles;
+  /** Brand colours, contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
+  brand: BrandTheme;
 }
 
 /**

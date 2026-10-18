@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -72,6 +72,41 @@ describe("biac build", () => {
     expect(run.status).toBe(1);
     expect(run.stderr).toContain(
       "Invalid biac.config.ts:2:18 — directories.pages/nestd: unknown key, expected one of pages/nested (did you mean pages/nested?)",
+    );
+  }, 120_000);
+
+  it("writes the brand colours into build/index.html", () => {
+    const root = makeTempProject("biac-e2e-build-brand-");
+    writeProjectFile(root, "pages/index.md", "# Branded\n");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } } } };\n',
+    );
+
+    execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
+
+    const html = readFileSync(join(root, "build", "index.html"), "utf8");
+    expect(html).toContain("--primary: #154886;");
+    expect(html).toContain("--primary: #60a5fa;");
+  }, 120_000);
+
+  it("exits 1 naming a brand colour under its contrast floor", () => {
+    const root = makeTempProject("biac-e2e-build-brand-contrast-");
+    writeProjectFile(root, "pages/index.md", "# Branded\n");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default {\n  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },\n};\n',
+    );
+
+    const run = spawnSync(process.execPath, [biac, "build", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(
+      "Invalid biac.config.ts:2:36 — brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
     );
   }, 120_000);
 });

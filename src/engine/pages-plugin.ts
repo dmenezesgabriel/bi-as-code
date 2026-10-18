@@ -3,12 +3,14 @@ import { copyFile, cp, mkdir } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import type {
   DevEnvironment,
+  HtmlTagDescriptor,
   Logger,
   NormalizedHotChannel,
   Plugin,
 } from "vite";
 import { ConfigFieldError, locatedError } from "./biac-config-error.js";
 import { loadBiacConfig } from "./biac-config.js";
+import { brandCss } from "./brand-css.js";
 import { compilePage } from "./compile-page.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
 import {
@@ -189,13 +191,14 @@ export function pagesPlugin(projectRoot: string): Plugin {
     // without it a `theme: "dark"` project would paint one light frame on
     // every load.
     async transformIndexHtml() {
-      const { theme } = await getConfig();
+      const { theme, brand } = await getConfig();
       return [
         {
           tag: "script",
           children: `globalThis.__BIAC_THEME__=${JSON.stringify(theme)};`,
           injectTo: "head-prepend" as const,
         },
+        ...brandStyleTags(brandCss(brand.colors)),
       ];
     },
     configureServer(server) {
@@ -334,8 +337,11 @@ async function compiledOrErrorModule(
  */
 function configModuleSource(config: BiacConfig): string {
   // `directories` reaches the browser already applied, in the manifest's
-  // `navTree`.
-  const browserConfig: Omit<BiacConfig, "interpreters" | "directories"> = {
+  // `navTree`; `brand` as the index.html style `brandStyleTags` injects.
+  const browserConfig: Omit<
+    BiacConfig,
+    "interpreters" | "directories" | "brand"
+  > = {
     title: config.title,
     theme: config.theme,
     nav: config.nav,
@@ -343,6 +349,18 @@ function configModuleSource(config: BiacConfig): string {
     layout: config.layout,
   };
   return `export const config = ${JSON.stringify(browserConfig)};\n`;
+}
+
+/**
+ * The brand stylesheet as index.html's first `<body>` element, none when
+ * empty. It must follow every theme stylesheet to win at their equal
+ * specificity: in dev vite appends `styles.css` to `<head>` as a `<style>`
+ * when `main.tsx` runs, after anything injected into `<head>`. Inline and
+ * ahead of the app root, it still applies before first paint.
+ */
+function brandStyleTags(css: string): HtmlTagDescriptor[] {
+  if (css === "") return [];
+  return [{ tag: "style", children: css, injectTo: "body-prepend" }];
 }
 
 /**

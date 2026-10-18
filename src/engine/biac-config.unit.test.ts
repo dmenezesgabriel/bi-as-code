@@ -41,6 +41,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
+      brand: { colors: {} },
     });
   });
 
@@ -61,6 +62,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
+      brand: { colors: {} },
     });
   });
 });
@@ -110,6 +112,7 @@ describe("field handling", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
+      brand: { colors: {} },
     });
   });
 
@@ -179,6 +182,43 @@ describe("field handling", () => {
     await expect(loadBiacConfig(root)).resolves.toMatchObject({
       layout: { table_of_contents_label: "Contents" },
     });
+  });
+});
+
+describe("brand", () => {
+  it("reads brand colours, lower-cased", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60A5FA" } } } };\n',
+    );
+
+    const config = await loadBiacConfig(root);
+
+    expect(config.brand).toEqual({
+      colors: { primary: { light: "#154886", dark: "#60a5fa" } },
+    });
+  });
+
+  it("throws at the colour's line and column for a colour under its contrast floor", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      [
+        "export default {",
+        "  brand: {",
+        "    colors: {",
+        '      background: { light: "#fdf6e3", dark: "#0a0a0a" },',
+        "    },",
+        "  },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      "Invalid biac.config.ts:4:21 — brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
+    );
   });
 });
 
@@ -431,7 +471,7 @@ describe("error position", () => {
 
 describe("unknown keys", () => {
   const ACCEPTED =
-    "expected one of title, theme, nav, sql, interpreters, layout, directories";
+    "expected one of title, theme, nav, sql, interpreters, layout, directories, brand";
 
   it.each([
     ["no close key", "pagewidth", `pagewidth: unknown key, ${ACCEPTED}`],
