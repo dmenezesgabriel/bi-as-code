@@ -32,6 +32,7 @@ import {
   optionAt,
   readyCharts,
 } from "./echart-hosts.js";
+import { cardCount, mainWidth, readCards } from "./widget-cards.js";
 
 // chromium-headless-shell crashes its renderer under 200k-row slider
 // re-queries on crossfilter-scale; Chrome's new headless completes them
@@ -177,6 +178,23 @@ test("the static build offers no page editor, even on ?edit", async ({
   await expect(heading).toHaveCount(1);
   await expect(editLink).toHaveCount(0);
   await expect(page.locator(".cm-editor")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the orders dashboard keeps its full width and cards off the static build", async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(`${preview.url}orders-dashboard`);
+
+  await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(6);
+  expect(await readCards(page)).toMatchObject({
+    nested: 0,
+    tint: "rgb(250, 250, 250)",
+  });
+  // 896px is the article cap on a page without a ToC rail.
+  expect(await mainWidth(page)).toBeGreaterThan(896);
   expect(errors).toEqual([]);
 });
 

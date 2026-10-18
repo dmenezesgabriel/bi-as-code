@@ -1,4 +1,3 @@
-import type { Page } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -7,31 +6,7 @@ import {
 } from "../lib/write-until-logged.js";
 import { contrastRatio, readRootToken } from "./contrast.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
-
-/** Counts of the cards a carded page draws, read off the live DOM. */
-function readCards(page: Page) {
-  return page.evaluate(() => {
-    const inCard = (selector: string) =>
-      [...document.querySelectorAll(selector)].some(
-        (element) => element.closest("[data-widget-card]") !== null,
-      );
-    return {
-      cards: document.querySelectorAll("[data-widget-card]").length,
-      nested: document.querySelectorAll("[data-widget-card] [data-widget-card]")
-        .length,
-      perTabPanel: [...document.querySelectorAll("[role=tabpanel]")].map(
-        (panel) => panel.querySelectorAll("[data-widget-card]").length,
-      ),
-      filterBarCarded: inCard("[data-filter-bar]"),
-      calloutCarded: inCard("[role=note]"),
-      tint: getComputedStyle(
-        document.querySelector("[data-cards]") ?? document.body,
-      ).backgroundColor,
-    };
-  });
-}
-
-const cardCount = async (page: Page) => (await readCards(page)).cards;
+import { cardCount, mainWidth, readCards } from "./widget-cards.js";
 
 test("front-matter cards: true cards each chart, table and big value in place, and a bad value shows its error", async ({
   page,
@@ -152,5 +127,40 @@ test("biac.config.ts layout.cards cards every page, and a page's cards: false op
 
   writeFileSync(configFile, validConfig);
   writeFileSync(index, originalIndex);
+  expect(errors).toEqual([]);
+});
+
+test("the shipped orders dashboard spans the full width on cards, and Orders overview stays in the article column without them", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(`${biacDev.url}/orders-dashboard`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Orders dashboard" }),
+  ).toBeVisible();
+  // 3 big values, 2 charts and 1 table; the filter bar stays bare.
+  await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(6);
+  expect(await readCards(page)).toMatchObject({
+    nested: 0,
+    filterBarCarded: false,
+    tint: "rgb(250, 250, 250)",
+  });
+  // 896px is the article cap on a page without a ToC rail.
+  expect(await mainWidth(page)).toBeGreaterThan(896);
+
+  await page
+    .getByRole("navigation", { name: "Site navigation" })
+    .getByRole("link", { name: "Orders overview" })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Orders overview" }),
+  ).toBeVisible();
+  expect(await readCards(page)).toMatchObject({
+    cards: 0,
+    tint: "rgba(0, 0, 0, 0)",
+  });
+  expect(await mainWidth(page)).toBe(896);
   expect(errors).toEqual([]);
 });

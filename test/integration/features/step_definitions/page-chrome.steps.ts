@@ -52,7 +52,7 @@ Then(
     // label is the deslugified file name.
     assert.match(
       code,
-      /"rootPages":\[\{"name":"Orders overview","href":"\/"\},\{"name":"Cross-filter at scale","href":"\/crossfilter-scale"\},\{"name":"Regional orders","href":"\/regional-orders"\},\{"name":"Weekly orders","href":"\/weekly-orders"\},\{"name":"Weekly review","href":"\/weekly-review"\}\]/,
+      /"rootPages":\[\{"name":"Orders overview","href":"\/"\},\{"name":"Cross-filter at scale","href":"\/crossfilter-scale"\},\{"name":"Orders dashboard","href":"\/orders-dashboard"\},\{"name":"Regional orders","href":"\/regional-orders"\},\{"name":"Weekly orders","href":"\/weekly-orders"\},\{"name":"Weekly review","href":"\/weekly-review"\}\]/,
     );
     assert.match(
       code,
