@@ -12,7 +12,7 @@ An author writes `brand: { colors: { primary, background }, palette, scale }` in
 2. Add `brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" }, background: { light: "#fffdf5", dark: "#0a0a0a" } } }` to `biac.config.ts` and save. The tab reloads by itself. The page surface is `#fffdf5`, and the `/weekly-review` checked toggle and the selected button-group item fill `#154886`. Switch to dark: the toggle fills `#60a5fa`. The heatmap ramp starts at `--background`. Change the light background to `#fdf6e3`: the overlay names `brand.colors.background.light`, `--chart-4 #cc79a7`, `2.83:1` and `3:1 (WCAG 2.2 SC 1.4.11)` at `biac.config.ts:<line>:<column>` — the default palette has no headroom on a non-white light background (`--chart-4` is 3.06:1 on `#ffffff`).
 3. Add `palette: { light: ["#1e40af"], dark: ["#60a5fa"] }`. Series 1 takes the brand colour, and series 2…8 keep the defaults (open decision O1).
 4. Add `scale: { light: ["#1e40af"], dark: ["#60a5fa"] }`. The `/weekly-review` heatmap ramps from `--background` to the brand colour. A widget's own `colorScale` prop still wins.
-5. Change the light palette entry to `"#45a1bf"` (2.96:1 on white). The overlay names `brand.palette.light[0]`, the measured ratio, the colour it was measured against and the floor `3:1 (WCAG 2.2 SC 1.4.11)`, located at `biac.config.ts:<line>:<column>`. Restore it and the page comes back by itself.
+5. Change the light palette entry to `"#45a1bf"` (2.956:1 on white, printed truncated as `2.95:1`). The overlay names `brand.palette.light[0]`, the measured ratio, the colour it was measured against and the floor `3:1 (WCAG 2.2 SC 1.4.11)`, located at `biac.config.ts:<line>:<column>`. Restore it and the page comes back by itself.
 6. The example page added in T5 sets a front-matter `brand:` with a different primary. Only that page uses it; going back to `/` restores the project brand without a reload, and the charts on each page draw that page's palette.
 7. `bin/biac build` + `bin/biac preview`: the same colours, with no frame painted in the default colours before the brand ones (ADR-0014's first-paint driver). A failing colour makes `bin/biac build` exit non-zero with the same message.
 8. Reload — the effect persists.
@@ -104,15 +104,15 @@ Overall: GAP-042 is **absent** (fixed tokens; the heatmap's per-widget `colorSca
 
 ## Open decisions
 
-- **O1 — partial palette.** evidence's positional overlay (proposed: `palette: { light: ["#1e40af"] }` changes series 1 only, and ADR-0016's tuned defaults keep series 2…8) or streamlit's replace-and-cycle (a 3-colour brand palette repeats after 3). An omitted mode inherits the default for that mode, as in evidence's `mergeColorList`. Settle in T2.
-- **O2 — the CVD floor on a user palette.** ADR-0016's ΔE ≥ 16 floor under protan, deutan and tritan simulation is guaranteed for our palette. Options: enforce it as an error (most brand palettes would fail), warn (a warning scrolls past; the SL-045 rationale), or leave it unenforced and say in the ADR that the guarantee covers the default only, while the 3:1 floors stay errors. Proposed: unenforced, recorded in the ADR. Settle in T2 with the measured ΔE of a realistic brand palette, e.g. evidence's default in `evidence/docs/features/themes.mdx`.
+- **O1 — settled in T2 by the author on 2026-10-18: positional overlay**, as in evidence's `overlayColorList`. `palette: { light: ["#1e40af"] }` changes series 1 only, and ADR-0016's tuned defaults keep series 2…8. Each mode is optional and independent; an omitted mode keeps its defaults (`src/engine/brand-css.ts` `modeDeclarations`, `src/engine/types.ts` `BrandPalette`).
+- **O2 — settled in T2 by the author on 2026-10-18: unenforced**, recorded in the T5 ADR — the ΔE ≥ 16 guarantee covers the default palette only; the 3:1 floors stay errors. Measured with `test/lib/palette-separability.ts` `minimumSeparation`: evidence's example palette `#154886 #45a1bf #a5cdee #8dacbf #85c7c6` reaches min ΔE 9.6 protan / 9.1 deutan / 9.5 tritan (14.0 normal); the demo's one-colour overlay `#1e40af` over the light defaults drops to ΔE 2.8 protan and deutan against `--chart-7 #4433aa`, so enforcing it would fail demo step 3.
 - **O3 — settled in T1** (`src/engine/brand-contrast.ts` `CONTRAST_PAIRS`; extra pairs chosen by the author on 2026-10-18). A pair is checked when either side is a brand colour; the error names the brand side(s) to change, never adjusts the colour.
   - `--primary` vs `--primary-foreground` 4.5:1 (1.4.3) — `button-group.tsx` pressed text, `toggle.tsx` thumb.
   - `--primary` vs `--background` 3:1 (1.4.11) — checked toggle track, `slider.tsx` thumb border.
   - `--primary` vs `--secondary` 3:1 (1.4.11) — `slider.tsx` indicator on its `bg-secondary` track.
   - `--background` vs `--foreground` and `--muted-foreground` 4.5:1 (1.4.3).
   - `--background` vs `--ring` 3:1 (2.4.13), the floor `test/e2e-browser/focus-ring.spec.ts` holds.
-  - `--background` vs `--chart-1`…`--chart-8` 3:1 (1.4.11, ADR-0016) — the default palette now; T2 swaps in the brand palette and adds `--chart-label-inside`.
+  - `--background` vs `--chart-1`…`--chart-8` 3:1 (1.4.11, ADR-0016), and each series vs `--chart-label-inside` 3:1 — a brand palette entry takes its series token's place (T2).
   - Each `scale` colour unchecked, since a heatmap cell's value is in its tooltip and label.
 
 - **O4 — how a page override reaches the document.** It must apply at document level (`:root, .light` / `.dark`), since `withTokenProbe` reads a probe under `<body>`. It must also be in the DOM before the page's charts run their effects, because a child's effects run before its parent's (the comment in `css-token-reader.ts`). Proposed: the engine resolves page over project in `src/engine/compile-page.ts`, exports the page's CSS text, and `page-router.tsx` renders it as a React 19 `<style href=… precedence=…>` (react 19.2.6). React hoists it and inserts it at commit, before effects. Verify that ordering in a unit test before relying on it. The alternative is a `useLayoutEffect` in `page-router.tsx`, which would run after the children's.
@@ -136,7 +136,7 @@ Overall: GAP-042 is **absent** (fixed tokens; the heatmap's per-widget `colorSca
   - The contrast pairs are settled (O3) and checked through `src/engine/contrast-ratio.ts` (O6).
   - `transformIndexHtml` injects the brand `<style>` before paint, in dev and in build.
   - Measure on `/weekly-review` (the example page with a toggle and a heatmap) in both modes: computed `--primary` and `--background`, the toggle fill, and the heatmap ramp start. A failing pair gives the overlay text and a `biac build` exit code.
-- [ ] T2 — `brand.palette`:
+- [x] T2 — `brand.palette`:
   - Settle O1 and O2. 1–8 colours per mode overlay `--chart-1`…`--chart-8`, and a 9th is an error.
   - Each colour meets the 3:1 floors.
   - Measure the first two series fills, using `eval` on the ECharts option through `test/e2e-browser/echart-hosts.ts`, before and after.
