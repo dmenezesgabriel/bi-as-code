@@ -22,11 +22,10 @@ function page(file: string, nav: NavFields = {}): PageManifestEntry {
 
 describe("root pages", () => {
   it("puts the home page first and names an untitled one Home", () => {
-    const tree = buildNavTree([
-      page("pages/b.md"),
-      page("pages/index.md"),
-      page("pages/a.md"),
-    ]);
+    const tree = buildNavTree(
+      [page("pages/b.md"), page("pages/index.md"), page("pages/a.md")],
+      {},
+    );
 
     expect(tree.rootPages).toEqual([
       { name: "Home", href: "/" },
@@ -36,10 +35,13 @@ describe("root pages", () => {
   });
 
   it("prefers the front-matter title over the deslugified file name", () => {
-    const tree = buildNavTree([
-      page("pages/index.md", { title: "Welcome" }),
-      page("pages/getting-started.md"),
-    ]);
+    const tree = buildNavTree(
+      [
+        page("pages/index.md", { title: "Welcome" }),
+        page("pages/getting-started.md"),
+      ],
+      {},
+    );
 
     expect(tree.rootPages).toEqual([
       { name: "Welcome", href: "/" },
@@ -50,31 +52,40 @@ describe("root pages", () => {
 
 describe("ordering", () => {
   it("orders positioned pages ascending by sidebarPosition", () => {
-    const tree = buildNavTree([
-      page("pages/index.md"),
-      page("pages/c.md", { sidebarPosition: 3 }),
-      page("pages/a.md", { sidebarPosition: 1 }),
-      page("pages/b.md", { sidebarPosition: 2 }),
-    ]);
+    const tree = buildNavTree(
+      [
+        page("pages/index.md"),
+        page("pages/c.md", { sidebarPosition: 3 }),
+        page("pages/a.md", { sidebarPosition: 1 }),
+        page("pages/b.md", { sidebarPosition: 2 }),
+      ],
+      {},
+    );
 
     expect(tree.rootPages.map((p) => p.href)).toEqual(["/", "/a", "/b", "/c"]);
   });
 
   it("breaks position ties by display name", () => {
-    const tree = buildNavTree([
-      page("pages/beta.md", { sidebarPosition: 1 }),
-      page("pages/alpha.md", { sidebarPosition: 1 }),
-    ]);
+    const tree = buildNavTree(
+      [
+        page("pages/beta.md", { sidebarPosition: 1 }),
+        page("pages/alpha.md", { sidebarPosition: 1 }),
+      ],
+      {},
+    );
 
     expect(tree.rootPages.map((p) => p.name)).toEqual(["Alpha", "Beta"]);
   });
 
   it("sorts positioned pages before unpositioned ones", () => {
-    const tree = buildNavTree([
-      page("pages/zebra.md"),
-      page("pages/walrus.md", { sidebarPosition: 9 }),
-      page("pages/apple.md"),
-    ]);
+    const tree = buildNavTree(
+      [
+        page("pages/zebra.md"),
+        page("pages/walrus.md", { sidebarPosition: 9 }),
+        page("pages/apple.md"),
+      ],
+      {},
+    );
 
     expect(tree.rootPages.map((p) => p.href)).toEqual([
       "/walrus",
@@ -84,19 +95,19 @@ describe("ordering", () => {
   });
 
   it("ties on the display name, so a title beats the slug", () => {
-    const tree = buildNavTree([
-      page("pages/zebra.md", { title: "Apple" }),
-      page("pages/banana.md"),
-    ]);
+    const tree = buildNavTree(
+      [page("pages/zebra.md", { title: "Apple" }), page("pages/banana.md")],
+      {},
+    );
 
     expect(tree.rootPages.map((p) => p.name)).toEqual(["Apple", "Banana"]);
   });
 
   it("keeps the home page first even when another page has a position", () => {
-    const tree = buildNavTree([
-      page("pages/index.md"),
-      page("pages/a.md", { sidebarPosition: 1 }),
-    ]);
+    const tree = buildNavTree(
+      [page("pages/index.md"), page("pages/a.md", { sidebarPosition: 1 })],
+      {},
+    );
 
     expect(tree.rootPages[0]).toEqual({ name: "Home", href: "/" });
   });
@@ -104,11 +115,14 @@ describe("ordering", () => {
 
 describe("directories", () => {
   it("groups deeper pages under their first slug segment, deslugified", () => {
-    const tree = buildNavTree([
-      page("pages/index.md"),
-      page("pages/user-guides/b.md"),
-      page("pages/user-guides/a.md"),
-    ]);
+    const tree = buildNavTree(
+      [
+        page("pages/index.md"),
+        page("pages/user-guides/b.md"),
+        page("pages/user-guides/a.md"),
+      ],
+      {},
+    );
 
     expect(tree.rootPages).toEqual([{ name: "Home", href: "/" }]);
     expect(tree.directories).toEqual([
@@ -124,11 +138,14 @@ describe("directories", () => {
   });
 
   it("puts a directory index page inside its own directory", () => {
-    const tree = buildNavTree([
-      page("pages/index.md"),
-      page("pages/nested/index.md", { title: "Overview" }),
-      page("pages/nested/page.md"),
-    ]);
+    const tree = buildNavTree(
+      [
+        page("pages/index.md"),
+        page("pages/nested/index.md", { title: "Overview" }),
+        page("pages/nested/page.md"),
+      ],
+      {},
+    );
 
     expect(tree.rootPages).toEqual([{ name: "Home", href: "/" }]);
     expect(tree.directories).toEqual([
@@ -144,7 +161,7 @@ describe("directories", () => {
   });
 
   it("groups depth > 2 under the first segment", () => {
-    const tree = buildNavTree([page("pages/a/b/deep-page.md")]);
+    const tree = buildNavTree([page("pages/a/b/deep-page.md")], {});
 
     expect(tree.rootPages).toEqual([]);
     expect(tree.directories).toEqual([
@@ -157,10 +174,13 @@ describe("directories", () => {
   });
 
   it("orders directories by their first page's sorted position", () => {
-    const tree = buildNavTree([
-      page("pages/zebra-dir/y.md", { sidebarPosition: 5 }),
-      page("pages/apple-dir/x.md", { sidebarPosition: 1 }),
-    ]);
+    const tree = buildNavTree(
+      [
+        page("pages/zebra-dir/y.md", { sidebarPosition: 5 }),
+        page("pages/apple-dir/x.md", { sidebarPosition: 1 }),
+      ],
+      {},
+    );
 
     expect(tree.directories.map((d) => d.id)).toEqual([
       "apple-dir",
@@ -169,6 +189,34 @@ describe("directories", () => {
   });
 });
 
+describe("directory titles", () => {
+  it("names a folder by its configured title and keeps its id", () => {
+    const tree = buildNavTree([page("pages/nested/page.md")], {
+      "pages/nested": { title: "Planning" },
+    });
+
+    expect(tree.directories).toEqual([
+      {
+        id: "nested",
+        name: "Planning",
+        pages: [{ name: "Page", href: "/nested/page" }],
+      },
+    ]);
+  });
+
+  it("deslugifies a folder the titles leave out", () => {
+    const tree = buildNavTree(
+      [page("pages/nested/page.md"), page("pages/user-guides/a.md")],
+      { "pages/nested": { title: "Planning" } },
+    );
+
+    expect(tree.directories.map((d) => d.name)).toEqual([
+      "User Guides",
+      "Planning",
+    ]);
+  });
+});
+
 it("returns an empty tree for an empty manifest", () => {
-  expect(buildNavTree([])).toEqual({ rootPages: [], directories: [] });
+  expect(buildNavTree([], {})).toEqual({ rootPages: [], directories: [] });
 });

@@ -13,12 +13,12 @@ import {
 } from "./data-loader-interpreters.js";
 import {
   isPageWidth,
-  isTocLabel,
+  isNonBlankText,
   PAGE_WIDTH_CHOICES,
-  TOC_LABEL_SHAPE,
+  NON_BLANK_TEXT_SHAPE,
 } from "./page-layout-frontmatter.js";
 import { sqlTableMap } from "./sql-frontmatter.js";
-import type { BiacConfig, LayoutSwitch } from "./types.js";
+import type { BiacConfig, DirectoryTitles, LayoutSwitch } from "./types.js";
 
 const CONFIG_FILE = "biac.config.ts";
 
@@ -34,13 +34,15 @@ const DEFAULTS: BiacConfig = {
     table_of_contents: true,
     table_of_contents_label: "On this page",
   },
+  directories: {},
 };
 
-// The keys of the three closed objects. An unknown one throws rather than
+// The keys of the closed objects. An unknown one throws rather than
 // warns: a warning scrolls past in a busy dev terminal and never fails a
 // build, so a typo like `pagewidth` would silently do nothing. `sql` and
 // `interpreters` are open maps (table names, file extensions) and are never
-// checked.
+// checked; `directories` keys are folders, checked against the discovered
+// pages where the manifest is built.
 const CONFIG_KEYS = [
   "title",
   "theme",
@@ -48,6 +50,7 @@ const CONFIG_KEYS = [
   "sql",
   "interpreters",
   "layout",
+  "directories",
 ] as const;
 const NAV_KEYS = ["sidebar"] as const;
 const LAYOUT_KEYS = [
@@ -56,6 +59,11 @@ const LAYOUT_KEYS = [
   "table_of_contents",
   "table_of_contents_label",
 ] as const;
+
+const DIRECTORY_SETTING_KEYS = ["title"] as const;
+// The sidebar groups pages by their first folder only, so a title for a
+// deeper folder (`pages/a/b`) would never show — it is refused, not ignored.
+const DIRECTORY_KEY = /^pages\/[^/]+$/;
 
 const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")} }`;
 
@@ -128,6 +136,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
     sqlTables: sqlTableMap(raw.sql, CONFIG_FILE),
     interpreters: readInterpreters(raw),
     layout: readLayout(raw),
+    directories: readDirectories(raw),
   };
 }
 
@@ -213,14 +222,56 @@ function readLayoutSwitch(
 
 function readTocLabel(label: unknown): string {
   if (label === undefined) return DEFAULTS.layout.table_of_contents_label;
-  if (!isTocLabel(label))
+  if (!isNonBlankText(label))
     throw invalid(
       "layout.table_of_contents_label",
       ["layout", "table_of_contents_label"],
-      TOC_LABEL_SHAPE,
+      NON_BLANK_TEXT_SHAPE,
       label,
     );
   return label;
+}
+
+function readDirectories(spec: Record<string, unknown>): DirectoryTitles {
+  if (spec.directories === undefined) return { ...DEFAULTS.directories };
+  if (!isRecord(spec.directories))
+    throw invalid(
+      "directories",
+      ["directories"],
+      'an object mapping "pages/<folder>" to { title }',
+      spec.directories,
+    );
+  const titles = Object.entries(spec.directories).map(readDirectoryTitle);
+  return Object.fromEntries(titles);
+}
+
+function readDirectoryTitle([key, settings]: [string, unknown]): [
+  string,
+  { title: string },
+] {
+  const keyPath = ["directories", readDirectoryKey(key)];
+  const field = `directories[${JSON.stringify(key)}]`;
+  if (!isRecord(settings))
+    throw invalid(field, keyPath, "an object { title }", settings);
+  rejectUnknownKeys(settings, DIRECTORY_SETTING_KEYS, keyPath);
+  if (!isNonBlankText(settings.title))
+    throw invalid(
+      `${field}.title`,
+      [...keyPath, "title"],
+      NON_BLANK_TEXT_SHAPE,
+      settings.title,
+    );
+  return [key, { title: settings.title }];
+}
+
+function readDirectoryKey(key: string): string {
+  if (DIRECTORY_KEY.test(key)) return key;
+  throw invalid(
+    "directories key",
+    ["directories", key],
+    '"pages/<folder>", a first-level folder of pages/',
+    key,
+  );
 }
 
 function readInterpreters(

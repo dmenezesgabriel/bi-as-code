@@ -13,4 +13,6 @@ Feature: page chrome derives from pages/ front-matter and biac.config.ts
     And the favicon serves
     When I rename the site to "ACME" in biac.config.ts
     Then the config module serves the new title
+    When I title the nested folder "Planning" in biac.config.ts
+    Then the manifest module names the nested folder "Planning"
     And the server stops on SIGINT

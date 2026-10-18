@@ -65,3 +65,18 @@ export async function waitForWatch(
     { timeout: 10000 },
   );
 }
+
+/** Asserts `act()` (a filesystem mutation) bumps the module's invalidation timestamp. */
+export async function expectInvalidated(
+  module: { lastInvalidationTimestamp: number } | undefined,
+  act: () => void,
+): Promise<void> {
+  const timestamp = module!.lastInvalidationTimestamp;
+  act();
+  await vi.waitFor(
+    () => {
+      expect(module!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
+    },
+    { timeout: 10000 },
+  );
+}

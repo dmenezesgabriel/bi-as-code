@@ -27,7 +27,7 @@ export interface NavPage {
 export interface NavDirectory {
   /** The first path segment, e.g. "nested" for pages/nested/*. */
   id: string;
-  /** Deslugified segment, e.g. "Nested" / "User Guides". */
+  /** The folder's `directories` title in `biac.config.ts`, else the deslugified segment, e.g. "Nested" / "User Guides". */
   name: string;
   pages: NavPage[];
 }
@@ -115,7 +115,16 @@ export interface BiacConfig {
   interpreters: DataLoaderInterpreters;
   /** Project-wide page layout; a page's own layout front-matter overrides it key by key. */
   layout: Required<PageLayout>;
+  /** Sidebar folder titles. Engine-only — they reach the browser inside the manifest's `navTree`. */
+  directories: DirectoryTitles;
 }
+
+/**
+ * `biac.config.ts` `directories`: a first-level folder of `pages/`, keyed
+ * `"pages/<folder>"`, → the title its sidebar group and breadcrumb show.
+ * The URL keeps the folder name.
+ */
+export type DirectoryTitles = Record<string, { title: string }>;
 
 /**
  * The compiled form of one page: `code` is an ESM module whose default export

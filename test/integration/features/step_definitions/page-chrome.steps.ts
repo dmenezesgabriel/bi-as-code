@@ -102,6 +102,22 @@ Then("the config module serves the new title", async () => {
   );
 });
 
+When('I title the nested folder "Planning" in biac.config.ts', () => {
+  assert.ok(projectRoot, "project must exist");
+  writeFileSync(
+    join(projectRoot, "biac.config.ts"),
+    'export default { directories: { "pages/nested": { title: "Planning" } } };\n',
+  );
+});
+
+Then('the manifest module names the nested folder "Planning"', async () => {
+  await eventually(async () =>
+    (await getOk(`${server!.url}${MANIFEST_URL}`)).includes(
+      '"id":"nested","name":"Planning"',
+    ),
+  );
+});
+
 Then("the server stops on SIGINT", async () => {
   assert.ok(server, "server must be running");
   assert.equal(await server.stop(), 0);

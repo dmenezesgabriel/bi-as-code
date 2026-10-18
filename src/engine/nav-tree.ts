@@ -1,4 +1,6 @@
+import { directoryKey } from "./directory-titles.js";
 import type {
+  DirectoryTitles,
   NavDirectory,
   NavPage,
   NavTree,
@@ -20,14 +22,18 @@ interface FlatNavItem {
  * sorts first; then pages with a `sidebar_position` ascend, ties and
  * unpositioned pages fall back to display-name order. Pages whose slug has a
  * single segment are root pages; deeper pages group under their first
- * segment as a directory, ordered by first appearance in the sorted list.
+ * segment as a directory, ordered by first appearance in the sorted list,
+ * and named by its `directories` title when the config gives one.
  *
  * @example
- * buildNavTree(discoverPages("/site"));
+ * buildNavTree(discoverPages("/site"), { "pages/nested": { title: "Planning" } });
  * // → { rootPages: [{ name: "Home", href: "/" }],
- * //     directories: [{ id: "nested", name: "Nested", pages: [...] }] }
+ * //     directories: [{ id: "nested", name: "Planning", pages: [...] }] }
  */
-export function buildNavTree(entries: PageManifestEntry[]): NavTree {
+export function buildNavTree(
+  entries: PageManifestEntry[],
+  directories: DirectoryTitles,
+): NavTree {
   const items = entries.map(toFlatItem).sort(compareFlatItems);
   const rootPages: NavPage[] = [];
   const dirOrder: string[] = [];
@@ -48,13 +54,13 @@ export function buildNavTree(entries: PageManifestEntry[]): NavTree {
     dirPages.get(dir)!.push(page);
   }
 
-  const directories: NavDirectory[] = dirOrder.map((dir) => ({
+  const navDirectories: NavDirectory[] = dirOrder.map((dir) => ({
     id: dir,
-    name: deslugify(dir),
+    name: directories[directoryKey(dir)]?.title ?? deslugify(dir),
     pages: dirPages.get(dir)!,
   }));
 
-  return { rootPages, directories };
+  return { rootPages, directories: navDirectories };
 }
 
 function toFlatItem(entry: PageManifestEntry): FlatNavItem {

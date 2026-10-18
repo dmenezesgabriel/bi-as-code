@@ -13,8 +13,8 @@ export const PAGE_WIDTH_CHOICES = PAGE_WIDTHS.map((name) =>
   JSON.stringify(name),
 ).join(" | ");
 
-/** The accepted `table_of_contents_label` shape as an error message names it. */
-export const TOC_LABEL_SHAPE = "a non-empty string";
+/** The shape a name shown to readers must have, as an error message names it. */
+export const NON_BLANK_TEXT_SHAPE = "a non-empty string";
 
 /**
  * Reads a page's layout keys out of its front-matter. A value outside the
@@ -63,11 +63,11 @@ function pageSwitch(
 
 function pageTocLabel(label: unknown, location: string): PageLayout {
   if (label === undefined) return {};
-  if (!isTocLabel(label)) {
+  if (!isNonBlankText(label)) {
     throw invalidSetting(
       location,
       "table_of_contents_label",
-      TOC_LABEL_SHAPE,
+      NON_BLANK_TEXT_SHAPE,
       label,
     );
   }
@@ -75,15 +75,16 @@ function pageTocLabel(label: unknown, location: string): PageLayout {
 }
 
 /**
- * True for a value `table_of_contents_label` accepts, wherever it is
- * declared. A blank label is refused: it would leave the rail without a
- * heading and its `nav` landmark without a name.
+ * True for a name shown to readers — the `table_of_contents_label`, a
+ * sidebar folder title — wherever it is declared. A blank one is refused:
+ * it would leave the rail without a heading and its `nav` landmark, or a
+ * sidebar folder, without a name.
  *
  * @example
- * isTocLabel("Contents"); // → true
- * isTocLabel(" "); // → false
+ * isNonBlankText("Contents"); // → true
+ * isNonBlankText(" "); // → false
  */
-export function isTocLabel(value: unknown): value is string {
+export function isNonBlankText(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 

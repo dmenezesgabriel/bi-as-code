@@ -2,7 +2,11 @@ import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makePagesServer, waitForWatch } from "../lib/pages-vite-server.js";
+import {
+  expectInvalidated,
+  makePagesServer,
+  waitForWatch,
+} from "../lib/pages-vite-server.js";
 import {
   cleanupProjects,
   makeTempProject,
@@ -68,21 +72,6 @@ const WATCH_WAIT_MS = 10_000;
 // to WATCH_WAIT_MS for its event: vitest's 5s default would kill a test
 // before its own wait could run out on a loaded host.
 vi.setConfig({ testTimeout: 2 * WATCH_WAIT_MS });
-
-/** Asserts `act()` (a filesystem mutation) bumps the module's invalidation timestamp. */
-async function expectInvalidated(
-  module: { lastInvalidationTimestamp: number } | undefined,
-  act: () => void,
-): Promise<void> {
-  const timestamp = module!.lastInvalidationTimestamp;
-  act();
-  await vi.waitFor(
-    () => {
-      expect(module!.lastInvalidationTimestamp).toBeGreaterThan(timestamp);
-    },
-    { timeout: WATCH_WAIT_MS },
-  );
-}
 
 describe("page transform", () => {
   it("compiles a page under pages/ into a module on request", async () => {

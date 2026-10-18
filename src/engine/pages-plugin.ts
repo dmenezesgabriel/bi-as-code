@@ -7,6 +7,7 @@ import type {
   NormalizedHotChannel,
   Plugin,
 } from "vite";
+import { ConfigFieldError, locatedError } from "./biac-config-error.js";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
@@ -16,6 +17,7 @@ import {
   listDataLoaderTargets,
   type DataLoaderLog,
 } from "./data-loader.js";
+import { checkDirectoryTitles } from "./directory-titles.js";
 import { discoverPages } from "./discover-pages.js";
 import {
   manifestModuleSource,
@@ -31,6 +33,7 @@ import { statFile } from "./stat-file.js";
 import type {
   BiacConfig,
   DataLoaderInterpreters,
+  DirectoryTitles,
   SqlTableMap,
 } from "./types.js";
 
@@ -86,7 +89,9 @@ export function pagesPlugin(projectRoot: string): Plugin {
       (mod) => mod.id && isPageFile(mod.id, pagesDirPosix),
     );
     const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
-    for (const mod of [configModule, ...stalePages]) {
+    // `directories` titles live in the manifest's nav tree.
+    const manifest = graph.getModuleById(RESOLVED_MANIFEST_ID);
+    for (const mod of [configModule, manifest, ...stalePages]) {
       if (mod) graph.invalidateModule(mod);
     }
     if (environment.name !== "client") return;
@@ -162,7 +167,11 @@ export function pagesPlugin(projectRoot: string): Plugin {
         return configModuleSource(await getConfig());
       }
       if (id !== RESOLVED_MANIFEST_ID) return;
-      servedManifest = manifestModuleSource(discoverPages(root));
+      servedManifest = checkedManifestSource(
+        root,
+        (await getConfig()).directories,
+        configFile,
+      );
       return servedManifest;
     },
     async transform(code, id) {
@@ -234,7 +243,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (isClient && (await pushDataUpdate(this.environment.hot, file)))
         return [];
       if (!isPageFile(file, pagesDirPosix)) return;
-      if (!manifestChanged(root, servedManifest)) return;
+      if (!(await manifestChanged(root, getConfig, servedManifest))) return;
       // The manifest has no accepting importer upstream, so propagation
       // dead-ends into a full reload and the route tree rebuilds.
       const graph = this.environment.moduleGraph;
@@ -324,7 +333,9 @@ async function compiledOrErrorModule(
  * hold host paths (`process.execPath`) and the module ships in the build.
  */
 function configModuleSource(config: BiacConfig): string {
-  const browserConfig: Omit<BiacConfig, "interpreters"> = {
+  // `directories` reaches the browser already applied, in the manifest's
+  // `navTree`.
+  const browserConfig: Omit<BiacConfig, "interpreters" | "directories"> = {
     title: config.title,
     theme: config.theme,
     nav: config.nav,
@@ -335,18 +346,44 @@ function configModuleSource(config: BiacConfig): string {
 }
 
 /**
+ * The `virtual:biac-pages` source, failing at the `biac.config.ts` key when
+ * a `directories` title names a folder with no page — which fails
+ * `vite build` and puts vite's overlay, linked to the key, over the dev app.
+ */
+function checkedManifestSource(
+  root: string,
+  directories: DirectoryTitles,
+  configFile: string,
+): string {
+  const entries = discoverPages(root);
+  try {
+    checkDirectoryTitles(directories, entries);
+  } catch (error) {
+    if (error instanceof ConfigFieldError)
+      throw locatedError(error, configFile);
+    throw error;
+  }
+  return manifestModuleSource(entries, directories);
+}
+
+/**
  * True when a page change alters what `virtual:biac-pages` would serve. An
  * edit that breaks discovery (front-matter that no longer parses) counts as
  * unchanged: reloading would re-run discovery, fail the manifest module and
  * leave the browser with no app at all. The served manifest stays, and the
- * edited page's own module reports the error.
+ * edited page's own module reports the error. A broken config counts as
+ * unchanged too — its own reload already put the error on screen.
  */
-function manifestChanged(
+async function manifestChanged(
   root: string,
+  getConfig: () => Promise<BiacConfig>,
   servedManifest: string | undefined,
-): boolean {
+): Promise<boolean> {
   try {
-    return manifestModuleSource(discoverPages(root)) !== servedManifest;
+    const { directories } = await getConfig();
+    return (
+      manifestModuleSource(discoverPages(root), directories) !== servedManifest
+    );
   } catch {
     return false;
   }

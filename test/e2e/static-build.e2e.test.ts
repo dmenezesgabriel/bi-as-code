@@ -55,6 +55,25 @@ describe("biac build", () => {
     expect(run.status).toBe(1);
     expect(run.stderr).toContain("data/broken.csv.js exited with code 3");
   }, 120_000);
+
+  it("exits 1 naming a directories title whose folder holds no page", () => {
+    const root = makeTempProject("biac-e2e-build-stale-folder-");
+    writeProjectFile(root, "pages/nested/page.md", "# Nested\n");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default {\n  directories: { "pages/nestd": { title: "Planning" } },\n};\n',
+    );
+
+    const run = spawnSync(process.execPath, [biac, "build", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(
+      "Invalid biac.config.ts:2:18 — directories.pages/nestd: unknown key, expected one of pages/nested (did you mean pages/nested?)",
+    );
+  }, 120_000);
 });
 
 describe("biac preview", () => {

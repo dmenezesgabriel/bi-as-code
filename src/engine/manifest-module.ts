@@ -1,12 +1,12 @@
 import { buildNavTree } from "./nav-tree.js";
-import type { PageManifestEntry } from "./types.js";
+import type { DirectoryTitles, PageManifestEntry } from "./types.js";
 
 /** Module id prefix that resolves to one page file under `pages/`. */
 export const VIRTUAL_PAGE_PREFIX = "virtual:biac-page/";
 
 /**
  * Source of the `virtual:biac-pages` module: one entry per page with a lazy
- * `load`, the sidebar `navTree`, and `subscribePageUpdates`.
+ * `load`, the sidebar `navTree` (folders named by `directories`), and `subscribePageUpdates`.
  *
  * In dev the manifest is the HMR boundary for page edits: it accepts every
  * page module as a dependency, so a content edit stops propagating here
@@ -16,15 +16,18 @@ export const VIRTUAL_PAGE_PREFIX = "virtual:biac-page/";
  * production build, so the guarded block is dropped there.
  *
  * @example
- * manifestModuleSource([{ route: "/", file: "pages/index.md", isIndex: true }]);
+ * manifestModuleSource([{ route: "/", file: "pages/index.md", isIndex: true }], {});
  * // → "const hotPageModules = new Map();\n…export const pages = [\n  { route: \"/\", …"
  */
-export function manifestModuleSource(entries: PageManifestEntry[]): string {
+export function manifestModuleSource(
+  entries: PageManifestEntry[],
+  directories: DirectoryTitles,
+): string {
   return [
     "const hotPageModules = new Map();",
     "const pageUpdateListeners = new Set();",
     `export const pages = [\n${entries.map(entryRow).join(",\n")}\n];`,
-    `export const navTree = ${JSON.stringify(buildNavTree(entries))};`,
+    `export const navTree = ${JSON.stringify(buildNavTree(entries, directories))};`,
     "export function subscribePageUpdates(listener) {",
     "  pageUpdateListeners.add(listener);",
     "  return () => void pageUpdateListeners.delete(listener);",

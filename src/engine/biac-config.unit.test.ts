@@ -40,6 +40,7 @@ describe("missing or empty config", () => {
         table_of_contents: true,
         table_of_contents_label: "On this page",
       },
+      directories: {},
     });
   });
 
@@ -59,6 +60,7 @@ describe("missing or empty config", () => {
         table_of_contents: true,
         table_of_contents_label: "On this page",
       },
+      directories: {},
     });
   });
 });
@@ -107,6 +109,7 @@ describe("field handling", () => {
         table_of_contents: true,
         table_of_contents_label: "On this page",
       },
+      directories: {},
     });
   });
 
@@ -428,7 +431,7 @@ describe("error position", () => {
 
 describe("unknown keys", () => {
   const ACCEPTED =
-    "expected one of title, theme, nav, sql, interpreters, layout";
+    "expected one of title, theme, nav, sql, interpreters, layout, directories";
 
   it.each([
     ["no close key", "pagewidth", `pagewidth: unknown key, ${ACCEPTED}`],
