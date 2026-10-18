@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfigFromFile } from "vite";
+import { closestKey } from "./closest-key.js";
 import {
   DEFAULT_INTERPRETERS,
   mergeInterpreters,
@@ -18,8 +19,15 @@ const DEFAULTS: BiacConfig = {
   interpreters: DEFAULT_INTERPRETERS,
 };
 
-const CONFIG_SHAPE =
-  "an object with optional fields { title, theme, nav, sql, interpreters }";
+// The keys of the two closed objects. An unknown one throws rather than
+// warns: a warning scrolls past in a busy dev terminal and never fails a
+// build, so a typo like `pagewidth` would silently do nothing. `sql` and
+// `interpreters` are open maps (table names, file extensions) and are never
+// checked.
+const CONFIG_KEYS = ["title", "theme", "nav", "sql", "interpreters"] as const;
+const NAV_KEYS = ["sidebar"] as const;
+
+const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")} }`;
 
 /**
  * Loads the project's `biac.config.ts`, filling omitted fields with
@@ -75,6 +83,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
   if (!isRecord(raw)) {
     throw invalid("default export", CONFIG_SHAPE, raw);
   }
+  rejectUnknownKeys(raw, CONFIG_KEYS, "");
   return {
     title: readTitle(raw),
     theme: readTheme(raw),
@@ -110,6 +119,7 @@ function readSidebar(spec: Record<string, unknown>): boolean {
       "an object with an optional boolean sidebar",
       spec.nav,
     );
+  rejectUnknownKeys(spec.nav, NAV_KEYS, "nav.");
   if (spec.nav.sidebar === undefined) return DEFAULTS.nav.sidebar;
   if (typeof spec.nav.sidebar !== "boolean")
     throw invalid("nav.sidebar", "a boolean", spec.nav.sidebar);
@@ -154,6 +164,29 @@ function isStringArray(value: unknown): value is string[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function rejectUnknownKeys(
+  spec: Record<string, unknown>,
+  accepted: readonly string[],
+  pathPrefix: string,
+): void {
+  const known = new Set(accepted);
+  const unknown = Object.keys(spec).find((key) => !known.has(key));
+  if (unknown === undefined) return;
+  throw unknownKey(unknown, accepted, pathPrefix);
+}
+
+function unknownKey(
+  key: string,
+  accepted: readonly string[],
+  pathPrefix: string,
+): Error {
+  const suggestion = closestKey(key, accepted);
+  const hint = suggestion === undefined ? "" : ` (did you mean ${suggestion}?)`;
+  return new Error(
+    `Invalid ${CONFIG_FILE} — ${pathPrefix}${key}: unknown key, expected one of ${accepted.join(", ")}${hint}`,
+  );
 }
 
 function invalid(field: string, expected: string, value: unknown): Error {

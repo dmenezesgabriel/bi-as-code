@@ -126,6 +126,22 @@ describe("biac build", () => {
     expect(existsSync(join(root, "build", "index.html"))).toBe(false);
   }, 120_000);
 
+  it("fails on an unknown biac.config.ts key, naming it and the accepted ones", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", "# Hi\n");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default { pagewidth: "full" };\n',
+    );
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await expect(build([root])).rejects.toThrow(
+      "pagewidth: unknown key, expected one of title, theme, nav, sql, interpreters",
+    );
+    expect(existsSync(join(root, "build", "index.html"))).toBe(false);
+  }, 120_000);
+
   it("builds without a data/ directory and emits no build/data", async () => {
     const root = makeTempProject();
     writeProjectFile(root, "pages/index.md", "# No data\n");

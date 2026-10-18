@@ -262,3 +262,51 @@ describe("validation", () => {
     },
   );
 });
+
+describe("unknown keys", () => {
+  const ACCEPTED = "expected one of title, theme, nav, sql, interpreters";
+
+  it.each([
+    ["no close key", "pagewidth", `pagewidth: unknown key, ${ACCEPTED}`],
+    [
+      "a misspelling",
+      "titel",
+      `titel: unknown key, ${ACCEPTED} (did you mean title?)`,
+    ],
+    [
+      "a case difference",
+      "Title",
+      `Title: unknown key, ${ACCEPTED} (did you mean title?)`,
+    ],
+  ])("throws naming a top-level key with %s", async (_case, key, message) => {
+    const root = makeProject();
+    writeConfig(root, `export default { ${key}: "full" };\n`);
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      `Invalid biac.config.ts — ${message}`,
+    );
+  });
+
+  it("throws naming an unknown nav key by its dotted path", async () => {
+    const root = makeProject();
+    writeConfig(root, "export default { nav: { sidebr: false } };\n");
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      "Invalid biac.config.ts — nav.sidebr: unknown key, expected one of sidebar (did you mean sidebar?)",
+    );
+  });
+
+  it("accepts any table name under sql and any extension under interpreters", async () => {
+    const root = makeProject();
+    writeProjectFile(root, "data/channels.csv", "channel\nweb\n");
+    writeConfig(
+      root,
+      'export default { sql: { anything: "data/channels.csv" }, interpreters: { ".pl": ["perl"] } };\n',
+    );
+
+    const config = await loadBiacConfig(root);
+
+    expect(Object.keys(config.sqlTables)).toEqual(["anything"]);
+    expect(config.interpreters[".pl"]).toEqual(["perl"]);
+  });
+});
