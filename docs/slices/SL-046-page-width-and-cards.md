@@ -149,7 +149,20 @@ After T1, `page_width: full` in front-matter, same method:
 
 The page carries the validated value as its `layout` module export (`src/engine/page-layout-frontmatter.ts` `pageLayout`), absent when the page sets none, so T2 merges `biac.config.ts` `layout` under it key by key. Paragraphs keep their own measure at `full`; tables, charts and the filter row widen.
 
-- [ ] T2 — `layout: { page_width }` in `biac.config.ts`: `layout` joins `CONFIG_KEYS` with its own accepted-keys list (unknown key and bad value located, as in SL-045), ships in `virtual:biac-config`, merges under the page's front-matter. Measure two pages, one overriding.
+- [x] T2 — `layout: { page_width }` in `biac.config.ts`: `layout` joins `CONFIG_KEYS` with its own accepted-keys list (unknown key and bad value located, as in SL-045), ships in `virtual:biac-config`, merges under the page's front-matter. Measure two pages, one overriding.
+
+After T2, `layout: { page_width: "full" }` in `biac.config.ts`, `/` overriding with front-matter `page_width: article`, same method:
+
+| Page                         | Viewport | `main` | outer container | ToC rail |
+| ---------------------------- | -------- | ------ | --------------- | -------- |
+| `/weekly-review` (inherits)  | 1920     | 1328   | 1632            | 224      |
+| `/weekly-review`             | 1440     | 848    | 1152            | 224      |
+| `/weekly-review`             | 768      | 720    | 768             | hidden   |
+| `/` (overrides to `article`) | 1920     | 896    | 1152            | none     |
+| `/?edit` (editor preview)    | 1920     | 768    | 816             | none     |
+
+The resolved config's `layout` is concrete (`page_width: "article"` when omitted); `CompiledPage` in `src/web/src/features/pages/page-router.tsx` spreads the page's partial `layout` over it. `layout: { cardz: true }` fails `Invalid biac.config.ts:2:13 — layout.cardz: unknown key, expected one of page_width`, and the fix brings the page back with 0 console errors. T3 adds `cards` to `LAYOUT_KEYS` in `src/engine/biac-config.ts`.
+
 - [ ] T3 — `cards` in front-matter and `layout.cards`: settle O1 and O2, wrap the carded widgets, tint the page background, no nested cards; stories for carded and uncarded states, contrast measured light and dark. Measure card count per page with `eval`.
 - [ ] T4 — Example dashboard page in `pages/` (full + cards) and a page opting out; e2e-browser spec through the real pages; demo run ready; GAP-039 and GAP-044 rows re-measured for closing.
 
