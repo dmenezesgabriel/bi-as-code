@@ -14,6 +14,11 @@ declare module "virtual:biac-config" {
     };
     /** Project-wide `sql:` tables — name → `data/` path; merged with each page's own `sqlTables`. */
     sqlTables: Record<string, string>;
+    /** Project-wide page layout; a page's own layout front-matter overrides it key by key. */
+    layout: {
+      /** `article` keeps the reading column; `full` fills the space beside the sidebar. */
+      page_width: "article" | "full";
+    };
   }
   export const config: BiacConfig;
 }

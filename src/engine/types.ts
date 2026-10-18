@@ -104,6 +104,8 @@ export interface BiacConfig {
   sqlTables: SqlTableMap;
   /** Loader languages: the defaults with the project's `interpreters` merged over them. Engine-only — never sent to the browser. */
   interpreters: DataLoaderInterpreters;
+  /** Project-wide page layout; a page's own layout front-matter overrides it key by key. */
+  layout: Required<PageLayout>;
 }
 
 /**

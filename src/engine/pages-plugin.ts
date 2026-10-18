@@ -329,6 +329,7 @@ function configModuleSource(config: BiacConfig): string {
     theme: config.theme,
     nav: config.nav,
     sqlTables: config.sqlTables,
+    layout: config.layout,
   };
   return `export const config = ${JSON.stringify(browserConfig)};\n`;
 }

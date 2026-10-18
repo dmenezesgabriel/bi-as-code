@@ -131,9 +131,12 @@ function CompiledPage({ mod, site, dataUpdates }: CompiledPageProps) {
     () => ({ ...site.sqlTables, ...mod.sqlTables }),
     [site.sqlTables, mod.sqlTables],
   );
+  // The config's layout is the project default; each key the page's
+  // front-matter sets wins, the rest fall through.
+  const layout = { ...site.layout, ...mod.layout };
   return (
     <MarkdownPage
-      page={{ ...mod, sqlTables }}
+      page={{ ...mod, sqlTables, layout }}
       siteTitle={site.title}
       dataUpdates={dataUpdates}
     />

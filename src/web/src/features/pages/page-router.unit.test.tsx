@@ -80,6 +80,7 @@ const site: BiacConfig = {
   theme: "system" as const,
   nav: { sidebar: true },
   sqlTables: {},
+  layout: { page_width: "article" },
 };
 
 const navTree: NavTree = {
@@ -201,6 +202,33 @@ describe("buildPageRouter", () => {
       { name: "shared", source: "data/shared.parquet" },
       { name: "local", source: "data/local.csv" },
     ]);
+  });
+
+  it.each([
+    ["inherits the config's full width", {}, false],
+    [
+      "keeps its own article width over the config's full",
+      { page_width: "article" as const },
+      true,
+    ],
+  ])("a page that %s", async (_case, layout, capped) => {
+    // Arrange
+    const widthPage: CompiledPageModule = {
+      ...textPage("width body", "Width"),
+      layout,
+    };
+
+    // Act
+    renderRouter(
+      [pageEntry("/width", async () => widthPage)],
+      "/width",
+      navTree,
+      { ...site, layout: { page_width: "full" } },
+    );
+
+    // Assert
+    const main = await screen.findByRole("main");
+    expect(main.classList.contains("max-w-4xl")).toBe(capped);
   });
 
   it("re-registers a page's sql tables when the data channel reports a source change", async () => {

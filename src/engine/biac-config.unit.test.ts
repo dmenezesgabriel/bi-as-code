@@ -34,6 +34,7 @@ describe("missing or empty config", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
+      layout: { page_width: "article" },
     });
   });
 
@@ -47,6 +48,7 @@ describe("missing or empty config", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
+      layout: { page_width: "article" },
     });
   });
 });
@@ -89,6 +91,7 @@ describe("field handling", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
+      layout: { page_width: "article" },
     });
   });
 
@@ -101,6 +104,24 @@ describe("field handling", () => {
 
     await expect(loadBiacConfig(root)).resolves.toMatchObject({
       sqlTables: { orders: "data/orders.parquet" },
+    });
+  });
+
+  it("reads layout.page_width", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { layout: { page_width: "full" } };\n');
+
+    await expect(loadBiacConfig(root)).resolves.toMatchObject({
+      layout: { page_width: "full" },
+    });
+  });
+
+  it("keeps the article width for a layout block without page_width", async () => {
+    const root = makeProject();
+    writeConfig(root, "export default { layout: {} };\n");
+
+    await expect(loadBiacConfig(root)).resolves.toMatchObject({
+      layout: { page_width: "article" },
     });
   });
 });
@@ -190,6 +211,27 @@ describe("validation", () => {
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
       /sidebar.*expected.*boolean.*got.*yes/i,
+    );
+  });
+
+  it("throws naming the value and expected shape for a non-object layout", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { layout: "full" };\n');
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      /layout: expected an object with an optional page_width, got "full"/,
+    );
+  });
+
+  it("throws at its line and column for a page_width that is not article or full", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default {\n  layout: {\n    page_width: "wide",\n  },\n};\n',
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      'Invalid biac.config.ts:3:5 — layout.page_width: expected "article" | "full", got "wide"',
     );
   });
 
@@ -332,7 +374,8 @@ describe("error position", () => {
 });
 
 describe("unknown keys", () => {
-  const ACCEPTED = "expected one of title, theme, nav, sql, interpreters";
+  const ACCEPTED =
+    "expected one of title, theme, nav, sql, interpreters, layout";
 
   it.each([
     ["no close key", "pagewidth", `pagewidth: unknown key, ${ACCEPTED}`],
@@ -361,6 +404,15 @@ describe("unknown keys", () => {
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
       "Invalid biac.config.ts:1:25 — nav.sidebr: unknown key, expected one of sidebar (did you mean sidebar?)",
+    );
+  });
+
+  it("throws naming an unknown layout key by its dotted path", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { layout: { pagewidth: "full" } };\n');
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      "Invalid biac.config.ts:1:28 — layout.pagewidth: unknown key, expected one of page_width (did you mean page_width?)",
     );
   });
 

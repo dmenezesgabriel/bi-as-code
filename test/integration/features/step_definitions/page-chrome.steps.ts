@@ -61,11 +61,15 @@ Then(
   },
 );
 
-Then("the config module serves the configured title", async () => {
-  const code = await getOk(`${server!.url}${CONFIG_URL}`);
-  assert.match(code, /"title":"biac"/);
-  assert.match(code, /"sidebar":true/);
-});
+Then(
+  "the config module serves the configured title and page width",
+  async () => {
+    const code = await getOk(`${server!.url}${CONFIG_URL}`);
+    assert.match(code, /"title":"biac"/);
+    assert.match(code, /"sidebar":true/);
+    assert.match(code, /"layout":\{"page_width":"article"\}/);
+  },
+);
 
 Then(
   "the HTML shell wires the pre-paint theme script and the favicon",

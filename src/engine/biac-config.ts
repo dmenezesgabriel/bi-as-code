@@ -11,6 +11,7 @@ import {
   DEFAULT_INTERPRETERS,
   mergeInterpreters,
 } from "./data-loader-interpreters.js";
+import { isPageWidth, PAGE_WIDTH_CHOICES } from "./page-layout-frontmatter.js";
 import { sqlTableMap } from "./sql-frontmatter.js";
 import type { BiacConfig } from "./types.js";
 
@@ -22,15 +23,24 @@ const DEFAULTS: BiacConfig = {
   nav: { sidebar: true },
   sqlTables: {},
   interpreters: DEFAULT_INTERPRETERS,
+  layout: { page_width: "article" },
 };
 
-// The keys of the two closed objects. An unknown one throws rather than
+// The keys of the three closed objects. An unknown one throws rather than
 // warns: a warning scrolls past in a busy dev terminal and never fails a
 // build, so a typo like `pagewidth` would silently do nothing. `sql` and
 // `interpreters` are open maps (table names, file extensions) and are never
 // checked.
-const CONFIG_KEYS = ["title", "theme", "nav", "sql", "interpreters"] as const;
+const CONFIG_KEYS = [
+  "title",
+  "theme",
+  "nav",
+  "sql",
+  "interpreters",
+  "layout",
+] as const;
 const NAV_KEYS = ["sidebar"] as const;
+const LAYOUT_KEYS = ["page_width"] as const;
 
 const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")} }`;
 
@@ -102,6 +112,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
     nav: { sidebar: readSidebar(raw) },
     sqlTables: sqlTableMap(raw.sql, CONFIG_FILE),
     interpreters: readInterpreters(raw),
+    layout: readLayout(raw),
   };
 }
 
@@ -142,6 +153,28 @@ function readSidebar(spec: Record<string, unknown>): boolean {
       spec.nav.sidebar,
     );
   return spec.nav.sidebar;
+}
+
+function readLayout(spec: Record<string, unknown>): BiacConfig["layout"] {
+  if (spec.layout === undefined) return { ...DEFAULTS.layout };
+  if (!isRecord(spec.layout))
+    throw invalid(
+      "layout",
+      ["layout"],
+      "an object with an optional page_width",
+      spec.layout,
+    );
+  rejectUnknownKeys(spec.layout, LAYOUT_KEYS, ["layout"]);
+  const width = spec.layout.page_width;
+  if (width === undefined) return { ...DEFAULTS.layout };
+  if (!isPageWidth(width))
+    throw invalid(
+      "layout.page_width",
+      ["layout", "page_width"],
+      PAGE_WIDTH_CHOICES,
+      width,
+    );
+  return { page_width: width };
 }
 
 function readInterpreters(

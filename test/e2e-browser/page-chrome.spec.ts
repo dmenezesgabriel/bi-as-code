@@ -293,3 +293,69 @@ test("front-matter page_width: full widens the page in place, and a bad value sh
   expect(await mainWidth()).toBe(848);
   expect(errors).toEqual([]);
 });
+
+test("biac.config.ts layout.page_width widens every page, a page's front-matter overrides it, and a bad value is located", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const configFile = join(biacDev.projectDir, "biac.config.ts");
+  const validConfig = readFileSync(configFile, "utf8");
+  const withLayout = (width: string) =>
+    validConfig.replace("{\n", `{\n  layout: { page_width: "${width}" },\n`);
+  writeFileSync(configFile, withLayout("full"));
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(`${biacDev.url}/weekly-review`);
+  const heading = page.getByRole("heading", {
+    level: 1,
+    name: "Weekly review",
+  });
+  await expect(heading).toBeVisible();
+  const mainWidth = async () =>
+    (await page.locator("main").boundingBox())?.width ?? 0;
+  // 848px is the article column beside the ToC rail at this viewport.
+  expect(await mainWidth()).toBeGreaterThan(848);
+
+  const file = join(biacDev.projectDir, "pages/weekly-review.md");
+  const original = readFileSync(file, "utf8");
+  await rewriteUntilServerLogs({
+    rewrite: () =>
+      writeFileSync(
+        file,
+        original.replace("title: Weekly review\n", "$&page_width: article\n"),
+      ),
+    log: biacDev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  await expect.poll(mainWidth).toBe(848);
+
+  await rewriteUntilServerLogs({
+    rewrite: () => writeFileSync(configFile, withLayout("wide")),
+    log: biacDev.log,
+    loggedPath: "biac.config.ts",
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  // The config edit reloads the tab by itself, onto vite's error page; a
+  // second reload here would race that navigation and detach the frame.
+  await expect(
+    page.locator("vite-error-overlay").locator(".message"),
+  ).toContainText(
+    'layout.page_width: expected "article" | "full", got "wide"',
+    {
+      timeout: 20_000,
+    },
+  );
+  // The broken config's failed module request is the capability under
+  // test; only the page the fix brings back must load cleanly.
+  const errorsBeforeFix = errors.length;
+
+  // Written once: the first edit after the error is the one that must
+  // reload the tab, and a retry would hide an edit the server dropped.
+  writeFileSync(configFile, withLayout("full"));
+  await expect(heading).toBeVisible({ timeout: 20_000 });
+  expect(await mainWidth()).toBe(848);
+  expect(errors.slice(errorsBeforeFix)).toEqual([]);
+});

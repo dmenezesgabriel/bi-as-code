@@ -444,6 +444,19 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"sqlTables":{"orders":"data/orders.csv"}');
   });
 
+  it("serves the project's layout declared in biac.config.ts", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { layout: { page_width: "full" } };\n',
+    );
+    const dev = await makeServer(root);
+
+    const code = await loadConfigModule(dev);
+
+    expect(code).toContain('"layout":{"page_width":"full"}');
+  });
+
   it("keeps the loader interpreters out of the browser", async () => {
     const root = makeProject();
     writeFile(
@@ -468,6 +481,7 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"system"');
     expect(code).toContain('"sidebar":true');
     expect(code).toContain('"sqlTables":{}');
+    expect(code).toContain('"layout":{"page_width":"article"}');
   });
 
   it("invalidates the config module when biac.config.ts is edited", async () => {
