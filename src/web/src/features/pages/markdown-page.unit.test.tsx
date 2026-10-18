@@ -72,6 +72,7 @@ function page(partial: Partial<CompiledPageModule>): CompiledPageModule {
     title: null,
     sqlBlocks: [],
     sqlTables: {},
+    layout: {},
     ...partial,
   };
 }
@@ -460,5 +461,26 @@ describe("MarkdownPage", () => {
     expect(
       screen.queryByRole("navigation", { name: "On this page" }),
     ).toBeNull();
+  });
+
+  // jsdom computes no layout, so the width caps are asserted as the
+  // Tailwind classes that carry them.
+  it.each([{}, { page_width: "article" as const }])(
+    "keeps the reading column caps for layout %o",
+    async (layout) => {
+      renderPage(page({ layout }));
+
+      const main = await screen.findByRole("main");
+      expect(main).toHaveClass("max-w-4xl");
+      expect(main.parentElement).toHaveClass("max-w-6xl");
+    },
+  );
+
+  it("drops both width caps when the page sets page_width: full", async () => {
+    renderPage(page({ layout: { page_width: "full" } }));
+
+    const main = await screen.findByRole("main");
+    expect(main).not.toHaveClass("max-w-4xl");
+    expect(main.parentElement).not.toHaveClass("max-w-6xl");
   });
 });

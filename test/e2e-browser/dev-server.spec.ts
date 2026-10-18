@@ -1,18 +1,15 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
+import {
+  PAGE_SWAP_LOGGED_PATH,
+  rewriteUntilServerLogs,
+} from "../lib/write-until-logged.js";
 import {
   collectConsoleErrors,
   expect,
   openOrderMixRow,
   test,
 } from "./dev-server.fixture.js";
-
-/**
- * A content edit swaps the page in place, and vite logs that as an update
- * of the module accepting it — the page manifest — not of the page file.
- */
-const PAGE_SWAP_LOGGED_PATH = "/@id/__x00__virtual:biac-pages";
 
 test("renders the index page: title, prose, gfm table, highlighted sql fence", async ({
   page,

@@ -1,5 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
 import { useMemo, useState, type CSSProperties } from "react";
+import { cn } from "../../lib/cn";
 import { searchWithoutEditorKey } from "../editor/edit-search";
 import { browserFilterUrlPort } from "../filters/filter-url-port";
 import { FiltersProvider } from "../filters/page-filters-context";
@@ -127,6 +128,8 @@ const mdxComponents: MdxComponentMap = {
  * document and the MDX component renders with the shared component map.
  * Unless front-matter `table_of_contents: false`, a right-rail ToC built
  * from the article's h2/h3 headings rides along on `xl` viewports.
+ * Front-matter `page_width: full` lifts the reading-column caps so the
+ * content fills the space beside the sidebar; the ToC rail stays.
  *
  * @example
  * const mod = await entry.load();
@@ -144,10 +147,16 @@ export function MarkdownPage({
 }) {
   useDocumentTitle(page.title, siteTitle);
   const [article, setArticle] = useState<HTMLElement | null>(null);
+  const readingColumn = page.layout.page_width !== "full";
   return (
     // A size container: the ToC rail shows by the width this page has, not
     // the viewport's — the editor's preview pane is half the screen.
-    <div className="@container mx-auto flex max-w-6xl gap-8 px-6 py-10">
+    <div
+      className={cn(
+        "@container mx-auto flex gap-8 px-6 py-10",
+        readingColumn && "max-w-6xl",
+      )}
+    >
       {/* A jumped heading clears the header by 2rem, and on a page with a
           filter bar the docked row too, by the same gap. The margin is on
           the heading, not `scroll-padding-top` on the scroller: the editor's
@@ -155,7 +164,10 @@ export function MarkdownPage({
       <main
         ref={setArticle}
         style={{ "--docked-row-height": DOCKED_ROW_HEIGHT } as CSSProperties}
-        className="mx-auto w-full min-w-0 max-w-4xl space-y-block-gap [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 has-[[data-filter-bar]]:[&_h2]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)] has-[[data-filter-bar]]:[&_h3]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)]"
+        className={cn(
+          "mx-auto w-full min-w-0 space-y-block-gap [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 has-[[data-filter-bar]]:[&_h2]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)] has-[[data-filter-bar]]:[&_h3]:scroll-mt-[calc(var(--dock-top,4rem)+var(--docked-row-height)+2rem)]",
+          readingColumn && "max-w-4xl",
+        )}
       >
         <PageBody page={page} dataUpdates={dataUpdates} />
       </main>

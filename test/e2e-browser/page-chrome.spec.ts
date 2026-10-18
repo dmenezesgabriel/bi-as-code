@@ -1,7 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
+import {
+  PAGE_SWAP_LOGGED_PATH,
+  rewriteUntilServerLogs,
+} from "../lib/write-until-logged.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 /** Whether the document root currently carries the `dark` class. */
@@ -233,5 +236,60 @@ test("nav.sidebar:false removes the chrome and the article spans the viewport", 
   // chrome-free, it begins well inside that edge.
   const box = await page.locator("main").boundingBox();
   expect(box?.x).toBeLessThan(288);
+  expect(errors).toEqual([]);
+});
+
+test("front-matter page_width: full widens the page in place, and a bad value shows its error", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(`${biacDev.url}/weekly-review`);
+  const heading = page.getByRole("heading", {
+    level: 1,
+    name: "Weekly review",
+  });
+  await expect(heading).toBeVisible();
+  const mainWidth = async () =>
+    (await page.locator("main").boundingBox())?.width ?? 0;
+  // The article column: 1152px outer cap less padding and the ToC rail.
+  expect(await mainWidth()).toBe(848);
+  // A full reload discards every window property, so the marker surviving
+  // the edit proves the page widened in place.
+  await page.evaluate(() => {
+    (window as unknown as { __probe: string }).__probe = "kept";
+  });
+
+  const file = join(biacDev.projectDir, "pages/weekly-review.md");
+  const original = readFileSync(file, "utf8");
+  const withWidth = (value: string) =>
+    original.replace("title: Weekly review\n", `$&page_width: ${value}\n`);
+  await rewriteUntilServerLogs({
+    rewrite: () => writeFileSync(file, withWidth("full")),
+    log: biacDev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  await expect.poll(mainWidth).toBeGreaterThan(848);
+  await expect(
+    page.getByRole("navigation", { name: "On this page" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __probe?: string }).__probe,
+    ),
+  ).toBe("kept");
+
+  writeFileSync(file, withWidth("wide"));
+  await expect(page.getByRole("alert")).toContainText(
+    'page_width: expected "article" | "full", got "wide"',
+    { timeout: 20_000 },
+  );
+
+  writeFileSync(file, original);
+  await expect(heading).toBeVisible({ timeout: 20_000 });
+  expect(await mainWidth()).toBe(848);
   expect(errors).toEqual([]);
 });

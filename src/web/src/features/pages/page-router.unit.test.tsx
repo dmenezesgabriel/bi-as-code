@@ -44,6 +44,7 @@ function textPage(text: string, title: string | null): CompiledPageModule {
     title,
     sqlBlocks: [],
     sqlTables: {},
+    layout: {},
   };
 }
 
@@ -66,6 +67,7 @@ const homePage: CompiledPageModule = {
   title: "Home",
   sqlBlocks: [],
   sqlTables: {},
+  layout: {},
 };
 
 const pages: ManifestPageEntry[] = [
@@ -184,6 +186,7 @@ describe("buildPageRouter", () => {
       title: "Sql",
       sqlBlocks: [{ name: "q", sql: "select * from shared" }],
       sqlTables: { local: "data/local.csv" },
+      layout: {},
     };
     renderRouter(
       [pageEntry("/sql", async () => sqlPage)],
@@ -210,6 +213,7 @@ describe("buildPageRouter", () => {
       title: "Sql",
       sqlBlocks: [{ name: "q", sql: "select * from local" }],
       sqlTables: { local: "data/local.csv" },
+      layout: {},
     };
     renderRouter(
       [pageEntry("/sql", async () => sqlPage)],

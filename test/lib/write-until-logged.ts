@@ -20,6 +20,12 @@ export interface RewriteUntilServerLogsOptions {
 const POLL_MS = 50;
 
 /**
+ * A content edit swaps the page in place, and vite logs that as an update
+ * of the module accepting it — the page manifest — not of the page file.
+ */
+export const PAGE_SWAP_LOGGED_PATH = "/@id/__x00__virtual:biac-pages";
+
+/**
  * vite 8.2.2 logs a watched file's change as `page reload <file>[ (reason)]`,
  * the path relative to its root, or absolute when outside it — `biac dev`'s
  * root is not the project dir, so only the tail is matched — or, when the

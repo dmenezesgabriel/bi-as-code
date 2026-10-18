@@ -175,6 +175,34 @@ describe("page transform", () => {
     );
   });
 
+  it("serves a page's page_width front-matter as its layout export", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "---\npage_width: full\n---\n# Hi\n");
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain(
+      'export const layout = {"page_width":"full"};',
+    );
+  });
+
+  it("serves a page whose page_width is not article or full as a compile error", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "---\npage_width: wide\n---\n# Hi\n");
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Invalid front-matter in pages\/index\.md — page_width: expected \\"article\\" \| \\"full\\", got \\"wide\\""/,
+    );
+  });
+
   it("re-checks a page against a config edit so a new collision surfaces", async () => {
     const root = makeProject();
     writeFile("biac.config.ts", "export default {};\n");

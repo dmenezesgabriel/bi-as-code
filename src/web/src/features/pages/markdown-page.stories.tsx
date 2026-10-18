@@ -19,6 +19,7 @@ function pageModule(partial: Partial<CompiledPageModule>): CompiledPageModule {
     title: null,
     sqlBlocks: [],
     sqlTables: {},
+    layout: {},
     ...partial,
   };
 }
@@ -128,5 +129,28 @@ export const BlockRhythm: Story = {
     const gaps = [gap(kpis, chart), gap(chart, text), gap(text, table)];
 
     await expect(gaps).toEqual([16, 16, 16]);
+  },
+};
+
+/** Front-matter `page_width: full`: no reading-column cap, so the article
+ * fills its container up to the container's 24px side padding. */
+export const FullWidth: Story = {
+  args: {
+    page: pageModule({
+      title: "Dashboard",
+      layout: { page_width: "full" },
+      default: () => (
+        <div role="figure" aria-label="Chart" className="h-40 border" />
+      ),
+    }),
+  },
+  decorators: [withMemoryRouter(["/"], "/")],
+  play: async ({ canvas }) => {
+    const main = canvas.getByRole("main");
+    const container = main.parentElement as HTMLElement;
+
+    await expect(main.getBoundingClientRect().width).toBe(
+      container.clientWidth - 48,
+    );
   },
 };

@@ -25,6 +25,7 @@ async function importCompiledModule(code: string): Promise<{
   title: unknown;
   sqlBlocks: unknown;
   sqlTables: unknown;
+  layout: unknown;
 }> {
   const tmpParent = join(
     dirname(fileURLToPath(import.meta.url)),
@@ -257,6 +258,28 @@ describe("sql front-matter", () => {
   });
 });
 
+describe("layout front-matter", () => {
+  it("carries page_width into layout", async () => {
+    const page = await compile("---\npage_width: full\n---\n# Body\n");
+
+    expect(page.layout).toEqual({ page_width: "full" });
+  });
+
+  it("leaves layout empty when the page sets no page_width", async () => {
+    const page = await compile("# Body\n");
+
+    expect(page.layout).toEqual({});
+  });
+
+  it("rejects a page_width outside article | full naming the page file", async () => {
+    await expect(
+      compile("---\npage_width: wide\n---\n# Body\n", "pages/a.md"),
+    ).rejects.toThrow(
+      'Invalid front-matter in pages/a.md — page_width: expected "article" | "full", got "wide"',
+    );
+  });
+});
+
 describe("module source", () => {
   it("exports frontmatter, title and sqlBlocks alongside the default component", async () => {
     const page = await compile(
@@ -295,6 +318,13 @@ describe("module source", () => {
     expect(mod.title).toBe(page.title);
     expect(mod.sqlBlocks).toEqual(page.sqlBlocks);
     expect(mod.sqlTables).toEqual(page.sqlTables);
+    expect(mod.layout).toEqual(page.layout);
+  });
+
+  it("exports layout alongside sqlTables", async () => {
+    const page = await compile("---\npage_width: full\n---\n# Body\n");
+
+    expect(page.code).toContain('export const layout = {"page_width":"full"};');
   });
 });
 

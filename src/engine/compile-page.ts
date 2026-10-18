@@ -6,6 +6,7 @@ import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
+import { pageLayout } from "./page-layout-frontmatter.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
 import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
@@ -76,6 +77,7 @@ export async function compilePage(
     title: resolveTitle(frontmatter, metadata.firstHeading),
     sqlBlocks: metadata.sqlBlocks,
     sqlTables,
+    layout: pageLayout(frontmatter, location),
   };
   return { code: `${compiled}\n${metadataExports(page)}\n`, ...page };
 }
@@ -143,5 +145,6 @@ function metadataExports(page: Omit<CompiledPage, "code">): string {
     `export const title = ${JSON.stringify(page.title)};`,
     `export const sqlBlocks = ${JSON.stringify(page.sqlBlocks)};`,
     `export const sqlTables = ${JSON.stringify(page.sqlTables)};`,
+    `export const layout = ${JSON.stringify(page.layout)};`,
   ].join("\n");
 }

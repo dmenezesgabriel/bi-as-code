@@ -1,4 +1,5 @@
 import { normalize } from "node:path/posix";
+import { invalidSetting } from "./invalid-setting.js";
 import type { SqlTableMap } from "./types.js";
 
 /**
@@ -18,7 +19,7 @@ import type { SqlTableMap } from "./types.js";
 export function sqlTableMap(spec: unknown, location: string): SqlTableMap {
   if (spec === undefined) return {};
   if (!isRecord(spec)) {
-    throw invalidSql(
+    throw invalidSetting(
       location,
       "sql",
       'a mapping of table name → "data/…" file path',
@@ -28,10 +29,10 @@ export function sqlTableMap(spec: unknown, location: string): SqlTableMap {
   const tables: SqlTableMap = {};
   for (const [name, source] of Object.entries(spec)) {
     if (!name) {
-      throw invalidSql(location, "sql", "a non-empty table name", name);
+      throw invalidSetting(location, "sql", "a non-empty table name", name);
     }
     if (typeof source !== "string") {
-      throw invalidSql(location, `sql.${name}`, "a string path", source);
+      throw invalidSetting(location, `sql.${name}`, "a string path", source);
     }
     tables[name] = normalizeSource(source, location, name);
   }
@@ -51,7 +52,7 @@ export function assertNoSqlTableCollision(
   for (const name of Object.keys(pageTables)) {
     const configSource = configTables[name];
     if (configSource === undefined) continue;
-    throw invalidSql(
+    throw invalidSetting(
       location,
       `sql.${name}`,
       `a name not already declared by biac.config.ts (${JSON.stringify(configSource)})`,
@@ -70,7 +71,7 @@ function normalizeSource(
     !normalized.startsWith("data/") ||
     !/\.(csv|json|arrow|parquet)$/i.test(normalized)
   ) {
-    throw invalidSql(
+    throw invalidSetting(
       location,
       `sql.${name}`,
       'a "data/…" path ending .csv, .json, .arrow or .parquet',
@@ -82,15 +83,4 @@ function normalizeSource(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function invalidSql(
-  location: string,
-  field: string,
-  expected: string,
-  value: unknown,
-): Error {
-  return new Error(
-    `Invalid ${location} — ${field}: expected ${expected}, got ${JSON.stringify(value)}`,
-  );
 }

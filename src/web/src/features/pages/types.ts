@@ -50,7 +50,8 @@ export interface PageCompileError {
  * `components` prop for element overrides); `title` is the resolved page
  * title (front-matter `title`, else the first h1, else null); `sqlBlocks`
  * are the named ```sql fences extracted for the query registry; `sqlTables`
- * is the page's validated `sql:` front-matter (table name → `data/` path).
+ * is the page's validated `sql:` front-matter (table name → `data/` path);
+ * `layout` is its validated layout front-matter.
  */
 export interface CompiledPageModule {
   default: ComponentType<MdxPageProps>;
@@ -58,6 +59,7 @@ export interface CompiledPageModule {
   title: string | null;
   sqlBlocks: SqlBlock[];
   sqlTables: SqlTableMap;
+  layout: PageLayout;
 }
 
 export interface SqlBlock {
@@ -75,6 +77,17 @@ export type QueryResult =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "success"; readonly rows: Row[] };
+
+/**
+ * How wide a page's content runs: `article` keeps the reading column,
+ * `full` fills the space beside the sidebar.
+ */
+export type PageWidth = "article" | "full";
+
+/** A page's layout front-matter; a key the page leaves out stays absent. */
+export interface PageLayout {
+  page_width?: PageWidth;
+}
 
 /** Table name → `data/` file path relative to the project root. */
 export type SqlTableMap = Record<string, string>;

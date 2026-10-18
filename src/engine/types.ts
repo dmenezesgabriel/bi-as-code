@@ -53,6 +53,20 @@ export interface SqlBlock {
   sql: string;
 }
 
+/**
+ * How wide a page's content runs: `article` keeps the reading column,
+ * `full` fills the space beside the sidebar.
+ */
+export type PageWidth = "article" | "full";
+
+/**
+ * A page's validated layout front-matter. A key the author left out stays
+ * absent, so a project-wide default can still fill it.
+ */
+export interface PageLayout {
+  page_width?: PageWidth;
+}
+
 /** Parsed YAML front-matter of a page — arbitrary author keys, title included. */
 export interface PageFrontmatter {
   [key: string]: unknown;
@@ -106,6 +120,8 @@ export interface CompiledPage {
   sqlBlocks: SqlBlock[];
   /** Validated `sql:` front-matter — table name → `data/` file path. */
   sqlTables: SqlTableMap;
+  /** Validated layout front-matter — `page_width` when the page sets it. */
+  layout: PageLayout;
 }
 
 /**
