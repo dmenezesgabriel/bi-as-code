@@ -32,10 +32,10 @@ test("sidebar lists the nav tree in config order and highlights the active route
     nav.getByRole("link", { name: "Orders overview" }),
   ).toHaveAttribute("aria-current", "page");
 
-  // Nested starts closed on `/` (no active page inside); opening it
-  // shows sidebar_position order — Region detail before the
-  // alphabetically-earlier Allocation.
-  await nav.getByText("Nested").click();
+  // pages/nested, titled Breakdowns in biac.config.ts, starts closed on
+  // `/` (no active page inside); opening it shows sidebar_position
+  // order — Region detail before the alphabetically-earlier Allocation.
+  await nav.getByText("Breakdowns").click();
   const dirLinks = nav.locator("details li a");
   await expect(dirLinks).toHaveCount(2);
   expect(await dirLinks.allTextContents()).toEqual([
@@ -69,7 +69,7 @@ test("breadcrumbs follow the nav tree from the current route", async ({
   await page.goto(`${biacDev.url}nested/page`);
   await expect(crumbs.getByRole("listitem")).toHaveCount(3);
   await expect(crumbs).toHaveText(
-    /Orders overview\s*\/\s*Nested\s*\/\s*Region detail/,
+    /Orders overview\s*\/\s*Breakdowns\s*\/\s*Region detail/,
   );
   // Only the home crumb navigates: the directory has no route and the
   // leaf is the current page.

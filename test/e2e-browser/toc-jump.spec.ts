@@ -43,7 +43,12 @@ async function expectHeadingClearsBar(page: Page, id: string): Promise<void> {
     .toBeGreaterThanOrEqual(GAP_BELOW_DOCKED_BAR_PX);
 }
 
-for (const route of ["weekly-review", "crossfilter-scale"]) {
+// crossfilter-scale names its rail in front-matter; weekly-review keeps the
+// project default label.
+for (const [route, tocLabel] of [
+  ["weekly-review", "On this page"],
+  ["crossfilter-scale", "Measures"],
+] as const) {
   test(`every ToC entry on /${route} lands its heading below the docked filter bar`, async ({
     page,
     biacDev,
@@ -51,7 +56,7 @@ for (const route of ["weekly-review", "crossfilter-scale"]) {
     const errors = collectConsoleErrors(page);
     await page.setViewportSize(DESKTOP);
     await page.goto(`${biacDev.url}${route}`);
-    const toc = page.getByRole("navigation", { name: "On this page" });
+    const toc = page.getByRole("navigation", { name: tocLabel });
     await expect(toc).toBeVisible();
 
     for (const link of await toc.getByRole("link").all()) {

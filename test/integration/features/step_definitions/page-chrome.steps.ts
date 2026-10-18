@@ -41,7 +41,7 @@ When("biac dev serves it", async () => {
 });
 
 Then(
-  "the manifest module serves the nav tree with titles, positions and the Nested group",
+  "the manifest module serves the nav tree with titles, positions and the titled nested group",
   async () => {
     const code = await getOk(`${server!.url}${MANIFEST_URL}`);
     // Entries carry the fm nav fields the tree was built from.
@@ -56,7 +56,7 @@ Then(
     );
     assert.match(
       code,
-      /"directories":\[\{"id":"nested","name":"Nested","pages":\[\{"name":"Region detail","href":"\/nested\/page"\},\{"name":"Allocation","href":"\/nested\/allocation"\}\]\}\]/,
+      /"directories":\[\{"id":"nested","name":"Breakdowns","pages":\[\{"name":"Region detail","href":"\/nested\/page"\},\{"name":"Allocation","href":"\/nested\/allocation"\}\]\}\]/,
     );
   },
 );

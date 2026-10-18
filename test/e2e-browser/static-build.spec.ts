@@ -198,6 +198,24 @@ test("the orders dashboard keeps its full width and cards off the static build",
   expect(errors).toEqual([]);
 });
 
+test("the folder title and crossfilter-scale's own ToC label render off the static build", async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${preview.url}nested/page`);
+  const crumbs = page.getByRole("navigation", { name: "breadcrumb" });
+  await expect(crumbs).toHaveText(
+    /Orders overview\s*\/\s*Breakdowns\s*\/\s*Region detail/,
+  );
+  await expect(page.locator("details summary")).toHaveText("Breakdowns");
+
+  await page.goto(`${preview.url}crossfilter-scale`);
+  const measures = page.getByRole("navigation", { name: "Measures" });
+  await expect(measures.getByRole("link")).toHaveCount(3);
+  expect(errors).toEqual([]);
+});
+
 test("an unknown route renders the not-found page inside the app shell", async ({
   page,
 }) => {

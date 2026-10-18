@@ -1,5 +1,7 @@
 ---
 title: Cross-filter at scale
+table_of_contents: true
+table_of_contents_label: Measures
 sql:
   flights: data/flights.parquet
 ---
