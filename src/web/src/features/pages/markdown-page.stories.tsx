@@ -155,6 +155,34 @@ export const FullWidth: Story = {
   },
 };
 
+/** `table_of_contents: false` — from the page's front-matter or the
+ * project's `layout` — drops the right rail even with headings to list. */
+export const WithoutTableOfContents: Story = {
+  args: {
+    page: pageModule({
+      title: "Quarterly results",
+      layout: { table_of_contents: false },
+      default: () => (
+        <>
+          <h2>Orders</h2>
+          <p>Order volume.</p>
+          <h2>Revenue</h2>
+          <p>Revenue.</p>
+        </>
+      ),
+    }),
+  },
+  decorators: [withMemoryRouter(["/"], "/")],
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByRole("heading", { name: "Revenue" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("navigation", { name: "On this page" }),
+    ).toBeNull();
+  },
+};
+
 /** Front-matter `cards: true`: the big value sits on a card over the
  * tinted page; the callout beside it stays prose chrome. */
 export const Cards: Story = {

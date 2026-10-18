@@ -46,4 +46,19 @@ describe("pageLayout", () => {
       'Invalid front-matter in pages/page.md — cards: expected a boolean, got "yes"',
     );
   });
+
+  it("carries table_of_contents true and false", () => {
+    expect(pageLayout({ table_of_contents: true }, LOCATION)).toEqual({
+      table_of_contents: true,
+    });
+    expect(pageLayout({ table_of_contents: false }, LOCATION)).toEqual({
+      table_of_contents: false,
+    });
+  });
+
+  it("rejects a non-boolean table_of_contents naming the file and the value", () => {
+    expect(() => pageLayout({ table_of_contents: "no" }, LOCATION)).toThrow(
+      'Invalid front-matter in pages/page.md — table_of_contents: expected a boolean, got "no"',
+    );
+  });
 });

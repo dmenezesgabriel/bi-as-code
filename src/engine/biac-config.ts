@@ -13,7 +13,7 @@ import {
 } from "./data-loader-interpreters.js";
 import { isPageWidth, PAGE_WIDTH_CHOICES } from "./page-layout-frontmatter.js";
 import { sqlTableMap } from "./sql-frontmatter.js";
-import type { BiacConfig } from "./types.js";
+import type { BiacConfig, LayoutSwitch } from "./types.js";
 
 const CONFIG_FILE = "biac.config.ts";
 
@@ -23,7 +23,7 @@ const DEFAULTS: BiacConfig = {
   nav: { sidebar: true },
   sqlTables: {},
   interpreters: DEFAULT_INTERPRETERS,
-  layout: { page_width: "article", cards: false },
+  layout: { page_width: "article", cards: false, table_of_contents: true },
 };
 
 // The keys of the three closed objects. An unknown one throws rather than
@@ -40,7 +40,7 @@ const CONFIG_KEYS = [
   "layout",
 ] as const;
 const NAV_KEYS = ["sidebar"] as const;
-const LAYOUT_KEYS = ["page_width", "cards"] as const;
+const LAYOUT_KEYS = ["page_width", "cards", "table_of_contents"] as const;
 
 const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")} }`;
 
@@ -167,7 +167,8 @@ function readLayout(spec: Record<string, unknown>): BiacConfig["layout"] {
   rejectUnknownKeys(spec.layout, LAYOUT_KEYS, ["layout"]);
   return {
     page_width: readPageWidth(spec.layout.page_width),
-    cards: readLayoutCards(spec.layout.cards),
+    cards: readLayoutSwitch(spec.layout, "cards"),
+    table_of_contents: readLayoutSwitch(spec.layout, "table_of_contents"),
   };
 }
 
@@ -183,11 +184,15 @@ function readPageWidth(width: unknown): BiacConfig["layout"]["page_width"] {
   return width;
 }
 
-function readLayoutCards(cards: unknown): boolean {
-  if (cards === undefined) return DEFAULTS.layout.cards;
-  if (typeof cards !== "boolean")
-    throw invalid("layout.cards", ["layout", "cards"], "a boolean", cards);
-  return cards;
+function readLayoutSwitch(
+  layout: Record<string, unknown>,
+  key: LayoutSwitch,
+): boolean {
+  const value = layout[key];
+  if (value === undefined) return DEFAULTS.layout[key];
+  if (typeof value !== "boolean")
+    throw invalid(`layout.${key}`, ["layout", key], "a boolean", value);
+  return value;
 }
 
 function readInterpreters(

@@ -89,6 +89,8 @@ export interface PageLayout {
   page_width?: PageWidth;
   /** True puts each chart, table and big value on its own card. */
   cards?: boolean;
+  /** False hides the right-rail table of contents. */
+  table_of_contents?: boolean;
 }
 
 /** Table name → `data/` file path relative to the project root. */

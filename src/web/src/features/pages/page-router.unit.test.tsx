@@ -80,7 +80,7 @@ const site: BiacConfig = {
   theme: "system" as const,
   nav: { sidebar: true },
   sqlTables: {},
-  layout: { page_width: "article", cards: false },
+  layout: { page_width: "article", cards: false, table_of_contents: true },
 };
 
 const navTree: NavTree = {
@@ -223,7 +223,7 @@ describe("buildPageRouter", () => {
       [pageEntry("/width", async () => widthPage)],
       "/width",
       navTree,
-      { ...site, layout: { page_width: "full", cards: false } },
+      { ...site, layout: { ...site.layout, page_width: "full" } },
     );
 
     // Assert
@@ -246,12 +246,41 @@ describe("buildPageRouter", () => {
       [pageEntry("/cards", async () => cardsPage)],
       "/cards",
       navTree,
-      { ...site, layout: { page_width: "article", cards: true } },
+      { ...site, layout: { ...site.layout, cards: true } },
     );
 
     // Assert
     await screen.findByText("cards body");
     expect(document.querySelector("[data-cards]") !== null).toBe(carded);
+  });
+
+  it.each([
+    ["inherits the config's hidden table of contents", {}, false],
+    ["brings back the table of contents", { table_of_contents: true }, true],
+  ])("a page that %s", async (_case, layout, shown) => {
+    // Arrange
+    const tocPage: CompiledPageModule = {
+      ...textPage("toc body", "Toc"),
+      default: () => (
+        <>
+          <h2>Section A</h2>
+          <h2>Section B</h2>
+        </>
+      ),
+      layout,
+    };
+
+    // Act
+    renderRouter([pageEntry("/toc", async () => tocPage)], "/toc", navTree, {
+      ...site,
+      layout: { ...site.layout, table_of_contents: false },
+    });
+
+    // Assert
+    await screen.findByText("Section A");
+    expect(
+      screen.queryByRole("navigation", { name: "On this page" }) !== null,
+    ).toBe(shown);
   });
 
   it("re-registers a page's sql tables when the data channel reports a source change", async () => {

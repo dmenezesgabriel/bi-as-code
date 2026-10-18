@@ -175,9 +175,36 @@ describe("page transform", () => {
     );
   });
 
-  it("serves a page's page_width front-matter as its layout export", async () => {
+  it.each([
+    ["page_width", "page_width: full", '{"page_width":"full"}'],
+    [
+      "cards",
+      "page_width: full\ncards: true",
+      '{"page_width":"full","cards":true}',
+    ],
+    [
+      "table_of_contents",
+      "table_of_contents: true",
+      '{"table_of_contents":true}',
+    ],
+  ])(
+    "serves a page's %s front-matter in its layout export",
+    async (_key, frontmatter, layout) => {
+      const root = makeProject();
+      writeFile("pages/index.md", `---\n${frontmatter}\n---\n# Hi\n`);
+      const dev = await makeServer(root);
+
+      const result = await dev.transformRequest(
+        `/@fs${join(root, "pages/index.md")}`,
+      );
+
+      expect(result?.code).toContain(`export const layout = ${layout};`);
+    },
+  );
+
+  it("serves a page whose table_of_contents is not a boolean as a compile error", async () => {
     const root = makeProject();
-    writeFile("pages/index.md", "---\npage_width: full\n---\n# Hi\n");
+    writeFile("pages/index.md", '---\ntable_of_contents: "no"\n---\n# Hi\n');
     const dev = await makeServer(root);
 
     const result = await dev.transformRequest(
@@ -185,24 +212,7 @@ describe("page transform", () => {
     );
 
     expect(result?.code).toContain(
-      'export const layout = {"page_width":"full"};',
-    );
-  });
-
-  it("serves a page's cards front-matter in its layout export", async () => {
-    const root = makeProject();
-    writeFile(
-      "pages/index.md",
-      "---\npage_width: full\ncards: true\n---\n# Hi\n",
-    );
-    const dev = await makeServer(root);
-
-    const result = await dev.transformRequest(
-      `/@fs${join(root, "pages/index.md")}`,
-    );
-
-    expect(result?.code).toContain(
-      'export const layout = {"page_width":"full","cards":true};',
+      'table_of_contents: expected a boolean, got \\"no\\"',
     );
   });
 
@@ -465,13 +475,15 @@ describe("virtual:biac-config", () => {
     const root = makeProject();
     writeFile(
       "biac.config.ts",
-      'export default { layout: { page_width: "full", cards: true } };\n',
+      'export default { layout: { page_width: "full", cards: true, table_of_contents: false } };\n',
     );
     const dev = await makeServer(root);
 
     const code = await loadConfigModule(dev);
 
-    expect(code).toContain('"layout":{"page_width":"full","cards":true}');
+    expect(code).toContain(
+      '"layout":{"page_width":"full","cards":true,"table_of_contents":false}',
+    );
   });
 
   it("keeps the loader interpreters out of the browser", async () => {
@@ -498,7 +510,9 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"system"');
     expect(code).toContain('"sidebar":true');
     expect(code).toContain('"sqlTables":{}');
-    expect(code).toContain('"layout":{"page_width":"article","cards":false}');
+    expect(code).toContain(
+      '"layout":{"page_width":"article","cards":false,"table_of_contents":true}',
+    );
   });
 
   it("invalidates the config module when biac.config.ts is edited", async () => {

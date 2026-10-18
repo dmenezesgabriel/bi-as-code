@@ -359,3 +359,53 @@ test("biac.config.ts layout.page_width widens every page, a page's front-matter 
   expect(await mainWidth()).toBe(848);
   expect(errors.slice(errorsBeforeFix)).toEqual([]);
 });
+
+test("biac.config.ts layout.table_of_contents: false hides every rail, a page's front-matter brings its own back, and a bad value shows its error", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const configFile = join(biacDev.projectDir, "biac.config.ts");
+  writeFileSync(
+    configFile,
+    readFileSync(configFile, "utf8").replace(
+      "{\n",
+      "{\n  layout: { table_of_contents: false },\n",
+    ),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${biacDev.url}/weekly-review`);
+  const heading = page.getByRole("heading", {
+    level: 1,
+    name: "Weekly review",
+  });
+  await expect(heading).toBeVisible();
+  const toc = page.getByRole("navigation", { name: "On this page" });
+  await expect(toc).toHaveCount(0);
+
+  const file = join(biacDev.projectDir, "pages/weekly-review.md");
+  const original = readFileSync(file, "utf8");
+  const withToc = (value: string) =>
+    original.replace(
+      "title: Weekly review\n",
+      `$&table_of_contents: ${value}\n`,
+    );
+  await rewriteUntilServerLogs({
+    rewrite: () => writeFileSync(file, withToc("true")),
+    log: biacDev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  await expect(toc.getByRole("link")).toHaveCount(7, { timeout: 20_000 });
+
+  writeFileSync(file, withToc('"no"'));
+  await expect(page.getByRole("alert")).toContainText(
+    'table_of_contents: expected a boolean, got "no"',
+    { timeout: 20_000 },
+  );
+
+  writeFileSync(file, withToc("true"));
+  await expect(toc.getByRole("link")).toHaveCount(7, { timeout: 20_000 });
+  expect(errors).toEqual([]);
+});

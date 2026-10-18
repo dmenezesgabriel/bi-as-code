@@ -20,6 +20,8 @@ declare module "virtual:biac-config" {
       page_width: "article" | "full";
       /** True puts each chart, table and big value on its own card. */
       cards: boolean;
+      /** False hides the right-rail table of contents; a page can bring it back. */
+      table_of_contents: boolean;
     };
   }
   export const config: BiacConfig;

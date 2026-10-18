@@ -67,7 +67,12 @@ export interface PageLayout {
   page_width?: PageWidth;
   /** True puts each chart, table and big value on its own card. */
   cards?: boolean;
+  /** False hides the right-rail table of contents. */
+  table_of_contents?: boolean;
 }
+
+/** The `PageLayout` keys that are strict on/off booleans. */
+export type LayoutSwitch = "cards" | "table_of_contents";
 
 /** Parsed YAML front-matter of a page — arbitrary author keys, title included. */
 export interface PageFrontmatter {

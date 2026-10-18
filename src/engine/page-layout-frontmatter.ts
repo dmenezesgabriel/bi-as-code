@@ -1,5 +1,10 @@
 import { invalidSetting } from "./invalid-setting.js";
-import type { PageFrontmatter, PageLayout, PageWidth } from "./types.js";
+import type {
+  LayoutSwitch,
+  PageFrontmatter,
+  PageLayout,
+  PageWidth,
+} from "./types.js";
 
 const PAGE_WIDTHS: readonly PageWidth[] = ["article", "full"];
 
@@ -15,8 +20,8 @@ export const PAGE_WIDTH_CHOICES = PAGE_WIDTHS.map((name) =>
  * not a typo.
  *
  * @example
- * pageLayout({ page_width: "full", cards: true }, "front-matter in pages/a.md");
- * // → { page_width: "full", cards: true }
+ * pageLayout({ page_width: "full", table_of_contents: false }, "front-matter in pages/a.md");
+ * // → { page_width: "full", table_of_contents: false }
  */
 export function pageLayout(
   frontmatter: PageFrontmatter,
@@ -24,7 +29,8 @@ export function pageLayout(
 ): PageLayout {
   return {
     ...pageWidth(frontmatter.page_width, location),
-    ...pageCards(frontmatter.cards, location),
+    ...pageSwitch(frontmatter, "cards", location),
+    ...pageSwitch(frontmatter, "table_of_contents", location),
   };
 }
 
@@ -38,12 +44,17 @@ function pageWidth(width: unknown, location: string): PageLayout {
 
 // Strictly a boolean: YAML already reads `true`/`false`, so a string here is
 // a typo such as `cards: yes please`, not a value to coerce.
-function pageCards(cards: unknown, location: string): PageLayout {
-  if (cards === undefined) return {};
-  if (typeof cards !== "boolean") {
-    throw invalidSetting(location, "cards", "a boolean", cards);
+function pageSwitch(
+  frontmatter: PageFrontmatter,
+  key: LayoutSwitch,
+  location: string,
+): PageLayout {
+  const value = frontmatter[key];
+  if (value === undefined) return {};
+  if (typeof value !== "boolean") {
+    throw invalidSetting(location, key, "a boolean", value);
   }
-  return { cards };
+  return { [key]: value };
 }
 
 /**

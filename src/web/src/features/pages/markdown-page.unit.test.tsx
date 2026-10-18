@@ -65,6 +65,15 @@ function renderSwappablePage(first: CompiledPageModule, db: DuckDbService) {
   return (next: CompiledPageModule) => act(() => handle.swap?.(next));
 }
 
+function twoSections() {
+  return (
+    <>
+      <h2>Section A</h2>
+      <h2>Section B</h2>
+    </>
+  );
+}
+
 function page(partial: Partial<CompiledPageModule>): CompiledPageModule {
   return {
     default: () => null,
@@ -444,23 +453,25 @@ describe("MarkdownPage", () => {
     ).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("hides the toc when front-matter sets table_of_contents: false", async () => {
+  it("hides the toc when its layout sets table_of_contents: false", async () => {
     renderPage(
-      page({
-        frontmatter: { table_of_contents: false },
-        default: () => (
-          <>
-            <h2>Section A</h2>
-            <h2>Section B</h2>
-          </>
-        ),
-      }),
+      page({ layout: { table_of_contents: false }, default: twoSections }),
     );
 
     await screen.findByRole("main");
     expect(
       screen.queryByRole("navigation", { name: "On this page" }),
     ).toBeNull();
+  });
+
+  // The router merges validated front-matter into `layout`; an unvalidated
+  // raw key such as `table_of_contents: "no"` never reaches it.
+  it("keeps the toc when only the raw front-matter names table_of_contents", async () => {
+    renderPage(
+      page({ frontmatter: { table_of_contents: false }, default: twoSections }),
+    );
+
+    await screen.findByRole("navigation", { name: "On this page" });
   });
 
   // jsdom computes no layout, so the width caps are asserted as the

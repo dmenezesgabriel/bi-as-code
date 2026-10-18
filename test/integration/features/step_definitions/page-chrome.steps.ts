@@ -67,7 +67,10 @@ Then(
     const code = await getOk(`${server!.url}${CONFIG_URL}`);
     assert.match(code, /"title":"biac"/);
     assert.match(code, /"sidebar":true/);
-    assert.match(code, /"layout":\{"page_width":"article","cards":false\}/);
+    assert.match(
+      code,
+      /"layout":\{"page_width":"article","cards":false,"table_of_contents":true\}/,
+    );
   },
 );
 

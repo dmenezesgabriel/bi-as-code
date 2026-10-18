@@ -34,7 +34,7 @@ describe("missing or empty config", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
-      layout: { page_width: "article", cards: false },
+      layout: { page_width: "article", cards: false, table_of_contents: true },
     });
   });
 
@@ -48,7 +48,7 @@ describe("missing or empty config", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
-      layout: { page_width: "article", cards: false },
+      layout: { page_width: "article", cards: false, table_of_contents: true },
     });
   });
 });
@@ -91,7 +91,7 @@ describe("field handling", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
-      layout: { page_width: "article", cards: false },
+      layout: { page_width: "article", cards: false, table_of_contents: true },
     });
   });
 
@@ -121,7 +121,7 @@ describe("field handling", () => {
     writeConfig(root, "export default { layout: {} };\n");
 
     await expect(loadBiacConfig(root)).resolves.toMatchObject({
-      layout: { page_width: "article", cards: false },
+      layout: { page_width: "article", cards: false, table_of_contents: true },
     });
   });
 
@@ -131,6 +131,18 @@ describe("field handling", () => {
 
     await expect(loadBiacConfig(root)).resolves.toMatchObject({
       layout: { page_width: "article", cards: true },
+    });
+  });
+
+  it("reads layout.table_of_contents", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      "export default { layout: { table_of_contents: false } };\n",
+    );
+
+    await expect(loadBiacConfig(root)).resolves.toMatchObject({
+      layout: { page_width: "article", cards: false, table_of_contents: false },
     });
   });
 });
@@ -228,7 +240,7 @@ describe("validation", () => {
     writeConfig(root, 'export default { layout: "full" };\n');
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
-      /layout: expected an object with optional page_width, cards, got "full"/,
+      /layout: expected an object with optional page_width, cards, table_of_contents, got "full"/,
     );
   });
 
@@ -416,17 +428,22 @@ describe("unknown keys", () => {
     [
       "an unknown layout key by its dotted path",
       'export default { layout: { pagewidth: "full" } };\n',
-      "Invalid biac.config.ts:1:28 — layout.pagewidth: unknown key, expected one of page_width, cards (did you mean page_width?)",
+      "Invalid biac.config.ts:1:28 — layout.pagewidth: unknown key, expected one of page_width, cards, table_of_contents (did you mean page_width?)",
     ],
     [
       "a misspelt layout key with the closest, cards",
       "export default { layout: { cardz: true } };\n",
-      "Invalid biac.config.ts:1:28 — layout.cardz: unknown key, expected one of page_width, cards (did you mean cards?)",
+      "Invalid biac.config.ts:1:28 — layout.cardz: unknown key, expected one of page_width, cards, table_of_contents (did you mean cards?)",
     ],
     [
       "a non-boolean layout.cards at its line and column",
       'export default {\n  layout: { cards: "yes" },\n};\n',
       'Invalid biac.config.ts:2:13 — layout.cards: expected a boolean, got "yes"',
+    ],
+    [
+      "a non-boolean layout.table_of_contents at its line and column",
+      'export default {\n  layout: { table_of_contents: "no" },\n};\n',
+      'Invalid biac.config.ts:2:13 — layout.table_of_contents: expected a boolean, got "no"',
     ],
   ])("throws naming %s", async (_case, source, message) => {
     const root = makeProject();
