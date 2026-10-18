@@ -28,7 +28,12 @@ const site: BiacConfig = {
   theme: "system",
   nav: { sidebar: true },
   sqlTables: {},
-  layout: { page_width: "article", cards: false, table_of_contents: true },
+  layout: {
+    page_width: "article",
+    cards: false,
+    table_of_contents: true,
+    table_of_contents_label: "On this page",
+  },
 };
 
 async function renderShell(

@@ -131,7 +131,8 @@ const mdxComponents: MdxComponentMap = {
  * Renders one compiled page module: the resolved title is applied to the
  * document and the MDX component renders with the shared component map.
  * Unless its layout sets `table_of_contents: false`, a right-rail ToC built
- * from the article's h2/h3 headings rides along on `xl` viewports.
+ * from the article's h2/h3 headings rides along on `xl` viewports, headed
+ * by its layout's `table_of_contents_label`.
  * Front-matter `page_width: full` lifts the reading-column caps so the
  * content fills the space beside the sidebar; the ToC rail stays.
  * `cards: true` puts each chart, table and big value on a card over a
@@ -182,7 +183,10 @@ export function MarkdownPage({
           </CardsProvider>
         </main>
         {page.layout.table_of_contents !== false && article && (
-          <NavToc article={article} />
+          <NavToc
+            article={article}
+            label={page.layout.table_of_contents_label}
+          />
         )}
       </div>
     </CardModeBackground>

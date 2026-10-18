@@ -187,6 +187,11 @@ describe("page transform", () => {
       "table_of_contents: true",
       '{"table_of_contents":true}',
     ],
+    [
+      "table_of_contents_label",
+      "table_of_contents_label: Contents",
+      '{"table_of_contents_label":"Contents"}',
+    ],
   ])(
     "serves a page's %s front-matter in its layout export",
     async (_key, frontmatter, layout) => {
@@ -202,19 +207,31 @@ describe("page transform", () => {
     },
   );
 
-  it("serves a page whose table_of_contents is not a boolean as a compile error", async () => {
-    const root = makeProject();
-    writeFile("pages/index.md", '---\ntable_of_contents: "no"\n---\n# Hi\n');
-    const dev = await makeServer(root);
-
-    const result = await dev.transformRequest(
-      `/@fs${join(root, "pages/index.md")}`,
-    );
-
-    expect(result?.code).toContain(
+  it.each([
+    [
+      "table_of_contents is not a boolean",
+      'table_of_contents: "no"',
       'table_of_contents: expected a boolean, got \\"no\\"',
-    );
-  });
+    ],
+    [
+      "table_of_contents_label is empty",
+      'table_of_contents_label: ""',
+      'table_of_contents_label: expected a non-empty string, got \\"\\"',
+    ],
+  ])(
+    "serves a page whose %s as a compile error",
+    async (_case, frontmatter, message) => {
+      const root = makeProject();
+      writeFile("pages/index.md", `---\n${frontmatter}\n---\n# Hi\n`);
+      const dev = await makeServer(root);
+
+      const result = await dev.transformRequest(
+        `/@fs${join(root, "pages/index.md")}`,
+      );
+
+      expect(result?.code).toContain(message);
+    },
+  );
 
   it("serves a page whose page_width is not article or full as a compile error", async () => {
     const root = makeProject();
@@ -475,14 +492,14 @@ describe("virtual:biac-config", () => {
     const root = makeProject();
     writeFile(
       "biac.config.ts",
-      'export default { layout: { page_width: "full", cards: true, table_of_contents: false } };\n',
+      'export default { layout: { page_width: "full", cards: true, table_of_contents: false, table_of_contents_label: "Contents" } };\n',
     );
     const dev = await makeServer(root);
 
     const code = await loadConfigModule(dev);
 
     expect(code).toContain(
-      '"layout":{"page_width":"full","cards":true,"table_of_contents":false}',
+      '"layout":{"page_width":"full","cards":true,"table_of_contents":false,"table_of_contents_label":"Contents"}',
     );
   });
 
@@ -511,7 +528,7 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"sidebar":true');
     expect(code).toContain('"sqlTables":{}');
     expect(code).toContain(
-      '"layout":{"page_width":"article","cards":false,"table_of_contents":true}',
+      '"layout":{"page_width":"article","cards":false,"table_of_contents":true,"table_of_contents_label":"On this page"}',
     );
   });
 

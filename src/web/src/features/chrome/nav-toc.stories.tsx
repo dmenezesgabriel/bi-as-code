@@ -9,7 +9,7 @@ import { NavToc } from "./nav-toc";
  * size container at least 59rem wide — narrower, the iframe shows nothing,
  * which is the real behavior.
  */
-function ArticleWithToc() {
+function ArticleWithToc({ label }: { label?: string }) {
   const [article, setArticle] = useState<HTMLElement | null>(null);
   return (
     <div className="@container flex gap-8">
@@ -22,7 +22,7 @@ function ArticleWithToc() {
         <h3 id="refunds">Refunds</h3>
         <p>Refunds subtracted from revenue.</p>
       </main>
-      {article && <NavToc article={article} />}
+      {article && <NavToc article={article} label={label} />}
     </div>
   );
 }
@@ -49,6 +49,20 @@ export const WithHeadings: Story = {
       "Refunds",
     ]);
     await expect(links[0]).toHaveAttribute("href", "#orders");
+  },
+};
+
+/** A `table_of_contents_label` replaces the "On this page" heading and
+ * names the `nav` landmark with the same text. */
+export const CustomLabel: Story = {
+  render: () => <ArticleWithToc label="Contents" />,
+  play: async ({ canvasElement }) => {
+    const nav = canvasElement.querySelector('nav[aria-label="Contents"]');
+    await expect(nav).not.toBeNull();
+    await expect(nav!.querySelector("p")).toHaveTextContent("Contents");
+    await expect(
+      canvasElement.querySelector('nav[aria-label="On this page"]'),
+    ).toBeNull();
   },
 };
 

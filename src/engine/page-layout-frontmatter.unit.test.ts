@@ -61,4 +61,25 @@ describe("pageLayout", () => {
       'Invalid front-matter in pages/page.md — table_of_contents: expected a boolean, got "no"',
     );
   });
+
+  it("carries table_of_contents_label", () => {
+    expect(
+      pageLayout({ table_of_contents_label: "Contents" }, LOCATION),
+    ).toEqual({ table_of_contents_label: "Contents" });
+  });
+
+  it.each([
+    ["an empty string", "", '""'],
+    ["a blank string", "  ", '"  "'],
+    ["a number", 3, "3"],
+  ])(
+    "rejects %s as table_of_contents_label naming the file and the value",
+    (_case, value, shown) => {
+      expect(() =>
+        pageLayout({ table_of_contents_label: value }, LOCATION),
+      ).toThrow(
+        `Invalid front-matter in pages/page.md — table_of_contents_label: expected a non-empty string, got ${shown}`,
+      );
+    },
+  );
 });

@@ -22,6 +22,8 @@ declare module "virtual:biac-config" {
       cards: boolean;
       /** False hides the right-rail table of contents; a page can bring it back. */
       table_of_contents: boolean;
+      /** The table of contents' heading and the name of its `nav` landmark. */
+      table_of_contents_label: string;
     };
   }
   export const config: BiacConfig;

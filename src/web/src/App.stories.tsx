@@ -24,7 +24,12 @@ const SITE: BiacConfig = {
   theme: "light",
   nav: { sidebar: true },
   sqlTables: {},
-  layout: { page_width: "article", cards: false, table_of_contents: true },
+  layout: {
+    page_width: "article",
+    cards: false,
+    table_of_contents: true,
+    table_of_contents_label: "On this page",
+  },
 };
 
 const meta: Meta<typeof AppShell> = {

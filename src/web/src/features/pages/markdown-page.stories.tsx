@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import type { Row } from "../data/types";
 import {
@@ -155,6 +155,17 @@ export const FullWidth: Story = {
   },
 };
 
+function OrdersAndRevenue() {
+  return (
+    <>
+      <h2>Orders</h2>
+      <p>Order volume.</p>
+      <h2>Revenue</h2>
+      <p>Revenue.</p>
+    </>
+  );
+}
+
 /** `table_of_contents: false` — from the page's front-matter or the
  * project's `layout` — drops the right rail even with headings to list. */
 export const WithoutTableOfContents: Story = {
@@ -162,14 +173,7 @@ export const WithoutTableOfContents: Story = {
     page: pageModule({
       title: "Quarterly results",
       layout: { table_of_contents: false },
-      default: () => (
-        <>
-          <h2>Orders</h2>
-          <p>Order volume.</p>
-          <h2>Revenue</h2>
-          <p>Revenue.</p>
-        </>
-      ),
+      default: OrdersAndRevenue,
     }),
   },
   decorators: [withMemoryRouter(["/"], "/")],
@@ -180,6 +184,30 @@ export const WithoutTableOfContents: Story = {
     await expect(
       canvas.queryByRole("navigation", { name: "On this page" }),
     ).toBeNull();
+  },
+};
+
+/** `table_of_contents_label` — from the page's front-matter or the
+ * project's `layout` — heads the rail and names its `nav` landmark. The
+ * rail is in the DOM at any width; it shows from a 59rem container up. */
+export const LabelledTableOfContents: Story = {
+  args: {
+    page: pageModule({
+      title: "Quarterly results",
+      layout: { table_of_contents_label: "Contents" },
+      default: OrdersAndRevenue,
+    }),
+  },
+  decorators: [withMemoryRouter(["/"], "/")],
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(
+        canvasElement.querySelector('nav[aria-label="Contents"]'),
+      ).not.toBeNull(),
+    );
+    await expect(
+      canvasElement.querySelector('nav[aria-label="Contents"] p'),
+    ).toHaveTextContent("Contents");
   },
 };
 

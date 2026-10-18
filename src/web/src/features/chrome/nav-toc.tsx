@@ -6,7 +6,7 @@ import {
   type TocHeading,
 } from "./toc-headings";
 
-const TOC_LABEL = "On this page";
+const DEFAULT_TOC_LABEL = "On this page";
 
 interface HighlightBox {
   top: number;
@@ -21,7 +21,7 @@ function sameHeadings(a: TocHeading[], b: TocHeading[]): boolean {
 }
 
 /**
- * The right-rail "On this page" table of contents. Headings are read from
+ * The right-rail table of contents ("On this page" unless labelled). Headings are read from
  * the rendered article DOM (evidence's approach — no rehype plugin), with
  * a debounced MutationObserver re-extracting when the page mutates. The
  * scroll-spy ports framework's `client/toc.ts`: an IntersectionObserver
@@ -31,12 +31,19 @@ function sameHeadings(a: TocHeading[], b: TocHeading[]): boolean {
  * (its `scroll-margin-top`), otherwise the lowest heading
  * still above center — and the highlight bar slides to the active link.
  * Renders nothing when the article has fewer than two qualifying headings.
+ * `label` is both the visible heading and the `nav` landmark's name.
  *
  * @example
  * <main ref={setArticle}>{content}</main>
- * {article && <NavToc article={article} />}
+ * {article && <NavToc article={article} label="Contents" />}
  */
-export function NavToc({ article }: { article: HTMLElement }) {
+export function NavToc({
+  article,
+  label = DEFAULT_TOC_LABEL,
+}: {
+  article: HTMLElement;
+  label?: string;
+}) {
   const [headings, setHeadings] = useState<TocHeading[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bar, setBar] = useState<HighlightBox | null>(null);
@@ -107,9 +114,9 @@ export function NavToc({ article }: { article: HTMLElement }) {
     // 18rem sidebar, less the page's 3rem of side padding — enough for the
     // 14rem rail plus a readable article.
     <aside className="sticky top-(--dock-top,4rem) hidden max-h-[calc(100vh-4rem)] w-56 shrink-0 self-start overflow-y-auto @min-[59rem]:block">
-      <nav aria-label={TOC_LABEL}>
+      <nav aria-label={label}>
         <p className="pb-2 text-xs font-medium tracking-wide text-muted-foreground-faded">
-          {TOC_LABEL}
+          {label}
         </p>
         <ul ref={listRef} className="relative border-l border-border">
           {bar && (

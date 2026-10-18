@@ -474,6 +474,17 @@ describe("MarkdownPage", () => {
     await screen.findByRole("navigation", { name: "On this page" });
   });
 
+  it("names the toc with its layout's table_of_contents_label", async () => {
+    renderPage(
+      page({
+        layout: { table_of_contents_label: "Contents" },
+        default: twoSections,
+      }),
+    );
+
+    await screen.findByRole("navigation", { name: "Contents" });
+  });
+
   // jsdom computes no layout, so the width caps are asserted as the
   // Tailwind classes that carry them.
   it.each([{}, { page_width: "article" as const }])(

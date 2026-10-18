@@ -11,7 +11,12 @@ import {
   DEFAULT_INTERPRETERS,
   mergeInterpreters,
 } from "./data-loader-interpreters.js";
-import { isPageWidth, PAGE_WIDTH_CHOICES } from "./page-layout-frontmatter.js";
+import {
+  isPageWidth,
+  isTocLabel,
+  PAGE_WIDTH_CHOICES,
+  TOC_LABEL_SHAPE,
+} from "./page-layout-frontmatter.js";
 import { sqlTableMap } from "./sql-frontmatter.js";
 import type { BiacConfig, LayoutSwitch } from "./types.js";
 
@@ -23,7 +28,12 @@ const DEFAULTS: BiacConfig = {
   nav: { sidebar: true },
   sqlTables: {},
   interpreters: DEFAULT_INTERPRETERS,
-  layout: { page_width: "article", cards: false, table_of_contents: true },
+  layout: {
+    page_width: "article",
+    cards: false,
+    table_of_contents: true,
+    table_of_contents_label: "On this page",
+  },
 };
 
 // The keys of the three closed objects. An unknown one throws rather than
@@ -40,7 +50,12 @@ const CONFIG_KEYS = [
   "layout",
 ] as const;
 const NAV_KEYS = ["sidebar"] as const;
-const LAYOUT_KEYS = ["page_width", "cards", "table_of_contents"] as const;
+const LAYOUT_KEYS = [
+  "page_width",
+  "cards",
+  "table_of_contents",
+  "table_of_contents_label",
+] as const;
 
 const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")} }`;
 
@@ -169,6 +184,7 @@ function readLayout(spec: Record<string, unknown>): BiacConfig["layout"] {
     page_width: readPageWidth(spec.layout.page_width),
     cards: readLayoutSwitch(spec.layout, "cards"),
     table_of_contents: readLayoutSwitch(spec.layout, "table_of_contents"),
+    table_of_contents_label: readTocLabel(spec.layout.table_of_contents_label),
   };
 }
 
@@ -193,6 +209,18 @@ function readLayoutSwitch(
   if (typeof value !== "boolean")
     throw invalid(`layout.${key}`, ["layout", key], "a boolean", value);
   return value;
+}
+
+function readTocLabel(label: unknown): string {
+  if (label === undefined) return DEFAULTS.layout.table_of_contents_label;
+  if (!isTocLabel(label))
+    throw invalid(
+      "layout.table_of_contents_label",
+      ["layout", "table_of_contents_label"],
+      TOC_LABEL_SHAPE,
+      label,
+    );
+  return label;
 }
 
 function readInterpreters(

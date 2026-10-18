@@ -409,3 +409,54 @@ test("biac.config.ts layout.table_of_contents: false hides every rail, a page's 
   await expect(toc.getByRole("link")).toHaveCount(7, { timeout: 20_000 });
   expect(errors).toEqual([]);
 });
+
+test("biac.config.ts layout.table_of_contents_label names every rail, a page's front-matter names its own, and an empty label shows its error", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const configFile = join(biacDev.projectDir, "biac.config.ts");
+  writeFileSync(
+    configFile,
+    readFileSync(configFile, "utf8").replace(
+      "{\n",
+      '{\n  layout: { table_of_contents_label: "Contents" },\n',
+    ),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${biacDev.url}/regional-orders`);
+  const contents = page.getByRole("navigation", { name: "Contents" });
+  await expect(contents.getByText("Contents", { exact: true })).toBeVisible();
+  await page.goto(`${biacDev.url}/weekly-review`);
+  await expect(contents.getByRole("link")).toHaveCount(7);
+
+  const file = join(biacDev.projectDir, "pages/weekly-review.md");
+  const original = readFileSync(file, "utf8");
+  const withLabel = (value: string) =>
+    original.replace(
+      "title: Weekly review\n",
+      `$&table_of_contents_label: ${value}\n`,
+    );
+  await rewriteUntilServerLogs({
+    rewrite: () => writeFileSync(file, withLabel("Summary")),
+    log: biacDev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  const summary = page.getByRole("navigation", { name: "Summary" });
+  await expect(summary.getByText("Summary", { exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(contents).toHaveCount(0);
+
+  writeFileSync(file, withLabel('""'));
+  await expect(page.getByRole("alert")).toContainText(
+    'table_of_contents_label: expected a non-empty string, got ""',
+    { timeout: 20_000 },
+  );
+
+  writeFileSync(file, withLabel("Summary"));
+  await expect(summary.getByRole("link")).toHaveCount(7, { timeout: 20_000 });
+  expect(errors).toEqual([]);
+});

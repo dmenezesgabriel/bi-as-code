@@ -22,6 +22,7 @@ import { buildPageRouter } from "./page-router";
 import type {
   CompiledPageModule,
   ManifestPageEntry,
+  PageLayout,
   PageModule,
 } from "./types";
 
@@ -80,7 +81,12 @@ const site: BiacConfig = {
   theme: "system" as const,
   nav: { sidebar: true },
   sqlTables: {},
-  layout: { page_width: "article", cards: false, table_of_contents: true },
+  layout: {
+    page_width: "article",
+    cards: false,
+    table_of_contents: true,
+    table_of_contents_label: "On this page",
+  },
 };
 
 const navTree: NavTree = {
@@ -254,11 +260,7 @@ describe("buildPageRouter", () => {
     expect(document.querySelector("[data-cards]") !== null).toBe(carded);
   });
 
-  it.each([
-    ["inherits the config's hidden table of contents", {}, false],
-    ["brings back the table of contents", { table_of_contents: true }, true],
-  ])("a page that %s", async (_case, layout, shown) => {
-    // Arrange
+  function renderTocPage(layout: PageLayout, siteLayout: Partial<PageLayout>) {
     const tocPage: CompiledPageModule = {
       ...textPage("toc body", "Toc"),
       default: () => (
@@ -269,18 +271,39 @@ describe("buildPageRouter", () => {
       ),
       layout,
     };
-
-    // Act
     renderRouter([pageEntry("/toc", async () => tocPage)], "/toc", navTree, {
       ...site,
-      layout: { ...site.layout, table_of_contents: false },
+      layout: { ...site.layout, ...siteLayout },
     });
+  }
+
+  it.each([
+    ["inherits the config's hidden table of contents", {}, false],
+    ["brings back the table of contents", { table_of_contents: true }, true],
+  ])("a page that %s", async (_case, layout, shown) => {
+    // Arrange + Act
+    renderTocPage(layout, { table_of_contents: false });
 
     // Assert
     await screen.findByText("Section A");
     expect(
       screen.queryByRole("navigation", { name: "On this page" }) !== null,
     ).toBe(shown);
+  });
+
+  it.each([
+    ["inherits the config's table of contents label", {}, "Contents"],
+    [
+      "names its own table of contents",
+      { table_of_contents_label: "Summary" },
+      "Summary",
+    ],
+  ])("a page that %s", async (_case, layout, label) => {
+    // Arrange + Act
+    renderTocPage(layout, { table_of_contents_label: "Contents" });
+
+    // Assert
+    await screen.findByRole("navigation", { name: label });
   });
 
   it("re-registers a page's sql tables when the data channel reports a source change", async () => {

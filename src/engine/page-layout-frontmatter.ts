@@ -13,6 +13,9 @@ export const PAGE_WIDTH_CHOICES = PAGE_WIDTHS.map((name) =>
   JSON.stringify(name),
 ).join(" | ");
 
+/** The accepted `table_of_contents_label` shape as an error message names it. */
+export const TOC_LABEL_SHAPE = "a non-empty string";
+
 /**
  * Reads a page's layout keys out of its front-matter. A value outside the
  * accepted set fails naming the file, rather than being dropped for the
@@ -31,6 +34,7 @@ export function pageLayout(
     ...pageWidth(frontmatter.page_width, location),
     ...pageSwitch(frontmatter, "cards", location),
     ...pageSwitch(frontmatter, "table_of_contents", location),
+    ...pageTocLabel(frontmatter.table_of_contents_label, location),
   };
 }
 
@@ -55,6 +59,32 @@ function pageSwitch(
     throw invalidSetting(location, key, "a boolean", value);
   }
   return { [key]: value };
+}
+
+function pageTocLabel(label: unknown, location: string): PageLayout {
+  if (label === undefined) return {};
+  if (!isTocLabel(label)) {
+    throw invalidSetting(
+      location,
+      "table_of_contents_label",
+      TOC_LABEL_SHAPE,
+      label,
+    );
+  }
+  return { table_of_contents_label: label };
+}
+
+/**
+ * True for a value `table_of_contents_label` accepts, wherever it is
+ * declared. A blank label is refused: it would leave the rail without a
+ * heading and its `nav` landmark without a name.
+ *
+ * @example
+ * isTocLabel("Contents"); // → true
+ * isTocLabel(" "); // → false
+ */
+export function isTocLabel(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
 }
 
 /**

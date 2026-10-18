@@ -4,13 +4,13 @@ import { useState, type ReactNode } from "react";
 import { stubIntersectionObserver } from "./intersection-observer.stub";
 import { NavToc } from "./nav-toc";
 
-function renderToc(markup: ReactNode) {
+function renderToc(markup: ReactNode, label?: string) {
   function Host() {
     const [article, setArticle] = useState<HTMLElement | null>(null);
     return (
       <div>
         <article ref={setArticle}>{markup}</article>
-        {article && <NavToc article={article} />}
+        {article && <NavToc article={article} label={label} />}
       </div>
     );
   }
@@ -70,6 +70,14 @@ describe("NavToc", () => {
       "#nested-bit",
     );
     expect(document.getElementById("alpha-one")).not.toBeNull();
+  });
+
+  it("names the nav and its heading with the given label", async () => {
+    renderToc(THREE_SECTIONS, "Contents");
+
+    const nav = await screen.findByRole("navigation", { name: "Contents" });
+    expect(nav.querySelector("p")).toHaveTextContent("Contents");
+    expect(screen.queryByText("On this page")).toBeNull();
   });
 
   it("indents h3 entries relative to h2 entries", async () => {
