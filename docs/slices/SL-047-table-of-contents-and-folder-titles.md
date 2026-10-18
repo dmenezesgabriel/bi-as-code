@@ -1,6 +1,6 @@
 # SL-047 — A project sets whether pages show a table of contents and what it is called, and names its sidebar folders
 
-Milestone: Phase 4 — Project and page settings, themes, layouts · State: open · Depends on: SL-046 · Closes: GAP-040, GAP-041
+Milestone: Phase 4 — Project and page settings, themes, layouts · State: partial — awaits its demo · Depends on: SL-046 · Closes: GAP-040, GAP-041
 
 ## Outcome
 
@@ -8,11 +8,11 @@ An author sets `layout: { table_of_contents: false, table_of_contents_label: "Co
 
 ## Demo
 
-1. Cold start: `bin/biac dev` at 1440px. On `/nested/page` the sidebar folder and the breadcrumb read `Nested`. On `/weekly-review` the ToC rail shows 7 links under the heading `On this page`, which is also its `nav[aria-label]`. A page with fewer than two headings (`/nested/page`, `/`) has no rail at all, since `src/web/src/features/chrome/nav-toc.tsx` returns null below 2 headings.
-2. Add `directories: { "pages/nested": { title: "Planning" } }` to `biac.config.ts` and save. The tab reloads by itself; sidebar folder and breadcrumb read `Planning`; the URL is still `/nested/page`.
-3. Add `layout: { table_of_contents_label: "Contents" }`. The `/weekly-review` and `/regional-orders` rail heading and `nav[aria-label]` read `Contents`.
-4. Add `table_of_contents: false` to `layout`. Neither `/weekly-review` nor `/regional-orders` shows the rail; the example page (added in T4), whose front-matter sets `table_of_contents: true`, keeps its rail.
-5. Type `"pages/nestd"` under `directories`: a located error at `biac.config.ts:<line>:<column>` names the key, the accepted folders (`"pages/nested"`) and the closest. Type `table_of_contents: "no"` in a page's front-matter: the page shows the located front-matter error naming `table_of_contents`, `a boolean` and `"no"`. Fix both — the page comes back by itself.
+1. Cold start: `bin/biac dev` at 1440px. On `/nested/page` the sidebar folder and the breadcrumb read `Breakdowns` — the shipped `biac.config.ts` titles `pages/nested`. On `/weekly-review` the ToC rail shows 7 links under the heading `On this page`, which is also its `nav[aria-label]`; `/crossfilter-scale` names its own rail `Measures` (3 links) in front-matter. A page with fewer than two headings (`/nested/page`, `/`) has no rail at all, since `src/web/src/features/chrome/nav-toc.tsx` returns null below 2 headings.
+2. Change that `directories` title in `biac.config.ts` to `"Planning"` and save. The tab reloads by itself; sidebar folder and breadcrumb read `Planning`; the URL is still `/nested/page`.
+3. Add `layout: { table_of_contents_label: "Contents" }`. The `/weekly-review` and `/regional-orders` rail heading and `nav[aria-label]` read `Contents`; `/crossfilter-scale` keeps `Measures`.
+4. Add `table_of_contents: false` to `layout`. Neither `/weekly-review` nor `/regional-orders` shows the rail; `/crossfilter-scale`, whose front-matter sets `table_of_contents: true`, keeps its `Measures` rail.
+5. Change the `directories` key to `"pages/nestd"`: a located error at `biac.config.ts:<line>:<column>` names the key, the accepted folders (`"pages/nested"`) and the closest. Type `table_of_contents: "no"` in a page's front-matter: the page shows the located front-matter error naming `table_of_contents`, `a boolean` and `"no"`. Fix both — the page comes back by itself.
 6. `bin/biac build` + `bin/biac preview`: the same labels, folder title and rails render.
 7. Reload — the effect persists.
 
@@ -123,7 +123,8 @@ Overall: GAP-040 is **present and partial** (page switch only, unvalidated; no d
       Measured on `bin/biac dev` at 1440×900 (rail `aria-label` / heading / links): `/weekly-review` and `/regional-orders` read `On this page` (7 and 2 links) before; with `layout.table_of_contents_label: "Contents"` both read `Contents`; `/weekly-review` front-matter `Summary` reads `Summary` while `/regional-orders` stays `Contents`; `""` in front-matter or config shows the located error.
 - [x] T3 — `directories` in `biac.config.ts`: validated in `biac-config.ts` (an object of `"pages/<folder>": { title: string }`), passed through `manifestModuleSource` into `buildNavTree`; settle O3 (stale or deeper key is a located error, fails `biac build`); `reloadAfterConfigEdit` invalidates the manifest. Measure the sidebar folder label and breadcrumb text on `/nested/page` before and after.
       Measured on `bin/biac dev` at 1440×900 on `/nested/page` (sidebar folder / breadcrumb): `Nested` / `Orders overview › Nested › Region detail` before; with `directories: { "pages/nested": { title: "Planning" } }` the tab reloads by itself into `Planning` / `Orders overview › Planning › Region detail`, URL unchanged, and a reload keeps it; `"pages/nestd"` shows vite's overlay `Invalid biac.config.ts:6:18 — directories.pages/nestd: unknown key, expected one of pages/nested (did you mean pages/nested?)` linked to the key, and fixing it brings the page back; console 0 errors, 0 warnings.
-- [ ] T4 — The example project: root `biac.config.ts` titles `pages/nested`, one page overrides the ToC default and label; an e2e-browser spec drives the real pages; demo ready; GAP-040 and GAP-041 rows re-measured for closing.
+- [x] T4 — The example project: root `biac.config.ts` titles `pages/nested`, one page overrides the ToC default and label; an e2e-browser spec drives the real pages; demo ready; GAP-040 and GAP-041 rows re-measured for closing.
+      Measured on `bin/biac dev` at 1440×900: `/nested/page` sidebar folder `Breakdowns`, breadcrumb `Orders overview / Breakdowns / Region detail`, URL unchanged; rails (label / links) `/crossfilter-scale` Measures / 3, `/weekly-review` On this page / 7, `/regional-orders` On this page / 2; console 0 errors, 0 warnings. `directory-titles.spec.ts`, `table-of-contents.spec.ts` and `static-build.spec.ts` drive the same on dev and off the static build.
 
 ## Out of scope
 
