@@ -1,11 +1,17 @@
-import { contrastTooLow } from "./biac-config-error.js";
+import { contrastTooLow, formatKeyPath } from "./biac-config-error.js";
 import { contrastRatio } from "./contrast-ratio.js";
 import {
   BRAND_TOKENS,
   DEFAULT_THEME_TOKENS,
+  SERIES_TOKENS,
   type ThemeTokenName,
 } from "./default-theme-tokens.js";
-import type { BrandColours, ColourMode, ContrastShortfall } from "./types.js";
+import type {
+  BrandColours,
+  BrandTheme,
+  ColourMode,
+  ContrastShortfall,
+} from "./types.js";
 
 type BrandKey = keyof BrandColours;
 
@@ -18,26 +24,15 @@ interface ContrastPair {
 
 const BRAND_KEYS = Object.keys(BRAND_TOKENS) as BrandKey[];
 
-const SERIES_TOKENS: readonly ThemeTokenName[] = [
-  "--chart-1",
-  "--chart-2",
-  "--chart-3",
-  "--chart-4",
-  "--chart-5",
-  "--chart-6",
-  "--chart-7",
-  "--chart-8",
-];
-
 // Every pair a brand colour paints into, at its WCAG 2.2 floor
 // (https://www.w3.org/TR/WCAG22/): SC 1.4.3 4.5:1 for text — the pressed
 // button-group label on `--primary`, body and muted text on
 // `--background`; SC 1.4.11 3:1 for the shapes of a control — the checked
 // toggle and slider thumb on the page, the slider's filled indicator on its
-// `--secondary` track — and for chart series on the canvas (ADR-0016's
-// floor, held for the default palette on any brand background); SC 2.4.13
-// 3:1 for the focus ring on the page. A pair is checked when either side is
-// a brand colour.
+// `--secondary` track — and for every chart series, brand or default, on
+// the canvas and under the label drawn inside it (ADR-0016's floors); SC
+// 2.4.13 3:1 for the focus ring on the page. A pair is checked when either
+// side is a brand colour.
 const CONTRAST_PAIRS: readonly ContrastPair[] = [
   pair("--primary", "--primary-foreground", 4.5, "1.4.3"),
   pair("--primary", "--background", 3, "1.4.11"),
@@ -46,23 +41,27 @@ const CONTRAST_PAIRS: readonly ContrastPair[] = [
   pair("--background", "--muted-foreground", 4.5, "1.4.3"),
   pair("--background", "--ring", 3, "2.4.13"),
   ...SERIES_TOKENS.map((series) => pair("--background", series, 3, "1.4.11")),
+  ...SERIES_TOKENS.map((series) =>
+    pair(series, "--chart-label-inside", 3, "1.4.11"),
+  ),
 ];
 
 const COLOUR_MODES: readonly ColourMode[] = ["light", "dark"];
 
 /**
- * Throws a located error for the first brand colour, in either mode, under
- * its contrast floor against the theme it lands in. It names the side to
- * change and never adjusts the colour itself.
+ * Throws a located error for the first brand colour or palette entry, in
+ * either mode, under its contrast floor against the theme it lands in. It
+ * names the side to change and never adjusts the colour itself.
  *
  * @example
- * checkBrandContrast({ background: { light: "#fdf6e3", dark: "#0a0a0a" } });
- * // throws "brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.84:1, …"
+ * checkBrandContrast({ colors: {}, palette: { light: ["#45a1bf"] } });
+ * // throws "brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, …"
  */
-export function checkBrandContrast(colours: BrandColours): void {
+export function checkBrandContrast(brand: BrandTheme): void {
   for (const mode of COLOUR_MODES) {
+    const sides = brandSides(brand, mode);
     const shortfall = CONTRAST_PAIRS.map((checked) =>
-      measure(checked, colours, mode),
+      measure(checked, sides, mode),
     ).find((measured) => measured !== undefined);
     if (shortfall) throw contrastTooLow(shortfall);
   }
@@ -85,13 +84,32 @@ interface PairSide {
   readonly brandPath?: readonly string[];
 }
 
+// The brand's colours in one mode, keyed by the token each one replaces.
+type BrandSides = ReadonlyMap<ThemeTokenName, PairSide>;
+
+function brandSides(brand: BrandTheme, mode: ColourMode): BrandSides {
+  const colours = BRAND_KEYS.flatMap((key) => {
+    const colour = brand.colors[key]?.[mode];
+    if (colour === undefined) return [];
+    const brandPath = ["brand", "colors", key, mode];
+    return [{ token: BRAND_TOKENS[key], colour, brandPath }];
+  });
+  const palette = (brand.palette[mode] ?? []).flatMap((colour, index) => {
+    const token = SERIES_TOKENS[index];
+    if (token === undefined) return [];
+    const brandPath = ["brand", "palette", mode, String(index)];
+    return [{ token, colour, brandPath }];
+  });
+  return new Map([...colours, ...palette].map((side) => [side.token, side]));
+}
+
 function measure(
   checked: ContrastPair,
-  colours: BrandColours,
+  sides: BrandSides,
   mode: ColourMode,
 ): ContrastShortfall | undefined {
-  const first = pairSide(checked.first, colours, mode);
-  const second = pairSide(checked.second, colours, mode);
+  const first = pairSide(checked.first, sides, mode);
+  const second = pairSide(checked.second, sides, mode);
   const [subject, neighbour] = first.brandPath
     ? [first, second]
     : [second, first];
@@ -111,30 +129,25 @@ function shortfall(
   return {
     keyPath,
     colour: subject.colour,
-    against: neighbour.brandPath?.join(".") ?? neighbour.token,
+    against: neighbour.brandPath
+      ? formatKeyPath(neighbour.brandPath)
+      : neighbour.token,
     againstColour: neighbour.colour,
     ratio,
     floor: checked.floor,
     criterion: checked.criterion,
     fixes: [subject, neighbour].flatMap((side) =>
-      side.brandPath ? [side.brandPath.join(".")] : [],
+      side.brandPath ? [formatKeyPath(side.brandPath)] : [],
     ),
   };
 }
 
 function pairSide(
   token: ThemeTokenName,
-  colours: BrandColours,
+  sides: BrandSides,
   mode: ColourMode,
 ): PairSide {
-  const key = BRAND_KEYS.find((brandKey) => BRAND_TOKENS[brandKey] === token);
-  const brandColour = key ? colours[key]?.[mode] : undefined;
-  if (key === undefined || brandColour === undefined) {
-    return { token, colour: DEFAULT_THEME_TOKENS[mode][token] };
-  }
-  return {
-    token,
-    colour: brandColour,
-    brandPath: ["brand", "colors", key, mode],
-  };
+  return (
+    sides.get(token) ?? { token, colour: DEFAULT_THEME_TOKENS[mode][token] }
+  );
 }

@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { checkBrandContrast } from "./brand-contrast.js";
-import type { BrandColours } from "./types.js";
+import type { BrandColours, BrandPalette, BrandTheme } from "./types.js";
 
-function failureOf(colours: BrandColours): unknown {
+function brandOf(colors: BrandColours, palette: BrandPalette = {}): BrandTheme {
+  return { colors, palette };
+}
+
+function failureOf(colours: BrandColours, palette: BrandPalette = {}): unknown {
   try {
-    checkBrandContrast(colours);
+    checkBrandContrast(brandOf(colours, palette));
   } catch (error) {
     return error;
   }
-  throw new Error(`Expected ${JSON.stringify(colours)} to fail a floor`);
+  throw new Error(
+    `Expected ${JSON.stringify({ colours, palette })} to fail a floor`,
+  );
 }
 
 describe("checkBrandContrast — passing colours", () => {
   it("accepts no brand colours", () => {
-    const check = () => checkBrandContrast({});
+    const check = () => checkBrandContrast(brandOf({}));
 
     expect(check).not.toThrow();
   });
@@ -24,9 +30,67 @@ describe("checkBrandContrast — passing colours", () => {
       background: { light: "#fffdf5", dark: "#0a0a0a" },
     };
 
-    const check = () => checkBrandContrast(colours);
+    const check = () => checkBrandContrast(brandOf(colours));
 
     expect(check).not.toThrow();
+  });
+
+  it("accepts a palette that clears every floor on a brand background", () => {
+    const brand = brandOf(
+      { background: { light: "#fffdf5", dark: "#0a0a0a" } },
+      { light: ["#1e40af"], dark: ["#60a5fa"] },
+    );
+
+    const check = () => checkBrandContrast(brand);
+
+    expect(check).not.toThrow();
+  });
+});
+
+describe("checkBrandContrast — palette floors", () => {
+  it("fails a palette colour under 3:1 on the default canvas, at its index", () => {
+    const error = failureOf({}, { light: ["#1e40af", "#45a1bf"] });
+
+    expect(error).toMatchObject({
+      keyPath: ["brand", "palette", "light", "1"],
+      message:
+        "brand.palette.light[1]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[1]",
+    });
+  });
+
+  it("fails a palette colour under 3:1 against the label drawn inside it", () => {
+    const error = failureOf(
+      { background: { light: "#ffffff", dark: "#000000" } },
+      { dark: ["#5a5a5a"] },
+    );
+
+    expect(error).toMatchObject({
+      message:
+        "brand.palette.dark[0]: #5a5a5a against --chart-label-inside #0a0a0a measures 2.87:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.dark[0]",
+    });
+  });
+
+  it("names both brand keys when the palette and the background are both the author's", () => {
+    const error = failureOf(
+      { background: { light: "#fffdf5", dark: "#0a0a0a" } },
+      { light: ["#45a1bf"] },
+    );
+
+    expect(error).toMatchObject({
+      message:
+        "brand.colors.background.light: #fffdf5 against brand.palette.light[0] #45a1bf measures 2.90:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light or brand.palette.light[0]",
+    });
+  });
+
+  it("checks the default series past the palette's end on a brand background", () => {
+    const error = failureOf(
+      { background: { light: "#fdf6e3", dark: "#0a0a0a" } },
+      { light: ["#1e40af"] },
+    );
+
+    expect(error).toMatchObject({
+      message: expect.stringContaining("against --chart-4 #cc79a7"),
+    });
   });
 });
 

@@ -8,13 +8,13 @@ describe("readBrand — accepted shapes", () => {
   it("returns no colours when brand is absent", () => {
     const brand = readBrand({});
 
-    expect(brand).toEqual({ colors: {} });
+    expect(brand).toEqual({ colors: {}, palette: {} });
   });
 
   it("returns no colours for a brand block without colors", () => {
     const brand = readBrand({ brand: {} });
 
-    expect(brand).toEqual({ colors: {} });
+    expect(brand).toEqual({ colors: {}, palette: {} });
   });
 
   it("reads primary and background per mode", () => {
@@ -30,6 +30,35 @@ describe("readBrand — accepted shapes", () => {
       primary: PASSING_PRIMARY,
       background: PASSING_BACKGROUND,
     });
+  });
+
+  it("reads a palette per mode, lower-cased", () => {
+    const spec = {
+      brand: { palette: { light: ["#1E40AF", "#D55E00"], dark: ["#60a5fa"] } },
+    };
+
+    const brand = readBrand(spec);
+
+    expect(brand.palette).toEqual({
+      light: ["#1e40af", "#d55e00"],
+      dark: ["#60a5fa"],
+    });
+  });
+
+  it("leaves a palette mode the author omits to the defaults", () => {
+    const spec = { brand: { palette: { dark: ["#60a5fa"] } } };
+
+    const brand = readBrand(spec);
+
+    expect(brand.palette).toEqual({ dark: ["#60a5fa"] });
+  });
+
+  it("accepts a palette of eight colours, one per series token", () => {
+    const eight = Array.from({ length: 8 }, () => "#1e40af");
+
+    const brand = readBrand({ brand: { palette: { light: eight } } });
+
+    expect(brand.palette.light).toHaveLength(8);
   });
 
   it("lower-cases a hex written in capitals", () => {
@@ -48,7 +77,7 @@ describe("readBrand — rejected shapes", () => {
     [
       { brand: "blue" },
       ["brand"],
-      'brand: expected an object with optional fields { colors }, got "blue"',
+      'brand: expected an object with optional fields { colors, palette }, got "blue"',
     ],
     [
       { brand: { colors: [] } },
@@ -75,6 +104,35 @@ describe("readBrand — rejected shapes", () => {
       ["brand", "colors", "primary", "light"],
       'brand.colors.primary.light: expected a "#rrggbb" colour, got "blue"',
     ],
+    [
+      { brand: { palette: ["#1e40af"] } },
+      ["brand", "palette"],
+      'brand.palette: expected an object with optional fields { light, dark }, got ["#1e40af"]',
+    ],
+    [
+      { brand: { palette: { light: "#1e40af" } } },
+      ["brand", "palette", "light"],
+      'brand.palette.light: expected an array of 1 to 8 "#rrggbb" colours, got "#1e40af"',
+    ],
+    [
+      { brand: { palette: { light: [] } } },
+      ["brand", "palette", "light"],
+      'brand.palette.light: expected an array of 1 to 8 "#rrggbb" colours, got []',
+    ],
+    [
+      {
+        brand: {
+          palette: { dark: Array.from({ length: 9 }, () => "#60a5fa") },
+        },
+      },
+      ["brand", "palette", "dark"],
+      `brand.palette.dark: expected an array of 1 to 8 "#rrggbb" colours, got ${JSON.stringify(Array.from({ length: 9 }, () => "#60a5fa"))}`,
+    ],
+    [
+      { brand: { palette: { light: ["#1e40af", "#d55e00", "teal"] } } },
+      ["brand", "palette", "light", "2"],
+      'brand.palette.light[2]: expected a "#rrggbb" colour, got "teal"',
+    ],
   ])(
     "names the field and the expected shape for %j",
     (spec, keyPath, message) => {
@@ -86,8 +144,8 @@ describe("readBrand — rejected shapes", () => {
 
   it.each([
     [
-      { brand: { palette: {} } },
-      "brand.palette: unknown key, expected one of colors",
+      { brand: { scale: {} } },
+      "brand.scale: unknown key, expected one of colors, palette",
     ],
     [
       { brand: { colors: { accent: PASSING_PRIMARY } } },
@@ -98,6 +156,10 @@ describe("readBrand — rejected shapes", () => {
         brand: { colors: { primary: { ...PASSING_PRIMARY, dim: "#000000" } } },
       },
       "brand.colors.primary.dim: unknown key, expected one of light, dark",
+    ],
+    [
+      { brand: { palette: { mid: ["#1e40af"] } } },
+      "brand.palette.mid: unknown key, expected one of light, dark",
     ],
   ])("rejects an unknown key in %j", (spec, message) => {
     const read = () => readBrand(spec);
@@ -116,6 +178,16 @@ describe("readBrand — rejected shapes", () => {
       expect.objectContaining({
         keyPath: ["brand", "colors", "background", "light"],
       }),
+    );
+  });
+
+  it("checks the palette it reads against its contrast floors", () => {
+    const spec = { brand: { palette: { light: ["#45a1bf"] } } };
+
+    const read = () => readBrand(spec);
+
+    expect(read).toThrow(
+      expect.objectContaining({ keyPath: ["brand", "palette", "light", "0"] }),
     );
   });
 });

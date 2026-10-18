@@ -198,7 +198,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
           children: `globalThis.__BIAC_THEME__=${JSON.stringify(theme)};`,
           injectTo: "head-prepend" as const,
         },
-        ...brandStyleTags(brandCss(brand.colors)),
+        ...brandStyleTags(brandCss(brand)),
       ];
     },
     configureServer(server) {

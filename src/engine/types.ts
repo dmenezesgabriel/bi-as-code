@@ -108,12 +108,19 @@ export interface BrandColours {
   background?: ModeColour;
 }
 
+/**
+ * `brand.palette`: per mode, 1–8 series colours laid over `--chart-1`…
+ * `--chart-8` by position — the defaults fill the rest, and a mode left out
+ * keeps all eight.
+ */
+export type BrandPalette = Partial<Record<ColourMode, readonly string[]>>;
+
 /** A brand colour measured under its contrast floor against a neighbour. */
 export interface ContrastShortfall {
-  /** Where the failing brand colour is written, e.g. `brand.colors.primary.light`. */
+  /** Where the failing brand colour is written, e.g. `["brand", "palette", "light", "0"]`. */
   keyPath: readonly string[];
   colour: string;
-  /** The neighbour: a theme token name, or the other brand key's dotted path. */
+  /** The neighbour: a theme token name, or the other brand key's written path. */
   against: string;
   againstColour: string;
   ratio: number;
@@ -127,6 +134,7 @@ export interface ContrastShortfall {
 /** `biac.config.ts`'s optional `brand` block. */
 export interface BrandTheme {
   colors: BrandColours;
+  palette: BrandPalette;
 }
 
 /** Chrome/navigation settings from `biac.config.ts`'s optional `nav` block. */
@@ -152,7 +160,7 @@ export interface BiacConfig {
   layout: Required<PageLayout>;
   /** Sidebar folder titles. Engine-only — they reach the browser inside the manifest's `navTree`. */
   directories: DirectoryTitles;
-  /** Brand colours, contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
+  /** Brand colours and palette, contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
   brand: BrandTheme;
 }
 

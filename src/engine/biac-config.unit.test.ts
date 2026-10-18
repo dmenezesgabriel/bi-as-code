@@ -41,7 +41,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {} },
+      brand: { colors: {}, palette: {} },
     });
   });
 
@@ -62,7 +62,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {} },
+      brand: { colors: {}, palette: {} },
     });
   });
 });
@@ -112,7 +112,7 @@ describe("field handling", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {} },
+      brand: { colors: {}, palette: {} },
     });
   });
 
@@ -197,7 +197,42 @@ describe("brand", () => {
 
     expect(config.brand).toEqual({
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
+      palette: {},
     });
+  });
+
+  it("reads a brand palette", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default { brand: { palette: { light: ["#1E40AF"], dark: ["#60a5fa"] } } };\n',
+    );
+
+    const config = await loadBiacConfig(root);
+
+    expect(config.brand.palette).toEqual({
+      light: ["#1e40af"],
+      dark: ["#60a5fa"],
+    });
+  });
+
+  it("throws at the entry's line and column for a palette colour under its contrast floor", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      [
+        "export default {",
+        "  brand: {",
+        '    palette: { light: ["#1e40af", "#45a1bf"], dark: ["#60a5fa"] },',
+        "  },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      "Invalid biac.config.ts:3:35 — brand.palette.light[1]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[1]",
+    );
   });
 
   it("throws at the colour's line and column for a colour under its contrast floor", async () => {

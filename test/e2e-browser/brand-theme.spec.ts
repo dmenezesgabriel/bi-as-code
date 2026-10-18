@@ -3,7 +3,12 @@ import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 import { effectiveBackground, paintedRgb, readRootToken } from "./contrast.js";
-import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import {
+  type BiacDev,
+  collectConsoleErrors,
+  expect,
+  test,
+} from "./dev-server.fixture.js";
 import {
   WEEKLY_REVIEW_CHART_COUNT,
   openWeeklyReviewCharts,
@@ -11,9 +16,21 @@ import {
   readyCharts,
 } from "./echart-hosts.js";
 
+// `defaultSeries2` is styles.css's `--chart-2`: a one-colour palette
+// replaces series 1 only.
 const BRAND = {
-  light: { primary: "#154886", background: "#fffdf5" },
-  dark: { primary: "#60a5fa", background: "#0a0a0a" },
+  light: {
+    primary: "#154886",
+    background: "#fffdf5",
+    series1: "#1e40af",
+    defaultSeries2: "#d55e00",
+  },
+  dark: {
+    primary: "#60a5fa",
+    background: "#0a0a0a",
+    series1: "#60a5fa",
+    defaultSeries2: "#e69f00",
+  },
 } as const;
 
 const BRAND_BLOCK = `  brand: {
@@ -21,6 +38,7 @@ const BRAND_BLOCK = `  brand: {
       primary: { light: "${BRAND.light.primary}", dark: "${BRAND.dark.primary}" },
       background: { light: "${BRAND.light.background}", dark: "${BRAND.dark.background}" },
     },
+    palette: { light: ["${BRAND.light.series1}"], dark: ["${BRAND.dark.series1}"] },
   },
 `;
 
@@ -57,7 +75,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} mode`, () => {
     test.use({ colorScheme });
 
-    test("brand colours in biac.config.ts restyle the chrome, the checked toggle and the chart surface", async ({
+    test("brand colours and palette in biac.config.ts restyle the chrome, the checked toggle, the chart surface and series", async ({
       page,
       biacDev,
     }) => {
@@ -99,15 +117,24 @@ for (const colorScheme of ["light", "dark"] as const) {
         await paintedRgb(page, brand.background),
       );
       expect(await heatmapRampStart(page)).toBe(brand.background);
+      const palette = (await optionAt(page, 0)).color;
+      expect(palette?.slice(0, 2)).toEqual([
+        brand.series1,
+        brand.defaultSeries2,
+      ]);
       expect(errors).toEqual([]);
     });
   });
 }
 
-test("a brand colour under its contrast floor is located in the overlay, and fixing it brings the page back", async ({
-  page,
-  biacDev,
-}) => {
+// Writes `brandBlock` into the shipped config, expects the overlay to name
+// `message` at `location`, then restores the file and expects the page back.
+async function expectLocatedThenRecovered(
+  page: Page,
+  biacDev: BiacDev,
+  brandBlock: string,
+  failure: { message: string; location: RegExp },
+): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openWeeklyReviewCharts(page, biacDev.url);
   const configFile = join(biacDev.projectDir, "biac.config.ts");
@@ -115,19 +142,15 @@ test("a brand colour under its contrast floor is located in the overlay, and fix
 
   await rewriteConfig(
     configFile,
-    brandedConfig(
-      shipped,
-      '  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },\n',
-    ),
+    brandedConfig(shipped, brandBlock),
     biacDev.log,
   );
 
   const overlay = page.locator("vite-error-overlay");
-  await expect(overlay.locator(".message")).toContainText(
-    "brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
-    { timeout: 20_000 },
-  );
-  await expect(overlay.locator(".file")).toHaveText(/biac\.config\.ts:7:36$/);
+  await expect(overlay.locator(".message")).toContainText(failure.message, {
+    timeout: 20_000,
+  });
+  await expect(overlay.locator(".file")).toHaveText(failure.location);
 
   // Written once: the first edit after the error is the one that must
   // reload the tab, and a retry would hide an edit the server dropped.
@@ -136,4 +159,36 @@ test("a brand colour under its contrast floor is located in the overlay, and fix
     timeout: 20_000,
   });
   await expect(overlay).toHaveCount(0);
+}
+
+test("a brand colour under its contrast floor is located in the overlay, and fixing it brings the page back", async ({
+  page,
+  biacDev,
+}) => {
+  await expectLocatedThenRecovered(
+    page,
+    biacDev,
+    '  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },\n',
+    {
+      message:
+        "brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
+      location: /biac\.config\.ts:7:36$/,
+    },
+  );
+});
+
+test("a palette colour under its contrast floor is located in the overlay, and fixing it brings the page back", async ({
+  page,
+  biacDev,
+}) => {
+  await expectLocatedThenRecovered(
+    page,
+    biacDev,
+    '  brand: { palette: { light: ["#45a1bf"], dark: ["#60a5fa"] } },\n',
+    {
+      message:
+        "brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
+      location: /biac\.config\.ts:7:31$/,
+    },
+  );
 });

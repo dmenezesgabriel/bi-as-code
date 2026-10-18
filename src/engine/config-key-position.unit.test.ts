@@ -54,6 +54,18 @@ describe("findConfigKeyPosition — located keys", () => {
     expect(position).toEqual({ line: 3, column: 3 });
   });
 
+  it("finds an array element by its index", () => {
+    const source =
+      'export default {\n  palette: { light: ["#1e40af", "#45a1bf"] },\n};\n';
+
+    const position = findConfigKeyPosition(source, ["palette", "light", "1"]);
+
+    expect(position).toEqual({
+      line: 2,
+      column: source.indexOf('"#45a1bf"') - 16,
+    });
+  });
+
   it("locates the default-exported object for an empty path", () => {
     const source = "// project settings\nexport default 42;\n";
 
@@ -78,6 +90,19 @@ describe("findConfigKeyPosition — no position", () => {
     ["no default export", "export const titel = 1;\n"],
   ])("returns undefined for %s", (_case, source) => {
     const position = findConfigKeyPosition(source, ["titel"]);
+
+    expect(position).toBeUndefined();
+  });
+
+  it.each([
+    ["an index past the end", ["light", "2"]],
+    ["a name inside an array", ["light", "length"]],
+    ["an element spread in", ["dark", "0"]],
+  ])("returns undefined for %s", (_case, keyPath) => {
+    const source =
+      'const more = ["#000000"];\nexport default { light: ["#1e40af"], dark: [...more] };\n';
+
+    const position = findConfigKeyPosition(source, keyPath);
 
     expect(position).toBeUndefined();
   });

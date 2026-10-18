@@ -75,13 +75,13 @@ describe("biac build", () => {
     );
   }, 120_000);
 
-  it("writes the brand colours into build/index.html", () => {
+  it("writes the brand colours and palette into build/index.html", () => {
     const root = makeTempProject("biac-e2e-build-brand-");
     writeProjectFile(root, "pages/index.md", "# Branded\n");
     writeProjectFile(
       root,
       "biac.config.ts",
-      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } } } };\n',
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: { light: ["#1e40af"] } } };\n',
     );
 
     execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
@@ -89,6 +89,7 @@ describe("biac build", () => {
     const html = readFileSync(join(root, "build", "index.html"), "utf8");
     expect(html).toContain("--primary: #154886;");
     expect(html).toContain("--primary: #60a5fa;");
+    expect(html).toContain("--chart-1: #1e40af;");
   }, 120_000);
 
   it("exits 1 naming a brand colour under its contrast floor", () => {
@@ -107,6 +108,25 @@ describe("biac build", () => {
     expect(run.status).toBe(1);
     expect(run.stderr).toContain(
       "Invalid biac.config.ts:2:36 — brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
+    );
+  }, 120_000);
+
+  it("exits 1 naming a palette colour under its contrast floor", () => {
+    const root = makeTempProject("biac-e2e-build-brand-palette-");
+    writeProjectFile(root, "pages/index.md", "# Branded\n");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default {\n  brand: { palette: { light: ["#45a1bf"] } },\n};\n',
+    );
+
+    const run = spawnSync(process.execPath, [biac, "build", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(
+      "Invalid biac.config.ts:2:31 — brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
     );
   }, 120_000);
 });

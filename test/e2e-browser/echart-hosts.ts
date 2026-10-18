@@ -7,6 +7,8 @@ import { expect } from "./dev-server.fixture.js";
  * what `setOption` actually applied, same as the web-unit suite.
  */
 export interface AppliedOption {
+  /** The series palette, theme-merged: series `i` takes `color[i]`. */
+  color?: string[];
   series: {
     name?: string;
     type?: string;

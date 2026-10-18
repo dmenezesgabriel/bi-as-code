@@ -15,6 +15,20 @@ export class ConfigFieldError extends Error {
 }
 
 /**
+ * A key path as an author reads it in `biac.config.ts`: dotted keys, with an
+ * array index in brackets.
+ *
+ * @example
+ * formatKeyPath(["brand", "palette", "light", "0"]); // → "brand.palette.light[0]"
+ */
+export function formatKeyPath(keyPath: readonly string[]): string {
+  return keyPath
+    .map((key) => (/^\d+$/.test(key) ? `[${key}]` : `.${key}`))
+    .join("")
+    .replace(/^\./, "");
+}
+
+/**
  * Names a field whose value has the wrong shape, with the offending value.
  *
  * @example
@@ -48,7 +62,7 @@ export function contrastTooLow(shortfall: ContrastShortfall): ConfigFieldError {
   const measured = (Math.floor(shortfall.ratio * 100) / 100).toFixed(2);
   return new ConfigFieldError(
     shortfall.keyPath,
-    `${shortfall.keyPath.join(".")}: ${shortfall.colour} against ${shortfall.against} ${shortfall.againstColour} measures ${measured}:1, expected at least ${shortfall.floor}:1 (WCAG 2.2 SC ${shortfall.criterion}) — change ${shortfall.fixes.join(" or ")}`,
+    `${formatKeyPath(shortfall.keyPath)}: ${shortfall.colour} against ${shortfall.against} ${shortfall.againstColour} measures ${measured}:1, expected at least ${shortfall.floor}:1 (WCAG 2.2 SC ${shortfall.criterion}) — change ${shortfall.fixes.join(" or ")}`,
   );
 }
 

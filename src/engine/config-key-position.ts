@@ -8,7 +8,8 @@ export interface ConfigKeyPosition {
 
 /**
  * Finds where the property at `keyPath` is written in a `biac.config.ts`
- * source, by walking the default-exported object literal. Parsing (rather
+ * source, by walking the default-exported object literal; a numeric segment
+ * steps into an array literal and locates that element. Parsing (rather
  * than searching the text for `key:`) cannot misfire on a key spelled in a
  * comment or a string. A key the walk cannot reach statically — spread in,
  * computed, behind a variable, or in a file that does not parse — has no
@@ -27,10 +28,10 @@ export function findConfigKeyPosition(
   let node: ESTree.Node = exported;
   let start = exported.start;
   for (const key of keyPath) {
-    const property = findProperty(node, key);
-    if (property === undefined) return undefined;
-    start = property.key.start;
-    node = unwrap(property.value);
+    const child = findChild(node, key);
+    if (child === undefined) return undefined;
+    start = child.start;
+    node = unwrap(child.value);
   }
   return toLineColumn(source, start);
 }
@@ -60,6 +61,27 @@ function unwrap(
   )
     return unwrap(node.expression);
   return node;
+}
+
+// Where a path segment is written, and the value the walk continues into.
+interface ConfigChild {
+  start: number;
+  value: ESTree.ExportDefaultDeclarationKind;
+}
+
+function findChild(node: ESTree.Node, key: string): ConfigChild | undefined {
+  if (node.type === "ArrayExpression") return findElement(node, key);
+  const property = findProperty(node, key);
+  return property && { start: property.key.start, value: property.value };
+}
+
+function findElement(
+  node: ESTree.ArrayExpression,
+  key: string,
+): ConfigChild | undefined {
+  const element = /^\d+$/.test(key) ? node.elements[Number(key)] : undefined;
+  if (!element || element.type === "SpreadElement") return undefined;
+  return { start: element.start, value: element };
 }
 
 function findProperty(

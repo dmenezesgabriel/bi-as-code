@@ -9,7 +9,29 @@ export type ThemeTokenName =
   | "--foreground"
   | "--muted-foreground"
   | "--ring"
-  | `--chart-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`;
+  | "--chart-label-inside"
+  | SeriesTokenName;
+
+/** A series colour token, `--chart-1`…`--chart-8`. */
+export type SeriesTokenName = `--chart-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`;
+
+/**
+ * The series tokens in palette order: a brand palette lays its colours over
+ * them by position, so their count is the palette's ceiling (ADR-0016).
+ *
+ * @example
+ * SERIES_TOKENS[0]; // → "--chart-1"
+ */
+export const SERIES_TOKENS: readonly SeriesTokenName[] = [
+  "--chart-1",
+  "--chart-2",
+  "--chart-3",
+  "--chart-4",
+  "--chart-5",
+  "--chart-6",
+  "--chart-7",
+  "--chart-8",
+];
 
 /**
  * The default value of each checked token, per mode. These mirror
@@ -30,6 +52,7 @@ export const DEFAULT_THEME_TOKENS: Readonly<
     "--foreground": "#171717",
     "--muted-foreground": "#525252",
     "--ring": "#737373",
+    "--chart-label-inside": "#ffffff",
     "--chart-1": "#0072b2",
     "--chart-2": "#d55e00",
     "--chart-3": "#009e73",
@@ -47,6 +70,7 @@ export const DEFAULT_THEME_TOKENS: Readonly<
     "--foreground": "#f5f5f5",
     "--muted-foreground": "#a1a1a1",
     "--ring": "#a1a1a1",
+    "--chart-label-inside": "#0a0a0a",
     "--chart-1": "#0072b2",
     "--chart-2": "#e69f00",
     "--chart-3": "#009e73",

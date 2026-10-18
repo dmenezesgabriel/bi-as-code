@@ -588,6 +588,24 @@ describe("virtual:biac-config", () => {
     );
   });
 
+  it("injects the brand palette over the series tokens of its mode", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { brand: { palette: { light: ["#1e40af"], dark: ["#60a5fa"] } } };\n',
+    );
+    const dev = await makeServer(root);
+
+    const html = await dev.transformIndexHtml(
+      "/",
+      "<html><head></head><body></body></html>",
+    );
+
+    expect(html).toContain(
+      "<style>:root,\n.light {\n  --chart-1: #1e40af;\n}\n.dark {\n  --chart-1: #60a5fa;\n}\n</style>",
+    );
+  });
+
   it("injects no brand style when the project sets no brand colour", async () => {
     const root = makeProject();
     const dev = await makeServer(root);

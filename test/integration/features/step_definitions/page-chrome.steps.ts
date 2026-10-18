@@ -134,6 +134,22 @@ Then("the HTML shell sets the brand colours in the body", async () => {
   );
 });
 
+When("I set a brand palette in biac.config.ts", () => {
+  assert.ok(projectRoot, "project must exist");
+  writeFileSync(
+    join(projectRoot, "biac.config.ts"),
+    'export default { brand: { palette: { light: ["#1e40af"], dark: ["#60a5fa"] } } };\n',
+  );
+});
+
+Then("the HTML shell sets the first series colour in the body", async () => {
+  await eventually(async () =>
+    /<body>\s*<style>:root,\n\.light \{\n {2}--chart-1: #1e40af;/.test(
+      await getOk(server!.url),
+    ),
+  );
+});
+
 When(
   "I set a brand background under its contrast floor in biac.config.ts",
   () => {

@@ -7,6 +7,7 @@ import {
 } from "../../test/lib/temp-project.js";
 import {
   contrastTooLow,
+  formatKeyPath,
   invalid,
   locatedError,
   unknownKey,
@@ -21,6 +22,18 @@ function writeConfig(source: string): string {
   writeProjectFile(root, "biac.config.ts", source);
   return join(root, "biac.config.ts");
 }
+
+describe("formatKeyPath", () => {
+  it.each([
+    [["title"], "title"],
+    [["brand", "colors", "primary", "light"], "brand.colors.primary.light"],
+    [["brand", "palette", "dark", "7"], "brand.palette.dark[7]"],
+  ])("writes %j as %s", (keyPath, written) => {
+    const formatted = formatKeyPath(keyPath);
+
+    expect(formatted).toBe(written);
+  });
+});
 
 describe("field errors", () => {
   it("names the field, its expected shape and the value", () => {
@@ -49,6 +62,23 @@ describe("field errors", () => {
       message:
         "brand.colors.primary.light: #8a8a8a against --primary-foreground #ffffff measures 3.45:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.primary.light",
     });
+  });
+
+  it("writes an array index in brackets in a palette colour's path", () => {
+    const error = contrastTooLow({
+      keyPath: ["brand", "palette", "light", "0"],
+      colour: "#45a1bf",
+      against: "--background",
+      againstColour: "#ffffff",
+      ratio: 2.96,
+      floor: 3,
+      criterion: "1.4.11",
+      fixes: ["brand.palette.light[0]"],
+    });
+
+    expect(error.message).toMatch(
+      /^brand\.palette\.light\[0\]: #45a1bf against/,
+    );
   });
 
   it("names an unknown key by its dotted path with a suggestion", () => {
