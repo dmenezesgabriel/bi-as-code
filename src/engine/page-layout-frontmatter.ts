@@ -15,19 +15,35 @@ export const PAGE_WIDTH_CHOICES = PAGE_WIDTHS.map((name) =>
  * not a typo.
  *
  * @example
- * pageLayout({ page_width: "full" }, "front-matter in pages/a.md");
- * // → { page_width: "full" }
+ * pageLayout({ page_width: "full", cards: true }, "front-matter in pages/a.md");
+ * // → { page_width: "full", cards: true }
  */
 export function pageLayout(
   frontmatter: PageFrontmatter,
   location: string,
 ): PageLayout {
-  const width = frontmatter.page_width;
+  return {
+    ...pageWidth(frontmatter.page_width, location),
+    ...pageCards(frontmatter.cards, location),
+  };
+}
+
+function pageWidth(width: unknown, location: string): PageLayout {
   if (width === undefined) return {};
   if (!isPageWidth(width)) {
     throw invalidSetting(location, "page_width", PAGE_WIDTH_CHOICES, width);
   }
   return { page_width: width };
+}
+
+// Strictly a boolean: YAML already reads `true`/`false`, so a string here is
+// a typo such as `cards: yes please`, not a value to coerce.
+function pageCards(cards: unknown, location: string): PageLayout {
+  if (cards === undefined) return {};
+  if (typeof cards !== "boolean") {
+    throw invalidSetting(location, "cards", "a boolean", cards);
+  }
+  return { cards };
 }
 
 /**

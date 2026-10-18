@@ -18,6 +18,8 @@ declare module "virtual:biac-config" {
     layout: {
       /** `article` keeps the reading column; `full` fills the space beside the sidebar. */
       page_width: "article" | "full";
+      /** True puts each chart, table and big value on its own card. */
+      cards: boolean;
     };
   }
   export const config: BiacConfig;

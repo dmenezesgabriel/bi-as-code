@@ -87,6 +87,8 @@ export type PageWidth = "article" | "full";
 /** A page's layout front-matter; a key the page leaves out stays absent. */
 export interface PageLayout {
   page_width?: PageWidth;
+  /** True puts each chart, table and big value on its own card. */
+  cards?: boolean;
 }
 
 /** Table name → `data/` file path relative to the project root. */

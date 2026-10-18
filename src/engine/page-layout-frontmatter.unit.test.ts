@@ -28,4 +28,22 @@ describe("pageLayout", () => {
       /page_width: expected "article" \| "full", got true$/,
     );
   });
+
+  it("carries cards true and false", () => {
+    expect(pageLayout({ cards: true }, LOCATION)).toEqual({ cards: true });
+    expect(pageLayout({ cards: false }, LOCATION)).toEqual({ cards: false });
+  });
+
+  it("carries page_width and cards together", () => {
+    expect(pageLayout({ page_width: "full", cards: true }, LOCATION)).toEqual({
+      page_width: "full",
+      cards: true,
+    });
+  });
+
+  it("rejects a non-boolean cards naming the file and the value", () => {
+    expect(() => pageLayout({ cards: "yes" }, LOCATION)).toThrow(
+      'Invalid front-matter in pages/page.md — cards: expected a boolean, got "yes"',
+    );
+  });
 });

@@ -189,6 +189,23 @@ describe("page transform", () => {
     );
   });
 
+  it("serves a page's cards front-matter in its layout export", async () => {
+    const root = makeProject();
+    writeFile(
+      "pages/index.md",
+      "---\npage_width: full\ncards: true\n---\n# Hi\n",
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain(
+      'export const layout = {"page_width":"full","cards":true};',
+    );
+  });
+
   it("serves a page whose page_width is not article or full as a compile error", async () => {
     const root = makeProject();
     writeFile("pages/index.md", "---\npage_width: wide\n---\n# Hi\n");
@@ -448,13 +465,13 @@ describe("virtual:biac-config", () => {
     const root = makeProject();
     writeFile(
       "biac.config.ts",
-      'export default { layout: { page_width: "full" } };\n',
+      'export default { layout: { page_width: "full", cards: true } };\n',
     );
     const dev = await makeServer(root);
 
     const code = await loadConfigModule(dev);
 
-    expect(code).toContain('"layout":{"page_width":"full"}');
+    expect(code).toContain('"layout":{"page_width":"full","cards":true}');
   });
 
   it("keeps the loader interpreters out of the browser", async () => {
@@ -481,7 +498,7 @@ describe("virtual:biac-config", () => {
     expect(code).toContain('"system"');
     expect(code).toContain('"sidebar":true');
     expect(code).toContain('"sqlTables":{}');
-    expect(code).toContain('"layout":{"page_width":"article"}');
+    expect(code).toContain('"layout":{"page_width":"article","cards":false}');
   });
 
   it("invalidates the config module when biac.config.ts is edited", async () => {

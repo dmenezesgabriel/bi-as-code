@@ -65,6 +65,8 @@ export type PageWidth = "article" | "full";
  */
 export interface PageLayout {
   page_width?: PageWidth;
+  /** True puts each chart, table and big value on its own card. */
+  cards?: boolean;
 }
 
 /** Parsed YAML front-matter of a page — arbitrary author keys, title included. */
@@ -122,7 +124,7 @@ export interface CompiledPage {
   sqlBlocks: SqlBlock[];
   /** Validated `sql:` front-matter — table name → `data/` file path. */
   sqlTables: SqlTableMap;
-  /** Validated layout front-matter — `page_width` when the page sets it. */
+  /** Validated layout front-matter — `page_width` and `cards` when the page sets them. */
   layout: PageLayout;
 }
 

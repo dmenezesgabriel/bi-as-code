@@ -154,3 +154,49 @@ export const FullWidth: Story = {
     );
   },
 };
+
+/** Front-matter `cards: true`: the big value sits on a card over the
+ * tinted page; the callout beside it stays prose chrome. */
+export const Cards: Story = {
+  args: {
+    page: pageModule({
+      title: "Dashboard",
+      layout: { cards: true },
+      sqlBlocks: [{ name: "kpi", sql: "select 1280 as revenue" }],
+      default: ({ components }) => {
+        const BigValue = components?.BigValue ?? "div";
+        const Callout = components?.Callout ?? "div";
+        return (
+          <>
+            <BigValue data="kpi" title="Revenue" />
+            <Callout>Figures are weekly.</Callout>
+          </>
+        );
+      },
+    }),
+  },
+  decorators: [
+    withMemoryRouter(["/"], "/"),
+    withDataRuntime(
+      (() => {
+        const db = new FakeDuckDb();
+        db.rows = [{ revenue: 1280 }] satisfies Row[];
+        return db;
+      })(),
+    ),
+  ],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByText("Revenue")).toBeVisible();
+    await expect(
+      canvasElement.querySelectorAll("[data-widget-card]"),
+    ).toHaveLength(1);
+    await expect(
+      canvas.getByText("Figures are weekly.").closest("[data-widget-card]"),
+    ).toBeNull();
+    await expect(
+      getComputedStyle(
+        canvasElement.querySelector("[data-cards]") as HTMLElement,
+      ).backgroundColor,
+    ).toBe("rgb(250, 250, 250)");
+  },
+};

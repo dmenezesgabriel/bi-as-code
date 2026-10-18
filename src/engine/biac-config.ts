@@ -23,7 +23,7 @@ const DEFAULTS: BiacConfig = {
   nav: { sidebar: true },
   sqlTables: {},
   interpreters: DEFAULT_INTERPRETERS,
-  layout: { page_width: "article" },
+  layout: { page_width: "article", cards: false },
 };
 
 // The keys of the three closed objects. An unknown one throws rather than
@@ -40,7 +40,7 @@ const CONFIG_KEYS = [
   "layout",
 ] as const;
 const NAV_KEYS = ["sidebar"] as const;
-const LAYOUT_KEYS = ["page_width"] as const;
+const LAYOUT_KEYS = ["page_width", "cards"] as const;
 
 const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")} }`;
 
@@ -161,12 +161,18 @@ function readLayout(spec: Record<string, unknown>): BiacConfig["layout"] {
     throw invalid(
       "layout",
       ["layout"],
-      "an object with an optional page_width",
+      `an object with optional ${LAYOUT_KEYS.join(", ")}`,
       spec.layout,
     );
   rejectUnknownKeys(spec.layout, LAYOUT_KEYS, ["layout"]);
-  const width = spec.layout.page_width;
-  if (width === undefined) return { ...DEFAULTS.layout };
+  return {
+    page_width: readPageWidth(spec.layout.page_width),
+    cards: readLayoutCards(spec.layout.cards),
+  };
+}
+
+function readPageWidth(width: unknown): BiacConfig["layout"]["page_width"] {
+  if (width === undefined) return DEFAULTS.layout.page_width;
   if (!isPageWidth(width))
     throw invalid(
       "layout.page_width",
@@ -174,7 +180,14 @@ function readLayout(spec: Record<string, unknown>): BiacConfig["layout"] {
       PAGE_WIDTH_CHOICES,
       width,
     );
-  return { page_width: width };
+  return width;
+}
+
+function readLayoutCards(cards: unknown): boolean {
+  if (cards === undefined) return DEFAULTS.layout.cards;
+  if (typeof cards !== "boolean")
+    throw invalid("layout.cards", ["layout", "cards"], "a boolean", cards);
+  return cards;
 }
 
 function readInterpreters(

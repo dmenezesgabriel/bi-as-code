@@ -39,6 +39,13 @@
   --secondary: #e5e5e5; /* neutral-200 — unfilled slider/switch track */
   --card: #ffffff; /* white — raised panels: accordion card, active well tab */
   --card-border: #e5e5e5; /* neutral-200 */
+
+  /* The page behind cards when a page sets `cards: true`, so a white card
+     reads against it. neutral-50, not neutral-100: the faded label text on
+     it stays 4.54:1 (WCAG 1.4.3), where #f5f5f5 drops it to 4.35. The card
+     border is under 3:1 here as everywhere --card-border is used; a card
+     groups content and is not a control, so WCAG 1.4.11 does not apply. */
+  --card-mode-background: #fafafa; /* neutral-50 */
   --sparkline: #a1a1a1; /* neutral-400 */
   --link: #155dfc; /* blue-600 */
   --positive: #007a55; /* emerald-700 — a good delta */
@@ -132,6 +139,9 @@
   --secondary: #404040; /* neutral-700 — unfilled slider/switch track */
   --card: #171717; /* neutral-900 */
   --card-border: #404040; /* neutral-700 */
+
+  /* Dark cards are already lighter than the page, so no tint is needed. */
+  --card-mode-background: #0a0a0a; /* neutral-950 */
   --sparkline: #737373; /* neutral-500 */
   --link: #2b7fff; /* blue-500 — blue-400 drops under 3:1 against the dark body text, so a link stops reading apart from its paragraph (WCAG 1.4.1) */
   --positive: #00d492; /* emerald-400 */
@@ -204,6 +214,7 @@
   --color-secondary: var(--secondary);
   --color-card: var(--card);
   --color-card-border: var(--card-border);
+  --color-card-mode-background: var(--card-mode-background);
   --color-sparkline: var(--sparkline);
   --color-link: var(--link);
   --color-positive: var(--positive);

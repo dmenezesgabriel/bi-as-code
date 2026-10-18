@@ -265,6 +265,20 @@ describe("layout front-matter", () => {
     expect(page.layout).toEqual({ page_width: "full" });
   });
 
+  it("carries cards into layout", async () => {
+    const page = await compile("---\ncards: true\n---\n# Body\n");
+
+    expect(page.layout).toEqual({ cards: true });
+  });
+
+  it("rejects a non-boolean cards naming the page file", async () => {
+    await expect(
+      compile("---\ncards: yes please\n---\n# Body\n", "pages/a.md"),
+    ).rejects.toThrow(
+      'Invalid front-matter in pages/a.md — cards: expected a boolean, got "yes please"',
+    );
+  });
+
   it("leaves layout empty when the page sets no page_width", async () => {
     const page = await compile("# Body\n");
 

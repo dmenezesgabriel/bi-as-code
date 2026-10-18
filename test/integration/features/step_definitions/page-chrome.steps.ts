@@ -62,12 +62,12 @@ Then(
 );
 
 Then(
-  "the config module serves the configured title and page width",
+  "the config module serves the configured title and page layout",
   async () => {
     const code = await getOk(`${server!.url}${CONFIG_URL}`);
     assert.match(code, /"title":"biac"/);
     assert.match(code, /"sidebar":true/);
-    assert.match(code, /"layout":\{"page_width":"article"\}/);
+    assert.match(code, /"layout":\{"page_width":"article","cards":false\}/);
   },
 );
 

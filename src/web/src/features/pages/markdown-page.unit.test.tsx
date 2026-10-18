@@ -484,3 +484,51 @@ describe("MarkdownPage", () => {
     expect(main.parentElement).not.toHaveClass("max-w-6xl");
   });
 });
+
+describe("MarkdownPage cards", () => {
+  // A big value and a callout side by side: the value is carded, the
+  // callout is prose chrome and never is.
+  function kpiPage(layout: CompiledPageModule["layout"]): CompiledPageModule {
+    return page({
+      layout,
+      sqlBlocks: [{ name: "kpi", sql: "select 1 as total" }],
+      default: ({ components }) => {
+        const BigValue = components?.BigValue ?? "div";
+        const Callout = components?.Callout ?? "div";
+        return (
+          <>
+            <BigValue data="kpi" />
+            <Callout>note</Callout>
+          </>
+        );
+      },
+    });
+  }
+
+  const cards = () => document.querySelectorAll("[data-widget-card]");
+
+  it("puts a big value on a card and leaves the callout bare", async () => {
+    // Arrange / Act
+    renderPage(kpiPage({ cards: true }), "biac", new FakeDuckDb());
+
+    // Assert
+    await waitFor(() => expect(cards()).toHaveLength(1));
+    expect(screen.getByText("note").closest("[data-widget-card]")).toBeNull();
+    expect(document.querySelector("[data-cards]")).toHaveClass(
+      "bg-card-mode-background",
+    );
+  });
+
+  it.each([{}, { cards: false }])(
+    "cards nothing and tints nothing for layout %o",
+    async (layout) => {
+      // Arrange / Act
+      renderPage(kpiPage(layout), "biac", new FakeDuckDb());
+
+      // Assert
+      await screen.findByText("note");
+      expect(cards()).toHaveLength(0);
+      expect(document.querySelector("[data-cards]")).toBeNull();
+    },
+  );
+});

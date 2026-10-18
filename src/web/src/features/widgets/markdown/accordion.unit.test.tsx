@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { CardsProvider } from "../card/card-scope";
+import { withCard } from "../card/with-card";
 import { Accordion, AccordionItem } from "./accordion";
 import { carrierChildrenEls } from "./carrier-children.fixture";
 import type {
@@ -205,6 +207,37 @@ describe("Accordion", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("Accordion");
   });
+});
+
+describe("Accordion on a carded page", () => {
+  const CardedChart = withCard(({ label }: { label: string }) => (
+    <p>{label}</p>
+  ));
+
+  it.each([
+    ["default", 1],
+    ["well", 0],
+    ["card", 0],
+  ] as const)(
+    "a %s accordion's chart gets %i card",
+    (variant: AccordionVariant, cards: number) => {
+      // Arrange / Act
+      const { container } = render(
+        <CardsProvider cards>
+          <Accordion variant={variant}>
+            <AccordionItem title="Trend" open>
+              <CardedChart label="chart" />
+            </AccordionItem>
+          </Accordion>
+        </CardsProvider>,
+      );
+
+      // Assert — a boxed accordion is the card; a bare one is not.
+      expect(container.querySelectorAll("[data-widget-card]")).toHaveLength(
+        cards,
+      );
+    },
+  );
 });
 
 describe("AccordionItem", () => {

@@ -34,7 +34,7 @@ describe("missing or empty config", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
-      layout: { page_width: "article" },
+      layout: { page_width: "article", cards: false },
     });
   });
 
@@ -48,7 +48,7 @@ describe("missing or empty config", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
-      layout: { page_width: "article" },
+      layout: { page_width: "article", cards: false },
     });
   });
 });
@@ -91,7 +91,7 @@ describe("field handling", () => {
       nav: { sidebar: true },
       sqlTables: {},
       interpreters: DEFAULT_INTERPRETERS,
-      layout: { page_width: "article" },
+      layout: { page_width: "article", cards: false },
     });
   });
 
@@ -121,7 +121,16 @@ describe("field handling", () => {
     writeConfig(root, "export default { layout: {} };\n");
 
     await expect(loadBiacConfig(root)).resolves.toMatchObject({
-      layout: { page_width: "article" },
+      layout: { page_width: "article", cards: false },
+    });
+  });
+
+  it("reads layout.cards", async () => {
+    const root = makeProject();
+    writeConfig(root, "export default { layout: { cards: true } };\n");
+
+    await expect(loadBiacConfig(root)).resolves.toMatchObject({
+      layout: { page_width: "article", cards: true },
     });
   });
 });
@@ -219,7 +228,7 @@ describe("validation", () => {
     writeConfig(root, 'export default { layout: "full" };\n');
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
-      /layout: expected an object with an optional page_width, got "full"/,
+      /layout: expected an object with optional page_width, cards, got "full"/,
     );
   });
 
@@ -398,22 +407,32 @@ describe("unknown keys", () => {
     );
   });
 
-  it("throws naming an unknown nav key by its dotted path", async () => {
-    const root = makeProject();
-    writeConfig(root, "export default { nav: { sidebr: false } };\n");
-
-    await expect(loadBiacConfig(root)).rejects.toThrow(
+  it.each([
+    [
+      "an unknown nav key by its dotted path",
+      "export default { nav: { sidebr: false } };\n",
       "Invalid biac.config.ts:1:25 — nav.sidebr: unknown key, expected one of sidebar (did you mean sidebar?)",
-    );
-  });
-
-  it("throws naming an unknown layout key by its dotted path", async () => {
+    ],
+    [
+      "an unknown layout key by its dotted path",
+      'export default { layout: { pagewidth: "full" } };\n',
+      "Invalid biac.config.ts:1:28 — layout.pagewidth: unknown key, expected one of page_width, cards (did you mean page_width?)",
+    ],
+    [
+      "a misspelt layout key with the closest, cards",
+      "export default { layout: { cardz: true } };\n",
+      "Invalid biac.config.ts:1:28 — layout.cardz: unknown key, expected one of page_width, cards (did you mean cards?)",
+    ],
+    [
+      "a non-boolean layout.cards at its line and column",
+      'export default {\n  layout: { cards: "yes" },\n};\n',
+      'Invalid biac.config.ts:2:13 — layout.cards: expected a boolean, got "yes"',
+    ],
+  ])("throws naming %s", async (_case, source, message) => {
     const root = makeProject();
-    writeConfig(root, 'export default { layout: { pagewidth: "full" } };\n');
+    writeConfig(root, source);
 
-    await expect(loadBiacConfig(root)).rejects.toThrow(
-      "Invalid biac.config.ts:1:28 — layout.pagewidth: unknown key, expected one of page_width (did you mean page_width?)",
-    );
+    await expect(loadBiacConfig(root)).rejects.toThrow(message);
   });
 
   it("accepts any table name under sql and any extension under interpreters", async () => {

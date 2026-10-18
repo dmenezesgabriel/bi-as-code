@@ -1,7 +1,8 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Accordion as AccordionPrimitive } from "../../../components/accordion";
 import { ChevronDownIcon } from "../../../components/icons";
 import { cn } from "../../../lib/cn";
+import { NoCardScope } from "../card/card-scope";
 import { requireItemChildren } from "./collect-children";
 import { WidgetError } from "./states";
 import type {
@@ -93,12 +94,31 @@ export function Accordion({
               variant !== "default" && "pb-3",
             )}
           >
-            <div className="pb-4 text-sm">{item.props.children}</div>
+            <div className="pb-4 text-sm">
+              <PanelCardScope boxed={variant !== "default"}>
+                {item.props.children}
+              </PanelCardScope>
+            </div>
           </AccordionPrimitive.Panel>
         </AccordionPrimitive.Item>
       ))}
     </AccordionPrimitive.Root>
   );
+}
+
+/**
+ * A `well` or `card` accordion draws its own box, so on a carded page the
+ * widgets in its panels are already on a card and get none; a `default`
+ * accordion draws no box, so its widgets keep theirs.
+ */
+function PanelCardScope({
+  boxed,
+  children,
+}: {
+  boxed: boolean;
+  children: ReactNode;
+}): ReactElement {
+  return boxed ? <NoCardScope>{children}</NoCardScope> : <>{children}</>;
 }
 
 /**

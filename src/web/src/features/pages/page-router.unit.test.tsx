@@ -80,7 +80,7 @@ const site: BiacConfig = {
   theme: "system" as const,
   nav: { sidebar: true },
   sqlTables: {},
-  layout: { page_width: "article" },
+  layout: { page_width: "article", cards: false },
 };
 
 const navTree: NavTree = {
@@ -223,12 +223,35 @@ describe("buildPageRouter", () => {
       [pageEntry("/width", async () => widthPage)],
       "/width",
       navTree,
-      { ...site, layout: { page_width: "full" } },
+      { ...site, layout: { page_width: "full", cards: false } },
     );
 
     // Assert
     const main = await screen.findByRole("main");
     expect(main.classList.contains("max-w-4xl")).toBe(capped);
+  });
+
+  it.each([
+    ["inherits the config's cards", {}, true],
+    ["turns off the config's cards", { cards: false }, false],
+  ])("a page that %s", async (_case, layout, carded) => {
+    // Arrange
+    const cardsPage: CompiledPageModule = {
+      ...textPage("cards body", "Cards"),
+      layout,
+    };
+
+    // Act
+    renderRouter(
+      [pageEntry("/cards", async () => cardsPage)],
+      "/cards",
+      navTree,
+      { ...site, layout: { page_width: "article", cards: true } },
+    );
+
+    // Assert
+    await screen.findByText("cards body");
+    expect(document.querySelector("[data-cards]") !== null).toBe(carded);
   });
 
   it("re-registers a page's sql tables when the data channel reports a source change", async () => {
