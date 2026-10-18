@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
@@ -167,6 +167,47 @@ test("editing biac.config.ts reloads the site title", async ({
   });
   await expect(nav.getByRole("link", { name: "ACME" })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("a biac.config.ts typo shows the located error and fixing it brings the page back", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await openSiteNav(page, biacDev.url);
+  const configFile = join(biacDev.projectDir, "biac.config.ts");
+  const validConfig = readFileSync(configFile, "utf8");
+  await rewriteUntilServerLogs({
+    rewrite: () =>
+      writeFileSync(
+        configFile,
+        validConfig.replace("{\n", '{\n  pagewidth: "full",\n'),
+      ),
+    log: biacDev.log,
+    loggedPath: "biac.config.ts",
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+  // A tab loaded while the config is broken gets vite's error page, whose
+  // only link back is the HMR socket its overlay script opens.
+  await page.reload();
+  const overlay = page.locator("vite-error-overlay");
+  await expect(overlay.locator(".message")).toContainText(
+    "pagewidth: unknown key, expected one of title, theme, nav, sql, interpreters",
+  );
+  await expect(overlay.locator(".file")).toHaveText(/biac\.config\.ts:2:3$/);
+  // The typo's failed module request is the capability under test; only
+  // the page the fix brings back must load cleanly.
+  const errorsBeforeFix = errors.length;
+
+  // Written once: the first edit after the error is the one that must
+  // reload the tab, and a retry would hide an edit the server dropped.
+  writeFileSync(configFile, validConfig);
+  await expect(
+    page.getByRole("heading", { name: "Orders overview" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(overlay).toHaveCount(0);
+  expect(errors.slice(errorsBeforeFix)).toEqual([]);
 });
 
 test("nav.sidebar:false removes the chrome and the article spans the viewport", async ({

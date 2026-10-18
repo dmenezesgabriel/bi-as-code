@@ -457,6 +457,23 @@ describe("virtual:biac-config", () => {
     expect(await loadConfigModule(dev)).toContain('"Umbrella"');
   });
 
+  it("reloads the page when biac.config.ts is fixed after a failed load", async () => {
+    const root = makeProject();
+    const configPath = join(root, "biac.config.ts");
+    writeFile("biac.config.ts", 'export default { pagewidth: "full" };\n');
+    const dev = await makeServer(root);
+    await waitForWatch(dev, root, "biac.config.ts");
+    await dev.transformRequest(VIRTUAL_CONFIG_ID).catch(() => undefined);
+    const send = vi.spyOn(dev.environments.client.hot, "send");
+
+    writeFileSync(configPath, 'export default { title: "ACME" };\n');
+
+    await vi.waitFor(
+      () => expect(send).toHaveBeenCalledWith({ type: "full-reload" }),
+      { timeout: WATCH_WAIT_MS },
+    );
+  });
+
   it("injects the configured theme into index.html ahead of the inline script that reads it", async () => {
     const root = makeProject();
     writeFile("biac.config.ts", 'export default { theme: "dark" };\n');

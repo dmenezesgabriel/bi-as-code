@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 import { copyFile, cp, mkdir } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
-import type { Logger, NormalizedHotChannel, Plugin } from "vite";
+import type {
+  DevEnvironment,
+  Logger,
+  NormalizedHotChannel,
+  Plugin,
+} from "vite";
 import { loadBiacConfig } from "./biac-config.js";
 import { compilePage } from "./compile-page.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
@@ -67,6 +72,27 @@ export function pagesPlugin(projectRoot: string): Plugin {
   // config is memoized and dropped when the watcher reports an edit.
   let configPromise: Promise<BiacConfig> | undefined;
   const getConfig = () => (configPromise ??= loadBiacConfig(root));
+  // A config edit changes index.html and every route, so the page reloads
+  // in full — sent here rather than left to vite's propagation, which stops
+  // without a reload at a module it never analyzed: the config module after
+  // a failed load, so fixing a typo would leave the error on screen.
+  const reloadAfterConfigEdit = (environment: DevEnvironment) => {
+    configPromise = undefined;
+    const graph = environment.moduleGraph;
+    // `sql:` collisions are checked when a page compiles — a config edit
+    // can create or clear one without touching the page file, so cached
+    // page transforms must re-run against the new config.
+    const stalePages = [...graph.idToModuleMap.values()].filter(
+      (mod) => mod.id && isPageFile(mod.id, pagesDirPosix),
+    );
+    const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
+    for (const mod of [configModule, ...stalePages]) {
+      if (mod) graph.invalidateModule(mod);
+    }
+    if (environment.name !== "client") return;
+    environment.logger.info(`page reload ${configFile}`, { timestamp: true });
+    environment.hot.send({ type: "full-reload" });
+  };
   // The manifest last handed to vite — a page change that regenerates the
   // same source is content-only and must not invalidate it.
   let servedManifest: string | undefined;
@@ -195,30 +221,18 @@ export function pagesPlugin(projectRoot: string): Plugin {
       await copyLoaderOutputs(loaderOutputs, join(dir, "data"));
     },
     async hotUpdate({ file, modules }) {
+      // Ahead of the data push, which awaits the config: after a failed
+      // load that memo is a rejection, and awaiting it would throw before
+      // the edit that fixes it could drop it.
+      if (file === configFile) {
+        reloadAfterConfigEdit(this.environment);
+        return [];
+      }
       // No module changed, so none is handed back to vite. Only the client
       // environment pushes: vite runs this hook once per environment.
       const isClient = this.environment.name === "client";
       if (isClient && (await pushDataUpdate(this.environment.hot, file)))
         return [];
-      if (file === configFile) {
-        configPromise = undefined;
-        const graph = this.environment.moduleGraph;
-        // `sql:` collisions are checked when a page compiles — a config edit
-        // can create or clear one without touching the page file, so cached
-        // page transforms must re-run against the new config.
-        const stalePages = [...graph.idToModuleMap.values()].filter(
-          (mod) => mod.id && isPageFile(mod.id, pagesDirPosix),
-        );
-        const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
-        for (const mod of [configModule, ...stalePages]) {
-          if (mod) graph.invalidateModule(mod);
-        }
-        return [
-          ...modules,
-          ...(configModule ? [configModule] : []),
-          ...stalePages,
-        ];
-      }
       if (!isPageFile(file, pagesDirPosix)) return;
       if (!manifestChanged(root, servedManifest)) return;
       // The manifest has no accepting importer upstream, so propagation
