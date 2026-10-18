@@ -137,7 +137,7 @@ describe("biac build", () => {
     vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     await expect(build([root])).rejects.toThrow(
-      "pagewidth: unknown key, expected one of title, theme, nav, sql, interpreters",
+      "Invalid biac.config.ts:1:18 — pagewidth: unknown key, expected one of title, theme, nav, sql, interpreters",
     );
     expect(existsSync(join(root, "build", "index.html"))).toBe(false);
   }, 120_000);

@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   cleanupProjects,
@@ -263,6 +264,73 @@ describe("validation", () => {
   );
 });
 
+describe("error position", () => {
+  it("locates a bad value at its key's line and column", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default {\n  title: "ACME",\n  theme: "blue",\n};\n',
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      /^Invalid biac\.config\.ts:3:3 — theme: expected/,
+    );
+  });
+
+  it("locates a non-object default export at the exported value", async () => {
+    const root = makeProject();
+    writeConfig(root, "export default 42;\n");
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      "Invalid biac.config.ts:1:16 — default export: expected an object",
+    );
+  });
+
+  it("locates a bad interpreter argv at its extension key", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default {\n  interpreters: {\n    ".py": "python3",\n  },\n};\n',
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      'Invalid biac.config.ts:3:5 — interpreters[".py"]: expected',
+    );
+  });
+
+  it("gives vite the file as id and the key as loc", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default {\n  pagewidth: "full",\n};\n');
+    const file = join(root, "biac.config.ts");
+
+    const error = await loadBiacConfig(root).catch((thrown: unknown) => thrown);
+
+    expect(error).toMatchObject({
+      id: file,
+      loc: { file, line: 2, column: 3 },
+    });
+  });
+
+  it("names the key path alone when the key is spread in", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'const extra = { titel: "ACME" };\nexport default { ...extra };\n',
+    );
+    const file = join(root, "biac.config.ts");
+
+    const error = await loadBiacConfig(root).catch((thrown: unknown) => thrown);
+
+    expect(error).toMatchObject({
+      id: file,
+      message: expect.stringMatching(
+        /^Invalid biac\.config\.ts — titel: unknown key/,
+      ),
+    });
+    expect(error).not.toHaveProperty("loc");
+  });
+});
+
 describe("unknown keys", () => {
   const ACCEPTED = "expected one of title, theme, nav, sql, interpreters";
 
@@ -283,7 +351,7 @@ describe("unknown keys", () => {
     writeConfig(root, `export default { ${key}: "full" };\n`);
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
-      `Invalid biac.config.ts — ${message}`,
+      `Invalid biac.config.ts:1:18 — ${message}`,
     );
   });
 
@@ -292,7 +360,7 @@ describe("unknown keys", () => {
     writeConfig(root, "export default { nav: { sidebr: false } };\n");
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
-      "Invalid biac.config.ts — nav.sidebr: unknown key, expected one of sidebar (did you mean sidebar?)",
+      "Invalid biac.config.ts:1:25 — nav.sidebr: unknown key, expected one of sidebar (did you mean sidebar?)",
     );
   });
 

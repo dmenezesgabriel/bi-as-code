@@ -369,6 +369,25 @@ describe("file watching", () => {
 });
 
 describe("virtual:biac-config", () => {
+  it("rejects a config typo with vite's id and the key's loc", async () => {
+    const root = makeProject();
+    writeFile("biac.config.ts", 'export default {\n  pagewidth: "full",\n};\n');
+    const file = join(root, "biac.config.ts");
+    const dev = await makeServer(root);
+
+    const error = await dev
+      .transformRequest(VIRTUAL_CONFIG_ID)
+      .catch((thrown: unknown) => thrown);
+
+    expect(error).toMatchObject({
+      message: expect.stringMatching(
+        /^Invalid biac\.config\.ts:2:3 — pagewidth/,
+      ),
+      id: file,
+      loc: { file, line: 2, column: 3 },
+    });
+  });
+
   it("serves the project's declared title, theme and nav", async () => {
     const root = makeProject();
     writeFile(

@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfigFromFile } from "vite";
-import { closestKey } from "./closest-key.js";
+import {
+  ConfigFieldError,
+  invalid,
+  locatedError,
+  unknownKey,
+} from "./biac-config-error.js";
 import {
   DEFAULT_INTERPRETERS,
   mergeInterpreters,
@@ -35,7 +40,9 @@ const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")}
  * pipeline (`loadConfigFromFile` bundles it with esbuild, then imports it —
  * the same trust model as `vite.config.ts`). A missing file resolves to
  * defaults; a malformed one throws naming the field, its expected shape and
- * the offending value.
+ * the offending value, at the field's `biac.config.ts:<line>:<column>`. The
+ * Error carries vite's `id` and `loc`, so the dev overlay and terminal link
+ * to the author's file rather than to this module.
  *
  * @example
  * const config = await loadBiacConfig("/site");
@@ -44,10 +51,15 @@ const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")}
 export async function loadBiacConfig(projectRoot: string): Promise<BiacConfig> {
   const file = join(projectRoot, CONFIG_FILE);
   if (!existsSync(file)) return structuredClone(DEFAULTS);
-  const loaded = await loadConfigFile(file, projectRoot);
-  // `loaded.config` is typed as vite's UserConfig but is whatever the file
-  // default-exported — validate it field by field.
-  return toBiacConfig(loaded?.config);
+  try {
+    const loaded = await loadConfigFile(file, projectRoot);
+    // `loaded.config` is typed as vite's UserConfig but is whatever the file
+    // default-exported — validate it field by field.
+    return toBiacConfig(loaded?.config);
+  } catch (error) {
+    if (error instanceof ConfigFieldError) throw locatedError(error, file);
+    throw error;
+  }
 }
 
 /**
@@ -73,7 +85,7 @@ async function loadConfigFile(
       error instanceof Error &&
       error.message === "config must export or return an object."
     ) {
-      throw invalid("default export", CONFIG_SHAPE, "<non-object>");
+      throw invalid("default export", [], CONFIG_SHAPE, "<non-object>");
     }
     throw error;
   }
@@ -81,9 +93,9 @@ async function loadConfigFile(
 
 function toBiacConfig(raw: unknown): BiacConfig {
   if (!isRecord(raw)) {
-    throw invalid("default export", CONFIG_SHAPE, raw);
+    throw invalid("default export", [], CONFIG_SHAPE, raw);
   }
-  rejectUnknownKeys(raw, CONFIG_KEYS, "");
+  rejectUnknownKeys(raw, CONFIG_KEYS, []);
   return {
     title: readTitle(raw),
     theme: readTheme(raw),
@@ -96,7 +108,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
 function readTitle(spec: Record<string, unknown>): string {
   if (spec.title === undefined) return DEFAULTS.title;
   if (typeof spec.title !== "string")
-    throw invalid("title", "a string", spec.title);
+    throw invalid("title", ["title"], "a string", spec.title);
   return spec.title;
 }
 
@@ -108,7 +120,7 @@ function readTheme(spec: Record<string, unknown>): BiacConfig["theme"] {
     spec.theme === "system"
   )
     return spec.theme;
-  throw invalid("theme", '"light" | "dark" | "system"', spec.theme);
+  throw invalid("theme", ["theme"], '"light" | "dark" | "system"', spec.theme);
 }
 
 function readSidebar(spec: Record<string, unknown>): boolean {
@@ -116,13 +128,19 @@ function readSidebar(spec: Record<string, unknown>): boolean {
   if (!isRecord(spec.nav))
     throw invalid(
       "nav",
+      ["nav"],
       "an object with an optional boolean sidebar",
       spec.nav,
     );
-  rejectUnknownKeys(spec.nav, NAV_KEYS, "nav.");
+  rejectUnknownKeys(spec.nav, NAV_KEYS, ["nav"]);
   if (spec.nav.sidebar === undefined) return DEFAULTS.nav.sidebar;
   if (typeof spec.nav.sidebar !== "boolean")
-    throw invalid("nav.sidebar", "a boolean", spec.nav.sidebar);
+    throw invalid(
+      "nav.sidebar",
+      ["nav", "sidebar"],
+      "a boolean",
+      spec.nav.sidebar,
+    );
   return spec.nav.sidebar;
 }
 
@@ -133,6 +151,7 @@ function readInterpreters(
   if (!isRecord(spec.interpreters)) {
     throw invalid(
       "interpreters",
+      ["interpreters"],
       'an object mapping ".ext" to an argv string[] or null',
       spec.interpreters,
     );
@@ -146,11 +165,17 @@ function readInterpreter([ext, argv]: [string, unknown]): [
   string[] | null,
 ] {
   if (!ext.startsWith(".")) {
-    throw invalid("interpreters key", 'an extension starting with "."', ext);
+    throw invalid(
+      "interpreters key",
+      ["interpreters", ext],
+      'an extension starting with "."',
+      ext,
+    );
   }
   if (argv === null || isStringArray(argv)) return [ext, argv];
   throw invalid(
     `interpreters[${JSON.stringify(ext)}]`,
+    ["interpreters", ext],
     "an array of strings or null",
     argv,
   );
@@ -169,28 +194,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function rejectUnknownKeys(
   spec: Record<string, unknown>,
   accepted: readonly string[],
-  pathPrefix: string,
+  parentPath: readonly string[],
 ): void {
   const known = new Set(accepted);
   const unknown = Object.keys(spec).find((key) => !known.has(key));
   if (unknown === undefined) return;
-  throw unknownKey(unknown, accepted, pathPrefix);
-}
-
-function unknownKey(
-  key: string,
-  accepted: readonly string[],
-  pathPrefix: string,
-): Error {
-  const suggestion = closestKey(key, accepted);
-  const hint = suggestion === undefined ? "" : ` (did you mean ${suggestion}?)`;
-  return new Error(
-    `Invalid ${CONFIG_FILE} — ${pathPrefix}${key}: unknown key, expected one of ${accepted.join(", ")}${hint}`,
-  );
-}
-
-function invalid(field: string, expected: string, value: unknown): Error {
-  return new Error(
-    `Invalid ${CONFIG_FILE} — ${field}: expected ${expected}, got ${JSON.stringify(value)}`,
-  );
+  throw unknownKey(unknown, parentPath, accepted);
 }
