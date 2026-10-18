@@ -1,6 +1,6 @@
 # SL-046 — A page or a whole project spans the full width and puts each widget on a card
 
-Milestone: Phase 4 — Project and page settings, themes, layouts · State: open · Depends on: SL-045 · Closes: GAP-039, GAP-044
+Milestone: Phase 4 — Project and page settings, themes, layouts · State: partial — awaits its demo · Depends on: SL-045 · Closes: GAP-039, GAP-044
 
 ## Outcome
 
@@ -8,10 +8,10 @@ An author sets `layout: { page_width: "full", cards: true }` in `biac.config.ts`
 
 ## Demo
 
-1. Cold start: `bin/biac dev`, open the example dashboard page (added in T4) at a 1920px viewport. It renders in the article column (`main` 848px beside the ToC rail, inside the 1152px outer cap), widgets on the page background.
-2. Add `page_width: full` to that page's front-matter and save. Without a reload, the outer container fills the row beside the sidebar and `main` widens past 848px; the ToC rail still shows.
-3. Add `cards: true` to the front-matter. Each chart, `Table` and `BigValue` sits on a bordered card on a tinted page background; inputs, `FilterBar`, callouts, tabs and inline `Value`/`Delta` do not; a chart inside a `<Tabs>` panel gets exactly one card.
-4. Remove both front-matter keys and put `layout: { page_width: "full", cards: true }` in `biac.config.ts`. Every page is full width with cards; a second page with `cards: false` in its front-matter has none.
+1. Cold start: `bin/biac dev`, open `/orders-dashboard` at a 1920px viewport. Its front-matter sets `page_width: full` and `cards: true`: the outer container fills the row beside the sidebar (`main` 1584px) and each `BigValue`, the two charts and the `Table` sit on bordered cards (6) on a tinted page background; the region `Dropdown` above them has no card.
+2. Click Orders overview in the sidebar: `/` sets neither key, so it renders in the 896px article column with no cards and no tint — the page that opts out.
+3. On `/orders-dashboard`, remove `cards: true` and save. Without a reload the cards and the tint go; remove `page_width: full` and `main` falls back to 896px. On `/weekly-review`, add `cards: true`: a chart inside a `<Tabs>` panel gets exactly one card; inputs, `FilterBar`, callouts, tabs and inline `Value`/`Delta` get none.
+4. Put `layout: { page_width: "full", cards: true }` in `biac.config.ts`. Every page is full width with cards; add `cards: false` to `/`'s front-matter and it has none.
 5. Type `page_width: wide` in the front-matter: a located error names the file, `page_width`, `"article" | "full"` and `"wide"`. Type `layout: { cardz: true }` in `biac.config.ts`: the SL-045 error names `layout.cardz`, the accepted keys and the closest. Fix both — the page comes back by itself.
 6. `bin/biac build` + `bin/biac preview`: the same pages render the same widths and cards.
 7. Reload — the effect persists.
@@ -176,7 +176,18 @@ The resolved config's `layout` is concrete (`page_width: "article"` when omitted
 
 13 = 3 `BigValue`, 7 charts, 3 `Table`. O1: `withCard` in `src/web/src/features/widgets/card/with-card.tsx` wraps each carded entry of the static `mdxComponents` map once, and `card-scope.tsx` carries `cards` and `insideCard`, so a toggle changes context only (the in-place probe survived) and a widget under a card or a `NoCardScope` gets none. O2: `--card-mode-background` (ADR-0014). `layout: { cards: true }` in `biac.config.ts` cards `/weekly-review`; `/` with `cards: false` has 0 cards and no tint after client navigation. `cards: yes please` and `layout.cardz` fail located (`biac.config.ts:2:33 — layout.cardz: unknown key, expected one of page_width, cards (did you mean cards?)`); the fix restores 13 cards, 0 alerts, console clean.
 
-- [ ] T4 — Example dashboard page in `pages/` (full + cards) and a page opting out; e2e-browser spec through the real pages; demo run ready; GAP-039 and GAP-044 rows re-measured for closing.
+- [x] T4 — Example dashboard page in `pages/` (full + cards) and a page opting out; e2e-browser spec through the real pages; demo run ready; GAP-039 and GAP-044 rows re-measured for closing.
+
+After T4, `pages/orders-dashboard.md` (`page_width: full`, `cards: true`) against `/` (no keys), measured 2026-10-18 with `playwright-cli` on `bin/biac dev`:
+
+| Page                | Viewport | `main` | cards | nested | page tint         | horizontal scroll |
+| ------------------- | -------- | ------ | ----- | ------ | ----------------- | ----------------- |
+| `/orders-dashboard` | 1920     | 1584   | 6     | 0      | #fafafa / #0a0a0a | 0                 |
+| `/orders-dashboard` | 768      | 720    | 6     | 0      | #fafafa           | 0                 |
+| `/`                 | 1920     | 896    | 0     | 0      | none              | 0                 |
+| `/`                 | 768      | 720    | 0     | 0      | none              | 0                 |
+
+6 = 3 `BigValue`, 2 charts, 1 `Table`; the `FilterBar` is not carded; `?region=West` narrows the table to 140 rows with the 6 cards kept. `test/e2e-browser/page-cards.spec.ts` drives the shipped page and the sidebar link to `/`; `test/e2e-browser/static-build.spec.ts` checks the same 6 cards, tint and full width off `bin/biac build` + `bin/biac preview`. Console: 0 errors, 0 warnings.
 
 ## Out of scope
 
