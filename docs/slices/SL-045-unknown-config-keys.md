@@ -123,7 +123,7 @@ Run 2026-10-17 on a scratch copy of `pages/`, `data/`, `biac.config.ts` with `bi
 
 ## Tasks
 
-- [ ] T1 — Unknown top-level and `nav` keys throw `unknown key, expected one of …` with the closest-key suggestion (D1–D5); `sql`/`interpreters` keys stay unchecked; `biac build` fails. Unit tests for every message, integration test for the failed build. `playwright-cli`: `bin/biac dev` with `pagewidth`, screenshot the overlay, `eval` its text, `console` reads.
+- [x] T1 — Unknown top-level and `nav` keys throw `unknown key, expected one of …` with the closest-key suggestion (D1–D5); `sql`/`interpreters` keys stay unchecked; `biac build` fails. Unit tests for every message, integration test for the failed build. `playwright-cli`: `bin/biac dev` with `pagewidth`, screenshot the overlay, `eval` its text, `console` reads.
 - [ ] T2 — The error carries `biac.config.ts:<line>:<column>` and `id`/`loc` for vite (D6, D7); settle O1 and O2; key-path-only fallback for spread/computed keys. Unit tests on the position finder, integration test that the dev error has `loc`. `playwright-cli`: the overlay's file link reads the line and column.
 - [ ] T3 — Browser e2e: a typo saved under `biac dev` shows the overlay naming the key, deleting it brings the page back without a server restart (by itself if O3 chose (b), after a reload otherwise); mark GAP-045 closed in `docs/research/settings-and-themes.md`; slice awaits its demo.
 
