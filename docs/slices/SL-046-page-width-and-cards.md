@@ -107,11 +107,11 @@ Overall: **absent**. Nothing in the ledger claims any part of this as shipped.
 
 ## Open decisions
 
-| Id  | Decision                                                   | Evidence to gather first                                                                                                                                                                                                                                                                                  |
-| --- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| O1  | How a widget gets its card                                 | A card-aware component map built in `MarkdownPage` when `cards` is on, vs one `WidgetCard` each carded widget renders that reads a cards context (evidence's `ComponentWrapper.svelte` + `card-context.svelte.ts`). Read how `Tabs`/`Accordion` render children; the map can't see nesting, a context can |
-| O2  | The card-mode page background token                        | Light and dark hex (ADR-0014: tokens are hex), measured contrast of `--card-border` against it and against `--card` (WCAG 2.2 1.4.11 non-text 3:1, https://www.w3.org/TR/WCAG22/#non-text-contrast), and whether text on it keeps 4.5:1. A new token is an ADR-0014 amendment or a new ADR                |
-| O3  | `full` with `nav.sidebar: false` and in the editor preview | Measure `main` width in each with `playwright-cli` before choosing any extra padding                                                                                                                                                                                                                      |
+| Id  | Decision                                                                                   | Evidence to gather first                                                                                                                                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O1  | How a widget gets its card                                                                 | A card-aware component map built in `MarkdownPage` when `cards` is on, vs one `WidgetCard` each carded widget renders that reads a cards context (evidence's `ComponentWrapper.svelte` + `card-context.svelte.ts`). Read how `Tabs`/`Accordion` render children; the map can't see nesting, a context can                                    |
+| O2  | The card-mode page background token                                                        | Light and dark hex (ADR-0014: tokens are hex), measured contrast of `--card-border` against it and against `--card` (WCAG 2.2 1.4.11 non-text 3:1, https://www.w3.org/TR/WCAG22/#non-text-contrast), and whether text on it keeps 4.5:1. A new token is an ADR-0014 amendment or a new ADR                                                   |
+| O3  | `full` with `nav.sidebar: false` and in the editor preview — **settled: no extra padding** | Measured with `playwright-cli` on `bin/biac dev`: with `nav.sidebar: false` + `full`, `main` is 1872px at 1920 and 1392px at 1440, starting at x=24 — the container's `px-6` gutters already frame it. The editor preview pane is 816px at 1920, under both caps, so `main` is 768px for `article` and `full` alike — nothing changes there. |
 
 ## Surface
 
@@ -124,7 +124,7 @@ Overall: **absent**. Nothing in the ledger claims any part of this as shipped.
 
 ## Tasks
 
-- [ ] T1 — Front-matter `page_width: article|full`: the engine reads and validates it (located error on any other value), the page carries it, `MarkdownPage` drops both caps for `full`. Measure `main` width at 1920px, 1440px and 768px before/after on a `pages/` page, in the editor preview too (O3).
+- [x] T1 — Front-matter `page_width: article|full`: the engine reads and validates it (located error on any other value), the page carries it, `MarkdownPage` drops both caps for `full`. Measure `main` width at 1920px, 1440px and 768px before/after on a `pages/` page, in the editor preview too (O3).
 
 Baseline, measured 2026-10-18 with `playwright-cli` on `bin/biac dev` (sidebar open, `main.getBoundingClientRect().width` and its parent's):
 
@@ -136,6 +136,18 @@ Baseline, measured 2026-10-18 with `playwright-cli` on `bin/biac dev` (sidebar o
 | `/` (no ToC rail)          | 1440     | 896 (capped) | —               | none     |
 
 At 1440px the outer cap equals the space beside the 288px sidebar, so on a page with a ToC rail `full` gains nothing at that size. Measure the gain at 1920px, or on a page without the rail. Console: 0 errors, 0 warnings.
+
+After T1, `page_width: full` in front-matter, same method:
+
+| Page             | Viewport | `main` | outer container | ToC rail |
+| ---------------- | -------- | ------ | --------------- | -------- |
+| `/weekly-review` | 1920     | 1328   | 1632            | 224      |
+| `/weekly-review` | 1440     | 848    | 1152            | 224      |
+| `/weekly-review` | 768      | 720    | 768             | hidden   |
+| `/`              | 1920     | 1584   | 1632            | none     |
+| `/`              | 1440     | 1104   | 1152            | none     |
+
+The page carries the validated value as its `layout` module export (`src/engine/page-layout-frontmatter.ts` `pageLayout`), absent when the page sets none, so T2 merges `biac.config.ts` `layout` under it key by key. Paragraphs keep their own measure at `full`; tables, charts and the filter row widen.
 
 - [ ] T2 — `layout: { page_width }` in `biac.config.ts`: `layout` joins `CONFIG_KEYS` with its own accepted-keys list (unknown key and bad value located, as in SL-045), ships in `virtual:biac-config`, merges under the page's front-matter. Measure two pages, one overriding.
 - [ ] T3 — `cards` in front-matter and `layout.cards`: settle O1 and O2, wrap the carded widgets, tint the page background, no nested cards; stories for carded and uncarded states, contrast measured light and dark. Measure card count per page with `eval`.
