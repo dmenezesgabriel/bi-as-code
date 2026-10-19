@@ -1,6 +1,6 @@
 # ADR-0018 — Brand colours are a contrast-checked `brand` key, not a theme
 
-Status: accepted
+Status: superseded by [ADR-0019](0019-the-brand-is-contrast-checked-config-for-colour-type-and-shape.md)
 Date: 2026-10-19
 
 ## Context
