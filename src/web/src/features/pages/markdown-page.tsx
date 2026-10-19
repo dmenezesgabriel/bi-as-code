@@ -20,6 +20,7 @@ import { DateRange } from "../widgets/inputs/date-range";
 import { Dropdown } from "../widgets/inputs/dropdown";
 import { DOCKED_ROW_HEIGHT, FilterBar } from "../widgets/inputs/filter-bar";
 import { MultiSelect } from "../widgets/inputs/multi-select";
+import { Search } from "../widgets/inputs/search";
 import { Slider } from "../widgets/inputs/slider";
 import { TextInput } from "../widgets/inputs/text-input";
 import { Toggle } from "../widgets/inputs/toggle";
@@ -69,7 +70,7 @@ import { useDocumentTitle } from "./use-document-title";
  * `BarChart`, `LineChart`, `AreaChart`, `ScatterChart`, `Histogram`,
  * `Heatmap`) resolve `data` against that same registry; the input widgets
  * (`Dropdown`, `MultiSelect`, `Slider`, `ButtonGroup`, `TextInput`,
- * `Toggle`, `DateRange`) write the page filters those
+ * `Search`, `Toggle`, `DateRange`) write the page filters those
  * consumers declare, and `FilterBar` is their presentational sticky
  * container; the markdown
  * widgets (`Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Tab`,
@@ -112,6 +113,7 @@ const mdxComponents: MdxComponentMap = {
   Slider,
   ButtonGroup,
   TextInput,
+  Search,
   Toggle,
   DateRange,
   FilterBar,

@@ -12,6 +12,7 @@ import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
 import { assertPageIcon } from "./page-icon-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
+import { remarkRejectUnknownSearchMethod } from "./search-method.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
 import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
 import type {
@@ -74,6 +75,7 @@ export async function compilePage(
       remarkGfm,
       [remarkPageMetadata, metadata],
       remarkRejectReservedFilterIds,
+      remarkRejectUnknownSearchMethod,
     ],
   });
 

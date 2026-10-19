@@ -434,6 +434,19 @@ describe("markdown constructs", () => {
     });
   });
 
+  it("rejects an unknown search method at its line in the file", async () => {
+    const markdown =
+      '---\ntitle: T\n---\n\n<Search id="q" column="region" method="regexp" />\n';
+
+    const failure = await compile(markdown).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining('Unknown method "regexp"'),
+      line: 5,
+      column: 32,
+    });
+  });
+
   it("rejects malformed mdx expressions", async () => {
     await expect(compile("broken {unclosed\n")).rejects.toThrow();
   });

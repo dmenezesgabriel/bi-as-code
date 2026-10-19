@@ -13,7 +13,7 @@ the [orders overview](/).
 
 <Callout type="info" title="Reading guide">
 Every figure on this page re-runs live against the `orders` table — the
-`?region=`, `?amount=`, `?ordered=`, `?q=` and `?large_orders=` URL
+`?region=`, `?amount=`, `?ordered=`, `?q=`, `?order=` and `?large_orders=` URL
 parameters scope the widgets that declare `filters` and the queries that
 interpolate them. Charts cross-filter in session state, with no URL
 parameter: a regional-split bar click or an order-mix legend toggle
@@ -28,7 +28,8 @@ the histogram once) to clear.
   <Dropdown id="region" data="order_amounts" valueColumn="region" title="Region" filters={["region", "amount"]} />
   <Slider id="amount" data="order_amounts" valueColumn="amount" range title="Amount" filters={["region"]} />
   <DateRange id="ordered" valueColumn="order_date" title="Ordered" />
-  <TextInput id="q" title="Search regions" placeholder="e.g. West" />
+  <Search id="q" column="region" title="Search regions" placeholder="e.g. West" />
+  <TextInput id="order" title="Order id" placeholder="e.g. 42" />
   <Toggle id="large_orders" label="Large orders only" />
 </FilterBar>
 
@@ -162,19 +163,19 @@ from orders
 <Histogram data="order_amounts" value="amount" title="Order amounts" subtitle="Orders per amount bin, US dollars" filters={["region", "amount", "ordered"]} select="crossfilter" />
 
 The same distribution at order grain — the `<Table>` narrows on every
-input above: the region pick, the amount range and the ordered window
-through `filters`, a drag across the histogram through the same
-`amount` clause, `q` over the region name and the large-orders switch
+input above: the region pick, the amount range, the ordered window and
+the region search through `filters`, a drag across the histogram through
+the same `amount` clause, the order id and the large-orders switch
 (`amount >= 44`) through the fence's own `{{params.*}}` clauses.
 
 ```sql order_detail
 select order_id, order_date::varchar as order_date, region, amount
 from orders
-where ({{params.q}} is null or region ilike '%' || {{params.q}} || '%')
+where ({{params.order}} is null or order_id::varchar = {{params.order}})
   and ({{params.large_orders}} is distinct from 'true' or amount >= 44)
 ```
 
-<Table data="order_detail" filters={["region", "amount", "ordered"]} />
+<Table data="order_detail" filters={["region", "amount", "ordered", "q"]} />
 
 ## Trend lines
 

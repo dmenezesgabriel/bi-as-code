@@ -18,6 +18,7 @@ describe("an input's id", () => {
     "Slider",
     "ButtonGroup",
     "TextInput",
+    "Search",
     "Toggle",
     "DateRange",
   ])("rejects <%s id> naming the editor's key", async (tag) => {

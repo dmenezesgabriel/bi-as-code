@@ -358,7 +358,37 @@ test("the Ordered date range persists the expression and narrows order_detail", 
   expect(errors).toEqual([]);
 });
 
-test("the q text input and large_orders toggle re-query order_detail", async ({
+test("the q search narrows order_detail through filters and persists", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+  const table = orderDetailTable(page);
+  await expect(table).toContainText("· 355 rows");
+
+  const q = page.getByRole("searchbox", { name: "Search regions" });
+  await expect(q).toBeEnabled();
+  await q.fill("we");
+  // The commit lands after ~300ms of quiet — poll past the debounce. The
+  // match clause reaches the table through its `filters`, no fence SQL.
+  await expect.poll(() => urlParam(page, "q")).toBe("we");
+  await expect(table).toContainText("· 140 rows");
+
+  await page.reload();
+  await expect(
+    page.getByRole("searchbox", { name: "Search regions" }),
+  ).toHaveValue("we");
+  await expect(table).toContainText("· 140 rows");
+
+  await page.getByRole("searchbox", { name: "Search regions" }).fill("");
+  await expect.poll(() => urlParam(page, "q")).toBeNull();
+  await expect(table).toContainText("· 355 rows");
+  expect(errors).toEqual([]);
+});
+
+test("the order text input and large_orders toggle re-query order_detail", async ({
   page,
   biacDev,
 }) => {
@@ -366,29 +396,29 @@ test("the q text input and large_orders toggle re-query order_detail", async ({
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
 
-  const q = page.getByLabel("Search regions");
-  await expect(q).toBeEnabled();
-  await q.fill("west");
-  // The commit lands after ~300ms of quiet — poll past the debounce. The
-  // `{{params.q}}` interpolation narrows the fence the widget reads.
-  await expect.poll(() => urlParam(page, "q")).toBe("west");
+  const order = page.getByLabel("Order id");
+  await expect(order).toBeEnabled();
+  await order.fill("42");
+  // The `{{params.order}}` interpolation narrows the fence the table reads.
+  await expect.poll(() => urlParam(page, "order")).toBe("42");
   const table = orderDetailTable(page);
-  await expect(table).toContainText("· 140 rows");
+  await expect(table.getByRole("row")).toHaveCount(2);
+  await expect(table).toContainText("South");
 
   // The label activates the switch's hidden checkbox natively.
   await page.locator("label[for='large_orders-face']").click();
   await expect.poll(() => urlParam(page, "large_orders")).toBe("true");
-  // q=west ∩ amount >= 44 — West's 80 top-bracket orders.
-  await expect(table).toContainText("· 80 rows");
+  // Order 42 is a 39-dollar order — below the large-orders bar of 44.
+  await expect(page.getByText("0 rows", { exact: true })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel("Search regions")).toHaveValue("west");
+  await expect(page.getByLabel("Order id")).toHaveValue("42");
   // The label names both the switch face and its hidden checkbox input —
   // the role locator pins the one carrying the checked face.
   await expect(
     page.getByRole("switch", { name: "Large orders only" }),
   ).toBeChecked();
-  await expect(table).toContainText("· 80 rows");
+  await expect(page.getByText("0 rows", { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

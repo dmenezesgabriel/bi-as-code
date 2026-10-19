@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { MatchMethod } from "../../crossfilter/clause";
 import type { FilterIds } from "../../filters/filter-ids";
 
 /**
@@ -135,6 +136,28 @@ export interface SliderProps {
  */
 export interface TextInputProps {
   readonly id: string;
+  readonly title?: string;
+  readonly placeholder?: string;
+  readonly initialValue?: string;
+}
+
+/**
+ * How `<Search>` matches its text against the column. mosaic's `regexp`
+ * is left out: a half-typed pattern is a query error on every widget the
+ * filter names. The engine rejects any other literal at compile
+ * (`src/engine/search-method.ts`).
+ */
+export type SearchMethod = Exclude<MatchMethod, "regexp">;
+
+/**
+ * Props of the `<Search>` MDX widget — mosaic's `Search` input over one
+ * `column`: the held text persists as `?id=<text>` and predicates every
+ * widget listing `id` in its `filters`.
+ */
+export interface SearchProps {
+  readonly id: string;
+  readonly column: string;
+  readonly method?: SearchMethod;
   readonly title?: string;
   readonly placeholder?: string;
   readonly initialValue?: string;

@@ -6,6 +6,7 @@ import type {
   FilterSelectProps,
   MultiSelectProps,
   OptionItem,
+  SearchProps,
   TextInputProps,
   ToggleProps,
 } from "./types";
@@ -81,6 +82,15 @@ describe("input widget prop types", () => {
     expectTypeOf<TextInputProps>().not.toHaveProperty("data");
     expectTypeOf<TextInputProps>().not.toHaveProperty("valueColumn");
     expectTypeOf<TextInputProps>().not.toHaveProperty("filters");
+  });
+
+  it("Search requires an id and a column, and offers no regexp method", () => {
+    expectTypeOf<SearchProps["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<SearchProps["column"]>().toEqualTypeOf<string>();
+    expectTypeOf<SearchProps["method"]>().toEqualTypeOf<
+      "contains" | "prefix" | "suffix" | undefined
+    >();
+    expectTypeOf<SearchProps>().not.toHaveProperty("filters");
   });
 
   it("Toggle carries label/invert/initialValue and nothing else", () => {

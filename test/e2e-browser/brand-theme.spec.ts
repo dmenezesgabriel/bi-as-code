@@ -180,7 +180,7 @@ for (const colorScheme of ["light", "dark"] as const) {
       ).toEqual(await paintedRgb(page, brand.positive));
       expect(await readRootToken(page, "--field")).toBe(brand.field);
       expect(await readRootToken(page, "--sidebar")).toBe(brand.sidebar);
-      const search = page.getByRole("textbox", { name: "Search regions" });
+      const search = page.getByRole("searchbox", { name: "Search regions" });
       expect(await paintedRgb(page, await effectiveBackground(search))).toEqual(
         await paintedRgb(page, brand.field),
       );

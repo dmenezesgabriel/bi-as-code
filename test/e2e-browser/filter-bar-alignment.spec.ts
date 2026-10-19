@@ -21,12 +21,15 @@ const CONTROL_HEIGHT = 36;
 
 function weeklyReviewFields(page: Page): FilterField[] {
   const bar = page.locator("[data-filter-bar]");
-  const named = (role: "combobox" | "group" | "textbox", name: string) =>
-    bar.getByRole(role, { name, exact: true });
+  const named = (
+    role: "combobox" | "group" | "searchbox" | "textbox",
+    name: string,
+  ) => bar.getByRole(role, { name, exact: true });
   const toggle = bar.getByRole("switch", { name: "Large orders only" });
   const region = named("combobox", "Region");
   const ordered = bar.getByLabel("Ordered", { exact: true });
-  const search = named("textbox", "Search regions");
+  const search = named("searchbox", "Search regions");
+  const order = named("textbox", "Order id");
   return [
     { name: "Region", named: region, box: region, labelRow: true },
     // The slider draws a track, not a box: only its label is on a line.
@@ -38,6 +41,7 @@ function weeklyReviewFields(page: Page): FilterField[] {
     },
     { name: "Ordered", named: ordered, box: ordered, labelRow: true },
     { name: "Search regions", named: search, box: search, labelRow: true },
+    { name: "Order id", named: order, box: order, labelRow: true },
     // Its label is inline in the box, so it has no label row to line up.
     {
       name: "Large orders only",

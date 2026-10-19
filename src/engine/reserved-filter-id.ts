@@ -26,6 +26,7 @@ const FILTER_INPUT_TAGS: ReadonlySet<string> = new Set([
   "Slider",
   "ButtonGroup",
   "TextInput",
+  "Search",
   "Toggle",
   "DateRange",
 ]);
@@ -83,7 +84,7 @@ function namesFilterIds(
  * itself, a string literal expression, or the string literals of an array
  * expression. Anything else yields nothing.
  */
-function literalStrings(value: MdxJsxAttribute["value"]): string[] {
+export function literalStrings(value: MdxJsxAttribute["value"]): string[] {
   if (typeof value === "string") return [value];
   const statement = value?.data?.estree?.body[0];
   if (statement?.type !== "ExpressionStatement") return [];

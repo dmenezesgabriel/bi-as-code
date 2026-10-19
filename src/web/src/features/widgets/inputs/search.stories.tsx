@@ -1,0 +1,99 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor } from "storybook/test";
+import { FakeDuckDb } from "../../data/fake-duckdb";
+import type { Row } from "../../data/types";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
+import type { SqlBlock } from "../../pages/types";
+import {
+  withPageFilters,
+  withQueryData,
+} from "../../../../.storybook/decorators";
+import { Table } from "../table/table";
+import { Search } from "./search";
+import type { SearchProps } from "./types";
+
+const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
+
+const ALL_ORDERS: Row[] = [
+  { region: "West", amount: 44 },
+  { region: "North", amount: 40 },
+];
+
+/** Serves only the `West` row once a `contains` clause on `region` applies. */
+function regionDb(): FakeDuckDb {
+  return FakeDuckDb.withRowsWhen(ALL_ORDERS, (sql) =>
+    sql.includes("contains(lower(region), lower(?))") ? [ALL_ORDERS[0]!] : null,
+  );
+}
+
+const meta = {
+  title: "Widgets/Search",
+  component: Search,
+  args: { id: "q", column: "region", title: "Search regions" },
+} satisfies Meta<SearchProps>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** The authored shape: an empty search box with the default placeholder. */
+export const Empty: Story = {
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  play: async ({ canvas }) => {
+    const input = await canvas.findByRole("searchbox", {
+      name: "Search regions",
+    });
+    await expect(input).toHaveAttribute("placeholder", "Search");
+    await expect(input).toHaveValue("");
+  },
+};
+
+/** A `?q=` link restores the held text on first render. */
+export const Held: Story = {
+  decorators: [withPageFilters(new FakeFilterUrlPort("?q=west"))],
+  play: async ({ canvas }) => {
+    const input = await canvas.findByRole("searchbox", {
+      name: "Search regions",
+    });
+    await expect(input).toHaveValue("west");
+  },
+};
+
+/** Outside a page's filters the box renders, disabled. */
+export const Disabled: Story = {
+  play: async ({ canvas }) => {
+    const input = await canvas.findByRole("searchbox", {
+      name: "Search regions",
+    });
+    await expect(input).toBeDisabled();
+  },
+};
+
+const narrowPort = new FakeFilterUrlPort("");
+const narrowDb = regionDb();
+
+/** Typing narrows a `filters={["q"]}` table through the match clause —
+ * no fence names the search text. */
+export const NarrowsFilteredTable: Story = {
+  decorators: [withQueryData([ORDERS], narrowDb), withPageFilters(narrowPort)],
+  render: (args) => (
+    <>
+      <Search {...args} />
+      <Table data="orders" filters={["q"]} />
+    </>
+  ),
+  play: async ({ canvas }) => {
+    const table = await canvas.findByRole("table");
+    await expect(table).toHaveTextContent("North");
+
+    const input = canvas.getByRole("searchbox", { name: "Search regions" });
+    await userEvent.type(input, "we");
+    await userEvent.tab();
+
+    // The re-run resets the result to `loading` first — the table remounts,
+    // so each poll must re-locate it rather than assert the stale node.
+    await waitFor(() =>
+      expect(canvas.getByRole("table")).not.toHaveTextContent("North"),
+    );
+    await expect(narrowPort.read()?.searchParams.get("q")).toBe("we");
+  },
+};
