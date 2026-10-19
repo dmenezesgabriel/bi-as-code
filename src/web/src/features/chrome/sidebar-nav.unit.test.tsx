@@ -54,6 +54,14 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "About" })).toBeInTheDocument();
   });
 
+  it("sets the site title in the brand heading font", async () => {
+    await renderNav("/");
+
+    const title = screen.getByRole("link", { name: "ACME" });
+
+    expect(title).toHaveClass("font-heading");
+  });
+
   it("opens the directory containing the active route and closes the rest", async () => {
     await renderNav("/nested/page");
 

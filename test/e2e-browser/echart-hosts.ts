@@ -29,6 +29,8 @@ export interface AppliedOption {
   }[];
   legend: { selected?: Record<string, boolean> }[];
   visualMap?: { min?: number; max?: number; inRange?: { color?: string[] } }[];
+  /** The theme's text default, which every chart text inherits. */
+  textStyle?: { fontFamily?: string };
 }
 
 /** A viewport-space point, ready for `page.mouse`. */

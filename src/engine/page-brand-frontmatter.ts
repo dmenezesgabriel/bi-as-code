@@ -12,7 +12,7 @@ import type { BrandTheme, PageFrontmatter } from "./types.js";
  *
  * @example
  * pageBrand({ brand: { palette: { light: ["#1e40af"] } } }, "front-matter in pages/a.md", projectBrand);
- * // → { colors: {}, palette: { light: ["#1e40af"] }, scale: {} }
+ * // → { colors: {}, palette: { light: ["#1e40af"] }, scale: {}, fonts: {} }
  */
 export function pageBrand(
   frontmatter: PageFrontmatter,

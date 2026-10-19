@@ -4,12 +4,14 @@ import { isRecord, rejectUnknownKeys } from "./config-shape.js";
 import { SERIES_TOKENS, type ThemeTokens } from "./default-theme-tokens.js";
 import type {
   BrandColours,
+  BrandFonts,
   BrandTheme,
+  FontStack,
   ModeColour,
   ModeColourLists,
 } from "./types.js";
 
-const BRAND_KEYS = ["colors", "palette", "scale"] as const;
+const BRAND_KEYS = ["colors", "palette", "scale", "fonts"] as const;
 const COLOUR_KEYS = [
   "primary",
   "background",
@@ -19,6 +21,8 @@ const COLOUR_KEYS = [
   "sidebar",
 ] as const;
 const MODE_KEYS = ["light", "dark"] as const;
+const FONT_KEYS = ["body", "heading", "code"] as const;
+const FONT_STACKS: readonly FontStack[] = ["sans-serif", "serif", "mono"];
 
 // One accepted form: zrender parses hex but not `oklch()` (ADR-0014), and a
 // single form keeps the contrast maths exact.
@@ -28,6 +32,8 @@ const BRAND_SHAPE = `an object with optional fields { ${BRAND_KEYS.join(", ")} }
 const COLOURS_SHAPE = `an object with optional fields { ${COLOUR_KEYS.join(", ")} }`;
 const MODE_COLOUR_SHAPE = `an object { ${MODE_KEYS.join(", ")} } of "#rrggbb" colours`;
 const MODE_LISTS_SHAPE = `an object with optional fields { ${MODE_KEYS.join(", ")} }`;
+const FONTS_SHAPE = `an object with optional fields { ${FONT_KEYS.join(", ")} }`;
+const FONT_STACK_SHAPE = `one of ${FONT_STACKS.map((stack) => JSON.stringify(stack)).join(", ")}`;
 // Past eight series ECharts repeats the list, and every extra colour lowers
 // the separation floor the palette is chosen against (ADR-0016).
 const PALETTE_LIST: ColourListLimit = {
@@ -53,15 +59,20 @@ interface ColourListLimit {
  * @example
  * brandCss(NO_BRAND); // → ""
  */
-export const NO_BRAND: BrandTheme = { colors: {}, palette: {}, scale: {} };
+export const NO_BRAND: BrandTheme = {
+  colors: {},
+  palette: {},
+  scale: {},
+  fonts: {},
+};
 
 /**
- * Reads `biac.config.ts`'s `brand` block, lower-casing each colour, and
- * checks every colour and palette entry against its contrast floor on
- * `theme` — the defaults, or a page's project brand — leaving the scale
- * unchecked, since a heatmap cell's value is in its tooltip and label. A bad
- * shape or a colour under its floor throws a `ConfigFieldError` at the
- * colour's key path.
+ * Reads `biac.config.ts`'s `brand` block, lower-casing each colour and
+ * taking each font as a system stack's name, and checks every colour and
+ * palette entry against its contrast floor on `theme` — the defaults, or a
+ * page's project brand — leaving the scale unchecked, since a heatmap cell's
+ * value is in its tooltip and label. A bad shape, an unknown stack or a
+ * colour under its floor throws a `ConfigFieldError` at its key path.
  *
  * @example
  * readBrand({ brand: { colors: { primary: { light: "#154886", dark: "#60A5FA" } } } });
@@ -80,6 +91,7 @@ export function readBrand(
     colors: readColours(spec.brand.colors),
     palette: readModeLists(spec.brand.palette, "palette", PALETTE_LIST),
     scale: readModeLists(spec.brand.scale, "scale", SCALE_LIST),
+    fonts: readFonts(spec.brand.fonts),
   };
   checkBrandContrast(brand, theme);
   return brand;
@@ -98,6 +110,27 @@ function readColours(value: unknown): BrandColours {
     colours[key] = readModeColour(value[key], [...keyPath, key]);
   }
   return colours;
+}
+
+function readFonts(value: unknown): BrandFonts {
+  if (value === undefined) return {};
+  const keyPath = ["brand", "fonts"];
+  if (!isRecord(value)) {
+    throw invalid(formatKeyPath(keyPath), keyPath, FONTS_SHAPE, value);
+  }
+  rejectUnknownKeys(value, FONT_KEYS, keyPath);
+  const fonts: BrandFonts = {};
+  for (const key of FONT_KEYS) {
+    if (value[key] === undefined) continue;
+    fonts[key] = readFontStack(value[key], [...keyPath, key]);
+  }
+  return fonts;
+}
+
+function readFontStack(value: unknown, keyPath: string[]): FontStack {
+  const stack = FONT_STACKS.find((name) => name === value);
+  if (stack !== undefined) return stack;
+  throw invalid(formatKeyPath(keyPath), keyPath, FONT_STACK_SHAPE, value);
 }
 
 function readModeLists(

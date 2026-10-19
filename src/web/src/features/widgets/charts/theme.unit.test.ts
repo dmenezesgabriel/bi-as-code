@@ -45,6 +45,7 @@ const LIGHT_SHEET: Record<string, string> = {
     LIGHT_CHART_TOKENS.series.map((color, i) => [`--chart-${i + 1}`, color]),
   ),
   "--chart-scale": "#0072b2",
+  "--body-font": LIGHT_CHART_TOKENS.fontFamily,
 };
 
 const TOKEN_SETS: readonly [string, ChartTokens][] = [
@@ -90,6 +91,14 @@ describe("readChartTokens", () => {
     const tokens = readChartTokens(sheet.read);
 
     expect(tokens.scale).toEqual(["#fef3c7", "#1e40af", "#172554"]);
+  });
+
+  it("names the body font token when a stylesheet leaves it undefined", () => {
+    const sheet = new FakeTokenSheet({ ...LIGHT_SHEET, "--body-font": "" });
+
+    const read = () => readChartTokens(sheet.read);
+
+    expect(read).toThrow(/--body-font .*a font stack/);
   });
 
   it("names the scale token when a stylesheet leaves it undefined", () => {
@@ -183,6 +192,21 @@ describe("chartTheme tooltip", () => {
       const css = theme.tooltip?.extraCssText;
 
       expect(css).toBe("border-radius: var(--radius-sm);");
+    },
+  );
+});
+
+describe("chartTheme text", () => {
+  it.each(TOKEN_SETS)(
+    "sets every %s chart text in the body font",
+    (_m, tokens) => {
+      const theme = chartTheme({ ...tokens, fontFamily: "Georgia, serif" }) as {
+        textStyle?: { fontFamily?: string };
+      };
+
+      const fontFamily = theme.textStyle?.fontFamily;
+
+      expect(fontFamily).toBe("Georgia, serif");
     },
   );
 });

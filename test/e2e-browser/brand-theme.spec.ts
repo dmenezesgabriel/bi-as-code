@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 import { effectiveBackground, paintedRgb, readRootToken } from "./contrast.js";
 import {
@@ -66,8 +66,15 @@ const BRAND_BLOCK = `  brand: {
     },
     palette: { light: ["${BRAND.light.series1}"], dark: ["${BRAND.dark.series1}"] },
     scale: { light: ["${BRAND.light.scaleEnd}"], dark: ["${BRAND.dark.scaleEnd}"] },
+    fonts: { body: "serif", heading: "sans-serif", code: "mono" },
   },
 `;
+
+// Tailwind's stacks by their first family, and the generic family that ends
+// each: the brand names a stack, never a list.
+const SERIF_STACK = /^ui-serif,.*\bserif$/;
+const SANS_STACK = /^ui-sans-serif,.*\bsans-serif,/;
+const MONO_STACK = /^ui-monospace,.*\bmonospace$/;
 
 // The shipped config with a brand block added ahead of its closing brace.
 function brandedConfig(shipped: string, block: string): string {
@@ -104,6 +111,10 @@ async function documentBrand(page: Page, chartCount: number) {
   };
 }
 
+async function fontFamilyOf(locator: Locator): Promise<string> {
+  return locator.evaluate((element) => getComputedStyle(element).fontFamily);
+}
+
 async function heatmapRamp(page: Page): Promise<readonly string[] | undefined> {
   for (let index = 0; index < WEEKLY_REVIEW_CHART_COUNT; index += 1) {
     const ramp = (await optionAt(page, index)).visualMap?.[0]?.inRange?.color;
@@ -116,7 +127,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} mode`, () => {
     test.use({ colorScheme });
 
-    test("brand colours, palette and scale in biac.config.ts restyle the chrome, the sidebar, the input surface, the checked toggle, the deltas, the chart surface, series and heatmap ramp", async ({
+    test("brand colours, palette, scale and fonts in biac.config.ts restyle the chrome, the sidebar, the input surface, the checked toggle, the deltas, the text, the chart surface, series, heatmap ramp and chart text", async ({
       page,
       biacDev,
     }) => {
@@ -187,6 +198,17 @@ for (const colorScheme of ["light", "dark"] as const) {
         brand.series1,
         brand.defaultSeries2,
       ]);
+      expect(await fontFamilyOf(page.locator("body"))).toMatch(SERIF_STACK);
+      expect(await fontFamilyOf(page.locator("main h1"))).toMatch(SANS_STACK);
+      expect(await fontFamilyOf(sidebar.getByRole("link").first())).toMatch(
+        SANS_STACK,
+      );
+      expect(await fontFamilyOf(page.locator("main pre").first())).toMatch(
+        MONO_STACK,
+      );
+      expect((await optionAt(page, 0)).textStyle?.fontFamily).toMatch(
+        SERIF_STACK,
+      );
       expect(errors).toEqual([]);
     });
     test("pages/crossfilter-scale.md's front-matter brand applies to that page only, across client navigation both ways", async ({
@@ -300,6 +322,13 @@ const OVERLAY_FAILURES = [
     message:
       "brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
     location: /biac\.config\.ts:7:31$/,
+  },
+  {
+    what: "a font that is not a system stack's name",
+    brandLine: '  brand: { fonts: { body: "comic" } },\n',
+    message:
+      'brand.fonts.body: expected one of "sans-serif", "serif", "mono", got "comic"',
+    location: /biac\.config\.ts:7:21$/,
   },
   {
     what: "a scale with no colours",

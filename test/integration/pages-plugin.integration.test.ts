@@ -647,6 +647,11 @@ describe("virtual:biac-config", () => {
       'colors: { field: { light: "#f8fafc", dark: "#1e293b" }, sidebar: { light: "#f1f5f9", dark: "#0f172a" } }',
       ":root,\n.light {\n  --field: #f8fafc;\n  --sidebar: #f1f5f9;\n}\n.dark {\n  --field: #1e293b;\n  --sidebar: #0f172a;\n}\n",
     ],
+    [
+      "the brand fonts over the font tokens, once for both modes",
+      'fonts: { body: "serif", heading: "sans-serif", code: "mono" }',
+      ":root {\n  --body-font: var(--font-stack-serif);\n  --heading-font: var(--font-stack-sans-serif);\n  --code-font: var(--font-stack-mono);\n}\n",
+    ],
   ])("injects %s", async (_what, brand, css) => {
     const root = makeProject();
     writeFile("biac.config.ts", `export default { brand: { ${brand} } };\n`);

@@ -121,6 +121,17 @@
    reads this variable. */
 :root {
   --radius: 0.5rem;
+
+  /* The three font stacks a brand names: Tailwind's system stacks, so a
+     page loads no font file and makes no font request. Naming each here
+     also makes Tailwind emit `--font-serif`, which no utility uses. Body,
+     heading and code each pick one; the defaults render as before. */
+  --font-stack-sans-serif: var(--font-sans);
+  --font-stack-serif: var(--font-serif);
+  --font-stack-mono: var(--font-mono);
+  --body-font: var(--font-stack-sans-serif);
+  --heading-font: var(--font-stack-sans-serif);
+  --code-font: var(--font-stack-mono);
 }
 
 .dark {
@@ -247,6 +258,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Preflight sets `html` in the default family and `code, kbd, samp, pre`
+     in the default mono one, so pointing those at the font tokens restyles
+     every page without a utility on each element. `font-heading` is the
+     heading's own hook. */
+  --default-font-family: var(--body-font);
+  --default-mono-font-family: var(--code-font);
+  --font-heading: var(--heading-font);
 
   /* The one gap between consecutive page blocks — widgets, charts, tables,
      fences and paragraphs alike — so a page reads as one rhythm. */

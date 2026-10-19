@@ -316,6 +316,7 @@ describe("brand front-matter", () => {
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
       palette: {},
       scale: {},
+      fonts: {},
     };
     const markdown =
       '---\nbrand:\n  colors:\n    background: { light: "#3b5c99", dark: "#0a0a0a" }\n---\n# Body\n';

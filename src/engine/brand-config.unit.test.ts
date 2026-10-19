@@ -9,13 +9,13 @@ describe("readBrand — accepted shapes", () => {
   it("returns no colours when brand is absent", () => {
     const brand = readBrand({});
 
-    expect(brand).toEqual({ colors: {}, palette: {}, scale: {} });
+    expect(brand).toEqual({ colors: {}, palette: {}, scale: {}, fonts: {} });
   });
 
   it("returns no colours for a brand block without colors", () => {
     const brand = readBrand({ brand: {} });
 
-    expect(brand).toEqual({ colors: {}, palette: {}, scale: {} });
+    expect(brand).toEqual({ colors: {}, palette: {}, scale: {}, fonts: {} });
   });
 
   it("reads primary and background per mode", () => {
@@ -110,6 +110,26 @@ describe("readBrand — accepted shapes", () => {
     });
   });
 
+  it("reads a body, heading and code font by stack name", () => {
+    const spec = {
+      brand: { fonts: { body: "serif", heading: "sans-serif", code: "mono" } },
+    };
+
+    const brand = readBrand(spec);
+
+    expect(brand.fonts).toEqual({
+      body: "serif",
+      heading: "sans-serif",
+      code: "mono",
+    });
+  });
+
+  it("leaves a font the author omits to the defaults", () => {
+    const brand = readBrand({ brand: { fonts: { body: "serif" } } });
+
+    expect(brand.fonts).toEqual({ body: "serif" });
+  });
+
   it("lower-cases a hex written in capitals", () => {
     const spec = {
       brand: { colors: { primary: { light: "#15488A", dark: "#60A5FA" } } },
@@ -126,7 +146,7 @@ describe("readBrand — rejected shapes", () => {
     [
       { brand: "blue" },
       ["brand"],
-      'brand: expected an object with optional fields { colors, palette, scale }, got "blue"',
+      'brand: expected an object with optional fields { colors, palette, scale, fonts }, got "blue"',
     ],
     [
       { brand: { colors: [] } },
@@ -207,6 +227,26 @@ describe("readBrand — rejected shapes", () => {
       ["brand", "scale", "light", "1"],
       'brand.scale.light[1]: expected a "#rrggbb" colour, got "navy"',
     ],
+    [
+      { brand: { fonts: "serif" } },
+      ["brand", "fonts"],
+      'brand.fonts: expected an object with optional fields { body, heading, code }, got "serif"',
+    ],
+    [
+      { brand: { fonts: { body: "Inter" } } },
+      ["brand", "fonts", "body"],
+      'brand.fonts.body: expected one of "sans-serif", "serif", "mono", got "Inter"',
+    ],
+    [
+      { brand: { fonts: { code: "monospace" } } },
+      ["brand", "fonts", "code"],
+      'brand.fonts.code: expected one of "sans-serif", "serif", "mono", got "monospace"',
+    ],
+    [
+      { brand: { fonts: { heading: 700 } } },
+      ["brand", "fonts", "heading"],
+      'brand.fonts.heading: expected one of "sans-serif", "serif", "mono", got 700',
+    ],
   ])(
     "names the field and the expected shape for %j",
     (spec, keyPath, message) => {
@@ -219,7 +259,7 @@ describe("readBrand — rejected shapes", () => {
   it.each([
     [
       { brand: { ramp: {} } },
-      "brand.ramp: unknown key, expected one of colors, palette, scale",
+      "brand.ramp: unknown key, expected one of colors, palette, scale, fonts",
     ],
     [
       { brand: { colors: { accent: PASSING_PRIMARY } } },
@@ -238,6 +278,10 @@ describe("readBrand — rejected shapes", () => {
     [
       { brand: { scale: { mid: ["#1e40af"] } } },
       "brand.scale.mid: unknown key, expected one of light, dark",
+    ],
+    [
+      { brand: { fonts: { title: "serif" } } },
+      "brand.fonts.title: unknown key, expected one of body, heading, code",
     ],
   ])("rejects an unknown key in %j", (spec, message) => {
     const read = () => readBrand(spec);
@@ -304,6 +348,7 @@ describe("readBrand — over a project brand", () => {
       colors: { primary: PASSING_PRIMARY },
       palette: {},
       scale: {},
+      fonts: {},
     });
     const spec = {
       brand: { colors: { background: { light: "#3b5c99", dark: "#0a0a0a" } } },

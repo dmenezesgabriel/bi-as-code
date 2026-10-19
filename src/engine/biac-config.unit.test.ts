@@ -41,7 +41,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {}, palette: {}, scale: {} },
+      brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
     });
   });
 
@@ -62,7 +62,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {}, palette: {}, scale: {} },
+      brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
     });
   });
 });
@@ -112,7 +112,7 @@ describe("field handling", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {}, palette: {}, scale: {} },
+      brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
     });
   });
 
@@ -199,6 +199,7 @@ describe("brand", () => {
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
       palette: {},
       scale: {},
+      fonts: {},
     });
   });
 

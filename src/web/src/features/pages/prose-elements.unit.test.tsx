@@ -38,6 +38,17 @@ describe("prose headings", () => {
     ).toBeVisible();
   });
 
+  it.each(headings)(
+    "sets a level-%i heading in the brand heading font",
+    (level, Heading) => {
+      render(<Heading>Orders</Heading>);
+
+      expect(screen.getByRole("heading", { level })).toHaveClass(
+        "font-heading",
+      );
+    },
+  );
+
   it("keeps an author id so the ToC can link to it", () => {
     render(<ProseH2 id="revenue">Revenue</ProseH2>);
 

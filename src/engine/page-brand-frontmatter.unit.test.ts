@@ -3,11 +3,12 @@ import { pageBrand } from "./page-brand-frontmatter.js";
 import type { BrandTheme } from "./types.js";
 
 const LOCATION = "front-matter in pages/page.md";
-const NO_BRAND: BrandTheme = { colors: {}, palette: {}, scale: {} };
+const NO_BRAND: BrandTheme = { colors: {}, palette: {}, scale: {}, fonts: {} };
 const PROJECT_BRAND: BrandTheme = {
   colors: { primary: { light: "#154886", dark: "#60a5fa" } },
   palette: {},
   scale: {},
+  fonts: {},
 };
 
 describe("pageBrand — accepted", () => {
@@ -26,6 +27,7 @@ describe("pageBrand — accepted", () => {
       colors: {},
       palette: { light: ["#1e40af"] },
       scale: {},
+      fonts: {},
     });
   });
 });

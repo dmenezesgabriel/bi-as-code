@@ -3,7 +3,7 @@ import { brandCss } from "./brand-css.js";
 
 describe("brandCss — colours", () => {
   it("emits nothing when no brand colour is set", () => {
-    const css = brandCss({ colors: {}, palette: {}, scale: {} });
+    const css = brandCss({ colors: {}, palette: {}, scale: {}, fonts: {} });
 
     expect(css).toBe("");
   });
@@ -16,6 +16,7 @@ describe("brandCss — colours", () => {
       },
       palette: {},
       scale: {},
+      fonts: {},
     });
 
     expect(css).toBe(
@@ -32,6 +33,7 @@ describe("brandCss — colours", () => {
       },
       palette: {},
       scale: {},
+      fonts: {},
     });
 
     expect(css).toBe(
@@ -48,6 +50,7 @@ describe("brandCss — colours", () => {
       },
       palette: {},
       scale: {},
+      fonts: {},
     });
 
     expect(css).toBe(
@@ -61,6 +64,7 @@ describe("brandCss — colours", () => {
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
       palette: {},
       scale: {},
+      fonts: {},
     });
 
     expect(css).not.toContain("--background");
@@ -73,6 +77,7 @@ describe("brandCss — palette", () => {
       colors: {},
       palette: { light: ["#1e40af", "#d55e00"], dark: ["#60a5fa"] },
       scale: {},
+      fonts: {},
     });
 
     expect(css).toBe(
@@ -86,6 +91,7 @@ describe("brandCss — palette", () => {
       colors: {},
       palette: { light: ["#1e40af"] },
       scale: {},
+      fonts: {},
     });
 
     expect(css).toBe(":root,\n.light {\n  --chart-1: #1e40af;\n}\n");
@@ -96,6 +102,7 @@ describe("brandCss — palette", () => {
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
       palette: { dark: ["#60a5fa"] },
       scale: {},
+      fonts: {},
     });
 
     expect(css).toBe(
@@ -111,6 +118,7 @@ describe("brandCss — scale", () => {
       colors: {},
       palette: {},
       scale: { light: ["#1e40af"], dark: ["#0a0a0a", "#60a5fa", "#ffffff"] },
+      fonts: {},
     });
 
     expect(css).toBe(
@@ -124,10 +132,54 @@ describe("brandCss — scale", () => {
       colors: {},
       palette: { light: ["#1e40af"] },
       scale: { light: ["#60a5fa"] },
+      fonts: {},
     });
 
     expect(css).toBe(
       ":root,\n.light {\n  --chart-1: #1e40af;\n  --chart-scale: #60a5fa;\n}\n",
+    );
+  });
+});
+
+describe("brandCss — fonts", () => {
+  it("sets each brand font to its named stack in one rule for both modes", () => {
+    const css = brandCss({
+      colors: {},
+      palette: {},
+      scale: {},
+      fonts: { body: "serif", heading: "sans-serif", code: "mono" },
+    });
+
+    expect(css).toBe(
+      ":root {\n  --body-font: var(--font-stack-serif);\n" +
+        "  --heading-font: var(--font-stack-sans-serif);\n" +
+        "  --code-font: var(--font-stack-mono);\n}\n",
+    );
+  });
+
+  it("leaves a font the brand omits to styles.css", () => {
+    const css = brandCss({
+      colors: {},
+      palette: {},
+      scale: {},
+      fonts: { body: "serif" },
+    });
+
+    expect(css).toBe(":root {\n  --body-font: var(--font-stack-serif);\n}\n");
+  });
+
+  it("puts the font rule before the per-mode colour rules", () => {
+    const css = brandCss({
+      colors: { primary: { light: "#154886", dark: "#60a5fa" } },
+      palette: {},
+      scale: {},
+      fonts: { code: "serif" },
+    });
+
+    expect(css).toBe(
+      ":root {\n  --code-font: var(--font-stack-serif);\n}\n" +
+        ":root,\n.light {\n  --primary: #154886;\n}\n" +
+        ".dark {\n  --primary: #60a5fa;\n}\n",
     );
   });
 });

@@ -44,7 +44,7 @@ export function SidebarNav({
       <Link
         to="/"
         onClick={onNavigate}
-        className="block px-4 py-3 text-base font-bold text-foreground focus-visible:-outline-offset-2"
+        className="block px-4 py-3 font-heading text-base font-bold text-foreground focus-visible:-outline-offset-2"
       >
         {siteTitle}
       </Link>

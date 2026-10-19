@@ -116,6 +116,19 @@ export interface BrandColours {
   sidebar?: ModeColour;
 }
 
+/** A system font stack, named by its generic family — no font file is loaded. */
+export type FontStack = "sans-serif" | "serif" | "mono";
+
+/** `brand.fonts`: each key replaces one font token, in both modes. */
+export interface BrandFonts {
+  /** `--body-font` — running text, controls and chart text. */
+  body?: FontStack;
+  /** `--heading-font` — markdown headings and the sidebar's site title. */
+  heading?: FontStack;
+  /** `--code-font` — code fences and inline code. */
+  code?: FontStack;
+}
+
 /** Per mode, a list of `#rrggbb` colours; a mode left out keeps its default. */
 export type ModeColourLists = Partial<Record<ColourMode, readonly string[]>>;
 
@@ -150,6 +163,7 @@ export interface BrandTheme {
    * as written. A mode left out keeps the default ramp.
    */
   scale: ModeColourLists;
+  fonts: BrandFonts;
 }
 
 /** Chrome/navigation settings from `biac.config.ts`'s optional `nav` block. */
@@ -175,7 +189,7 @@ export interface BiacConfig {
   layout: Required<PageLayout>;
   /** Sidebar folder titles. Engine-only — they reach the browser inside the manifest's `navTree`. */
   directories: DirectoryTitles;
-  /** Brand colours, palette and heatmap scale; colours and palette contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
+  /** Brand colours, palette, heatmap scale and fonts; colours and palette contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
   brand: BrandTheme;
 }
 

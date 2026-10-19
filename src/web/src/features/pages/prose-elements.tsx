@@ -20,9 +20,10 @@ type ProseTag =
 // Tailwind preflight zeroes heading sizes and paragraph margins, so markdown
 // would otherwise render as one run of body text. Weight, line-height and
 // balanced wrapping follow common document stylesheets; a heading that opens
-// its container (a page, a callout body) sits flush.
+// its container (a page, a callout body) sits flush. `font-heading` is the
+// brand's heading font, which may differ from the body's.
 const HEADING =
-  "max-w-measure font-semibold leading-tight text-balance first:mt-0";
+  "max-w-measure font-heading font-semibold leading-tight text-balance first:mt-0";
 
 /**
  * A markdown element override for the MDX components map: renders `tag`

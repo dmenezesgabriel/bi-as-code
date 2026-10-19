@@ -3,7 +3,12 @@ import {
   SCALE_TOKEN,
   SERIES_TOKENS,
 } from "./default-theme-tokens.js";
-import type { BrandColours, BrandTheme, ColourMode } from "./types.js";
+import type {
+  BrandColours,
+  BrandFonts,
+  BrandTheme,
+  ColourMode,
+} from "./types.js";
 
 // The selectors `src/web/src/styles.css` declares each mode's tokens on:
 // `.light`/`.dark` also match the chart theme's hidden token probe, so a
@@ -13,23 +18,43 @@ const MODE_SELECTORS: Readonly<Record<ColourMode, string>> = {
   dark: ".dark",
 };
 
+// The font token each `brand.fonts` key sets. A font is the same in both
+// modes, so it goes in one `:root` rule, ahead of the per-mode colours.
+const FONT_TOKENS: Readonly<Record<keyof BrandFonts, string>> = {
+  body: "--body-font",
+  heading: "--heading-font",
+  code: "--code-font",
+};
+
 /**
- * The stylesheet that sets each brand colour, palette entry and scale over
- * its theme token, one rule per mode that sets any; empty when the project
- * sets none.
+ * The stylesheet that sets each brand font, colour, palette entry and scale
+ * over its theme token: one `:root` rule for the fonts, then one rule per
+ * mode that sets any colour; empty when the project sets none.
  *
  * @example
- * brandCss({ colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: {}, scale: {} });
+ * brandCss({ colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: {}, scale: {}, fonts: {} });
  * // → ":root,\n.light {\n  --primary: #154886;\n}\n.dark {\n  --primary: #60a5fa;\n}\n"
  */
 export function brandCss(brand: BrandTheme): string {
-  return (Object.keys(MODE_SELECTORS) as ColourMode[])
-    .map((mode) => {
-      const declarations = modeDeclarations(brand, mode);
-      if (declarations.length === 0) return "";
-      return `${MODE_SELECTORS[mode]} {\n${declarations.join("")}}\n`;
-    })
-    .join("");
+  const modeRules = (Object.keys(MODE_SELECTORS) as ColourMode[]).map((mode) =>
+    cssRule(MODE_SELECTORS[mode], modeDeclarations(brand, mode)),
+  );
+  return [cssRule(":root", fontDeclarations(brand.fonts)), ...modeRules].join(
+    "",
+  );
+}
+
+function cssRule(selector: string, declarations: string[]): string {
+  if (declarations.length === 0) return "";
+  return `${selector} {\n${declarations.join("")}}\n`;
+}
+
+// Each stack is a token styles.css declares from Tailwind's own, so the
+// brand names a stack and never writes a font list itself.
+function fontDeclarations(fonts: BrandFonts): string[] {
+  return (Object.keys(FONT_TOKENS) as (keyof BrandFonts)[])
+    .filter((key) => fonts[key] !== undefined)
+    .map((key) => `  ${FONT_TOKENS[key]}: var(--font-stack-${fonts[key]});\n`);
 }
 
 function modeDeclarations(brand: BrandTheme, mode: ColourMode): string[] {

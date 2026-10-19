@@ -4,9 +4,10 @@ import type { ChartTokens, ReadToken } from "./types";
 const SERIES_TOKEN_COUNT = 8;
 
 /**
- * The chart's colours, read off the theme tokens in `src/web/src/styles.css`
- * through `read` — the canvas cannot inherit CSS, so every colour the engine
- * paints is looked up here, never copied into this module (ADR-0014).
+ * The chart's colours and font, read off the theme tokens in
+ * `src/web/src/styles.css` through `read` — the canvas cannot inherit CSS, so
+ * every colour and font the engine paints is looked up here, never copied
+ * into this module (ADR-0014).
  *
  * @example
  * const tokens = withTokenProbe("dark", readChartTokens);
@@ -30,14 +31,24 @@ export function readChartTokens(read: ReadToken): ChartTokens {
     scale: token("--chart-scale")
       .split(",")
       .map((stop) => stop.trim()),
+    // Otherwise the engine draws its own `sans-serif`, whatever the page's.
+    fontFamily: requireToken(read, "--body-font", FONT_STACK_EXAMPLE),
   };
 }
 
-function requireToken(read: ReadToken, name: string): string {
+const COLOUR_EXAMPLE = 'a colour such as "#e5e5e5" declared on :root and .dark';
+const FONT_STACK_EXAMPLE =
+  'a font stack such as "ui-sans-serif, system-ui, sans-serif" declared on :root';
+
+function requireToken(
+  read: ReadToken,
+  name: string,
+  expected = COLOUR_EXAMPLE,
+): string {
   const value = read(name).trim();
   if (value !== "") return value;
   throw new Error(
-    `chart theme token ${name} is undefined — expected a colour such as "#e5e5e5" declared on :root and .dark in styles.css`,
+    `chart theme token ${name} is undefined — expected ${expected} in styles.css`,
   );
 }
 
@@ -65,7 +76,7 @@ export function chartTheme(t: ChartTokens): Record<string, unknown> {
   const outsideLabel = { label: { color: t.mutedForeground } };
   return {
     color: [...t.series],
-    textStyle: { color: t.foreground },
+    textStyle: { color: t.foreground, fontFamily: t.fontFamily },
     title: {
       textStyle: { color: t.foreground },
       subtextStyle: { color: t.mutedForeground },

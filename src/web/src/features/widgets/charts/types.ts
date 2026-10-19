@@ -193,6 +193,8 @@ export interface ChartTokens {
    * ramps from `background` to it, two or more are the ramp as written.
    */
   readonly scale: readonly string[];
+  /** The body font stack every chart text draws in. */
+  readonly fontFamily: string;
 }
 
 /** Looks up one custom property (`--border`) and returns its value. */

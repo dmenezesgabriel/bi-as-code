@@ -7,7 +7,7 @@ function brandOf(
   colors: BrandColours,
   palette: ModeColourLists = {},
 ): BrandTheme {
-  return { colors, palette, scale: {} };
+  return { colors, palette, scale: {}, fonts: {} };
 }
 
 function failureOf(
@@ -58,6 +58,7 @@ describe("checkBrandContrast — passing colours", () => {
       colors: {},
       palette: {},
       scale: { light: ["#ffffff", "#1e40af"], dark: ["#0a0a0a"] },
+      fonts: {},
     };
 
     const check = () => checkBrandContrast(brand);

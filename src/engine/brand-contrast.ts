@@ -115,7 +115,7 @@ export function checkBrandContrast(
  * against its project's, since the page's colours land on that theme.
  *
  * @example
- * brandedThemeTokens({ colors: { background: { light: "#fffdf5", dark: "#111111" } }, palette: {}, scale: {} })
+ * brandedThemeTokens({ colors: { background: { light: "#fffdf5", dark: "#111111" } }, palette: {}, scale: {}, fonts: {} })
  *   .light["--background"]; // → "#fffdf5"
  */
 export function brandedThemeTokens(brand: BrandTheme): ThemeTokens {

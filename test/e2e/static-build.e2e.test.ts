@@ -75,13 +75,13 @@ describe("biac build", () => {
     );
   }, 120_000);
 
-  it("writes the brand colours, palette and scale into build/index.html", () => {
+  it("writes the brand colours, palette, scale and fonts into build/index.html", () => {
     const root = makeTempProject("biac-e2e-build-brand-");
     writeProjectFile(root, "pages/index.md", "# Branded\n");
     writeProjectFile(
       root,
       "biac.config.ts",
-      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: { light: ["#1e40af"] }, scale: { dark: ["#60a5fa"] } } };\n',
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: { light: ["#1e40af"] }, scale: { dark: ["#60a5fa"] }, fonts: { body: "serif" } } };\n',
     );
 
     execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
@@ -91,6 +91,23 @@ describe("biac build", () => {
     expect(html).toContain("--primary: #60a5fa;");
     expect(html).toContain("--chart-1: #1e40af;");
     expect(html).toContain("--chart-scale: #60a5fa;");
+    expect(html).toContain("--body-font: var(--font-stack-serif);");
+  }, 120_000);
+
+  it("ships every font stack a brand can name in the built stylesheet", () => {
+    const root = makeTempProject("biac-e2e-build-font-stacks-");
+    writeProjectFile(root, "pages/index.md", "# Plain\n");
+
+    execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
+
+    const assets = join(root, "build", "assets");
+    const css = readdirSync(assets)
+      .filter((name) => name.endsWith(".css"))
+      .map((name) => readFileSync(join(assets, name), "utf8"))
+      .join("");
+    for (const token of ["--font-sans", "--font-serif", "--font-mono"]) {
+      expect(css).toMatch(new RegExp(`${token}:\\s*\\S`));
+    }
   }, 120_000);
 
   it.each([

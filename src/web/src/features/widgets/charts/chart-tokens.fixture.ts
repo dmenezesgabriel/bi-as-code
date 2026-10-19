@@ -22,6 +22,10 @@ const DARK_SERIES = [
   "#8800ff",
 ] as const;
 
+// `--body-font`'s default: Tailwind's `--font-sans`, as a browser computes it.
+const SANS_STACK =
+  'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"';
+
 /** The light chart tokens, as `src/web/src/styles.css` defines them. */
 export const LIGHT_CHART_TOKENS: ChartTokens = {
   foreground: "#171717",
@@ -34,6 +38,7 @@ export const LIGHT_CHART_TOKENS: ChartTokens = {
   labelInside: "#ffffff",
   series: LIGHT_SERIES,
   scale: ["#0072b2"],
+  fontFamily: SANS_STACK,
 };
 
 /** The dark chart tokens, as `src/web/src/styles.css` defines them. */
@@ -48,4 +53,5 @@ export const DARK_CHART_TOKENS: ChartTokens = {
   labelInside: "#0a0a0a",
   series: DARK_SERIES,
   scale: ["#0072b2"],
+  fontFamily: SANS_STACK,
 };
