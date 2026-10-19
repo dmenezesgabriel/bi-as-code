@@ -1,6 +1,6 @@
 # SL-063 — A project sets its fonts, type size, corner radius and semantic colours, and a page overrides them
 
-Milestone: Phase 4 — Project and page settings, themes, layouts · State: open · Depends on: SL-048 · Closes: GAP-068
+Milestone: Phase 4 — Project and page settings, themes, layouts · State: partial — awaits its demo · Depends on: SL-048 · Closes: GAP-068
 
 ## Outcome
 
@@ -133,9 +133,9 @@ Default ratios below were measured 2026-10-19 with `src/engine/contrast-ratio.ts
 - **O3 — `radius` units and cap. Settled (T5):** `"0"`, or `"<n>px"` / `"<n>rem"` with `n` a non-negative decimal written with a leading digit, up to 24px / 1.5rem inclusive (streamlit's largest step, `full`, is 1.4rem); `src/engine/brand-config.ts` `readRadius` keeps it as written and `src/engine/brand-css.ts` `rootDeclarations` writes `--radius: <value>` into the fonts' `:root` rule. Out of range is `brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "2rem"` at the key (`biac.config.ts:4:12` in the dev overlay; `biac build` exits 1 with the same text). A rem radius scales with `fontSize`, a px one does not. Measured 2026-10-19 at 1440×900, select trigger / text input / prose link (`rounded-md`, `rounded-md`, `rounded-sm`) on `/weekly-review` and card (`rounded-lg`) on `/orders-dashboard`: default 6 / 6 / 4 / 8px; `"0"` 0 / 0 / 0 / 0px — Chromium clamps `--radius-sm` `calc(0 - 4px)` to `0px`, so `src/web/src/styles.css` needs no `max()`; `"1.5rem"` 22 / 22 / 20 / 24px; with `fontSize: "18px"`, `"1rem"` 16 / 16 / 14px and `"12px"` 10 / 10 / 8px. `rounded-full` pills stay pills at every value. No page sets `chip` on a `<BigValue>`, so the delta chip (`rounded-sm`) is measured through the prose link, which takes the same step.
 - **O4 — which stacks. Settled (T3):** Tailwind's `--font-sans`, `--font-serif`, `--font-mono`, so the defaults render as before. `src/web/src/styles.css` names them `--font-stack-sans-serif`/`-serif`/`-mono` and points `--body-font`, `--heading-font`, `--code-font` at them; `@theme inline` sets `--default-font-family`, `--default-mono-font-family` and a `font-heading` utility from those. The brand writes `--<key>-font: var(--font-stack-<name>)` in one `:root` rule (`src/engine/brand-css.ts` `fontDeclarations`). Measured: before T3 the built CSS emitted no `--font-serif` (Tailwind drops an unreferenced theme var); naming the stacks makes it emit, held by `test/e2e/static-build.e2e.test.ts`.
 - **O5 — charts follow the body font. Settled (T3):** yes. `readChartTokens` reads `--body-font` into `ChartTokens.fontFamily` and `chartTheme` sets the root `textStyle.fontFamily`; `test/e2e-browser/brand-theme.spec.ts` reads it off the live option.
-- **O6 — page override depth.** Proposed: every new key per page, key by key, as ADR-0018 does for colours: a page's `fonts.body` alone leaves the project's heading and code fonts. `fontSize` per page changes the root while the page is mounted, as the brand style already does for `--background`.
+- **O6 — page override depth. Settled (T6):** every new key per page, key by key, as ADR-0018 does for colours: a page's `fonts.body` alone leaves the project's heading and code fonts. `fontSize` per page changes the root while the page is mounted, as the brand style already does for `--background`. No new code: `pageBrand` already runs the shared `readBrand` and `brandCss` writes the page's keys alone into its `:root` rule; `src/engine/page-brand-frontmatter.unit.test.ts`, `test/integration/pages-plugin.integration.test.ts` and `test/e2e-browser/brand-theme.spec.ts` pin it on `pages/crossfilter-scale.md` (`fonts.body: sans-serif`, `radius: 1rem`).
 
-Each decision is recorded by amending ADR-0018 (or a new ADR if fonts and size warrant one) in T6.
+Each decision is recorded in [ADR-0019](../adr/0019-the-brand-is-contrast-checked-config-for-colour-type-and-shape.md), which supersedes ADR-0018.
 
 ## Surface
 
@@ -164,10 +164,10 @@ Each decision is recorded by amending ADR-0018 (or a new ADR if fonts and size w
 - [x] T5 — `brand.radius`:
   - Settle O3.
   - Measure `border-radius` on a select trigger, a card and a delta chip at 0, default and the cap.
-- [ ] T6 — Front-matter override, the example project and the record:
+- [x] T6 — Front-matter override, the example project and the record:
   - Settle O6; the page reader takes every new key, key by key.
   - `biac.config.ts` and `pages/crossfilter-scale.md` exercise the keys; `test/e2e-browser/brand-theme.spec.ts` drives them.
-  - ADR-0018 amended (or a new ADR) with O1–O6.
+  - ADR-0019, superseding ADR-0018, records O1–O6 (ADR-0001: an accepted ADR changes only through a new one).
   - Re-measure GAP-068 in `docs/research/settings-and-themes.md` for closing, and get the demo ready.
 
 ## Out of scope
