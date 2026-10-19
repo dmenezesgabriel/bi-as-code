@@ -113,6 +113,20 @@ async function documentBrand(page: Page, chartCount: number) {
   };
 }
 
+// The type and shape the document wears: body and heading fonts, the root
+// font size, `--radius` and the first ready chart's text font.
+async function documentTypeAndShape(page: Page) {
+  return {
+    body: await fontFamilyOf(page.locator("body")),
+    heading: await fontFamilyOf(page.locator("main h1")),
+    rootSize: await page.evaluate(
+      () => getComputedStyle(document.documentElement).fontSize,
+    ),
+    radius: await readRootToken(page, "--radius"),
+    chartFont: (await optionAt(page, 0)).textStyle?.fontFamily,
+  };
+}
+
 async function fontFamilyOf(locator: Locator): Promise<string> {
   return locator.evaluate((element) => getComputedStyle(element).fontFamily);
 }
@@ -274,6 +288,50 @@ for (const colorScheme of ["light", "dark"] as const) {
       await sidebar.getByRole("link", { name: "Orders overview" }).click();
       await expect(readyCharts(page)).toHaveCount(1);
       expect(await documentBrand(page, 1)).toEqual(projectBrand);
+      expect(errors).toEqual([]);
+    });
+    test("pages/crossfilter-scale.md's front-matter font and radius override the project's key by key, and leave with the page", async ({
+      page,
+      biacDev,
+    }) => {
+      const errors = collectConsoleErrors(page);
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(biacDev.url);
+      await expect(readyCharts(page)).toHaveCount(1);
+      const configFile = join(biacDev.projectDir, "biac.config.ts");
+      const reloaded = page.waitForEvent("load", { timeout: 20_000 });
+      await rewriteConfig(
+        configFile,
+        brandedConfig(readFileSync(configFile, "utf8"), BRAND_BLOCK),
+        biacDev.log,
+      );
+      await reloaded;
+      await expect(readyCharts(page)).toHaveCount(1);
+      const sidebar = page.getByRole("navigation", { name: "Site navigation" });
+      // BRAND_BLOCK's project type and shape, which the page does not set.
+      const projectTypeAndShape = {
+        body: expect.stringMatching(SERIF_STACK),
+        heading: expect.stringMatching(SANS_STACK),
+        rootSize: "18px",
+        radius: "12px",
+        chartFont: expect.stringMatching(SERIF_STACK),
+      };
+      expect(await documentTypeAndShape(page)).toEqual(projectTypeAndShape);
+
+      await sidebar
+        .getByRole("link", { name: "Cross-filter at scale" })
+        .click();
+      await expect(readyCharts(page)).toHaveCount(SCALE_PAGE_CHARTS.length);
+      expect(await documentTypeAndShape(page)).toEqual({
+        ...projectTypeAndShape,
+        body: expect.stringMatching(SANS_STACK),
+        radius: "1rem",
+        chartFont: expect.stringMatching(SANS_STACK),
+      });
+
+      await sidebar.getByRole("link", { name: "Orders overview" }).click();
+      await expect(readyCharts(page)).toHaveCount(1);
+      expect(await documentTypeAndShape(page)).toEqual(projectTypeAndShape);
       expect(errors).toEqual([]);
     });
   });

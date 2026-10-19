@@ -30,6 +30,27 @@ describe("pageBrand — accepted", () => {
       fonts: {},
     });
   });
+
+  it("reads a page's fonts, root size and radius as only the keys it sets", () => {
+    const frontmatter = {
+      brand: {
+        fonts: { body: "sans-serif" },
+        fontSize: "18px",
+        radius: "1rem",
+      },
+    };
+
+    const brand = pageBrand(frontmatter, LOCATION, PROJECT_BRAND);
+
+    expect(brand).toEqual({
+      colors: {},
+      palette: {},
+      scale: {},
+      fonts: { body: "sans-serif" },
+      fontSize: 18,
+      radius: "1rem",
+    });
+  });
 });
 
 describe("pageBrand — rejected", () => {
@@ -40,6 +61,16 @@ describe("pageBrand — rejected", () => {
 
     expect(read).toThrow(
       'Invalid front-matter in pages/page.md — brand.colors.primary: expected an object { light, dark } of "#rrggbb" colours, got "blue"',
+    );
+  });
+
+  it("names the file for a radius past its cap", () => {
+    const frontmatter = { brand: { radius: "2rem" } };
+
+    const read = () => pageBrand(frontmatter, LOCATION, PROJECT_BRAND);
+
+    expect(read).toThrow(
+      'Invalid front-matter in pages/page.md — brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "2rem"',
     );
   });
 

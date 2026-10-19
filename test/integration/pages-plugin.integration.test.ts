@@ -253,6 +253,23 @@ describe("page transform", () => {
     );
   });
 
+  it("serves a page's front-matter fonts and radius as one root rule in its brandCss export", async () => {
+    const root = makeProject();
+    writeFile(
+      "pages/index.md",
+      '---\nbrand:\n  fonts: { body: "sans-serif" }\n  radius: "1rem"\n---\n# Hi\n',
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain(
+      'export const brandCss = ":root {\\n  --body-font: var(--font-stack-sans-serif);\\n  --radius: 1rem;\\n}\\n";',
+    );
+  });
+
   it("serves a page brand colour under its floor on the project brand as a compile error", async () => {
     const root = makeProject();
     writeFile(

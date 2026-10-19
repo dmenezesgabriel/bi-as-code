@@ -8,6 +8,8 @@ brand:
   colors:
     primary: { light: "#7c3aed", dark: "#c4b5fd" }
   palette: { light: ["#7c3aed"], dark: ["#c4b5fd"] }
+  fonts: { body: "sans-serif" }
+  radius: "1rem"
 ---
 
 # Cross-filter at scale
@@ -18,7 +20,8 @@ table on each change: drag the Distance slider, or drag across any
 histogram, and the other histograms follow. Later departures run later, so
 brushing the evening hours shifts the delay distribution right.
 This page's front-matter `brand:` gives it its own violet primary and first
-series colour; every other page keeps the project's.
+series colour, a sans-serif body and rounder corners; every other page keeps
+the project's.
 
 <FilterBar>
   <Slider id="distance" data="distance_bounds" valueColumn="distance" range title="Distance" />
