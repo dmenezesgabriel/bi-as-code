@@ -13,7 +13,7 @@ An author writes `brand: { colors: { primary, background }, palette, scale }` in
 3. Add `palette: { light: ["#1e40af"], dark: ["#60a5fa"] }`. Series 1 takes the brand colour, and series 2…8 keep the defaults (open decision O1).
 4. Add `scale: { light: ["#1e40af"], dark: ["#60a5fa"] }`. The `/weekly-review` heatmap ramps from `--background` to the brand colour. A widget's own `colorScale` prop still wins.
 5. Change the light palette entry to `"#45a1bf"` (2.956:1 on white, printed truncated as `2.95:1`). The overlay names `brand.palette.light[0]`, the measured ratio, the colour it was measured against and the floor `3:1 (WCAG 2.2 SC 1.4.11)`, located at `biac.config.ts:<line>:<column>`. Restore it and the page comes back by itself.
-6. The example page added in T5 sets a front-matter `brand:` with a different primary. Only that page uses it; going back to `/` restores the project brand without a reload, and the charts on each page draw that page's palette.
+6. `/crossfilter-scale` sets a front-matter `brand:` with a violet primary and series 1 (`#7c3aed` light / `#c4b5fd` dark). Only that page uses it; going back to `/` restores the project brand without a reload, and the charts on each page draw that page's palette.
 7. `bin/biac build` + `bin/biac preview`: the same colours, with no frame painted in the default colours before the brand ones (ADR-0014's first-paint driver). A failing colour makes `bin/biac build` exit non-zero with the same message.
 8. Reload — the effect persists.
 
@@ -71,7 +71,7 @@ Paths are relative to `research_repos/` and were verified with `test -e` on 2026
 
 | Axis                 | Options seen (repo → approach)                                                                               | Trade-off                                                                                                                                    | Our choice, and why                                                                                                                                                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Config key           | evidence `theme.yaml` (a second file); framework `theme` names presets; streamlit `[theme]`                  | Our `theme` is already the mode (`src/engine/types.ts` `BiacTheme`); reusing it breaks every existing config                                 | **Settled 2026-10-18 by the author:** a new `brand: { colors, palette, scale }` block in `biac.config.ts`, the same `brand:` in front-matter. Recorded in an ADR in T5                                                                   |
+| Config key           | evidence `theme.yaml` (a second file); framework `theme` names presets; streamlit `[theme]`                  | Our `theme` is already the mode (`src/engine/types.ts` `BiacTheme`); reusing it breaks every existing config                                 | **Settled 2026-10-18 by the author:** a new `brand: { colors, palette, scale }` block in `biac.config.ts`, the same `brand:` in front-matter. Recorded in ADR-0018                                                                       |
 | Settable colours     | evidence `base` + derived text/borders, `card`, `inputSurface`, `positive`/`negative`…; streamlit 52 options | Deriving from `base` needs an algorithm and tests for every derived pair; exposing every token makes ~180 internal names public API          | **Settled 2026-10-18 by the author:** `colors.primary` → `--primary` and `colors.background` → `--background`, each `{ light, dark }`. The rest stay ours; positive/negative, field and sidebar are SL-063                               |
 | Theme model          | framework presets; evidence/streamlit token overrides with light/dark pairs                                  | Presets need curated themes; overrides map 1:1 onto our hex custom properties (ADR-0014)                                                     | Token overrides per mode                                                                                                                                                                                                                 |
 | Contrast             | evidence derives without measuring; streamlit none                                                           | A brand colour can break WCAG 2.2 1.4.3 (text 4.5:1) and 1.4.11 (non-text 3:1) (https://www.w3.org/TR/WCAG22/) and the floors ADR-0016 holds | **Settled 2026-10-18 by the author:** a located error that fails `biac build`, naming the key path, the colour, the colour it sits on, the measured ratio and the floor — the `invalid()` precedent in `src/engine/biac-config-error.ts` |
@@ -98,14 +98,14 @@ Overall: GAP-042 is **absent** (fixed tokens; the heatmap's per-widget `colorSca
 
 ## Deviations
 
-- Contrast is measured and enforced at config load. evidence derives and streamlit trusts. The ADR in T5 records why; the check itself carries a comment citing WCAG 2.2 1.4.3 and 1.4.11.
+- Contrast is measured and enforced at config load. evidence derives and streamlit trusts. ADR-0018 records why; the check itself carries a comment citing WCAG 2.2 1.4.3 and 1.4.11.
 - Only `#RRGGBB` is accepted. streamlit takes any CSS colour, but zrender cannot parse `oklch()` and ADR-0014 keeps every token hex.
 - A palette is at most 8 colours. ADR-0016: past 8, ECharts repeats the list, and every extra colour lowers the floor. A 9th entry is an error, not a silent truncation.
 
 ## Open decisions
 
 - **O1 — settled in T2 by the author on 2026-10-18: positional overlay**, as in evidence's `overlayColorList`. `palette: { light: ["#1e40af"] }` changes series 1 only, and ADR-0016's tuned defaults keep series 2…8. Each mode is optional and independent; an omitted mode keeps its defaults (`src/engine/brand-css.ts` `modeDeclarations`, `src/engine/types.ts` `BrandTheme.palette`).
-- **O2 — settled in T2 by the author on 2026-10-18: unenforced**, recorded in the T5 ADR — the ΔE ≥ 16 guarantee covers the default palette only; the 3:1 floors stay errors. Measured with `test/lib/palette-separability.ts` `minimumSeparation`: evidence's example palette `#154886 #45a1bf #a5cdee #8dacbf #85c7c6` reaches min ΔE 9.6 protan / 9.1 deutan / 9.5 tritan (14.0 normal); the demo's one-colour overlay `#1e40af` over the light defaults drops to ΔE 2.8 protan and deutan against `--chart-7 #4433aa`, so enforcing it would fail demo step 3.
+- **O2 — settled in T2 by the author on 2026-10-18: unenforced**, recorded in ADR-0018 — the ΔE ≥ 16 guarantee covers the default palette only; the 3:1 floors stay errors. Measured with `test/lib/palette-separability.ts` `minimumSeparation`: evidence's example palette `#154886 #45a1bf #a5cdee #8dacbf #85c7c6` reaches min ΔE 9.6 protan / 9.1 deutan / 9.5 tritan (14.0 normal); the demo's one-colour overlay `#1e40af` over the light defaults drops to ΔE 2.8 protan and deutan against `--chart-7 #4433aa`, so enforcing it would fail demo step 3.
 - **O3 — settled in T1** (`src/engine/brand-contrast.ts` `CONTRAST_PAIRS`; extra pairs chosen by the author on 2026-10-18). A pair is checked when either side is a brand colour; the error names the brand side(s) to change, never adjusts the colour.
   - `--primary` vs `--primary-foreground` 4.5:1 (1.4.3) — `button-group.tsx` pressed text, `toggle.tsx` thumb.
   - `--primary` vs `--background` 3:1 (1.4.11) — checked toggle track, `slider.tsx` thumb border.
@@ -150,8 +150,8 @@ Overall: GAP-042 is **absent** (fixed tokens; the heatmap's per-widget `colorSca
   - Settle O4 and O5. The same validator runs with front-matter location (`src/engine/invalid-setting.ts`).
   - The page's resolved brand reaches the document when the page mounts and goes away when you leave it.
   - Measure computed `--primary` on the override page and on `/` across client navigation both ways, and confirm the charts on each page read that page's palette.
-- [ ] T5 — The example project and the record:
-  - The root `biac.config.ts` sets a brand, and one page overrides it.
+- [x] T5 — The example project and the record:
+  - The root `biac.config.ts` stays brand-free, as demo step 1 needs; `pages/crossfilter-scale.md` overrides the brand (its Slider shows `--primary`, its 3 Histograms series 1). Settled by the author on 2026-10-19.
   - `test/e2e-browser/brand-theme.spec.ts` drives the real pages.
   - An ADR records `brand` vs `theme`, the enforced contrast floors and the O2 outcome.
   - Re-measure the GAP-042 and GAP-043 rows for closing, and get the demo ready.
