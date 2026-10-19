@@ -9,6 +9,7 @@ import {
   expect,
   test,
 } from "./dev-server.fixture.js";
+import { SCALE_PAGE_CHARTS } from "./crossfilter-gestures.js";
 import {
   WEEKLY_REVIEW_CHART_COUNT,
   openWeeklyReviewCharts,
@@ -33,6 +34,17 @@ const BRAND = {
     defaultSeries2: "#e69f00",
     scaleEnd: "#93c5fd",
   },
+} as const;
+
+// The shipped config sets no brand; pages/crossfilter-scale.md's
+// front-matter sets primary and series 1 for that page only.
+const PROJECT_DEFAULT = {
+  light: { primary: "#171717", series1: "#0072b2" },
+  dark: { primary: "#e5e5e5", series1: "#0072b2" },
+} as const;
+const SCALE_PAGE_BRAND = {
+  light: { primary: "#7c3aed", series1: "#7c3aed" },
+  dark: { primary: "#c4b5fd", series1: "#c4b5fd" },
 } as const;
 
 const BRAND_BLOCK = `  brand: {
@@ -66,6 +78,20 @@ async function rewriteConfig(
 
 // The weekly-review heatmap's ramp: it starts on the canvas surface the
 // chart theme read from `--background` and ends on `--chart-scale`.
+// The brand the document wears: `--primary`, series 1 of every ready chart,
+// and how many page brand `<style>` elements are mounted under `#root`.
+async function documentBrand(page: Page, chartCount: number) {
+  const series1: (string | undefined)[] = [];
+  for (let index = 0; index < chartCount; index += 1) {
+    series1.push((await optionAt(page, index)).color?.[0]);
+  }
+  return {
+    primary: await readRootToken(page, "--primary"),
+    series1,
+    pageStyles: await page.locator("#root style").count(),
+  };
+}
+
 async function heatmapRamp(page: Page): Promise<readonly string[] | undefined> {
   for (let index = 0; index < WEEKLY_REVIEW_CHART_COUNT; index += 1) {
     const ramp = (await optionAt(page, index)).visualMap?.[0]?.inRange?.color;
@@ -128,6 +154,48 @@ for (const colorScheme of ["light", "dark"] as const) {
         brand.series1,
         brand.defaultSeries2,
       ]);
+      expect(errors).toEqual([]);
+    });
+    test("pages/crossfilter-scale.md's front-matter brand applies to that page only, across client navigation both ways", async ({
+      page,
+      biacDev,
+    }) => {
+      const errors = collectConsoleErrors(page);
+      const project = PROJECT_DEFAULT[colorScheme];
+      const scalePage = SCALE_PAGE_BRAND[colorScheme];
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(biacDev.url);
+      await expect(readyCharts(page)).toHaveCount(1);
+      const sidebar = page.getByRole("navigation", { name: "Site navigation" });
+      const projectBrand = {
+        primary: project.primary,
+        series1: [project.series1],
+        pageStyles: 0,
+      };
+      expect(await documentBrand(page, 1)).toEqual(projectBrand);
+
+      await sidebar
+        .getByRole("link", { name: "Cross-filter at scale" })
+        .click();
+      await expect(readyCharts(page)).toHaveCount(SCALE_PAGE_CHARTS.length);
+      expect(await documentBrand(page, SCALE_PAGE_CHARTS.length)).toEqual({
+        primary: scalePage.primary,
+        series1: SCALE_PAGE_CHARTS.map(() => scalePage.series1),
+        pageStyles: 1,
+      });
+      const thumb = page.getByRole("slider", { name: "Minimum" }).locator("..");
+      expect(
+        await paintedRgb(
+          page,
+          await thumb.evaluate(
+            (element) => getComputedStyle(element).borderTopColor,
+          ),
+        ),
+      ).toEqual(await paintedRgb(page, scalePage.primary));
+
+      await sidebar.getByRole("link", { name: "Orders overview" }).click();
+      await expect(readyCharts(page)).toHaveCount(1);
+      expect(await documentBrand(page, 1)).toEqual(projectBrand);
       expect(errors).toEqual([]);
     });
   });
