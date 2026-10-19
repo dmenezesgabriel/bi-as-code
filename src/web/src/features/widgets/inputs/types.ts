@@ -152,7 +152,9 @@ export type SearchMethod = Exclude<MatchMethod, "regexp">;
 /**
  * Props of the `<Search>` MDX widget — mosaic's `Search` input over one
  * `column`: the held text persists as `?id=<text>` and predicates every
- * widget listing `id` in its `filters`.
+ * widget listing `id` in its `filters`. `data` names a ```sql fence whose
+ * matching rows — under `filters` and the search itself — are counted
+ * beside the box.
  */
 export interface SearchProps {
   readonly id: string;
@@ -161,6 +163,8 @@ export interface SearchProps {
   readonly title?: string;
   readonly placeholder?: string;
   readonly initialValue?: string;
+  readonly data?: string;
+  readonly filters?: FilterIds;
 }
 
 /**

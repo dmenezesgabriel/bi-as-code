@@ -149,3 +149,101 @@ describe("Search — URL", () => {
     expect(port.written).toHaveLength(0);
   });
 });
+
+const REGION_ROWS = [
+  { region: "West" },
+  { region: "North" },
+  { region: "East" },
+];
+
+/** Serves every region to the fence and `match_count` to a count re-query. */
+function countingDb(matches: number): FakeDuckDb {
+  return FakeDuckDb.withRowsWhen(REGION_ROWS, (sql) =>
+    sql.includes("count(*)") ? [{ match_count: matches }] : null,
+  );
+}
+
+/** Renders `<Search data="orders">` alone — its count is the only consumer. */
+function renderCountedSearch(
+  db: FakeDuckDb,
+  props: Partial<SearchProps> = {},
+  port = new FakeFilterUrlPort(""),
+): FakeDuckDb {
+  return renderWithRegistry(
+    <Search
+      id="q"
+      column="region"
+      title="Search regions"
+      data="orders"
+      {...props}
+    />,
+    { db, blocks: [ORDERS], port },
+  );
+}
+
+describe("Search — match count", () => {
+  it("renders no count without data", () => {
+    renderSearch();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("counts the fence's rows while nothing is typed", async () => {
+    renderCountedSearch(countingDb(1));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("3 matches"),
+    );
+  });
+
+  it("counts under the search's own clause once text is held", async () => {
+    const db = renderCountedSearch(countingDb(1));
+
+    type("we");
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("1 match"),
+    );
+    expect(db.queries).toContainEqual({
+      sql: "select count(*) as match_count from (select * from orders) where contains(lower(region), lower(?))",
+      params: ["we"],
+    });
+  });
+
+  it("reads 'No matches' when nothing matches", async () => {
+    renderCountedSearch(countingDb(0), {}, new FakeFilterUrlPort("?q=zzz"));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("No matches"),
+    );
+  });
+
+  it("counts under the other filters it names", async () => {
+    const port = new FakeFilterUrlPort("?q=we&channel=web");
+    const db = renderWithRegistry(
+      <>
+        <Search id="channel" column="channel" />
+        <Search id="q" column="region" data="orders" filters={["channel"]} />
+      </>,
+      { db: countingDb(1), blocks: [ORDERS], port },
+    );
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select count(*) as match_count from (select * from orders) where (contains(lower(channel), lower(?))) AND (contains(lower(region), lower(?)))",
+        params: ["web", "we"],
+      }),
+    );
+  });
+
+  it("replaces the field with an alert when no fence declares data", () => {
+    renderCountedSearch(countingDb(1), { data: "missing" });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "no sql fence on this page declares this name",
+    );
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("replaces the field with an alert when the fence fails", async () => {
+    renderCountedSearch(FakeDuckDb.failing("Catalog Error: no orders"));
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("Catalog Error"),
+    );
+  });
+});

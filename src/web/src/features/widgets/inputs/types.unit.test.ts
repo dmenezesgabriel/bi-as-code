@@ -90,7 +90,14 @@ describe("input widget prop types", () => {
     expectTypeOf<SearchProps["method"]>().toEqualTypeOf<
       "contains" | "prefix" | "suffix" | undefined
     >();
-    expectTypeOf<SearchProps>().not.toHaveProperty("filters");
+  });
+
+  it("Search counts an optional data fence under optional filters", () => {
+    expectTypeOf<SearchProps["data"]>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<SearchProps["filters"]>().toEqualTypeOf<
+      FilterIds | undefined
+    >();
+    expectTypeOf<SearchProps>().not.toHaveProperty("valueColumn");
   });
 
   it("Toggle carries label/invert/initialValue and nothing else", () => {

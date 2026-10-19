@@ -358,7 +358,7 @@ test("the Ordered date range persists the expression and narrows order_detail", 
   expect(errors).toEqual([]);
 });
 
-test("the q search narrows order_detail through filters and persists", async ({
+test("the q search narrows order_detail through filters, counts its matches and persists", async ({
   page,
   biacDev,
 }) => {
@@ -366,7 +366,11 @@ test("the q search narrows order_detail through filters and persists", async ({
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
   const table = orderDetailTable(page);
+  // The count beside the box reads the same order_detail rows the table
+  // shows, under the same filters plus the search itself.
+  const count = page.getByRole("status").filter({ hasText: /match/ });
   await expect(table).toContainText("· 355 rows");
+  await expect(count).toHaveText("355 matches");
 
   const q = page.getByRole("searchbox", { name: "Search regions" });
   await expect(q).toBeEnabled();
@@ -375,16 +379,25 @@ test("the q search narrows order_detail through filters and persists", async ({
   // match clause reaches the table through its `filters`, no fence SQL.
   await expect.poll(() => urlParam(page, "q")).toBe("we");
   await expect(table).toContainText("· 140 rows");
+  await expect(count).toHaveText("140 matches");
 
+  await q.fill("zzz");
+  await expect.poll(() => urlParam(page, "q")).toBe("zzz");
+  await expect(count).toHaveText("No matches");
+
+  await q.fill("we");
+  await expect.poll(() => urlParam(page, "q")).toBe("we");
   await page.reload();
   await expect(
     page.getByRole("searchbox", { name: "Search regions" }),
   ).toHaveValue("we");
   await expect(table).toContainText("· 140 rows");
+  await expect(count).toHaveText("140 matches");
 
   await page.getByRole("searchbox", { name: "Search regions" }).fill("");
   await expect.poll(() => urlParam(page, "q")).toBeNull();
   await expect(table).toContainText("· 355 rows");
+  await expect(count).toHaveText("355 matches");
   expect(errors).toEqual([]);
 });
 
