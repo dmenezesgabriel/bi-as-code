@@ -34,6 +34,7 @@ import { serveDataDir } from "./serve-data-dir.js";
 import { statFile } from "./stat-file.js";
 import type {
   BiacConfig,
+  BrandTheme,
   DataLoaderInterpreters,
   DirectoryTitles,
   SqlTableMap,
@@ -84,9 +85,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const reloadAfterConfigEdit = (environment: DevEnvironment) => {
     configPromise = undefined;
     const graph = environment.moduleGraph;
-    // `sql:` collisions are checked when a page compiles — a config edit
-    // can create or clear one without touching the page file, so cached
-    // page transforms must re-run against the new config.
+    // `sql:` collisions and a page brand's contrast against the project
+    // brand are checked when a page compiles — a config edit can create or
+    // clear either without touching the page file, so cached page
+    // transforms must re-run against the new config.
     const stalePages = [...graph.idToModuleMap.values()].filter(
       (mod) => mod.id && isPageFile(mod.id, pagesDirPosix),
     );
@@ -179,10 +181,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
     async transform(code, id) {
       if (!isPageFile(id, pagesDirPosix)) return;
       const file = `pages/${toPosix(id).slice(pagesDirPosix.length + 1)}`;
-      const { sqlTables } = await getConfig();
+      const { sqlTables, brand } = await getConfig();
       const moduleSource = isDevServer
-        ? await compiledOrErrorModule(code, file, sqlTables)
-        : (await compilePage(code, file, sqlTables)).code;
+        ? await compiledOrErrorModule(code, file, sqlTables, brand)
+        : (await compilePage(code, file, sqlTables, brand)).code;
       return { code: moduleSource, map: null };
     },
     // The inline theme script in index.html runs before any module loads,
@@ -323,9 +325,10 @@ async function compiledOrErrorModule(
   markdown: string,
   file: string,
   configTables: SqlTableMap,
+  projectBrand: BrandTheme,
 ): Promise<string> {
   try {
-    return (await compilePage(markdown, file, configTables)).code;
+    return (await compilePage(markdown, file, configTables, projectBrand)).code;
   } catch (error) {
     return compileErrorModuleSource(pageCompileError(error, file));
   }

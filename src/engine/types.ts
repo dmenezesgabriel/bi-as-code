@@ -194,6 +194,8 @@ export interface CompiledPage {
   sqlTables: SqlTableMap;
   /** Validated layout front-matter — `page_width` and `cards` when the page sets them. */
   layout: PageLayout;
+  /** The page's front-matter `brand:` as a stylesheet of only the keys it sets; empty when it sets none. */
+  brandCss: string;
 }
 
 /**

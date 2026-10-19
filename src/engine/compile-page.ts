@@ -5,12 +5,16 @@ import remarkGfm from "remark-gfm";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
+import { NO_BRAND } from "./brand-config.js";
+import { brandCss } from "./brand-css.js";
+import { pageBrand } from "./page-brand-frontmatter.js";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
 import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
 import type {
+  BrandTheme,
   CompiledPage,
   PageFrontmatter,
   SqlBlock,
@@ -36,6 +40,8 @@ interface PageMetadata {
  *
  * `configTables` carries `biac.config.ts`'s project-wide `sql:` map — a
  * page name colliding with it is a compile error naming both sources.
+ * `projectBrand` is its `brand`, which the page's own `brand:` colours are
+ * contrast-checked against.
  *
  * @example
  * const page = await compilePage("---\ntitle: T\n---\n```sql q\nselect 1\n```\n", "pages/a.md");
@@ -45,6 +51,7 @@ export async function compilePage(
   markdown: string,
   filePath: string,
   configTables: SqlTableMap = {},
+  projectBrand: BrandTheme = NO_BRAND,
 ): Promise<CompiledPage> {
   const file = new VFile({ path: filePath, value: markdown });
   parseFrontmatterBlock(file, { strip: true });
@@ -78,6 +85,7 @@ export async function compilePage(
     sqlBlocks: metadata.sqlBlocks,
     sqlTables,
     layout: pageLayout(frontmatter, location),
+    brandCss: brandCss(pageBrand(frontmatter, location, projectBrand)),
   };
   return { code: `${compiled}\n${metadataExports(page)}\n`, ...page };
 }
@@ -146,5 +154,6 @@ function metadataExports(page: Omit<CompiledPage, "code">): string {
     `export const sqlBlocks = ${JSON.stringify(page.sqlBlocks)};`,
     `export const sqlTables = ${JSON.stringify(page.sqlTables)};`,
     `export const layout = ${JSON.stringify(page.layout)};`,
+    `export const brandCss = ${JSON.stringify(page.brandCss)};`,
   ].join("\n");
 }

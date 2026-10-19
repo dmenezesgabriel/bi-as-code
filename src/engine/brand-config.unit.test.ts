@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readBrand } from "./brand-config.js";
+import { brandedThemeTokens } from "./brand-contrast.js";
 
 const PASSING_PRIMARY = { light: "#154886", dark: "#60a5fa" };
 const PASSING_BACKGROUND = { light: "#fffdf5", dark: "#0a0a0a" };
@@ -220,5 +221,22 @@ describe("readBrand — rejected shapes", () => {
     expect(read).toThrow(
       expect.objectContaining({ keyPath: ["brand", "palette", "light", "0"] }),
     );
+  });
+});
+
+describe("readBrand — over a project brand", () => {
+  it("checks contrast against the theme it is given", () => {
+    const project = brandedThemeTokens({
+      colors: { primary: PASSING_PRIMARY },
+      palette: {},
+      scale: {},
+    });
+    const spec = {
+      brand: { colors: { background: { light: "#3b5c99", dark: "#0a0a0a" } } },
+    };
+
+    const read = () => readBrand(spec, project);
+
+    expect(read).toThrow("against --primary #154886 measures 1.37:1");
   });
 });

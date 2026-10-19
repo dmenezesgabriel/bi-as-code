@@ -236,6 +236,44 @@ describe("page transform", () => {
     );
   });
 
+  it("serves a page's front-matter brand as its brandCss export", async () => {
+    const root = makeProject();
+    writeFile(
+      "pages/index.md",
+      '---\nbrand:\n  palette:\n    dark: ["#60a5fa"]\n---\n# Hi\n',
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain(
+      'export const brandCss = ".dark {\\n  --chart-1: #60a5fa;\\n}\\n";',
+    );
+  });
+
+  it("serves a page brand colour under its floor on the project brand as a compile error", async () => {
+    const root = makeProject();
+    writeFile(
+      "biac.config.ts",
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } } } };\n',
+    );
+    writeFile(
+      "pages/index.md",
+      '---\nbrand:\n  colors:\n    background: { light: "#3b5c99", dark: "#0a0a0a" }\n---\n# Hi\n',
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Invalid front-matter in pages\/index\.md — brand\.colors\.background\.light: #3b5c99 against --primary #154886 measures 1\.37:1/,
+    );
+  });
+
   it("re-checks a page against a config edit so a new collision surfaces", async () => {
     const root = makeProject();
     writeFile("biac.config.ts", "export default {};\n");

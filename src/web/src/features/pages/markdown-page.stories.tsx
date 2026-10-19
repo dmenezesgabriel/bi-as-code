@@ -20,6 +20,7 @@ function pageModule(partial: Partial<CompiledPageModule>): CompiledPageModule {
     sqlBlocks: [],
     sqlTables: {},
     layout: {},
+    brandCss: "",
     ...partial,
   };
 }

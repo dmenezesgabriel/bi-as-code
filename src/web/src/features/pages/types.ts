@@ -60,6 +60,8 @@ export interface CompiledPageModule {
   sqlBlocks: SqlBlock[];
   sqlTables: SqlTableMap;
   layout: PageLayout;
+  /** The page's front-matter `brand:` as a stylesheet; empty when it sets none. */
+  brandCss: string;
 }
 
 export interface SqlBlock {

@@ -43,6 +43,11 @@ export const SERIES_TOKENS: readonly SeriesTokenName[] = [
  */
 export const SCALE_TOKEN = "--chart-scale";
 
+/** The value of each checked token, per mode. */
+export type ThemeTokens = Readonly<
+  Record<ColourMode, Readonly<Record<ThemeTokenName, string>>>
+>;
+
 /**
  * The default value of each checked token, per mode. These mirror
  * `src/web/src/styles.css`, which the engine cannot import — a unit test
@@ -51,9 +56,7 @@ export const SCALE_TOKEN = "--chart-scale";
  * @example
  * DEFAULT_THEME_TOKENS.dark["--background"]; // → "#0a0a0a"
  */
-export const DEFAULT_THEME_TOKENS: Readonly<
-  Record<ColourMode, Readonly<Record<ThemeTokenName, string>>>
-> = {
+export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   light: {
     "--primary": "#171717",
     "--primary-foreground": "#ffffff",

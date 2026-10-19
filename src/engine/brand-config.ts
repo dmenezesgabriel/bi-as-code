@@ -1,7 +1,7 @@
 import { formatKeyPath, invalid } from "./biac-config-error.js";
 import { checkBrandContrast } from "./brand-contrast.js";
 import { isRecord, rejectUnknownKeys } from "./config-shape.js";
-import { SERIES_TOKENS } from "./default-theme-tokens.js";
+import { SERIES_TOKENS, type ThemeTokens } from "./default-theme-tokens.js";
 import type {
   BrandColours,
   BrandTheme,
@@ -40,10 +40,19 @@ interface ColourListLimit {
 }
 
 /**
+ * The brand of a project or page that sets none: every token keeps its
+ * default.
+ *
+ * @example
+ * brandCss(NO_BRAND); // → ""
+ */
+export const NO_BRAND: BrandTheme = { colors: {}, palette: {}, scale: {} };
+
+/**
  * Reads `biac.config.ts`'s `brand` block, lower-casing each colour, and
- * checks every colour and palette entry against its contrast floor — the
- * scale is not checked, since a heatmap cell's value is in its tooltip and
- * label. A bad
+ * checks every colour and palette entry against its contrast floor on
+ * `theme` — the defaults, or a page's project brand — leaving the scale
+ * unchecked, since a heatmap cell's value is in its tooltip and label. A bad
  * shape or a colour under its floor throws a `ConfigFieldError` at the
  * colour's key path.
  *
@@ -51,8 +60,11 @@ interface ColourListLimit {
  * readBrand({ brand: { colors: { primary: { light: "#154886", dark: "#60A5FA" } } } });
  * // → { colors: { primary: { light: "#154886", dark: "#60a5fa" } } }
  */
-export function readBrand(spec: Record<string, unknown>): BrandTheme {
-  if (spec.brand === undefined) return { colors: {}, palette: {}, scale: {} };
+export function readBrand(
+  spec: Record<string, unknown>,
+  theme?: ThemeTokens,
+): BrandTheme {
+  if (spec.brand === undefined) return NO_BRAND;
   if (!isRecord(spec.brand)) {
     throw invalid("brand", ["brand"], BRAND_SHAPE, spec.brand);
   }
@@ -62,7 +74,7 @@ export function readBrand(spec: Record<string, unknown>): BrandTheme {
     palette: readModeLists(spec.brand.palette, "palette", PALETTE_LIST),
     scale: readModeLists(spec.brand.scale, "scale", SCALE_LIST),
   };
-  checkBrandContrast(brand);
+  checkBrandContrast(brand, theme);
   return brand;
 }
 

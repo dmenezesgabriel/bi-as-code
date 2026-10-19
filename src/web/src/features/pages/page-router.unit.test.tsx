@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
   act,
@@ -46,7 +47,30 @@ function textPage(text: string, title: string | null): CompiledPageModule {
     sqlBlocks: [],
     sqlTables: {},
     layout: {},
+    brandCss: "",
   };
+}
+
+// A page whose body reads `--primary` once, on its first render, as a
+// chart reads its tokens: it shows the colour the document held then.
+function primaryPage(name: string, brandCss: string): CompiledPageModule {
+  function PrimaryOnMount() {
+    const [primary] = useState(() =>
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--primary")
+        .trim(),
+    );
+    return (
+      <p>
+        {name} primary {primary}
+      </p>
+    );
+  }
+  return { ...textPage(name, name), default: PrimaryOnMount, brandCss };
+}
+
+function primaryRule(colour: string): string {
+  return `:root,\n.light {\n  --primary: ${colour};\n}\n`;
 }
 
 function failedPage(message: string): PageModule {
@@ -69,6 +93,7 @@ const homePage: CompiledPageModule = {
   sqlBlocks: [],
   sqlTables: {},
   layout: {},
+  brandCss: "",
 };
 
 const pages: ManifestPageEntry[] = [
@@ -194,6 +219,7 @@ describe("buildPageRouter", () => {
       sqlBlocks: [{ name: "q", sql: "select * from shared" }],
       sqlTables: { local: "data/local.csv" },
       layout: {},
+      brandCss: "",
     };
     renderRouter(
       [pageEntry("/sql", async () => sqlPage)],
@@ -317,6 +343,7 @@ describe("buildPageRouter", () => {
       sqlBlocks: [{ name: "q", sql: "select * from local" }],
       sqlTables: { local: "data/local.csv" },
       layout: {},
+      brandCss: "",
     };
     renderRouter(
       [pageEntry("/sql", async () => sqlPage)],
@@ -379,6 +406,39 @@ describe("buildPageRouter", () => {
     expect(await screen.findByText("new body")).toBeInTheDocument();
     expect(screen.queryByText("old body")).not.toBeInTheDocument();
     expect(router.state.location.searchStr).toBe("?region=West");
+  });
+
+  it("applies a page's brand while it is shown and drops it on leaving, both ways", async () => {
+    // One module per page, as `import()` hands back on every load.
+    const home = primaryPage("home", "");
+    const branded = primaryPage("branded", primaryRule("#154886"));
+    const router = renderRouter(
+      [
+        pageEntry("/", async () => home),
+        pageEntry("/branded", async () => branded),
+      ],
+      "/",
+    );
+    await screen.findByText("home primary #171717");
+
+    router.history.push("/branded");
+    expect(
+      await screen.findByText("branded primary #154886"),
+    ).toBeInTheDocument();
+
+    router.history.push("/");
+    expect(await screen.findByText("home primary #171717")).toBeInTheDocument();
+  });
+
+  it("re-renders a hot-swapped page with its edited brand", async () => {
+    let current = primaryPage("page", primaryRule("#154886"));
+    const router = renderRouter([pageEntry("/", async () => current)], "/");
+    await screen.findByText("page primary #154886");
+
+    current = primaryPage("page", primaryRule("#1e40af"));
+    await router.invalidate();
+
+    expect(await screen.findByText("page primary #1e40af")).toBeInTheDocument();
   });
 
   it("keeps the scroll position when a filter write replaces only the search params", async () => {

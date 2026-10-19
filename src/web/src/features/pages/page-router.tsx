@@ -13,6 +13,7 @@ import { CompileErrorPage } from "./compile-error-page";
 import { EditablePage } from "./editable-page";
 import { MarkdownPage } from "./markdown-page";
 import { NotFoundPage } from "./not-found-page";
+import { PageBrandStyle } from "./page-brand-style";
 import { PageError } from "./page-error";
 import type {
   CompiledPageModule,
@@ -134,11 +135,15 @@ function CompiledPage({ mod, site, dataUpdates }: CompiledPageProps) {
   // The config's layout is the project default; each key the page's
   // front-matter sets wins, the rest fall through.
   const layout = { ...site.layout, ...mod.layout };
+  // Keyed on the stylesheet so an edited front-matter brand remounts the
+  // page, and its charts read their tokens again.
   return (
-    <MarkdownPage
-      page={{ ...mod, sqlTables, layout }}
-      siteTitle={site.title}
-      dataUpdates={dataUpdates}
-    />
+    <PageBrandStyle key={mod.brandCss} css={mod.brandCss}>
+      <MarkdownPage
+        page={{ ...mod, sqlTables, layout }}
+        siteTitle={site.title}
+        dataUpdates={dataUpdates}
+      />
+    </PageBrandStyle>
   );
 }

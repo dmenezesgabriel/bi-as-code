@@ -26,6 +26,7 @@ async function importCompiledModule(code: string): Promise<{
   sqlBlocks: unknown;
   sqlTables: unknown;
   layout: unknown;
+  brandCss: unknown;
 }> {
   const tmpParent = join(
     dirname(fileURLToPath(import.meta.url)),
@@ -294,6 +295,39 @@ describe("layout front-matter", () => {
   });
 });
 
+describe("brand front-matter", () => {
+  it("leaves brandCss empty when the page sets no brand", async () => {
+    const page = await compile("# Body\n");
+
+    expect(page.brandCss).toBe("");
+    expect(page.code).toContain('export const brandCss = "";');
+  });
+
+  it("exports a stylesheet of only the keys the page sets", async () => {
+    const page = await compile(
+      '---\nbrand:\n  palette:\n    light: ["#1E40AF"]\n---\n# Body\n',
+    );
+
+    expect(page.brandCss).toBe(":root,\n.light {\n  --chart-1: #1e40af;\n}\n");
+  });
+
+  it("rejects a page colour under its floor on the project brand, naming the page file", async () => {
+    const projectBrand = {
+      colors: { primary: { light: "#154886", dark: "#60a5fa" } },
+      palette: {},
+      scale: {},
+    };
+    const markdown =
+      '---\nbrand:\n  colors:\n    background: { light: "#3b5c99", dark: "#0a0a0a" }\n---\n# Body\n';
+
+    const compiled = compilePage(markdown, "pages/a.md", {}, projectBrand);
+
+    await expect(compiled).rejects.toThrow(
+      "Invalid front-matter in pages/a.md — brand.colors.background.light: #3b5c99 against --primary #154886 measures 1.37:1",
+    );
+  });
+});
+
 describe("module source", () => {
   it("exports frontmatter, title and sqlBlocks alongside the default component", async () => {
     const page = await compile(
@@ -333,6 +367,7 @@ describe("module source", () => {
     expect(mod.sqlBlocks).toEqual(page.sqlBlocks);
     expect(mod.sqlTables).toEqual(page.sqlTables);
     expect(mod.layout).toEqual(page.layout);
+    expect(mod.brandCss).toBe(page.brandCss);
   });
 
   it("exports layout alongside sqlTables", async () => {

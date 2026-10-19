@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -128,6 +128,49 @@ describe("biac build", () => {
     expect(run.status).toBe(1);
     expect(run.stderr).toContain(
       "Invalid biac.config.ts:2:31 — brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
+    );
+  }, 120_000);
+
+  it("ships a page's front-matter brand in that page's own chunk", () => {
+    const root = makeTempProject("biac-e2e-build-page-brand-");
+    writeProjectFile(root, "pages/index.md", "# Home\n");
+    writeProjectFile(
+      root,
+      "pages/branded.md",
+      '---\nbrand:\n  palette:\n    dark: ["#60a5fa"]\n---\n# Branded\n',
+    );
+
+    execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
+
+    const assets = join(root, "build", "assets");
+    const carriers = readdirSync(assets).filter((name) =>
+      readFileSync(join(assets, name), "utf8").includes("--chart-1: #60a5fa;"),
+    );
+    expect(carriers).toEqual([expect.stringMatching(/^branded-.*\.js$/)]);
+    const html = readFileSync(join(root, "build", "index.html"), "utf8");
+    expect(html).not.toContain("--chart-1: #60a5fa;");
+  }, 120_000);
+
+  it("exits 1 naming a page brand colour under its floor on the project brand", () => {
+    const root = makeTempProject("biac-e2e-build-page-brand-contrast-");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } } } };\n',
+    );
+    writeProjectFile(
+      root,
+      "pages/index.md",
+      '---\nbrand:\n  colors:\n    background: { light: "#3b5c99", dark: "#0a0a0a" }\n---\n# Home\n',
+    );
+
+    const run = spawnSync(process.execPath, [biac, "build", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(
+      "Invalid front-matter in pages/index.md — brand.colors.background.light: #3b5c99 against --primary #154886 measures 1.37:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
     );
   }, 120_000);
 });

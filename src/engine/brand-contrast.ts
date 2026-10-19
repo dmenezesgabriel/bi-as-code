@@ -5,6 +5,7 @@ import {
   DEFAULT_THEME_TOKENS,
   SERIES_TOKENS,
   type ThemeTokenName,
+  type ThemeTokens,
 } from "./default-theme-tokens.js";
 import type {
   BrandColours,
@@ -50,21 +51,44 @@ const COLOUR_MODES: readonly ColourMode[] = ["light", "dark"];
 
 /**
  * Throws a located error for the first brand colour or palette entry, in
- * either mode, under its contrast floor against the theme it lands in. It
+ * either mode, under its contrast floor against the theme it lands in —
+ * the defaults, or a page's project brand from `brandedThemeTokens`. It
  * names the side to change and never adjusts the colour itself.
  *
  * @example
  * checkBrandContrast({ colors: {}, palette: { light: ["#45a1bf"] } });
  * // throws "brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, …"
  */
-export function checkBrandContrast(brand: BrandTheme): void {
+export function checkBrandContrast(
+  brand: BrandTheme,
+  theme: ThemeTokens = DEFAULT_THEME_TOKENS,
+): void {
   for (const mode of COLOUR_MODES) {
     const sides = brandSides(brand, mode);
     const shortfall = CONTRAST_PAIRS.map((checked) =>
-      measure(checked, sides, mode),
+      measure(checked, sides, theme[mode]),
     ).find((measured) => measured !== undefined);
     if (shortfall) throw contrastTooLow(shortfall);
   }
+}
+
+/**
+ * The theme a brand paints: each colour and palette entry over the default
+ * token it replaces, per mode. A page's front-matter brand is checked
+ * against its project's, since the page's colours land on that theme.
+ *
+ * @example
+ * brandedThemeTokens({ colors: { background: { light: "#fffdf5", dark: "#111111" } }, palette: {}, scale: {} })
+ *   .light["--background"]; // → "#fffdf5"
+ */
+export function brandedThemeTokens(brand: BrandTheme): ThemeTokens {
+  const branded = (mode: ColourMode) => ({
+    ...DEFAULT_THEME_TOKENS[mode],
+    ...Object.fromEntries(
+      [...brandSides(brand, mode)].map(([token, side]) => [token, side.colour]),
+    ),
+  });
+  return { light: branded("light"), dark: branded("dark") };
 }
 
 function pair(
@@ -106,10 +130,10 @@ function brandSides(brand: BrandTheme, mode: ColourMode): BrandSides {
 function measure(
   checked: ContrastPair,
   sides: BrandSides,
-  mode: ColourMode,
+  theme: ThemeTokens[ColourMode],
 ): ContrastShortfall | undefined {
-  const first = pairSide(checked.first, sides, mode);
-  const second = pairSide(checked.second, sides, mode);
+  const first = pairSide(checked.first, sides, theme);
+  const second = pairSide(checked.second, sides, theme);
   const [subject, neighbour] = first.brandPath
     ? [first, second]
     : [second, first];
@@ -145,9 +169,7 @@ function shortfall(
 function pairSide(
   token: ThemeTokenName,
   sides: BrandSides,
-  mode: ColourMode,
+  theme: ThemeTokens[ColourMode],
 ): PairSide {
-  return (
-    sides.get(token) ?? { token, colour: DEFAULT_THEME_TOKENS[mode][token] }
-  );
+  return sides.get(token) ?? { token, colour: theme[token] };
 }

@@ -82,6 +82,7 @@ function page(partial: Partial<CompiledPageModule>): CompiledPageModule {
     sqlBlocks: [],
     sqlTables: {},
     layout: {},
+    brandCss: "",
     ...partial,
   };
 }

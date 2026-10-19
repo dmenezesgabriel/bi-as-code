@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkBrandContrast } from "./brand-contrast.js";
+import { brandedThemeTokens, checkBrandContrast } from "./brand-contrast.js";
+import { DEFAULT_THEME_TOKENS } from "./default-theme-tokens.js";
 import type { BrandColours, BrandTheme, ModeColourLists } from "./types.js";
 
 function brandOf(
@@ -187,6 +188,46 @@ describe("checkBrandContrast — each floor", () => {
 
     expect(error).toMatchObject({
       message: expect.stringContaining("measures 2.99:1"),
+    });
+  });
+});
+
+describe("checkBrandContrast — over a project brand", () => {
+  it("measures a colour against the project's colour, naming only its own key", () => {
+    const project = brandOf({ primary: { light: "#154886", dark: "#60a5fa" } });
+    const page = brandOf({ background: { light: "#3b5c99", dark: "#0a0a0a" } });
+
+    const check = () => checkBrandContrast(page, brandedThemeTokens(project));
+
+    expect(check).toThrow(
+      "brand.colors.background.light: #3b5c99 against --primary #154886 measures 1.37:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
+    );
+  });
+});
+
+describe("brandedThemeTokens", () => {
+  it("is the default theme when the brand sets nothing", () => {
+    const tokens = brandedThemeTokens(brandOf({}));
+
+    expect(tokens).toEqual(DEFAULT_THEME_TOKENS);
+  });
+
+  it("overlays brand colours and palette entries per mode, keeping the rest", () => {
+    const brand = brandOf(
+      { background: { light: "#fffdf5", dark: "#111111" } },
+      { dark: ["#60a5fa"] },
+    );
+
+    const tokens = brandedThemeTokens(brand);
+
+    expect(tokens.light).toEqual({
+      ...DEFAULT_THEME_TOKENS.light,
+      "--background": "#fffdf5",
+    });
+    expect(tokens.dark).toEqual({
+      ...DEFAULT_THEME_TOKENS.dark,
+      "--background": "#111111",
+      "--chart-1": "#60a5fa",
     });
   });
 });
