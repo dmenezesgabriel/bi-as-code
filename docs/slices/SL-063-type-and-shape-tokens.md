@@ -131,8 +131,8 @@ Default ratios below were measured 2026-10-19 with `src/engine/contrast-ratio.ts
   - Each adds names to `ThemeTokenName` and `DEFAULT_THEME_TOKENS`, whose drift test keeps them equal to `src/web/src/styles.css`. Settle in T1/T2 by grepping every utility on `bg-field`/`bg-sidebar`/`text-positive`/`text-negative`.
 - **O2 — `fontSize` range and emission.** Proposed: a `"<n>px"` string, 12–24 inclusive, emitted as `html { font-size: <n/16 × 100>% }` so a reader's own browser size still scales it (C12). evidence and streamlit accept any positive size; the bounds are ours. Decide whether rem is also accepted (`1rem` = 16px).
 - **O3 — `radius` units and cap.** Proposed: `"<n>px"` or `"<n>rem"`, from 0 to 1.5rem/24px (streamlit's largest step, `full`, is 1.4rem). `--radius-sm` is `calc(var(--radius) - 4px)`; check in a browser that a 0 radius computes `0px`, not a dropped declaration (CSS clamps a `calc()` result to the property's range, https://www.w3.org/TR/css-values-4/#calc-range). `rounded-full` pills stay pills.
-- **O4 — which stacks.** Tailwind's `--font-sans`, `--font-serif`, `--font-mono` (today's computed `ui-sans-serif, system-ui, …` for sans) vs framework's `--sans-serif`/`--serif` lists. Proposed: Tailwind's three, since sans and mono are what pages render today, so the defaults change nothing.
-- **O5 — charts follow the body font.** Proposed: yes, through a `--font-body` token `readChartTokens` reads and `textStyle.fontFamily` uses. Measure with `test/e2e-browser/echart-hosts.ts` on the option.
+- **O4 — which stacks. Settled (T3):** Tailwind's `--font-sans`, `--font-serif`, `--font-mono`, so the defaults render as before. `src/web/src/styles.css` names them `--font-stack-sans-serif`/`-serif`/`-mono` and points `--body-font`, `--heading-font`, `--code-font` at them; `@theme inline` sets `--default-font-family`, `--default-mono-font-family` and a `font-heading` utility from those. The brand writes `--<key>-font: var(--font-stack-<name>)` in one `:root` rule (`src/engine/brand-css.ts` `fontDeclarations`). Measured: before T3 the built CSS emitted no `--font-serif` (Tailwind drops an unreferenced theme var); naming the stacks makes it emit, held by `test/e2e/static-build.e2e.test.ts`.
+- **O5 — charts follow the body font. Settled (T3):** yes. `readChartTokens` reads `--body-font` into `ChartTokens.fontFamily` and `chartTheme` sets the root `textStyle.fontFamily`; `test/e2e-browser/brand-theme.spec.ts` reads it off the live option.
 - **O6 — page override depth.** Proposed: every new key per page, key by key, as ADR-0018 does for colours: a page's `fonts.body` alone leaves the project's heading and code fonts. `fontSize` per page changes the root while the page is mounted, as the brand style already does for `--background`.
 
 Each decision is recorded by amending ADR-0018 (or a new ADR if fonts and size warrant one) in T6.
@@ -155,7 +155,7 @@ Each decision is recorded by amending ADR-0018 (or a new ADR if fonts and size w
 - [x] T2 — `brand.colors.field` and `sidebar`:
   - O1 pairs for both; emitted per mode.
   - Measure the select trigger, text input and toggle fill and the `<aside>` background in both modes.
-- [ ] T3 — `brand.fonts { body, heading, code }`:
+- [x] T3 — `brand.fonts { body, heading, code }`:
   - Settle O4 and O5. A heading token read by `src/web/src/features/pages/prose-elements.tsx`; charts read the body font.
   - Measure computed `font-family` on `body`, `main h1`, `pre`, and the ECharts option `textStyle.fontFamily` before and after; screenshot the chart axis.
 - [ ] T4 — `brand.fontSize`:
