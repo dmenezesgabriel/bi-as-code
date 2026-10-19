@@ -126,8 +126,8 @@ Default ratios below were measured 2026-10-19 with `src/engine/contrast-ratio.ts
 
 - **O1 — contrast pairs for the four colours.** Proposed, each in both modes:
   - **Settled (T1):** `--positive`, `--negative` against `--background`, `--card` and `--card-mode-background` at 4.5:1 (SC 1.4.3), and against their own 10% chip over each surface (`src/engine/contrast-ratio.ts` `blendOver`, `src/engine/brand-contrast.ts` `CHIP_TINT`). The default light `--positive` `#007a55` measured 4.47:1 on its chip over `--card-mode-background`, so it became `#00784f` (4.60).
-  - `--field` against `--foreground` (light 17.93, dark 16.44) and `--muted-foreground-faded` (placeholder, light 4.74) at 4.5:1. **Not** `--input` at 3:1: the defaults measure 1.48 light and 1.73 dark, so SC 1.4.11 on the field boundary would reject our own defaults; record why (the label and placeholder identify the control) or raise `--input` in a separate change.
-  - `--sidebar` against `--foreground` (17.18 / 16.44), `--sidebar-foreground` (9.93 / 12.09) and `--muted-foreground` (7.49 / 6.94) at 4.5:1, and against `--ring` at 3:1 (SC 2.4.13, sidebar links draw their ring inside).
+  - **Settled (T2):** `--field` against `--foreground` (light 17.93, dark 16.44) and `--muted-foreground-faded` (placeholder, 4.74 / 6.94) at 4.5:1. Not against `--input` (1.48 / 1.73) or as the toggle thumb on `--secondary` (1.26 / 1.73) at SC 1.4.11: the defaults already miss both, the label and placeholder identify the control; the reason is a comment at `CONTRAST_PAIRS`.
+  - **Settled (T2):** `--sidebar` against `--foreground` (17.18 / 16.44), `--sidebar-foreground` (9.93 / 12.09) and `--muted-foreground` (7.49 / 6.94) at 4.5:1, and against `--ring` at 3:1 (SC 2.4.13, sidebar links draw their ring inside; 4.54 / 6.94). The active link's `bg-sidebar-accent/60` chip is not a pair: an RGB sweep at step 3 in both modes found no sidebar colour that passes the plain pairs and fails `--foreground` or `--ring` on the chip, which holds while `--sidebar-accent`, `--foreground` and `--ring` are not brand keys.
   - Each adds names to `ThemeTokenName` and `DEFAULT_THEME_TOKENS`, whose drift test keeps them equal to `src/web/src/styles.css`. Settle in T1/T2 by grepping every utility on `bg-field`/`bg-sidebar`/`text-positive`/`text-negative`.
 - **O2 — `fontSize` range and emission.** Proposed: a `"<n>px"` string, 12–24 inclusive, emitted as `html { font-size: <n/16 × 100>% }` so a reader's own browser size still scales it (C12). evidence and streamlit accept any positive size; the bounds are ours. Decide whether rem is also accepted (`1rem` = 16px).
 - **O3 — `radius` units and cap.** Proposed: `"<n>px"` or `"<n>rem"`, from 0 to 1.5rem/24px (streamlit's largest step, `full`, is 1.4rem). `--radius-sm` is `calc(var(--radius) - 4px)`; check in a browser that a 0 radius computes `0px`, not a dropped declaration (CSS clamps a `calc()` result to the property's range, https://www.w3.org/TR/css-values-4/#calc-range). `rounded-full` pills stay pills.
@@ -152,7 +152,7 @@ Each decision is recorded by amending ADR-0018 (or a new ADR if fonts and size w
 - [x] T1 — `brand.colors.positive` and `negative`:
   - Validated as `primary` is; O1 pairs added; emitted per mode.
   - Measure on `/weekly-review` in both modes: computed `--positive`/`--negative`, the `+9.9%` delta colour, the chip background. A failing colour gives the overlay text and a `biac build` exit code.
-- [ ] T2 — `brand.colors.field` and `sidebar`:
+- [x] T2 — `brand.colors.field` and `sidebar`:
   - O1 pairs for both; emitted per mode.
   - Measure the select trigger, text input and toggle fill and the `<aside>` background in both modes.
 - [ ] T3 — `brand.fonts { body, heading, code }`:
