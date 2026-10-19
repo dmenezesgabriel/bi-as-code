@@ -1,6 +1,6 @@
 # SL-064 — A page names an icon that shows beside it in the sidebar
 
-Milestone: Phase 4 — Project and page settings, themes, layouts · State: open · Depends on: — · Closes: GAP-069
+Milestone: Phase 4 — Project and page settings, themes, layouts · State: partial — awaits its demo · Depends on: — · Closes: GAP-069
 
 > Delete this file when the slice ships. Every path below was verified on disk on 2026-10-19 (`test -e`); every icon name was checked against lucide-react 1.49.0's `iconNames` the same day.
 
@@ -107,12 +107,14 @@ Our implementation is **absent**. Nothing in the ledger claims any part of it sh
 
 ### Catalog parity across engine and SPA
 
-The SPA never imports the engine — shared constants are restated (`src/web/src/features/pages/data-updates.ts` restates `DATA_UPDATE_EVENT` from `src/engine/data-update.ts`). So the engine owns `PAGE_ICON_NAMES` (`src/engine/page-icon-frontmatter.ts`, beside `assertPageIcon`; exported in T2); the wrap site (new `src/web/src/components/page-icon.tsx`) restates it as a `name → Lucide component` map; a test under `test/integration/` imports both and pins the two name sets equal, so neither side can gain a name the other lacks.
+The SPA never imports the engine — shared constants are restated (`src/web/src/features/pages/data-updates.ts` restates `DATA_UPDATE_EVENT` from `src/engine/data-update.ts`). So the engine owns `PAGE_ICON_NAMES` (`src/engine/page-icon-frontmatter.ts`, beside `assertPageIcon`; exported in T2); the wrap site restates it as a `name → Lucide component` map (`PAGE_ICONS` in `src/web/src/components/page-icon-catalog.ts`, kept apart from `page-icon.tsx` so that file exports only a component and Fast Refresh holds); a test under `test/integration/` imports both and pins the two name sets equal, so neither side can gain a name the other lacks.
 
 ## Deviations
 
 - Unknown names fail rather than drop (streamlit's behaviour, not evidence's) — stated in a code comment beside the check, as `pageLayout` does for `page_width`.
 - No name normalization — the comment beside the check says the suggestion covers case.
+- The icon reaches the SPA only inside `navTree`: the manifest's `pages[]` rows and `ManifestPageEntry` (`src/web/src/features/pages/types.ts`) do not carry it, since nothing in the SPA reads it there.
+- No reserved icon slot: a page without `icon` shows its name from the link's left padding, as evidence `PageNavTree.svelte` and streamlit `SidebarNavLink.tsx` do (owner, 2026-10-19).
 
 ## Open decisions
 
@@ -123,14 +125,14 @@ None. O1 (which icons) settled by the owner 2026-10-19: the 56-name curated cata
 | Layer  | Files                                                                                                                                                                                                                                                                             |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | engine | `src/engine/page-icon-frontmatter.ts` (new), `src/engine/closest-key.ts` (`didYouMean`), `src/engine/invalid-setting.ts` (`hint`), `src/engine/compile-page.ts`, `src/engine/types.ts`, `src/engine/discover-pages.ts`, `src/engine/nav-tree.ts`, `src/engine/manifest-module.ts` |
-| client | `src/web/src/virtual-biac-pages.d.ts`, `src/web/src/features/pages/types.ts`                                                                                                                                                                                                      |
-| ui     | `src/web/src/components/page-icon.tsx` (new) + `page-icon.stories.tsx`, `src/web/src/features/chrome/sidebar-nav.tsx` + `sidebar-nav.stories.tsx`, example pages under `pages/`                                                                                                   |
+| client | `src/web/src/virtual-biac-pages.d.ts`                                                                                                                                                                                                                                             |
+| ui     | `src/web/src/components/page-icon.tsx`, `page-icon-catalog.ts` (new) + `page-icon.stories.tsx`, `src/web/src/features/chrome/sidebar-nav.tsx` + `sidebar-nav.stories.tsx`, example pages under `pages/`                                                                           |
 | tests  | colocated `*.unit.test.ts(x)`, `test/integration/` (parity, build failure), `test/e2e-browser/page-chrome.spec.ts`, `test/integration/features/` cucumber if a page-chrome scenario covers nav                                                                                    |
 
 ## Tasks
 
 - [x] T1 — An unknown `icon` is a located error: `PAGE_ICON_NAMES` and its check in `compilePage` (non-string, unknown name with "did you mean", `null`/`""` accepted); unit tests, `biac build` fails in an integration test, e2e-browser overlay + recovery on `/weekly-review`. playwright-cli: overlay text, recovery, console.
-- [ ] T2 — The icon shows in the sidebar: `navFields` → `PageManifestEntry.icon` → `NavPage.icon` → manifest → web types → `PageIcon` (with stories) → `NavLink` (stories: icon, no icon, active); parity test; icons on the example pages; e2e-browser: icon count, `aria-hidden`, accessible names, live update on edit. playwright-cli: compare against the Baseline — svg count, row height, 375 px drawer, console.
+- [x] T2 — The icon shows in the sidebar: `navFields` → `PageManifestEntry.icon` → `NavPage.icon` → manifest → web types → `PageIcon` (with stories) → `NavLink` (stories: icon, no icon, active); parity test; icons on the example pages; e2e-browser: icon count, `aria-hidden`, accessible names, live update on edit. playwright-cli: compare against the Baseline — svg count, row height, 375 px drawer, console.
 
 ## Out of scope
 
