@@ -47,8 +47,18 @@ const CHIP_TINT = 0.1;
 // the canvas and under the label drawn inside it (ADR-0016's floors); SC
 // 2.4.13 3:1 for the focus ring on the page; SC 1.4.3 4.5:1 for a delta's
 // text on every surface it sits on — the page, a widget card, the card-mode
-// page under an inline delta — and on its own chip over each. A pair is
-// checked when either side is a brand colour.
+// page under an inline delta — and on its own chip over each; SC 1.4.3 4.5:1
+// for a control's value and placeholder on `--field`, and for the title,
+// folder and link text on `--sidebar`, whose links draw their focus ring
+// inside it (SC 2.4.13 3:1). A pair is checked when either side is a brand
+// colour.
+//
+// Not checked: `--field` against its `--input` border and the toggle thumb
+// against its `--secondary` track (SC 1.4.11), which the defaults already
+// miss (1.48:1 and 1.26:1 in light), the label and placeholder naming the
+// control; and the active sidebar link's `--sidebar-accent` chip, which
+// cannot fail while the plain sidebar pairs pass so long as
+// `--sidebar-accent`, `--foreground` and `--ring` are not brand colours.
 const CONTRAST_PAIRS: readonly ContrastPair[] = [
   pair("--primary", "--primary-foreground", 4.5, "1.4.3"),
   pair("--primary", "--background", 3, "1.4.11"),
@@ -66,6 +76,12 @@ const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...DELTA_TOKENS.flatMap((tone) =>
     DELTA_SURFACES.map((surface) => chipPair(tone, surface)),
   ),
+  pair("--field", "--foreground", 4.5, "1.4.3"),
+  pair("--field", "--muted-foreground-faded", 4.5, "1.4.3"),
+  pair("--sidebar", "--foreground", 4.5, "1.4.3"),
+  pair("--sidebar", "--sidebar-foreground", 4.5, "1.4.3"),
+  pair("--sidebar", "--muted-foreground", 4.5, "1.4.3"),
+  pair("--sidebar", "--ring", 3, "2.4.13"),
 ];
 
 const COLOUR_MODES: readonly ColourMode[] = ["light", "dark"];

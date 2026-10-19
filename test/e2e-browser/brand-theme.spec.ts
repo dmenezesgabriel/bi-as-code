@@ -25,6 +25,8 @@ const BRAND = {
     background: "#fffdf5",
     positive: "#047857",
     negative: "#b91c1c",
+    field: "#f8fafc",
+    sidebar: "#f1f5f9",
     series1: "#1e40af",
     defaultSeries2: "#d55e00",
     scaleEnd: "#172554",
@@ -34,6 +36,8 @@ const BRAND = {
     background: "#0a0a0a",
     positive: "#34d399",
     negative: "#f87171",
+    field: "#1e293b",
+    sidebar: "#0f172a",
     series1: "#60a5fa",
     defaultSeries2: "#e69f00",
     scaleEnd: "#93c5fd",
@@ -57,6 +61,8 @@ const BRAND_BLOCK = `  brand: {
       background: { light: "${BRAND.light.background}", dark: "${BRAND.dark.background}" },
       positive: { light: "${BRAND.light.positive}", dark: "${BRAND.dark.positive}" },
       negative: { light: "${BRAND.light.negative}", dark: "${BRAND.dark.negative}" },
+      field: { light: "${BRAND.light.field}", dark: "${BRAND.dark.field}" },
+      sidebar: { light: "${BRAND.light.sidebar}", dark: "${BRAND.dark.sidebar}" },
     },
     palette: { light: ["${BRAND.light.series1}"], dark: ["${BRAND.dark.series1}"] },
     scale: { light: ["${BRAND.light.scaleEnd}"], dark: ["${BRAND.dark.scaleEnd}"] },
@@ -110,7 +116,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} mode`, () => {
     test.use({ colorScheme });
 
-    test("brand colours, palette and scale in biac.config.ts restyle the chrome, the checked toggle, the deltas, the chart surface, series and heatmap ramp", async ({
+    test("brand colours, palette and scale in biac.config.ts restyle the chrome, the sidebar, the input surface, the checked toggle, the deltas, the chart surface, series and heatmap ramp", async ({
       page,
       biacDev,
     }) => {
@@ -141,6 +147,18 @@ for (const colorScheme of ["light", "dark"] as const) {
           await delta.evaluate((element) => getComputedStyle(element).color),
         ),
       ).toEqual(await paintedRgb(page, brand.positive));
+      expect(await readRootToken(page, "--field")).toBe(brand.field);
+      expect(await readRootToken(page, "--sidebar")).toBe(brand.sidebar);
+      const search = page.getByRole("textbox", { name: "Search regions" });
+      expect(await paintedRgb(page, await effectiveBackground(search))).toEqual(
+        await paintedRgb(page, brand.field),
+      );
+      const sidebar = page.getByRole("navigation", {
+        name: "Site navigation",
+      });
+      expect(
+        await paintedRgb(page, await effectiveBackground(sidebar)),
+      ).toEqual(await paintedRgb(page, brand.sidebar));
       const toggle = page.getByRole("switch", { name: "Large orders only" });
       await toggle.click();
       await expect(toggle).toBeChecked();
@@ -266,6 +284,14 @@ const OVERLAY_FAILURES = [
     message:
       "brand.colors.positive.light: #4ade80 against --background #ffffff measures 1.74:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.positive.light",
     location: /biac\.config\.ts:7:34$/,
+  },
+  {
+    what: "a sidebar under its focus-ring floor",
+    brandLine:
+      '  brand: { colors: { sidebar: { light: "#cccccc", dark: "#171717" } } },\n',
+    message:
+      "brand.colors.sidebar.light: #cccccc against --ring #737373 measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 2.4.13) — change brand.colors.sidebar.light",
+    location: /biac\.config\.ts:7:33$/,
   },
   {
     what: "a palette colour under its contrast floor",

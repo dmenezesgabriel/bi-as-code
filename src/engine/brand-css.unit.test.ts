@@ -40,6 +40,22 @@ describe("brandCss — colours", () => {
     );
   });
 
+  it("sets the field and sidebar surfaces over --field and --sidebar per mode", () => {
+    const css = brandCss({
+      colors: {
+        field: { light: "#f8fafc", dark: "#1e293b" },
+        sidebar: { light: "#f1f5f9", dark: "#0f172a" },
+      },
+      palette: {},
+      scale: {},
+    });
+
+    expect(css).toBe(
+      ":root,\n.light {\n  --field: #f8fafc;\n  --sidebar: #f1f5f9;\n}\n" +
+        ".dark {\n  --field: #1e293b;\n  --sidebar: #0f172a;\n}\n",
+    );
+  });
+
   it("leaves a colour the brand omits to styles.css", () => {
     const css = brandCss({
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },

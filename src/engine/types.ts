@@ -110,6 +110,10 @@ export interface BrandColours {
   positive?: ModeColour;
   /** `--negative` — a bad delta's text and chip, a red negative value. */
   negative?: ModeColour;
+  /** `--field` — the surface of every input, select and toggle row. */
+  field?: ModeColour;
+  /** `--sidebar` — the navigation sidebar's background. */
+  sidebar?: ModeColour;
 }
 
 /** Per mode, a list of `#rrggbb` colours; a mode left out keeps its default. */

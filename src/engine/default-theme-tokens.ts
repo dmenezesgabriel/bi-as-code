@@ -8,11 +8,15 @@ export type ThemeTokenName =
   | "--background"
   | "--foreground"
   | "--muted-foreground"
+  | "--muted-foreground-faded"
   | "--ring"
   | "--card"
   | "--card-mode-background"
   | "--positive"
   | "--negative"
+  | "--field"
+  | "--sidebar"
+  | "--sidebar-foreground"
   | "--chart-label-inside"
   | SeriesTokenName;
 
@@ -68,11 +72,15 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
     "--background": "#ffffff",
     "--foreground": "#171717",
     "--muted-foreground": "#525252",
+    "--muted-foreground-faded": "#737373",
     "--ring": "#737373",
     "--card": "#ffffff",
     "--card-mode-background": "#fafafa",
     "--positive": "#00784f",
     "--negative": "#c10007",
+    "--field": "#ffffff",
+    "--sidebar": "#fafafa",
+    "--sidebar-foreground": "#404040",
     "--chart-label-inside": "#ffffff",
     "--chart-1": "#0072b2",
     "--chart-2": "#d55e00",
@@ -90,11 +98,15 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
     "--background": "#0a0a0a",
     "--foreground": "#f5f5f5",
     "--muted-foreground": "#a1a1a1",
+    "--muted-foreground-faded": "#a1a1a1",
     "--ring": "#a1a1a1",
     "--card": "#171717",
     "--card-mode-background": "#0a0a0a",
     "--positive": "#00d492",
     "--negative": "#ff6467",
+    "--field": "#171717",
+    "--sidebar": "#171717",
+    "--sidebar-foreground": "#d4d4d4",
     "--chart-label-inside": "#0a0a0a",
     "--chart-1": "#0072b2",
     "--chart-2": "#e69f00",
@@ -120,4 +132,6 @@ export const BRAND_TOKENS: Readonly<
   background: "--background",
   positive: "--positive",
   negative: "--negative",
+  field: "--field",
+  sidebar: "--sidebar",
 };

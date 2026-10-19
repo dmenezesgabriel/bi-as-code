@@ -271,6 +271,48 @@ describe("checkBrandContrast — delta colours", () => {
   });
 });
 
+describe("checkBrandContrast — field and sidebar", () => {
+  it("accepts the default field and sidebar surfaces as brand colours", () => {
+    const colours: BrandColours = {
+      field: { light: "#ffffff", dark: "#171717" },
+      sidebar: { light: "#fafafa", dark: "#171717" },
+    };
+
+    const check = () => checkBrandContrast(brandOf(colours));
+
+    expect(check).not.toThrow();
+  });
+
+  it("fails a field under 4.5:1 against its placeholder text", () => {
+    const error = failureOf({ field: { light: "#f0f0f0", dark: "#171717" } });
+
+    expect(error).toMatchObject({
+      keyPath: ["brand", "colors", "field", "light"],
+      message:
+        "brand.colors.field.light: #f0f0f0 against --muted-foreground-faded #737373 measures 4.16:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.field.light",
+    });
+  });
+
+  it("fails a sidebar whose text clears 4.5:1 but whose focus ring does not clear 3:1", () => {
+    const error = failureOf({ sidebar: { light: "#cccccc", dark: "#171717" } });
+
+    expect(error).toMatchObject({
+      message:
+        "brand.colors.sidebar.light: #cccccc against --ring #737373 measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 2.4.13) — change brand.colors.sidebar.light",
+    });
+  });
+
+  it("fails a dark sidebar under 4.5:1 against its folder labels", () => {
+    const error = failureOf({ sidebar: { light: "#fafafa", dark: "#606060" } });
+
+    expect(error).toMatchObject({
+      keyPath: ["brand", "colors", "sidebar", "dark"],
+      message:
+        "brand.colors.sidebar.dark: #606060 against --sidebar-foreground #d4d4d4 measures 4.24:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.sidebar.dark",
+    });
+  });
+});
+
 describe("checkBrandContrast — over a project brand", () => {
   it("measures a colour against the project's colour, naming only its own key", () => {
     const project = brandOf({ primary: { light: "#154886", dark: "#60a5fa" } });

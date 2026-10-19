@@ -642,6 +642,11 @@ describe("virtual:biac-config", () => {
       'colors: { positive: { light: "#047857", dark: "#34d399" }, negative: { light: "#b91c1c", dark: "#f87171" } }',
       ":root,\n.light {\n  --positive: #047857;\n  --negative: #b91c1c;\n}\n.dark {\n  --positive: #34d399;\n  --negative: #f87171;\n}\n",
     ],
+    [
+      "the brand field and sidebar surfaces over --field and --sidebar",
+      'colors: { field: { light: "#f8fafc", dark: "#1e293b" }, sidebar: { light: "#f1f5f9", dark: "#0f172a" } }',
+      ":root,\n.light {\n  --field: #f8fafc;\n  --sidebar: #f1f5f9;\n}\n.dark {\n  --field: #1e293b;\n  --sidebar: #0f172a;\n}\n",
+    ],
   ])("injects %s", async (_what, brand, css) => {
     const root = makeProject();
     writeFile("biac.config.ts", `export default { brand: { ${brand} } };\n`);

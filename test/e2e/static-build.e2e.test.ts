@@ -112,6 +112,12 @@ describe("biac build", () => {
       '  brand: { colors: { positive: { light: "#4ade80", dark: "#34d399" } } },',
       "Invalid biac.config.ts:2:34 — brand.colors.positive.light: #4ade80 against --background #ffffff measures 1.74:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.positive.light",
     ],
+    [
+      "a field surface",
+      "biac-e2e-build-brand-field-",
+      '  brand: { colors: { field: { light: "#f0f0f0", dark: "#171717" } } },',
+      "Invalid biac.config.ts:2:31 — brand.colors.field.light: #f0f0f0 against --muted-foreground-faded #737373 measures 4.16:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.field.light",
+    ],
   ])(
     "exits 1 naming %s under its contrast floor",
     (_what, prefix, brandLine, message) => {

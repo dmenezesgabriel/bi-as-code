@@ -51,6 +51,24 @@ describe("readBrand — accepted shapes", () => {
     });
   });
 
+  it("reads field and sidebar per mode, lower-cased", () => {
+    const spec = {
+      brand: {
+        colors: {
+          field: { light: "#F8FAFC", dark: "#1e293b" },
+          sidebar: { light: "#f1f5f9", dark: "#0F172A" },
+        },
+      },
+    };
+
+    const brand = readBrand(spec);
+
+    expect(brand.colors).toEqual({
+      field: { light: "#f8fafc", dark: "#1e293b" },
+      sidebar: { light: "#f1f5f9", dark: "#0f172a" },
+    });
+  });
+
   it("reads a palette per mode, lower-cased", () => {
     const spec = {
       brand: { palette: { light: ["#1E40AF", "#D55E00"], dark: ["#60a5fa"] } },
@@ -113,7 +131,7 @@ describe("readBrand — rejected shapes", () => {
     [
       { brand: { colors: [] } },
       ["brand", "colors"],
-      "brand.colors: expected an object with optional fields { primary, background, positive, negative }, got []",
+      "brand.colors: expected an object with optional fields { primary, background, positive, negative, field, sidebar }, got []",
     ],
     [
       { brand: { colors: { primary: "#154886" } } },
@@ -139,6 +157,11 @@ describe("readBrand — rejected shapes", () => {
       { brand: { colors: { negative: { light: "red", dark: "#f87171" } } } },
       ["brand", "colors", "negative", "light"],
       'brand.colors.negative.light: expected a "#rrggbb" colour, got "red"',
+    ],
+    [
+      { brand: { colors: { field: { light: "white", dark: "#1e293b" } } } },
+      ["brand", "colors", "field", "light"],
+      'brand.colors.field.light: expected a "#rrggbb" colour, got "white"',
     ],
     [
       { brand: { palette: ["#1e40af"] } },
@@ -246,6 +269,20 @@ describe("readBrand — rejected shapes", () => {
     expect(read).toThrow(
       expect.objectContaining({
         keyPath: ["brand", "colors", "positive", "light"],
+      }),
+    );
+  });
+
+  it("checks a field or sidebar surface it reads against its contrast floors", () => {
+    const spec = {
+      brand: { colors: { sidebar: { light: "#a3a3a3", dark: "#0f172a" } } },
+    };
+
+    const read = () => readBrand(spec);
+
+    expect(read).toThrow(
+      expect.objectContaining({
+        keyPath: ["brand", "colors", "sidebar", "light"],
       }),
     );
   });
