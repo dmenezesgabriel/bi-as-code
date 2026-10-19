@@ -6,14 +6,14 @@ import { SidebarNav } from "./sidebar-nav";
 
 const tree: NavTree = {
   rootPages: [
-    { name: "Home", href: "/" },
+    { name: "Home", href: "/", icon: "house" },
     { name: "About", href: "/about" },
   ],
   directories: [
     {
       id: "nested",
       name: "Nested",
-      pages: [{ name: "Region detail", href: "/nested/page" }],
+      pages: [{ name: "Region detail", href: "/nested/page", icon: "map-pin" }],
     },
     {
       id: "guides",
@@ -42,6 +42,32 @@ function dirElement(name: string): HTMLElement {
 
 beforeEach(() => {
   window.sessionStorage.clear();
+});
+
+describe("SidebarNav — page icons", () => {
+  it("shows a page's icon before its name, hidden from assistive tech", async () => {
+    await renderNav("/");
+
+    const home = screen.getByRole("link", { name: "Home" });
+    const svg = home.querySelector("svg");
+    expect(svg).toHaveClass("lucide-house");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+    expect(home.firstElementChild).toBe(svg);
+  });
+
+  it("shows an icon inside a directory group too", async () => {
+    await renderNav("/nested/page");
+
+    const link = screen.getByRole("link", { name: "Region detail" });
+    expect(link.querySelector("svg")).toHaveClass("lucide-map-pin");
+  });
+
+  it("shows the name alone when the page names no icon", async () => {
+    await renderNav("/");
+
+    const about = screen.getByRole("link", { name: "About" });
+    expect(about.querySelector("svg")).toBeNull();
+  });
 });
 
 describe("SidebarNav", () => {

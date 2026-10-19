@@ -1,5 +1,6 @@
 ---
 title: Region detail
+icon: map-pin
 sidebar_position: 1
 ---
 

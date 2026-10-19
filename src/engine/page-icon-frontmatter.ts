@@ -4,7 +4,9 @@ import { invalidSetting } from "./invalid-setting.js";
 // A curated set of Lucide names (https://lucide.dev/icons), canonical as of
 // lucide-react 1.49.0: a fixed set keeps the sidebar's icons in the bundle,
 // painted with the page, rather than ~2000 lazy chunks popping in after.
-const PAGE_ICON_NAMES: readonly string[] = [
+// The SPA's wrap site (src/web/src/components/page-icon.tsx) restates it as
+// a name → glyph map; an integration test pins the two equal.
+export const PAGE_ICON_NAMES: readonly string[] = [
   "house",
   "layout-dashboard",
   "layers",
@@ -63,6 +65,18 @@ const PAGE_ICON_NAMES: readonly string[] = [
   "list-checks",
 ];
 
+/**
+ * True when `value` names a catalog icon — the sidebar reads `icon` through
+ * this so a bad name drops out of the nav while `assertPageIcon` reports it.
+ *
+ * @example
+ * isPageIconName("calendar"); // true
+ * isPageIconName("calender"); // false
+ */
+export function isPageIconName(value: unknown): value is string {
+  return typeof value === "string" && PAGE_ICON_NAMES.includes(value);
+}
+
 const PAGE_ICON_CHOICES = `one of ${PAGE_ICON_NAMES.join(", ")}`;
 
 /**
@@ -79,7 +93,7 @@ const PAGE_ICON_CHOICES = `one of ${PAGE_ICON_NAMES.join(", ")}`;
  */
 export function assertPageIcon(icon: unknown, location: string): void {
   if (icon === undefined || icon === null || icon === "") return;
-  if (typeof icon === "string" && PAGE_ICON_NAMES.includes(icon)) return;
+  if (isPageIconName(icon)) return;
   const hint =
     typeof icon === "string" ? didYouMean(icon, PAGE_ICON_NAMES) : "";
   throw invalidSetting(location, "icon", PAGE_ICON_CHOICES, icon, hint);

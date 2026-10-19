@@ -482,6 +482,22 @@ describe("file watching", () => {
     expect(await loadManifest(dev)).toContain('title: "New"');
     expect(await loadManifest(dev)).toContain('"name":"New"');
   });
+
+  it("invalidates the manifest when a page's icon is edited, so the sidebar redraws it", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "---\nicon: house\n---\n# Hi\n");
+    const dev = await makeServer(root);
+    await waitForWatch(dev, join(root, "pages"), "index.md");
+    await loadManifest(dev);
+
+    await expectInvalidated(manifestModule(dev), () =>
+      writeFile("pages/index.md", "---\nicon: calendar\n---\n# Hi\n"),
+    );
+
+    expect(await loadManifest(dev)).toContain(
+      '{"name":"Home","href":"/","icon":"calendar"}',
+    );
+  });
 });
 
 describe("virtual:biac-config", () => {

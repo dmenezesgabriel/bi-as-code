@@ -1,5 +1,6 @@
 ---
 title: Orders dashboard
+icon: layout-dashboard
 page_width: full
 cards: true
 sql:

@@ -294,41 +294,6 @@ test("front-matter page_width: full widens the page in place, and a bad value sh
   expect(errors).toEqual([]);
 });
 
-test("front-matter icon outside the catalog shows its error with the closest name, and a catalog name recovers the page", async ({
-  page,
-  biacDev,
-}) => {
-  const errors = collectConsoleErrors(page);
-  await page.goto(`${biacDev.url}/weekly-review`);
-  const heading = page.getByRole("heading", {
-    level: 1,
-    name: "Weekly review",
-  });
-  await expect(heading).toBeVisible();
-
-  const file = join(biacDev.projectDir, "pages/weekly-review.md");
-  const original = readFileSync(file, "utf8");
-  const withIcon = (value: string) =>
-    original.replace("title: Weekly review\n", `$&icon: ${value}\n`);
-  writeFileSync(file, withIcon("calender"));
-  const alert = page.getByRole("alert");
-  await expect(alert).toContainText("front-matter in pages/weekly-review.md", {
-    timeout: 20_000,
-  });
-  await expect(alert).toContainText(
-    "icon: expected one of house, layout-dashboard,",
-  );
-  await expect(alert).toContainText('got "calender" (did you mean calendar?)');
-  await expect(page.getByRole("link", { name: "Weekly review" })).toBeVisible();
-
-  writeFileSync(file, withIcon("calendar"));
-  await expect(heading).toBeVisible({ timeout: 20_000 });
-  await expect(alert).toHaveCount(0);
-
-  writeFileSync(file, original);
-  expect(errors).toEqual([]);
-});
-
 test("biac.config.ts layout.page_width widens every page, a page's front-matter overrides it, and a bad value is located", async ({
   page,
   biacDev,

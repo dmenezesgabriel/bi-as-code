@@ -43,6 +43,13 @@ describe("manifest entries", () => {
     );
   });
 
+  it("carries a page's icon into the nav tree, not the page row", () => {
+    const source = manifestModuleSource([{ ...index, icon: "house" }], {});
+
+    expect(source).toContain('{"name":"Home","href":"/","icon":"house"}');
+    expect(source).not.toContain("icon: ");
+  });
+
   it("names a nav folder by its configured title", () => {
     const nested: PageManifestEntry = {
       route: "/nested/page",

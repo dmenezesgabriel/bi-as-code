@@ -41,7 +41,7 @@ When("biac dev serves it", async () => {
 });
 
 Then(
-  "the manifest module serves the nav tree with titles, positions and the titled nested group",
+  "the manifest module serves the nav tree with titles, positions, icons and the titled nested group",
   async () => {
     const code = await getOk(`${server!.url}${MANIFEST_URL}`);
     // Entries carry the fm nav fields the tree was built from.
@@ -49,14 +49,14 @@ Then(
     assert.match(code, /route: "\/nested\/allocation".*sidebarPosition: 2/);
     // Region detail precedes Allocation despite alphabetical order —
     // sidebar_position wins. Allocation has no fm title, so its nav
-    // label is the deslugified file name.
+    // label is the deslugified file name, and it names no icon.
     assert.match(
       code,
-      /"rootPages":\[\{"name":"Orders overview","href":"\/"\},\{"name":"Cross-filter at scale","href":"\/crossfilter-scale"\},\{"name":"Orders dashboard","href":"\/orders-dashboard"\},\{"name":"Regional orders","href":"\/regional-orders"\},\{"name":"Weekly orders","href":"\/weekly-orders"\},\{"name":"Weekly review","href":"\/weekly-review"\}\]/,
+      /"rootPages":\[\{"name":"Orders overview","href":"\/","icon":"house"\},\{"name":"Cross-filter at scale","href":"\/crossfilter-scale","icon":"filter"\},\{"name":"Orders dashboard","href":"\/orders-dashboard","icon":"layout-dashboard"\},\{"name":"Regional orders","href":"\/regional-orders","icon":"map"\},\{"name":"Weekly orders","href":"\/weekly-orders","icon":"chart-column"\},\{"name":"Weekly review","href":"\/weekly-review","icon":"calendar"\}\]/,
     );
     assert.match(
       code,
-      /"directories":\[\{"id":"nested","name":"Breakdowns","pages":\[\{"name":"Region detail","href":"\/nested\/page"\},\{"name":"Allocation","href":"\/nested\/allocation"\}\]\}\]/,
+      /"directories":\[\{"id":"nested","name":"Breakdowns","pages":\[\{"name":"Region detail","href":"\/nested\/page","icon":"map-pin"\},\{"name":"Allocation","href":"\/nested\/allocation"\}\]\}\]/,
     );
   },
 );

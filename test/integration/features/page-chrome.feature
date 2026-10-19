@@ -7,7 +7,7 @@ Feature: page chrome derives from pages/ front-matter and biac.config.ts
   Scenario: serve nav, config, theme script and favicon; reload on config edit
     Given the shipped example project
     When biac dev serves it
-    Then the manifest module serves the nav tree with titles, positions and the titled nested group
+    Then the manifest module serves the nav tree with titles, positions, icons and the titled nested group
     And the config module serves the configured title and page layout
     And the HTML shell wires the pre-paint theme script and the favicon
     And the favicon serves

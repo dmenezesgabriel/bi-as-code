@@ -2,7 +2,10 @@ import { existsSync, globSync } from "node:fs";
 import { join, sep } from "node:path";
 import { basename, dirname } from "node:path/posix";
 import { readPageFrontmatter } from "./page-frontmatter.js";
+import { isPageIconName } from "./page-icon-frontmatter.js";
 import type { PageFrontmatter, PageManifestEntry } from "./types.js";
+
+type NavFields = Pick<PageManifestEntry, "title" | "sidebarPosition" | "icon">;
 
 /**
  * Maps every `.md`/`.mdx` file under `pages/` in a project root to a route
@@ -77,15 +80,15 @@ function toEntry(
 /**
  * The front-matter fields nav cares about. `title` coerces like the page
  * compiler's title resolution (a numeric title renders as text); a
- * non-number `sidebar_position` is dropped rather than breaking the nav.
+ * non-number `sidebar_position` and an `icon` outside the catalog are
+ * dropped rather than breaking the nav — `compilePage` reports the icon.
  */
-function navFields(
-  frontmatter: PageFrontmatter,
-): Pick<PageManifestEntry, "title" | "sidebarPosition"> {
-  const fields: Pick<PageManifestEntry, "title" | "sidebarPosition"> = {};
+function navFields(frontmatter: PageFrontmatter): NavFields {
+  const fields: NavFields = {};
   if (frontmatter.title != null) fields.title = String(frontmatter.title);
   if (typeof frontmatter.sidebar_position === "number") {
     fields.sidebarPosition = frontmatter.sidebar_position;
   }
+  if (isPageIconName(frontmatter.icon)) fields.icon = frontmatter.icon;
   return fields;
 }

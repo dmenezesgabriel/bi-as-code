@@ -1,5 +1,6 @@
 ---
 title: Regional orders
+icon: map
 sql:
   regions: data/region-revenue.csv
   daily: data/daily-orders.csv

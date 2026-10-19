@@ -13,6 +13,7 @@ interface FlatNavItem {
   isHome: boolean;
   href: string;
   sidebarPosition?: number;
+  icon?: string;
   /** Label the sidebar shows: fm title, "Home", or the deslugified file name. */
   displayName: string;
 }
@@ -40,7 +41,7 @@ export function buildNavTree(
   const dirPages = new Map<string, NavPage[]>();
 
   for (const item of items) {
-    const page: NavPage = { name: item.displayName, href: item.href };
+    const page = toNavPage(item);
     const segments = item.slug.split("/");
     if (item.isHome || segments.length === 1) {
       rootPages.push(page);
@@ -63,6 +64,13 @@ export function buildNavTree(
   return { rootPages, directories: navDirectories };
 }
 
+/** The page's link; `icon` is set only when the page names one, so the served JSON omits it otherwise. */
+function toNavPage(item: FlatNavItem): NavPage {
+  const page: NavPage = { name: item.displayName, href: item.href };
+  if (item.icon !== undefined) page.icon = item.icon;
+  return page;
+}
+
 function toFlatItem(entry: PageManifestEntry): FlatNavItem {
   const slug = entry.file.slice("pages/".length).replace(/\.(md|mdx)$/, "");
   const name = slug.split("/").pop()!;
@@ -72,6 +80,7 @@ function toFlatItem(entry: PageManifestEntry): FlatNavItem {
     isHome,
     href: entry.route,
     sidebarPosition: entry.sidebarPosition,
+    icon: entry.icon,
     displayName: entry.title ?? (isHome ? "Home" : deslugify(name)),
   };
 }

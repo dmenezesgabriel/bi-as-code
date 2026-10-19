@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type MouseEvent } from "react";
 import type { NavDirectory, NavPage, NavTree } from "virtual:biac-pages";
+import { PageIcon } from "../../components/page-icon";
 import { cn } from "../../lib/cn";
 import { readDirOpenMap, writeDirOpen } from "./sidebar-storage";
 
@@ -101,12 +102,13 @@ function NavLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "block rounded-sm px-2 py-1.5 text-sm focus-visible:-outline-offset-2",
+        "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm focus-visible:-outline-offset-2",
         active
           ? "bg-sidebar-accent/60 font-medium text-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
       )}
     >
+      {page.icon && <PageIcon name={page.icon} />}
       {page.name}
     </Link>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertPageIcon } from "./page-icon-frontmatter.js";
+import { assertPageIcon, isPageIconName } from "./page-icon-frontmatter.js";
 
 const LOCATION = "front-matter in pages/page.md";
 
@@ -42,4 +42,17 @@ describe("assertPageIcon — rejected", () => {
 
     expect(check).toThrow(/icon: expected one of house, .*, got 3$/);
   });
+});
+
+describe("isPageIconName", () => {
+  it("is true for a catalog name", () => {
+    expect(isPageIconName("chart-line")).toBe(true);
+  });
+
+  it.each([undefined, null, "", "calender", "Calendar", 3])(
+    "is false for %j",
+    (value) => {
+      expect(isPageIconName(value)).toBe(false);
+    },
+  );
 });

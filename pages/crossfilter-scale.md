@@ -1,5 +1,6 @@
 ---
 title: Cross-filter at scale
+icon: filter
 table_of_contents: true
 table_of_contents_label: Measures
 sql:

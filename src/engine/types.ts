@@ -13,6 +13,8 @@ export interface PageManifestEntry {
   title?: string;
   /** Front-matter `sidebar_position`; absent when omitted or not a number. */
   sidebarPosition?: number;
+  /** Front-matter `icon`; absent when omitted or outside the catalog. */
+  icon?: string;
 }
 
 /** One page link inside the sidebar nav tree. */
@@ -21,6 +23,8 @@ export interface NavPage {
   name: string;
   /** Route the link navigates to. */
   href: string;
+  /** Catalog icon name shown before the label; absent when the page names none. */
+  icon?: string;
 }
 
 /** A collapsible sidebar group holding every page under one first path segment. */

@@ -1,5 +1,6 @@
 ---
 title: Orders overview
+icon: house
 sql:
   orders: data/orders.parquet
 ---

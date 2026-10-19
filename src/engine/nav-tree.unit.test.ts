@@ -5,6 +5,7 @@ import type { PageManifestEntry } from "./types.js";
 interface NavFields {
   title?: string;
   sidebarPosition?: number;
+  icon?: string;
 }
 
 /**
@@ -47,6 +48,31 @@ describe("root pages", () => {
       { name: "Welcome", href: "/" },
       { name: "Getting Started", href: "/getting-started" },
     ]);
+  });
+});
+
+describe("icons", () => {
+  it("carries a page's icon into its nav link, root and directory alike", () => {
+    const tree = buildNavTree(
+      [
+        page("pages/index.md", { icon: "house" }),
+        page("pages/nested/page.md", { icon: "map-pin" }),
+      ],
+      {},
+    );
+
+    expect(tree.rootPages).toEqual([
+      { name: "Home", href: "/", icon: "house" },
+    ]);
+    expect(tree.directories[0]!.pages).toEqual([
+      { name: "Page", href: "/nested/page", icon: "map-pin" },
+    ]);
+  });
+
+  it("leaves icon off a link whose page names none", () => {
+    const tree = buildNavTree([page("pages/index.md")], {});
+
+    expect(tree.rootPages[0]).not.toHaveProperty("icon");
   });
 });
 

@@ -1,5 +1,6 @@
 ---
 title: Weekly orders
+icon: chart-column
 sql:
   weekly: data/weekly-orders.csv
 ---

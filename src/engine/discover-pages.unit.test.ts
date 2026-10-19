@@ -147,6 +147,23 @@ describe("front-matter", () => {
     expect(discoverPages(root)[0]!.title).toBe("2024");
   });
 
+  it("reads a catalog icon into the manifest entry", () => {
+    const root = makeProject();
+    writeProjectFile(root, "pages/a.md", "---\nicon: chart-line\n---\n# A\n");
+
+    expect(discoverPages(root)[0]!.icon).toBe("chart-line");
+  });
+
+  it.each(["calender", "3", '""'])(
+    "drops an icon outside the catalog (icon: %s)",
+    (value) => {
+      const root = makeProject();
+      writeProjectFile(root, "pages/a.md", `---\nicon: ${value}\n---\n# A\n`);
+
+      expect(discoverPages(root)[0]).not.toHaveProperty("icon");
+    },
+  );
+
   it("drops a non-number sidebar_position", () => {
     const root = makeProject();
     writeProjectFile(

@@ -103,3 +103,46 @@ export const LinkClickReportsNavigate: Story = {
     await expect(args.onNavigate).toHaveBeenCalled();
   },
 };
+
+/** Pages that name an icon show it before the label, root and directory
+ * alike; a page without one shows its name alone. The active link's icon
+ * takes the active text colour. */
+export const WithIcons: Story = {
+  args: {
+    tree: {
+      rootPages: [
+        { name: "Home", href: "/", icon: "house" },
+        { name: "Weekly review", href: "/weekly-review", icon: "calendar" },
+      ],
+      directories: [
+        {
+          id: "guides",
+          name: "Guides",
+          pages: [
+            {
+              name: "Getting started",
+              href: "/guides/getting-started",
+              icon: "book-open",
+            },
+            { name: "Reference", href: "/guides/reference" },
+          ],
+        },
+      ],
+    },
+  },
+  decorators: [withMemoryRouter(PATHS, "/guides/getting-started")],
+  play: async ({ canvas }) => {
+    const active = canvas.getByRole("link", { name: "Getting started" });
+    await expect(active).toHaveAttribute("aria-current", "page");
+    await expect(active.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    await expect(
+      canvas.getByRole("link", { name: "Weekly review" }).querySelector("svg"),
+    ).toHaveClass("lucide-calendar");
+    await expect(
+      canvas.getByRole("link", { name: "Reference" }).querySelector("svg"),
+    ).toBeNull();
+  },
+};

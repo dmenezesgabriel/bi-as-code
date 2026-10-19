@@ -1,5 +1,6 @@
 ---
 title: Weekly review
+icon: calendar
 sql:
   orders: data/orders.parquet
 ---
