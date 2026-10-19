@@ -48,7 +48,11 @@
   --card-mode-background: #fafafa; /* neutral-50 */
   --sparkline: #a1a1a1; /* neutral-400 */
   --link: #155dfc; /* blue-600 */
-  --positive: #007a55; /* emerald-700 — a good delta */
+
+  /* A shade darker than emerald-700 (#007a55), whose text measures 4.47:1
+     on its own 10% chip over --card-mode-background, under WCAG 1.4.3's
+     4.5:1; this one measures 4.60. */
+  --positive: #00784f; /* a good delta */
   --negative: #c10007; /* red-700 — a bad delta, a red negative value */
   --info-surface: #eff6ff; /* blue-50 */
   --info-border: #bedbff; /* blue-200 */

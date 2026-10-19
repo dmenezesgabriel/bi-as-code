@@ -28,13 +28,44 @@ export function contrastRatio(firstHex: string, secondHex: string): number {
  * toLinearSrgb("#ff8000"); // → [1, 0.2159…, 0]
  */
 export function toLinearSrgb(hex: string): LinearSrgb {
+  const [red, green, blue] = encodedChannels(hex);
+  return [
+    srgbToLinear(red / 255),
+    srgbToLinear(green / 255),
+    srgbToLinear(blue / 255),
+  ];
+}
+
+/**
+ * The opaque colour `foreground` at `alpha` paints over `background`:
+ * source-over in gamma-encoded sRGB, the space a browser composites a
+ * translucent fill in (https://www.w3.org/TR/compositing-1/#simplealphacompositing).
+ *
+ * @example
+ * blendOver("#007a55", "#fafafa", 0.1); // → "#e1edea"
+ */
+export function blendOver(
+  foreground: string,
+  background: string,
+  alpha: number,
+): string {
+  if (!(alpha >= 0 && alpha <= 1)) {
+    throw new Error(`Expected an alpha from 0 to 1, got ${alpha}`);
+  }
+  const under = encodedChannels(background);
+  const mixed = encodedChannels(foreground).map((channel, index) =>
+    Math.round(channel * alpha + (under[index] ?? 0) * (1 - alpha)),
+  );
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+// The 0–255 channels of a `#rrggbb` colour, as written.
+function encodedChannels(hex: string): readonly [number, number, number] {
   if (!HEX_COLOUR.test(hex)) {
     throw new Error(`Expected a "#rrggbb" colour, got "${hex}"`);
   }
   const packed = parseInt(hex.slice(1), 16);
-  const channel = (shift: number): number =>
-    srgbToLinear(((packed >> shift) & 0xff) / 255);
-  return [channel(16), channel(8), channel(0)];
+  return [(packed >> 16) & 0xff, (packed >> 8) & 0xff, packed & 0xff];
 }
 
 function relativeLuminance(hex: string): number {

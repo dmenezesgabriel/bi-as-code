@@ -24,6 +24,22 @@ describe("brandCss — colours", () => {
     );
   });
 
+  it("sets the delta tones over --positive and --negative per mode", () => {
+    const css = brandCss({
+      colors: {
+        positive: { light: "#047857", dark: "#34d399" },
+        negative: { light: "#b91c1c", dark: "#f87171" },
+      },
+      palette: {},
+      scale: {},
+    });
+
+    expect(css).toBe(
+      ":root,\n.light {\n  --positive: #047857;\n  --negative: #b91c1c;\n}\n" +
+        ".dark {\n  --positive: #34d399;\n  --negative: #f87171;\n}\n",
+    );
+  });
+
   it("leaves a colour the brand omits to styles.css", () => {
     const css = brandCss({
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },

@@ -23,10 +23,12 @@ export interface DeltaDisplayProps {
   readonly className?: string;
 }
 
-// WCAG 1.4.3 needs 4.5:1 for the text, on white and on the 10% chip tint
+// WCAG 1.4.3 needs 4.5:1 for the text, on the page and on the 10% chip tint
 // alike: the light 600/500 tones measure 3.25–4.34:1 on their chips, so
 // --positive/--negative hold the 700 tones, and the chip tints wash the
-// same hue.
+// same hue. A brand tone is checked on its chip at config load
+// (`src/engine/brand-contrast.ts` `CHIP_TINT`), so the `/10` stays equal
+// to that alpha.
 const GOOD_TEXT = "text-positive";
 const BAD_TEXT = "text-negative";
 const GOOD_CHIP = "bg-positive/10 border-positive/25";

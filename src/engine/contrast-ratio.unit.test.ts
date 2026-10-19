@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, toLinearSrgb } from "./contrast-ratio.js";
+import { blendOver, contrastRatio, toLinearSrgb } from "./contrast-ratio.js";
 
 describe("contrastRatio", () => {
   it.each([
@@ -34,5 +34,27 @@ describe("toLinearSrgb", () => {
     const decode = () => toLinearSrgb("#fff");
 
     expect(decode).toThrow('Expected a "#rrggbb" colour, got "#fff"');
+  });
+});
+
+describe("blendOver", () => {
+  it.each([
+    ["#007a55", "#fafafa", 0.1, "#e1edea"],
+    ["#ff6467", "#171717", 0.1, "#2e1f1f"],
+    ["#123456", "#ffffff", 1, "#123456"],
+    ["#123456", "#ffffff", 0, "#ffffff"],
+  ] as const)(
+    "lays %s over %s at alpha %s",
+    (foreground, background, alpha, expected) => {
+      const blended = blendOver(foreground, background, alpha);
+
+      expect(blended).toBe(expected);
+    },
+  );
+
+  it("names the offending alpha and the expected range", () => {
+    const blend = () => blendOver("#000000", "#ffffff", 1.5);
+
+    expect(blend).toThrow("Expected an alpha from 0 to 1, got 1.5");
   });
 });

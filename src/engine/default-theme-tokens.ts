@@ -9,6 +9,10 @@ export type ThemeTokenName =
   | "--foreground"
   | "--muted-foreground"
   | "--ring"
+  | "--card"
+  | "--card-mode-background"
+  | "--positive"
+  | "--negative"
   | "--chart-label-inside"
   | SeriesTokenName;
 
@@ -65,6 +69,10 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
     "--foreground": "#171717",
     "--muted-foreground": "#525252",
     "--ring": "#737373",
+    "--card": "#ffffff",
+    "--card-mode-background": "#fafafa",
+    "--positive": "#00784f",
+    "--negative": "#c10007",
     "--chart-label-inside": "#ffffff",
     "--chart-1": "#0072b2",
     "--chart-2": "#d55e00",
@@ -83,6 +91,10 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
     "--foreground": "#f5f5f5",
     "--muted-foreground": "#a1a1a1",
     "--ring": "#a1a1a1",
+    "--card": "#171717",
+    "--card-mode-background": "#0a0a0a",
+    "--positive": "#00d492",
+    "--negative": "#ff6467",
     "--chart-label-inside": "#0a0a0a",
     "--chart-1": "#0072b2",
     "--chart-2": "#e69f00",
@@ -106,4 +118,6 @@ export const BRAND_TOKENS: Readonly<
 > = {
   primary: "--primary",
   background: "--background",
+  positive: "--positive",
+  negative: "--negative",
 };

@@ -626,12 +626,25 @@ describe("virtual:biac-config", () => {
     );
   });
 
-  it("injects the brand palette over the series tokens of its mode", async () => {
+  it.each([
+    [
+      "the brand palette over the series tokens of its mode",
+      'palette: { light: ["#1e40af"], dark: ["#60a5fa"] }',
+      ":root,\n.light {\n  --chart-1: #1e40af;\n}\n.dark {\n  --chart-1: #60a5fa;\n}\n",
+    ],
+    [
+      "the brand scale as one ramp token per mode",
+      'scale: { light: ["#1e40af"], dark: ["#0a0a0a", "#60a5fa"] }',
+      ":root,\n.light {\n  --chart-scale: #1e40af;\n}\n.dark {\n  --chart-scale: #0a0a0a, #60a5fa;\n}\n",
+    ],
+    [
+      "the brand delta tones over --positive and --negative",
+      'colors: { positive: { light: "#047857", dark: "#34d399" }, negative: { light: "#b91c1c", dark: "#f87171" } }',
+      ":root,\n.light {\n  --positive: #047857;\n  --negative: #b91c1c;\n}\n.dark {\n  --positive: #34d399;\n  --negative: #f87171;\n}\n",
+    ],
+  ])("injects %s", async (_what, brand, css) => {
     const root = makeProject();
-    writeFile(
-      "biac.config.ts",
-      'export default { brand: { palette: { light: ["#1e40af"], dark: ["#60a5fa"] } } };\n',
-    );
+    writeFile("biac.config.ts", `export default { brand: { ${brand} } };\n`);
     const dev = await makeServer(root);
 
     const html = await dev.transformIndexHtml(
@@ -639,27 +652,7 @@ describe("virtual:biac-config", () => {
       "<html><head></head><body></body></html>",
     );
 
-    expect(html).toContain(
-      "<style>:root,\n.light {\n  --chart-1: #1e40af;\n}\n.dark {\n  --chart-1: #60a5fa;\n}\n</style>",
-    );
-  });
-
-  it("injects the brand scale as one ramp token per mode", async () => {
-    const root = makeProject();
-    writeFile(
-      "biac.config.ts",
-      'export default { brand: { scale: { light: ["#1e40af"], dark: ["#0a0a0a", "#60a5fa"] } } };\n',
-    );
-    const dev = await makeServer(root);
-
-    const html = await dev.transformIndexHtml(
-      "/",
-      "<html><head></head><body></body></html>",
-    );
-
-    expect(html).toContain(
-      "<style>:root,\n.light {\n  --chart-scale: #1e40af;\n}\n.dark {\n  --chart-scale: #0a0a0a, #60a5fa;\n}\n</style>",
-    );
+    expect(html).toContain(`<style>${css}</style>`);
   });
 
   it("injects no brand style when the project sets no brand colour", async () => {

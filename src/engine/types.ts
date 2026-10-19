@@ -106,6 +106,10 @@ export interface BrandColours {
   primary?: ModeColour;
   /** `--background` — the page surface and the chart canvas. */
   background?: ModeColour;
+  /** `--positive` — a good delta's text and chip. */
+  positive?: ModeColour;
+  /** `--negative` — a bad delta's text and chip, a red negative value. */
+  negative?: ModeColour;
 }
 
 /** Per mode, a list of `#rrggbb` colours; a mode left out keeps its default. */

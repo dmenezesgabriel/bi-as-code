@@ -36,7 +36,7 @@ export const TOKENS: Record<ColorScheme, Record<string, string>> = {
     "--card-border": "#e5e5e5",
     "--sparkline": "#a1a1a1",
     "--link": "#155dfc",
-    "--positive": "#007a55",
+    "--positive": "#00784f",
     "--negative": "#c10007",
     "--info-surface": "#eff6ff",
     "--info-border": "#bedbff",

@@ -33,6 +33,24 @@ describe("readBrand — accepted shapes", () => {
     });
   });
 
+  it("reads positive and negative per mode, lower-cased", () => {
+    const spec = {
+      brand: {
+        colors: {
+          positive: { light: "#047857", dark: "#34D399" },
+          negative: { light: "#B91C1C", dark: "#F87171" },
+        },
+      },
+    };
+
+    const brand = readBrand(spec);
+
+    expect(brand.colors).toEqual({
+      positive: { light: "#047857", dark: "#34d399" },
+      negative: { light: "#b91c1c", dark: "#f87171" },
+    });
+  });
+
   it("reads a palette per mode, lower-cased", () => {
     const spec = {
       brand: { palette: { light: ["#1E40AF", "#D55E00"], dark: ["#60a5fa"] } },
@@ -95,7 +113,7 @@ describe("readBrand — rejected shapes", () => {
     [
       { brand: { colors: [] } },
       ["brand", "colors"],
-      "brand.colors: expected an object with optional fields { primary, background }, got []",
+      "brand.colors: expected an object with optional fields { primary, background, positive, negative }, got []",
     ],
     [
       { brand: { colors: { primary: "#154886" } } },
@@ -116,6 +134,11 @@ describe("readBrand — rejected shapes", () => {
       { brand: { colors: { primary: { light: "blue", dark: "#60a5fa" } } } },
       ["brand", "colors", "primary", "light"],
       'brand.colors.primary.light: expected a "#rrggbb" colour, got "blue"',
+    ],
+    [
+      { brand: { colors: { negative: { light: "red", dark: "#f87171" } } } },
+      ["brand", "colors", "negative", "light"],
+      'brand.colors.negative.light: expected a "#rrggbb" colour, got "red"',
     ],
     [
       { brand: { palette: ["#1e40af"] } },
@@ -209,6 +232,20 @@ describe("readBrand — rejected shapes", () => {
     expect(read).toThrow(
       expect.objectContaining({
         keyPath: ["brand", "colors", "background", "light"],
+      }),
+    );
+  });
+
+  it("checks a delta tone it reads against its contrast floors", () => {
+    const spec = {
+      brand: { colors: { positive: { light: "#4ade80", dark: "#34d399" } } },
+    };
+
+    const read = () => readBrand(spec);
+
+    expect(read).toThrow(
+      expect.objectContaining({
+        keyPath: ["brand", "colors", "positive", "light"],
       }),
     );
   });

@@ -10,7 +10,7 @@ import type {
 } from "./types.js";
 
 const BRAND_KEYS = ["colors", "palette", "scale"] as const;
-const COLOUR_KEYS = ["primary", "background"] as const;
+const COLOUR_KEYS = ["primary", "background", "positive", "negative"] as const;
 const MODE_KEYS = ["light", "dark"] as const;
 
 // One accepted form: zrender parses hex but not `oklch()` (ADR-0014), and a

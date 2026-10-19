@@ -1,5 +1,5 @@
 import { contrastTooLow, formatKeyPath } from "./biac-config-error.js";
-import { contrastRatio } from "./contrast-ratio.js";
+import { blendOver, contrastRatio } from "./contrast-ratio.js";
 import {
   BRAND_TOKENS,
   DEFAULT_THEME_TOKENS,
@@ -21,9 +21,22 @@ interface ContrastPair {
   readonly second: ThemeTokenName;
   readonly floor: number;
   readonly criterion: string;
+  // Set when `first` is text on a chip of its own colour at this alpha over
+  // `second`: the pair measures `first` against that chip.
+  readonly tint?: number;
 }
 
 const BRAND_KEYS = Object.keys(BRAND_TOKENS) as BrandKey[];
+
+const DELTA_TOKENS: readonly ThemeTokenName[] = ["--positive", "--negative"];
+const DELTA_SURFACES: readonly ThemeTokenName[] = [
+  "--background",
+  "--card",
+  "--card-mode-background",
+];
+// The alpha of a delta chip's fill, `bg-positive/10` in
+// `src/web/src/features/widgets/value/delta-display.tsx`.
+const CHIP_TINT = 0.1;
 
 // Every pair a brand colour paints into, at its WCAG 2.2 floor
 // (https://www.w3.org/TR/WCAG22/): SC 1.4.3 4.5:1 for text — the pressed
@@ -32,8 +45,10 @@ const BRAND_KEYS = Object.keys(BRAND_TOKENS) as BrandKey[];
 // toggle and slider thumb on the page, the slider's filled indicator on its
 // `--secondary` track — and for every chart series, brand or default, on
 // the canvas and under the label drawn inside it (ADR-0016's floors); SC
-// 2.4.13 3:1 for the focus ring on the page. A pair is checked when either
-// side is a brand colour.
+// 2.4.13 3:1 for the focus ring on the page; SC 1.4.3 4.5:1 for a delta's
+// text on every surface it sits on — the page, a widget card, the card-mode
+// page under an inline delta — and on its own chip over each. A pair is
+// checked when either side is a brand colour.
 const CONTRAST_PAIRS: readonly ContrastPair[] = [
   pair("--primary", "--primary-foreground", 4.5, "1.4.3"),
   pair("--primary", "--background", 3, "1.4.11"),
@@ -44,6 +59,12 @@ const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...SERIES_TOKENS.map((series) => pair("--background", series, 3, "1.4.11")),
   ...SERIES_TOKENS.map((series) =>
     pair(series, "--chart-label-inside", 3, "1.4.11"),
+  ),
+  ...DELTA_TOKENS.flatMap((tone) =>
+    DELTA_SURFACES.map((surface) => pair(tone, surface, 4.5, "1.4.3")),
+  ),
+  ...DELTA_TOKENS.flatMap((tone) =>
+    DELTA_SURFACES.map((surface) => chipPair(tone, surface)),
   ),
 ];
 
@@ -100,6 +121,10 @@ function pair(
   return { first, second, floor, criterion };
 }
 
+function chipPair(tone: ThemeTokenName, surface: ThemeTokenName): ContrastPair {
+  return { ...pair(tone, surface, 4.5, "1.4.3"), tint: CHIP_TINT };
+}
+
 // One side of a pair as it lands in a mode: a brand colour carries the
 // path the author wrote it at.
 interface PairSide {
@@ -134,36 +159,68 @@ function measure(
 ): ContrastShortfall | undefined {
   const first = pairSide(checked.first, sides, theme);
   const second = pairSide(checked.second, sides, theme);
-  const [subject, neighbour] = first.brandPath
-    ? [first, second]
-    : [second, first];
-  if (!subject.brandPath) return undefined;
-  const ratio = contrastRatio(subject.colour, neighbour.colour);
+  const brandPath = first.brandPath ?? second.brandPath;
+  if (!brandPath) return undefined;
+  const surface =
+    checked.tint === undefined
+      ? second.colour
+      : blendOver(first.colour, second.colour, checked.tint);
+  const ratio = contrastRatio(first.colour, surface);
   if (ratio >= checked.floor) return undefined;
-  return shortfall(subject.brandPath, subject, neighbour, ratio, checked);
+  return shortfall(brandPath, first, second, ratio, checked);
 }
 
+// The shortfall is located at the brand side, the first when both are; the
+// other side is named by its brand key when the author wrote it too.
 function shortfall(
   keyPath: readonly string[],
-  subject: PairSide,
-  neighbour: PairSide,
+  first: PairSide,
+  second: PairSide,
   ratio: number,
   checked: ContrastPair,
 ): ContrastShortfall {
+  const firstIsSubject = first.brandPath !== undefined;
   return {
     keyPath,
-    colour: subject.colour,
-    against: neighbour.brandPath
-      ? formatKeyPath(neighbour.brandPath)
-      : neighbour.token,
-    againstColour: neighbour.colour,
+    colour: firstIsSubject ? first.colour : second.colour,
+    ...describeNeighbour(first, second, firstIsSubject, checked.tint),
     ratio,
     floor: checked.floor,
     criterion: checked.criterion,
-    fixes: [subject, neighbour].flatMap((side) =>
+    fixes: [first, second].flatMap((side) =>
       side.brandPath ? [formatKeyPath(side.brandPath)] : [],
     ),
   };
+}
+
+// What the subject was measured against. On a chip pair the text is
+// measured against the chip, so a brand surface is named under the text it
+// carries, and brand text against the chip it paints over the surface.
+function describeNeighbour(
+  first: PairSide,
+  second: PairSide,
+  firstIsSubject: boolean,
+  tint: number | undefined,
+): Pick<ContrastShortfall, "against" | "againstColour"> {
+  const neighbour = firstIsSubject ? second : first;
+  if (tint === undefined) {
+    return { against: sideName(neighbour), againstColour: neighbour.colour };
+  }
+  const percent = `${tint * 100}%`;
+  if (!firstIsSubject) {
+    return {
+      against: `${first.token} on its ${percent} chip`,
+      againstColour: first.colour,
+    };
+  }
+  return {
+    against: `its ${percent} chip over ${sideName(second)}`,
+    againstColour: blendOver(first.colour, second.colour, tint),
+  };
+}
+
+function sideName(side: PairSide): string {
+  return side.brandPath ? formatKeyPath(side.brandPath) : side.token;
 }
 
 function pairSide(

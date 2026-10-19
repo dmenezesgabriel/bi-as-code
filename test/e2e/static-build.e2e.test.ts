@@ -93,43 +93,45 @@ describe("biac build", () => {
     expect(html).toContain("--chart-scale: #60a5fa;");
   }, 120_000);
 
-  it("exits 1 naming a brand colour under its contrast floor", () => {
-    const root = makeTempProject("biac-e2e-build-brand-contrast-");
-    writeProjectFile(root, "pages/index.md", "# Branded\n");
-    writeProjectFile(
-      root,
-      "biac.config.ts",
-      'export default {\n  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },\n};\n',
-    );
-
-    const run = spawnSync(process.execPath, [biac, "build", root], {
-      encoding: "utf8",
-    });
-
-    expect(run.status).toBe(1);
-    expect(run.stderr).toContain(
+  it.each([
+    [
+      "a brand colour",
+      "biac-e2e-build-brand-contrast-",
+      '  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },',
       "Invalid biac.config.ts:2:36 — brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
-    );
-  }, 120_000);
-
-  it("exits 1 naming a palette colour under its contrast floor", () => {
-    const root = makeTempProject("biac-e2e-build-brand-palette-");
-    writeProjectFile(root, "pages/index.md", "# Branded\n");
-    writeProjectFile(
-      root,
-      "biac.config.ts",
-      'export default {\n  brand: { palette: { light: ["#45a1bf"] } },\n};\n',
-    );
-
-    const run = spawnSync(process.execPath, [biac, "build", root], {
-      encoding: "utf8",
-    });
-
-    expect(run.status).toBe(1);
-    expect(run.stderr).toContain(
+    ],
+    [
+      "a palette colour",
+      "biac-e2e-build-brand-palette-",
+      '  brand: { palette: { light: ["#45a1bf"] } },',
       "Invalid biac.config.ts:2:31 — brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
-    );
-  }, 120_000);
+    ],
+    [
+      "a delta tone",
+      "biac-e2e-build-brand-positive-",
+      '  brand: { colors: { positive: { light: "#4ade80", dark: "#34d399" } } },',
+      "Invalid biac.config.ts:2:34 — brand.colors.positive.light: #4ade80 against --background #ffffff measures 1.74:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.positive.light",
+    ],
+  ])(
+    "exits 1 naming %s under its contrast floor",
+    (_what, prefix, brandLine, message) => {
+      const root = makeTempProject(prefix);
+      writeProjectFile(root, "pages/index.md", "# Branded\n");
+      writeProjectFile(
+        root,
+        "biac.config.ts",
+        `export default {\n${brandLine}\n};\n`,
+      );
+
+      const run = spawnSync(process.execPath, [biac, "build", root], {
+        encoding: "utf8",
+      });
+
+      expect(run.status).toBe(1);
+      expect(run.stderr).toContain(message);
+    },
+    120_000,
+  );
 
   it("ships a page's front-matter brand in that page's own chunk", () => {
     const root = makeTempProject("biac-e2e-build-page-brand-");

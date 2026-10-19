@@ -192,6 +192,85 @@ describe("checkBrandContrast — each floor", () => {
   });
 });
 
+describe("checkBrandContrast — delta colours", () => {
+  // Dark series everywhere, so a grey background clears the palette floors
+  // and the delta pairs are the ones left to fail.
+  const darkPalette: ModeColourLists = { light: Array(8).fill("#1e3a8a") };
+
+  it("accepts the default positive and negative tones as brand colours", () => {
+    const colours: BrandColours = {
+      positive: { light: "#00784f", dark: "#00d492" },
+      negative: { light: "#c10007", dark: "#ff6467" },
+    };
+
+    const check = () => checkBrandContrast(brandOf(colours));
+
+    expect(check).not.toThrow();
+  });
+
+  it("fails a positive tone under 4.5:1 on the page", () => {
+    const error = failureOf({
+      positive: { light: "#4ade80", dark: "#00d492" },
+    });
+
+    expect(error).toMatchObject({
+      keyPath: ["brand", "colors", "positive", "light"],
+      message:
+        "brand.colors.positive.light: #4ade80 against --background #ffffff measures 1.74:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.positive.light",
+    });
+  });
+
+  it("fails a tone that clears the plain surfaces but not its own 10% chip", () => {
+    const error = failureOf({
+      positive: { light: "#007a55", dark: "#00d492" },
+    });
+
+    expect(error).toMatchObject({
+      message:
+        "brand.colors.positive.light: #007a55 against its 10% chip over --card-mode-background #e1edea measures 4.47:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.positive.light",
+    });
+  });
+
+  it("checks the default positive tone on a brand background", () => {
+    const error = failureOf(
+      { background: { light: "#d0d0d0", dark: "#0a0a0a" } },
+      darkPalette,
+    );
+
+    expect(error).toMatchObject({
+      message:
+        "brand.colors.background.light: #d0d0d0 against --positive #00784f measures 3.58:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.background.light",
+    });
+  });
+
+  it("checks the default positive chip on a brand background", () => {
+    const error = failureOf(
+      { background: { light: "#f0f0f0", dark: "#0a0a0a" } },
+      darkPalette,
+    );
+
+    expect(error).toMatchObject({
+      message:
+        "brand.colors.background.light: #f0f0f0 against --positive on its 10% chip #00784f measures 4.23:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.background.light",
+    });
+  });
+
+  it("names both brand keys when the tone and the background its chip lies on are both the author's", () => {
+    const error = failureOf(
+      {
+        positive: { light: "#00784f", dark: "#00d492" },
+        background: { light: "#f0f0f0", dark: "#0a0a0a" },
+      },
+      darkPalette,
+    );
+
+    expect(error).toMatchObject({
+      message:
+        "brand.colors.positive.light: #00784f against its 10% chip over brand.colors.background.light #d8e4e0 measures 4.23:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.positive.light or brand.colors.background.light",
+    });
+  });
+});
+
 describe("checkBrandContrast — over a project brand", () => {
   it("measures a colour against the project's colour, naming only its own key", () => {
     const project = brandOf({ primary: { light: "#154886", dark: "#60a5fa" } });

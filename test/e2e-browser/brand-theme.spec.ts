@@ -23,6 +23,8 @@ const BRAND = {
   light: {
     primary: "#154886",
     background: "#fffdf5",
+    positive: "#047857",
+    negative: "#b91c1c",
     series1: "#1e40af",
     defaultSeries2: "#d55e00",
     scaleEnd: "#172554",
@@ -30,6 +32,8 @@ const BRAND = {
   dark: {
     primary: "#60a5fa",
     background: "#0a0a0a",
+    positive: "#34d399",
+    negative: "#f87171",
     series1: "#60a5fa",
     defaultSeries2: "#e69f00",
     scaleEnd: "#93c5fd",
@@ -51,6 +55,8 @@ const BRAND_BLOCK = `  brand: {
     colors: {
       primary: { light: "${BRAND.light.primary}", dark: "${BRAND.dark.primary}" },
       background: { light: "${BRAND.light.background}", dark: "${BRAND.dark.background}" },
+      positive: { light: "${BRAND.light.positive}", dark: "${BRAND.dark.positive}" },
+      negative: { light: "${BRAND.light.negative}", dark: "${BRAND.dark.negative}" },
     },
     palette: { light: ["${BRAND.light.series1}"], dark: ["${BRAND.dark.series1}"] },
     scale: { light: ["${BRAND.light.scaleEnd}"], dark: ["${BRAND.dark.scaleEnd}"] },
@@ -104,7 +110,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} mode`, () => {
     test.use({ colorScheme });
 
-    test("brand colours, palette and scale in biac.config.ts restyle the chrome, the checked toggle, the chart surface, series and heatmap ramp", async ({
+    test("brand colours, palette and scale in biac.config.ts restyle the chrome, the checked toggle, the deltas, the chart surface, series and heatmap ramp", async ({
       page,
       biacDev,
     }) => {
@@ -126,6 +132,15 @@ for (const colorScheme of ["light", "dark"] as const) {
 
       expect(await readRootToken(page, "--primary")).toBe(brand.primary);
       expect(await readRootToken(page, "--background")).toBe(brand.background);
+      expect(await readRootToken(page, "--positive")).toBe(brand.positive);
+      expect(await readRootToken(page, "--negative")).toBe(brand.negative);
+      const delta = page.getByText("+9.9%").first();
+      expect(
+        await paintedRgb(
+          page,
+          await delta.evaluate((element) => getComputedStyle(element).color),
+        ),
+      ).toEqual(await paintedRgb(page, brand.positive));
       const toggle = page.getByRole("switch", { name: "Large orders only" });
       await toggle.click();
       await expect(toggle).toBeChecked();
@@ -235,50 +250,45 @@ async function expectLocatedThenRecovered(
   await expect(overlay).toHaveCount(0);
 }
 
-test("a brand colour under its contrast floor is located in the overlay, and fixing it brings the page back", async ({
-  page,
-  biacDev,
-}) => {
-  await expectLocatedThenRecovered(
-    page,
-    biacDev,
-    '  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },\n',
-    {
-      message:
-        "brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
-      location: /biac\.config\.ts:7:36$/,
-    },
-  );
-});
+const OVERLAY_FAILURES = [
+  {
+    what: "a brand colour under its contrast floor",
+    brandLine:
+      '  brand: { colors: { background: { light: "#fdf6e3", dark: "#0a0a0a" } } },\n',
+    message:
+      "brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
+    location: /biac\.config\.ts:7:36$/,
+  },
+  {
+    what: "a delta tone under its contrast floor",
+    brandLine:
+      '  brand: { colors: { positive: { light: "#4ade80", dark: "#34d399" } } },\n',
+    message:
+      "brand.colors.positive.light: #4ade80 against --background #ffffff measures 1.74:1, expected at least 4.5:1 (WCAG 2.2 SC 1.4.3) — change brand.colors.positive.light",
+    location: /biac\.config\.ts:7:34$/,
+  },
+  {
+    what: "a palette colour under its contrast floor",
+    brandLine:
+      '  brand: { palette: { light: ["#45a1bf"], dark: ["#60a5fa"] } },\n',
+    message:
+      "brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
+    location: /biac\.config\.ts:7:31$/,
+  },
+  {
+    what: "a scale with no colours",
+    brandLine: "  brand: { scale: { light: [] } },\n",
+    message:
+      'brand.scale.light: expected an array of 1 or more "#rrggbb" colours, got []',
+    location: /biac\.config\.ts:7:21$/,
+  },
+] as const;
 
-test("a palette colour under its contrast floor is located in the overlay, and fixing it brings the page back", async ({
-  page,
-  biacDev,
-}) => {
-  await expectLocatedThenRecovered(
+for (const failure of OVERLAY_FAILURES) {
+  test(`${failure.what} is located in the overlay, and fixing it brings the page back`, async ({
     page,
     biacDev,
-    '  brand: { palette: { light: ["#45a1bf"], dark: ["#60a5fa"] } },\n',
-    {
-      message:
-        "brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
-      location: /biac\.config\.ts:7:31$/,
-    },
-  );
-});
-
-test("a scale with no colours is located in the overlay, and fixing it brings the page back", async ({
-  page,
-  biacDev,
-}) => {
-  await expectLocatedThenRecovered(
-    page,
-    biacDev,
-    "  brand: { scale: { light: [] } },\n",
-    {
-      message:
-        'brand.scale.light: expected an array of 1 or more "#rrggbb" colours, got []',
-      location: /biac\.config\.ts:7:21$/,
-    },
-  );
-});
+  }) => {
+    await expectLocatedThenRecovered(page, biacDev, failure.brandLine, failure);
+  });
+}
