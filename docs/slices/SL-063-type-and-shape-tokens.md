@@ -18,7 +18,7 @@ An author writes `brand: { fonts: { body, heading, code }, fontSize, radius }` a
 
 ## Demo
 
-1. Cold start: `bin/biac dev` at 1440×900. On `/weekly-review`, `eval` shows the baseline measured 2026-10-19: root `font-size` `16px`; `body` and `main h1` `font-family` `ui-sans-serif, system-ui, sans-serif, …` (Tailwind's `--font-sans`); a `pre` `ui-monospace, SFMono-Regular, …` at `14px`; `--radius` `0.5rem` and a select trigger `border-radius` `6px`; the `+9.9%` delta `rgb(0, 122, 85)` (`--positive` `#007a55`); `--field` `#ffffff` / `#171717`, `--sidebar` `#fafafa` / `#171717`, `--positive` `#00d492` and `--negative` `#ff6467` in dark. A paragraph's `max-width` is `640px`. Chart axis labels draw in ECharts' own `sans-serif`, not the page's stack (visible in a screenshot of `/orders-dashboard`).
+1. Cold start: `bin/biac dev` at 1440×900. On `/weekly-review`, `eval` shows the baseline measured 2026-10-19: root `font-size` `16px`; `body` and `main h1` `font-family` `ui-sans-serif, system-ui, sans-serif, …` (Tailwind's `--font-sans`); a `pre` `ui-monospace, SFMono-Regular, …` at `14px`; `--radius` `0.5rem` and a select trigger `border-radius` `6px`; the `+9.9%` delta `rgb(0, 120, 79)` (`--positive` `#00784f`); `--field` `#ffffff` / `#171717`, `--sidebar` `#fafafa` / `#171717`, `--positive` `#00d492` and `--negative` `#ff6467` in dark. A paragraph's `max-width` is `640px`. Chart axis labels draw in ECharts' own `sans-serif`, not the page's stack (visible in a screenshot of `/orders-dashboard`).
 2. Add `brand: { fonts: { body: "serif", heading: "sans-serif", code: "mono" } }` to `biac.config.ts` and save. The tab reloads by itself. Body text and the chart axis labels are serif; headings stay sans; a SQL fence stays mono.
 3. Add `fontSize: "18px"`. Root `font-size` is `18px`, a paragraph's `max-width` is `720px` (still 40rem = 70ch), and the select trigger's radius grows with it. Browser zoom to 200% still reflows (WCAG 2.2 SC 1.4.4).
 4. Add `radius: "0"`. Every input, card and chip corner is square; `--radius-sm` does not go negative.
@@ -125,7 +125,7 @@ Overall: **present but unreachable** for radius and the four colours, **absent**
 Default ratios below were measured 2026-10-19 with `src/engine/contrast-ratio.ts` `contrastRatio` on the `src/web/src/styles.css` values.
 
 - **O1 — contrast pairs for the four colours.** Proposed, each in both modes:
-  - `--positive`, `--negative` against `--background`, `--card` and `--card-mode-background` at 4.5:1 (SC 1.4.3, delta text). Defaults: light 5.14–6.42, dark 6.21–10.21. Also against their 10% chip tint composited over `--background` (`src/web/src/features/widgets/value/delta-display.tsx` `GOOD_CHIP`), which needs alpha compositing in `src/engine/contrast-ratio.ts` — settle whether that pair is checked or the chip tint is dropped from the check with a stated reason.
+  - **Settled (T1):** `--positive`, `--negative` against `--background`, `--card` and `--card-mode-background` at 4.5:1 (SC 1.4.3), and against their own 10% chip over each surface (`src/engine/contrast-ratio.ts` `blendOver`, `src/engine/brand-contrast.ts` `CHIP_TINT`). The default light `--positive` `#007a55` measured 4.47:1 on its chip over `--card-mode-background`, so it became `#00784f` (4.60).
   - `--field` against `--foreground` (light 17.93, dark 16.44) and `--muted-foreground-faded` (placeholder, light 4.74) at 4.5:1. **Not** `--input` at 3:1: the defaults measure 1.48 light and 1.73 dark, so SC 1.4.11 on the field boundary would reject our own defaults; record why (the label and placeholder identify the control) or raise `--input` in a separate change.
   - `--sidebar` against `--foreground` (17.18 / 16.44), `--sidebar-foreground` (9.93 / 12.09) and `--muted-foreground` (7.49 / 6.94) at 4.5:1, and against `--ring` at 3:1 (SC 2.4.13, sidebar links draw their ring inside).
   - Each adds names to `ThemeTokenName` and `DEFAULT_THEME_TOKENS`, whose drift test keeps them equal to `src/web/src/styles.css`. Settle in T1/T2 by grepping every utility on `bg-field`/`bg-sidebar`/`text-positive`/`text-negative`.
@@ -149,7 +149,7 @@ Each decision is recorded by amending ADR-0018 (or a new ADR if fonts and size w
 
 ## Tasks
 
-- [ ] T1 — `brand.colors.positive` and `negative`:
+- [x] T1 — `brand.colors.positive` and `negative`:
   - Validated as `primary` is; O1 pairs added; emitted per mode.
   - Measure on `/weekly-review` in both modes: computed `--positive`/`--negative`, the `+9.9%` delta colour, the chip background. A failing colour gives the overlay text and a `biac build` exit code.
 - [ ] T2 — `brand.colors.field` and `sidebar`:
