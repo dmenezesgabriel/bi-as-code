@@ -107,7 +107,7 @@ Our implementation is **absent**. Nothing in the ledger claims any part of it sh
 
 ### Catalog parity across engine and SPA
 
-The SPA never imports the engine — shared constants are restated (`src/web/src/features/pages/data-updates.ts` restates `DATA_UPDATE_EVENT` from `src/engine/data-update.ts`). So the engine owns `PAGE_ICON_NAMES` (new `src/engine/page-icon-names.ts`); the wrap site (new `src/web/src/components/page-icon.tsx`) restates it as a `name → Lucide component` map; a test under `test/integration/` imports both and pins the two name sets equal, so neither side can gain a name the other lacks.
+The SPA never imports the engine — shared constants are restated (`src/web/src/features/pages/data-updates.ts` restates `DATA_UPDATE_EVENT` from `src/engine/data-update.ts`). So the engine owns `PAGE_ICON_NAMES` (`src/engine/page-icon-frontmatter.ts`, beside `assertPageIcon`; exported in T2); the wrap site (new `src/web/src/components/page-icon.tsx`) restates it as a `name → Lucide component` map; a test under `test/integration/` imports both and pins the two name sets equal, so neither side can gain a name the other lacks.
 
 ## Deviations
 
@@ -120,16 +120,16 @@ None. O1 (which icons) settled by the owner 2026-10-19: the 56-name curated cata
 
 ## Surface
 
-| Layer  | Files                                                                                                                                                                                          |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| engine | `src/engine/page-icon-names.ts` (new), `src/engine/compile-page.ts`, `src/engine/types.ts`, `src/engine/discover-pages.ts`, `src/engine/nav-tree.ts`, `src/engine/manifest-module.ts`          |
-| client | `src/web/src/virtual-biac-pages.d.ts`, `src/web/src/features/pages/types.ts`                                                                                                                   |
-| ui     | `src/web/src/components/page-icon.tsx` (new) + `page-icon.stories.tsx`, `src/web/src/features/chrome/sidebar-nav.tsx` + `sidebar-nav.stories.tsx`, example pages under `pages/`                |
-| tests  | colocated `*.unit.test.ts(x)`, `test/integration/` (parity, build failure), `test/e2e-browser/page-chrome.spec.ts`, `test/integration/features/` cucumber if a page-chrome scenario covers nav |
+| Layer  | Files                                                                                                                                                                                                                                                                             |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| engine | `src/engine/page-icon-frontmatter.ts` (new), `src/engine/closest-key.ts` (`didYouMean`), `src/engine/invalid-setting.ts` (`hint`), `src/engine/compile-page.ts`, `src/engine/types.ts`, `src/engine/discover-pages.ts`, `src/engine/nav-tree.ts`, `src/engine/manifest-module.ts` |
+| client | `src/web/src/virtual-biac-pages.d.ts`, `src/web/src/features/pages/types.ts`                                                                                                                                                                                                      |
+| ui     | `src/web/src/components/page-icon.tsx` (new) + `page-icon.stories.tsx`, `src/web/src/features/chrome/sidebar-nav.tsx` + `sidebar-nav.stories.tsx`, example pages under `pages/`                                                                                                   |
+| tests  | colocated `*.unit.test.ts(x)`, `test/integration/` (parity, build failure), `test/e2e-browser/page-chrome.spec.ts`, `test/integration/features/` cucumber if a page-chrome scenario covers nav                                                                                    |
 
 ## Tasks
 
-- [ ] T1 — An unknown `icon` is a located error: `PAGE_ICON_NAMES` and its check in `compilePage` (non-string, unknown name with "did you mean", `null`/`""` accepted); unit tests, `biac build` fails in an integration test, e2e-browser overlay + recovery on `/weekly-review`. playwright-cli: overlay text, recovery, console.
+- [x] T1 — An unknown `icon` is a located error: `PAGE_ICON_NAMES` and its check in `compilePage` (non-string, unknown name with "did you mean", `null`/`""` accepted); unit tests, `biac build` fails in an integration test, e2e-browser overlay + recovery on `/weekly-review`. playwright-cli: overlay text, recovery, console.
 - [ ] T2 — The icon shows in the sidebar: `navFields` → `PageManifestEntry.icon` → `NavPage.icon` → manifest → web types → `PageIcon` (with stories) → `NavLink` (stories: icon, no icon, active); parity test; icons on the example pages; e2e-browser: icon count, `aria-hidden`, accessible names, live update on edit. playwright-cli: compare against the Baseline — svg count, row height, 375 px drawer, console.
 
 ## Out of scope
