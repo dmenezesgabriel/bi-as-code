@@ -11,7 +11,7 @@ import type {
   ModeColourLists,
 } from "./types.js";
 
-const BRAND_KEYS = ["colors", "palette", "scale", "fonts"] as const;
+const BRAND_KEYS = ["colors", "palette", "scale", "fonts", "fontSize"] as const;
 const COLOUR_KEYS = [
   "primary",
   "background",
@@ -23,6 +23,10 @@ const COLOUR_KEYS = [
 const MODE_KEYS = ["light", "dark"] as const;
 const FONT_KEYS = ["body", "heading", "code"] as const;
 const FONT_STACKS: readonly FontStack[] = ["sans-serif", "serif", "mono"];
+// Below 12px body text stops being readable and above 24px a 1440px screen
+// holds little more than a heading; the references accept any positive size.
+const FONT_SIZE_PX = { min: 12, max: 24 } as const;
+const WHOLE_PX = /^(\d+)px$/;
 
 // One accepted form: zrender parses hex but not `oklch()` (ADR-0014), and a
 // single form keeps the contrast maths exact.
@@ -34,6 +38,7 @@ const MODE_COLOUR_SHAPE = `an object { ${MODE_KEYS.join(", ")} } of "#rrggbb" co
 const MODE_LISTS_SHAPE = `an object with optional fields { ${MODE_KEYS.join(", ")} }`;
 const FONTS_SHAPE = `an object with optional fields { ${FONT_KEYS.join(", ")} }`;
 const FONT_STACK_SHAPE = `one of ${FONT_STACKS.map((stack) => JSON.stringify(stack)).join(", ")}`;
+const FONT_SIZE_SHAPE = `a "<n>px" size, n a whole number from ${FONT_SIZE_PX.min} to ${FONT_SIZE_PX.max}`;
 // Past eight series ECharts repeats the list, and every extra colour lowers
 // the separation floor the palette is chosen against (ADR-0016).
 const PALETTE_LIST: ColourListLimit = {
@@ -67,12 +72,13 @@ export const NO_BRAND: BrandTheme = {
 };
 
 /**
- * Reads `biac.config.ts`'s `brand` block, lower-casing each colour and
- * taking each font as a system stack's name, and checks every colour and
- * palette entry against its contrast floor on `theme` — the defaults, or a
- * page's project brand — leaving the scale unchecked, since a heatmap cell's
- * value is in its tooltip and label. A bad shape, an unknown stack or a
- * colour under its floor throws a `ConfigFieldError` at its key path.
+ * Reads `biac.config.ts`'s `brand` block, lower-casing each colour, taking
+ * each font as a system stack's name and the root font size as whole px,
+ * and checks every colour and palette entry against its contrast floor on
+ * `theme` — the defaults, or a page's project brand — leaving the scale
+ * unchecked, since a heatmap cell's value is in its tooltip and label. A bad
+ * shape, an unknown stack, a size out of range or a colour under its floor
+ * throws a `ConfigFieldError` at its key path.
  *
  * @example
  * readBrand({ brand: { colors: { primary: { light: "#154886", dark: "#60A5FA" } } } });
@@ -92,6 +98,7 @@ export function readBrand(
     palette: readModeLists(spec.brand.palette, "palette", PALETTE_LIST),
     scale: readModeLists(spec.brand.scale, "scale", SCALE_LIST),
     fonts: readFonts(spec.brand.fonts),
+    ...readFontSize(spec.brand.fontSize),
   };
   checkBrandContrast(brand, theme);
   return brand;
@@ -131,6 +138,16 @@ function readFontStack(value: unknown, keyPath: string[]): FontStack {
   const stack = FONT_STACKS.find((name) => name === value);
   if (stack !== undefined) return stack;
   throw invalid(formatKeyPath(keyPath), keyPath, FONT_STACK_SHAPE, value);
+}
+
+// Spread into the brand, so a size the author leaves out is no key at all.
+function readFontSize(value: unknown): Pick<BrandTheme, "fontSize"> {
+  if (value === undefined) return {};
+  const digits = typeof value === "string" ? WHOLE_PX.exec(value)?.[1] : null;
+  const px = Number(digits ?? NaN);
+  if (px >= FONT_SIZE_PX.min && px <= FONT_SIZE_PX.max) return { fontSize: px };
+  const keyPath = ["brand", "fontSize"];
+  throw invalid(formatKeyPath(keyPath), keyPath, FONT_SIZE_SHAPE, value);
 }
 
 function readModeLists(

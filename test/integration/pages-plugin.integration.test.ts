@@ -652,6 +652,11 @@ describe("virtual:biac-config", () => {
       'fonts: { body: "serif", heading: "sans-serif", code: "mono" }',
       ":root {\n  --body-font: var(--font-stack-serif);\n  --heading-font: var(--font-stack-sans-serif);\n  --code-font: var(--font-stack-mono);\n}\n",
     ],
+    [
+      "the brand root font size as a percentage of the browser's default",
+      'fontSize: "18px"',
+      ":root {\n  font-size: 112.5%;\n}\n",
+    ],
   ])("injects %s", async (_what, brand, css) => {
     const root = makeProject();
     writeFile("biac.config.ts", `export default { brand: { ${brand} } };\n`);

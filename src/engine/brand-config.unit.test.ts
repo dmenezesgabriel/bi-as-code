@@ -130,6 +130,22 @@ describe("readBrand — accepted shapes", () => {
     expect(brand.fonts).toEqual({ body: "serif" });
   });
 
+  it.each([
+    ["12px", 12],
+    ["18px", 18],
+    ["24px", 24],
+  ])("reads a root font size of %s as %i px", (fontSize, px) => {
+    const brand = readBrand({ brand: { fontSize } });
+
+    expect(brand.fontSize).toBe(px);
+  });
+
+  it("leaves the root font size to the browser when the author omits it", () => {
+    const brand = readBrand({ brand: { fonts: { body: "serif" } } });
+
+    expect(brand).not.toHaveProperty("fontSize");
+  });
+
   it("lower-cases a hex written in capitals", () => {
     const spec = {
       brand: { colors: { primary: { light: "#15488A", dark: "#60A5FA" } } },
@@ -146,7 +162,7 @@ describe("readBrand — rejected shapes", () => {
     [
       { brand: "blue" },
       ["brand"],
-      'brand: expected an object with optional fields { colors, palette, scale, fonts }, got "blue"',
+      'brand: expected an object with optional fields { colors, palette, scale, fonts, fontSize }, got "blue"',
     ],
     [
       { brand: { colors: [] } },
@@ -247,6 +263,36 @@ describe("readBrand — rejected shapes", () => {
       ["brand", "fonts", "heading"],
       'brand.fonts.heading: expected one of "sans-serif", "serif", "mono", got 700',
     ],
+    [
+      { brand: { fontSize: "11px" } },
+      ["brand", "fontSize"],
+      'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got "11px"',
+    ],
+    [
+      { brand: { fontSize: "25px" } },
+      ["brand", "fontSize"],
+      'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got "25px"',
+    ],
+    [
+      { brand: { fontSize: "18" } },
+      ["brand", "fontSize"],
+      'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got "18"',
+    ],
+    [
+      { brand: { fontSize: "1.125rem" } },
+      ["brand", "fontSize"],
+      'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got "1.125rem"',
+    ],
+    [
+      { brand: { fontSize: "18.5px" } },
+      ["brand", "fontSize"],
+      'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got "18.5px"',
+    ],
+    [
+      { brand: { fontSize: 18 } },
+      ["brand", "fontSize"],
+      'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got 18',
+    ],
   ])(
     "names the field and the expected shape for %j",
     (spec, keyPath, message) => {
@@ -259,7 +305,7 @@ describe("readBrand — rejected shapes", () => {
   it.each([
     [
       { brand: { ramp: {} } },
-      "brand.ramp: unknown key, expected one of colors, palette, scale, fonts",
+      "brand.ramp: unknown key, expected one of colors, palette, scale, fonts, fontSize",
     ],
     [
       { brand: { colors: { accent: PASSING_PRIMARY } } },

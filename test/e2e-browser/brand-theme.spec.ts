@@ -67,6 +67,7 @@ const BRAND_BLOCK = `  brand: {
     palette: { light: ["${BRAND.light.series1}"], dark: ["${BRAND.dark.series1}"] },
     scale: { light: ["${BRAND.light.scaleEnd}"], dark: ["${BRAND.dark.scaleEnd}"] },
     fonts: { body: "serif", heading: "sans-serif", code: "mono" },
+    fontSize: "18px",
   },
 `;
 
@@ -209,6 +210,18 @@ for (const colorScheme of ["light", "dark"] as const) {
       expect((await optionAt(page, 0)).textStyle?.fontFamily).toMatch(
         SERIF_STACK,
       );
+      // 18px scales every rem: the 40rem reading measure stays 70ch.
+      expect(
+        await page.evaluate(
+          () => getComputedStyle(document.documentElement).fontSize,
+        ),
+      ).toBe("18px");
+      expect(
+        await page
+          .locator("main p")
+          .first()
+          .evaluate((element) => getComputedStyle(element).maxWidth),
+      ).toBe("720px");
       expect(errors).toEqual([]);
     });
     test("pages/crossfilter-scale.md's front-matter brand applies to that page only, across client navigation both ways", async ({
@@ -329,6 +342,13 @@ const OVERLAY_FAILURES = [
     message:
       'brand.fonts.body: expected one of "sans-serif", "serif", "mono", got "comic"',
     location: /biac\.config\.ts:7:21$/,
+  },
+  {
+    what: "a root font size out of range",
+    brandLine: '  brand: { fontSize: "10px" },\n',
+    message:
+      'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got "10px"',
+    location: /biac\.config\.ts:7:12$/,
   },
   {
     what: "a scale with no colours",

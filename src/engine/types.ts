@@ -164,6 +164,13 @@ export interface BrandTheme {
    */
   scale: ModeColourLists;
   fonts: BrandFonts;
+  /**
+   * The root font size in px, 12–24, written as a percentage of the
+   * browser's default so a reader's own size still scales it. Every rem —
+   * text, spacing, the reading measure, corner radii — scales with it.
+   * Left out, the browser's default stands.
+   */
+  fontSize?: number;
 }
 
 /** Chrome/navigation settings from `biac.config.ts`'s optional `nav` block. */

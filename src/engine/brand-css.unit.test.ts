@@ -183,3 +183,39 @@ describe("brandCss — fonts", () => {
     );
   });
 });
+
+describe("brandCss — root font size", () => {
+  it.each([
+    [18, "112.5%"],
+    [12, "75%"],
+    [24, "150%"],
+  ])(
+    "sets %i px as %s of the browser's default size on :root",
+    (fontSize, percent) => {
+      const css = brandCss({
+        colors: {},
+        palette: {},
+        scale: {},
+        fonts: {},
+        fontSize,
+      });
+
+      expect(css).toBe(`:root {\n  font-size: ${percent};\n}\n`);
+    },
+  );
+
+  it("puts the root font size in the font rule, after the font tokens", () => {
+    const css = brandCss({
+      colors: {},
+      palette: {},
+      scale: {},
+      fonts: { body: "serif" },
+      fontSize: 18,
+    });
+
+    expect(css).toBe(
+      ":root {\n  --body-font: var(--font-stack-serif);\n" +
+        "  font-size: 112.5%;\n}\n",
+    );
+  });
+});
