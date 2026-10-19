@@ -25,6 +25,11 @@ export function readChartTokens(read: ReadToken): ChartTokens {
     series: Array.from({ length: SERIES_TOKEN_COUNT }, (_, i) =>
       token(`--chart-${i + 1}`),
     ),
+    // One list-valued token, as Tailwind's `--tw-gradient-stops` carries a
+    // gradient: a ramp has no fixed length to number tokens by.
+    scale: token("--chart-scale")
+      .split(",")
+      .map((stop) => stop.trim()),
   };
 }
 

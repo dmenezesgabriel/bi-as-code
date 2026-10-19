@@ -81,6 +81,13 @@
   --chart-7: #4433aa; /* indigo */
   --chart-8: #bb55ff; /* lavender */
 
+  /* Heatmap ramp, per mode: one comma-separated list, the way Tailwind's
+     --tw-gradient-stops carries a gradient. One stop ramps from
+     --background to it. A sequential scale of its own, as evidence's
+     colorScales and streamlit's chartSequentialColors keep theirs: a brand
+     palette does not move it. */
+  --chart-scale: #0072b2; /* --chart-1's Okabe-Ito blue */
+
   /* Syntax colours for shiki's css-variables theme, one set per mode like
      every other colour token (ADR-0014). The hues are GitHub Primer's, taken
      in the variants that read at 4.5:1 (WCAG 1.4.3) on the `--muted` fence
@@ -171,6 +178,7 @@
   --chart-6: #d55e00; /* Okabe-Ito vermillion */
   --chart-7: #f0e442; /* Okabe-Ito yellow */
   --chart-8: #8800ff; /* violet */
+  --chart-scale: #0072b2; /* --chart-1's Okabe-Ito blue */
   --shiki-background: var(--muted);
   --shiki-foreground: #e6edf3;
   --shiki-token-comment: #8b949e;

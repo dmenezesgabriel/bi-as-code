@@ -150,6 +150,22 @@ Then("the HTML shell sets the first series colour in the body", async () => {
   );
 });
 
+When("I set a brand scale in biac.config.ts", () => {
+  assert.ok(projectRoot, "project must exist");
+  writeFileSync(
+    join(projectRoot, "biac.config.ts"),
+    'export default { brand: { scale: { light: ["#1e40af"], dark: ["#0a0a0a", "#60a5fa"] } } };\n',
+  );
+});
+
+Then("the HTML shell sets the heatmap ramp in the body", async () => {
+  await eventually(async () =>
+    /<body>\s*<style>[^<]*\.dark \{\n {2}--chart-scale: #0a0a0a, #60a5fa;/.test(
+      await getOk(server!.url),
+    ),
+  );
+});
+
 When(
   "I set a brand background under its contrast floor in biac.config.ts",
   () => {

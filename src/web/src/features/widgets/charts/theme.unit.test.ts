@@ -44,6 +44,7 @@ const LIGHT_SHEET: Record<string, string> = {
   ...Object.fromEntries(
     LIGHT_CHART_TOKENS.series.map((color, i) => [`--chart-${i + 1}`, color]),
   ),
+  "--chart-scale": "#0072b2",
 };
 
 const TOKEN_SETS: readonly [string, ChartTokens][] = [
@@ -78,6 +79,25 @@ describe("readChartTokens", () => {
     const tokens = readChartTokens(sheet.read);
 
     expect(tokens.border).toBe("#e5e5e5");
+  });
+
+  it("splits the scale token's comma-separated list into trimmed stops", () => {
+    const sheet = new FakeTokenSheet({
+      ...LIGHT_SHEET,
+      "--chart-scale": " #fef3c7,#1e40af ,  #172554",
+    });
+
+    const tokens = readChartTokens(sheet.read);
+
+    expect(tokens.scale).toEqual(["#fef3c7", "#1e40af", "#172554"]);
+  });
+
+  it("names the scale token when a stylesheet leaves it undefined", () => {
+    const sheet = new FakeTokenSheet({ ...LIGHT_SHEET, "--chart-scale": "" });
+
+    const read = () => readChartTokens(sheet.read);
+
+    expect(read).toThrow(/--chart-scale/);
   });
 });
 

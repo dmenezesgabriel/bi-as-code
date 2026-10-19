@@ -162,20 +162,20 @@ function seriesOption(
 }
 
 /**
- * The `inRange` ramp: unset or empty → surface-to-first-accent (the "no
- * data" end blends into the page); one color → `[surface, color]`, reading
- * as a gradient anchored on the surface rather than a flat fill; two or
- * more → verbatim. Evidence's `getBackgroundAdjustedColorScale` semantics,
- * resolved against the mode's chart tokens.
+ * The `inRange` ramp: the widget's `colorScale`, or when that is unset or
+ * empty the theme's `--chart-scale` (by default one blue stop, so the
+ * "no data" end blends into the page). One color → `[surface, color]`,
+ * reading as a gradient anchored on the surface rather than a flat fill;
+ * two or more → verbatim. Evidence's `getBackgroundAdjustedColorScale`
+ * semantics, resolved against the mode's chart tokens.
  */
 function colorRamp(
   scale: string | readonly string[] | undefined,
   tokens: ChartTokens,
 ): readonly string[] {
-  const colors = scale === undefined ? [] : [scale].flat();
-  const surface = tokens.background;
-  if (colors.length === 0) return [surface, tokens.series[0]!];
-  if (colors.length === 1) return [surface, colors[0]!];
+  const own = scale === undefined ? [] : [scale].flat();
+  const colors = own.length === 0 ? tokens.scale : own;
+  if (colors.length === 1) return [tokens.background, colors[0]!];
   return colors;
 }
 

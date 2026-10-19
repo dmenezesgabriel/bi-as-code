@@ -41,7 +41,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {}, palette: {} },
+      brand: { colors: {}, palette: {}, scale: {} },
     });
   });
 
@@ -62,7 +62,7 @@ describe("missing or empty config", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {}, palette: {} },
+      brand: { colors: {}, palette: {}, scale: {} },
     });
   });
 });
@@ -112,7 +112,7 @@ describe("field handling", () => {
         table_of_contents_label: "On this page",
       },
       directories: {},
-      brand: { colors: {}, palette: {} },
+      brand: { colors: {}, palette: {}, scale: {} },
     });
   });
 
@@ -198,6 +198,7 @@ describe("brand", () => {
     expect(config.brand).toEqual({
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
       palette: {},
+      scale: {},
     });
   });
 
@@ -214,6 +215,40 @@ describe("brand", () => {
       light: ["#1e40af"],
       dark: ["#60a5fa"],
     });
+  });
+
+  it("reads a brand scale", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default { brand: { scale: { light: ["#1E40AF"], dark: ["#0a0a0a", "#60a5fa"] } } };\n',
+    );
+
+    const config = await loadBiacConfig(root);
+
+    expect(config.brand.scale).toEqual({
+      light: ["#1e40af"],
+      dark: ["#0a0a0a", "#60a5fa"],
+    });
+  });
+
+  it("throws at the entry's line and column for a scale colour that is not hex", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      [
+        "export default {",
+        "  brand: {",
+        '    scale: { light: ["#1e40af", "navy"] },',
+        "  },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      'Invalid biac.config.ts:3:33 — brand.scale.light[1]: expected a "#rrggbb" colour, got "navy"',
+    );
   });
 
   it("throws at the entry's line and column for a palette colour under its contrast floor", async () => {

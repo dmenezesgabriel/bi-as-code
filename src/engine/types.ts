@@ -108,12 +108,8 @@ export interface BrandColours {
   background?: ModeColour;
 }
 
-/**
- * `brand.palette`: per mode, 1–8 series colours laid over `--chart-1`…
- * `--chart-8` by position — the defaults fill the rest, and a mode left out
- * keeps all eight.
- */
-export type BrandPalette = Partial<Record<ColourMode, readonly string[]>>;
+/** Per mode, a list of `#rrggbb` colours; a mode left out keeps its default. */
+export type ModeColourLists = Partial<Record<ColourMode, readonly string[]>>;
 
 /** A brand colour measured under its contrast floor against a neighbour. */
 export interface ContrastShortfall {
@@ -134,7 +130,18 @@ export interface ContrastShortfall {
 /** `biac.config.ts`'s optional `brand` block. */
 export interface BrandTheme {
   colors: BrandColours;
-  palette: BrandPalette;
+  /**
+   * Per mode, 1–8 series colours laid over `--chart-1`…`--chart-8` by
+   * position — the defaults fill the rest, and a mode left out keeps all
+   * eight.
+   */
+  palette: ModeColourLists;
+  /**
+   * Per mode, the heatmap ramp a widget without its own `colorScale` draws —
+   * one colour ramps from the page surface to it, two or more are the ramp
+   * as written. A mode left out keeps the default ramp.
+   */
+  scale: ModeColourLists;
 }
 
 /** Chrome/navigation settings from `biac.config.ts`'s optional `nav` block. */
@@ -160,7 +167,7 @@ export interface BiacConfig {
   layout: Required<PageLayout>;
   /** Sidebar folder titles. Engine-only — they reach the browser inside the manifest's `navTree`. */
   directories: DirectoryTitles;
-  /** Brand colours and palette, contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
+  /** Brand colours, palette and heatmap scale; colours and palette contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
   brand: BrandTheme;
 }
 

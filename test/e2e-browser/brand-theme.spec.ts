@@ -17,19 +17,21 @@ import {
 } from "./echart-hosts.js";
 
 // `defaultSeries2` is styles.css's `--chart-2`: a one-colour palette
-// replaces series 1 only.
+// replaces series 1 only. A one-colour scale ramps from the background.
 const BRAND = {
   light: {
     primary: "#154886",
     background: "#fffdf5",
     series1: "#1e40af",
     defaultSeries2: "#d55e00",
+    scaleEnd: "#172554",
   },
   dark: {
     primary: "#60a5fa",
     background: "#0a0a0a",
     series1: "#60a5fa",
     defaultSeries2: "#e69f00",
+    scaleEnd: "#93c5fd",
   },
 } as const;
 
@@ -39,6 +41,7 @@ const BRAND_BLOCK = `  brand: {
       background: { light: "${BRAND.light.background}", dark: "${BRAND.dark.background}" },
     },
     palette: { light: ["${BRAND.light.series1}"], dark: ["${BRAND.dark.series1}"] },
+    scale: { light: ["${BRAND.light.scaleEnd}"], dark: ["${BRAND.dark.scaleEnd}"] },
   },
 `;
 
@@ -61,12 +64,12 @@ async function rewriteConfig(
   });
 }
 
-// The first colour of the weekly-review heatmap's ramp: the canvas surface
-// the chart theme read from `--background`.
-async function heatmapRampStart(page: Page): Promise<string | undefined> {
+// The weekly-review heatmap's ramp: it starts on the canvas surface the
+// chart theme read from `--background` and ends on `--chart-scale`.
+async function heatmapRamp(page: Page): Promise<readonly string[] | undefined> {
   for (let index = 0; index < WEEKLY_REVIEW_CHART_COUNT; index += 1) {
     const ramp = (await optionAt(page, index)).visualMap?.[0]?.inRange?.color;
-    if (ramp) return ramp[0];
+    if (ramp) return ramp;
   }
   return undefined;
 }
@@ -75,7 +78,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} mode`, () => {
     test.use({ colorScheme });
 
-    test("brand colours and palette in biac.config.ts restyle the chrome, the checked toggle, the chart surface and series", async ({
+    test("brand colours, palette and scale in biac.config.ts restyle the chrome, the checked toggle, the chart surface, series and heatmap ramp", async ({
       page,
       biacDev,
     }) => {
@@ -116,7 +119,10 @@ for (const colorScheme of ["light", "dark"] as const) {
       expect(await paintedRgb(page, surface)).toEqual(
         await paintedRgb(page, brand.background),
       );
-      expect(await heatmapRampStart(page)).toBe(brand.background);
+      expect(await heatmapRamp(page)).toEqual([
+        brand.background,
+        brand.scaleEnd,
+      ]);
       const palette = (await optionAt(page, 0)).color;
       expect(palette?.slice(0, 2)).toEqual([
         brand.series1,
@@ -189,6 +195,22 @@ test("a palette colour under its contrast floor is located in the overlay, and f
       message:
         "brand.palette.light[0]: #45a1bf against --background #ffffff measures 2.95:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.palette.light[0]",
       location: /biac\.config\.ts:7:31$/,
+    },
+  );
+});
+
+test("a scale with no colours is located in the overlay, and fixing it brings the page back", async ({
+  page,
+  biacDev,
+}) => {
+  await expectLocatedThenRecovered(
+    page,
+    biacDev,
+    "  brand: { scale: { light: [] } },\n",
+    {
+      message:
+        'brand.scale.light: expected an array of 1 or more "#rrggbb" colours, got []',
+      location: /biac\.config\.ts:7:21$/,
     },
   );
 });

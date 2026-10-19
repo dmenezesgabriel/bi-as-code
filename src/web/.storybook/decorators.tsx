@@ -179,3 +179,22 @@ export function withThemeMode(mode: ThemeMode): Decorator {
     </ThemeModeProvider>
   );
 }
+
+/**
+ * A story `beforeEach` that puts `css` in `<head>` before the story renders
+ * and removes it after — the storybook analogue of the brand stylesheet
+ * `biac.config.ts` injects into index.html. A `<style>` rendered by a
+ * decorator would land too late: `useChartTokens` reads the tokens during
+ * render, before React commits it.
+ *
+ * @example
+ * beforeEach: injectBrandStyle(":root, .light { --chart-scale: #1e40af; }")
+ */
+export function injectBrandStyle(css: string): () => () => void {
+  return () => {
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.append(style);
+    return () => style.remove();
+  };
+}

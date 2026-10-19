@@ -4,12 +4,12 @@ import { isRecord, rejectUnknownKeys } from "./config-shape.js";
 import { SERIES_TOKENS } from "./default-theme-tokens.js";
 import type {
   BrandColours,
-  BrandPalette,
   BrandTheme,
   ModeColour,
+  ModeColourLists,
 } from "./types.js";
 
-const BRAND_KEYS = ["colors", "palette"] as const;
+const BRAND_KEYS = ["colors", "palette", "scale"] as const;
 const COLOUR_KEYS = ["primary", "background"] as const;
 const MODE_KEYS = ["light", "dark"] as const;
 
@@ -20,14 +20,30 @@ const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
 const BRAND_SHAPE = `an object with optional fields { ${BRAND_KEYS.join(", ")} }`;
 const COLOURS_SHAPE = `an object with optional fields { ${COLOUR_KEYS.join(", ")} }`;
 const MODE_COLOUR_SHAPE = `an object { ${MODE_KEYS.join(", ")} } of "#rrggbb" colours`;
-const PALETTE_SHAPE = `an object with optional fields { ${MODE_KEYS.join(", ")} }`;
+const MODE_LISTS_SHAPE = `an object with optional fields { ${MODE_KEYS.join(", ")} }`;
 // Past eight series ECharts repeats the list, and every extra colour lowers
 // the separation floor the palette is chosen against (ADR-0016).
-const PALETTE_MODE_SHAPE = `an array of 1 to ${SERIES_TOKENS.length} "#rrggbb" colours`;
+const PALETTE_LIST: ColourListLimit = {
+  max: SERIES_TOKENS.length,
+  shape: `an array of 1 to ${SERIES_TOKENS.length} "#rrggbb" colours`,
+};
+// A ramp interpolates between its stops, so any count of one or more draws.
+const SCALE_LIST: ColourListLimit = {
+  max: Infinity,
+  shape: 'an array of 1 or more "#rrggbb" colours',
+};
+
+/** How many colours one mode's list may hold, and how to name that shape. */
+interface ColourListLimit {
+  max: number;
+  shape: string;
+}
 
 /**
  * Reads `biac.config.ts`'s `brand` block, lower-casing each colour, and
- * checks every colour and palette entry against its contrast floor. A bad
+ * checks every colour and palette entry against its contrast floor — the
+ * scale is not checked, since a heatmap cell's value is in its tooltip and
+ * label. A bad
  * shape or a colour under its floor throws a `ConfigFieldError` at the
  * colour's key path.
  *
@@ -36,14 +52,15 @@ const PALETTE_MODE_SHAPE = `an array of 1 to ${SERIES_TOKENS.length} "#rrggbb" c
  * // → { colors: { primary: { light: "#154886", dark: "#60a5fa" } } }
  */
 export function readBrand(spec: Record<string, unknown>): BrandTheme {
-  if (spec.brand === undefined) return { colors: {}, palette: {} };
+  if (spec.brand === undefined) return { colors: {}, palette: {}, scale: {} };
   if (!isRecord(spec.brand)) {
     throw invalid("brand", ["brand"], BRAND_SHAPE, spec.brand);
   }
   rejectUnknownKeys(spec.brand, BRAND_KEYS, ["brand"]);
   const brand: BrandTheme = {
     colors: readColours(spec.brand.colors),
-    palette: readPalette(spec.brand.palette),
+    palette: readModeLists(spec.brand.palette, "palette", PALETTE_LIST),
+    scale: readModeLists(spec.brand.scale, "scale", SCALE_LIST),
   };
   checkBrandContrast(brand);
   return brand;
@@ -64,28 +81,34 @@ function readColours(value: unknown): BrandColours {
   return colours;
 }
 
-function readPalette(value: unknown): BrandPalette {
+function readModeLists(
+  value: unknown,
+  key: "palette" | "scale",
+  limit: ColourListLimit,
+): ModeColourLists {
   if (value === undefined) return {};
-  const keyPath = ["brand", "palette"];
+  const keyPath = ["brand", key];
   if (!isRecord(value)) {
-    throw invalid(formatKeyPath(keyPath), keyPath, PALETTE_SHAPE, value);
+    throw invalid(formatKeyPath(keyPath), keyPath, MODE_LISTS_SHAPE, value);
   }
   rejectUnknownKeys(value, MODE_KEYS, keyPath);
-  const palette: BrandPalette = {};
+  const lists: ModeColourLists = {};
   for (const mode of MODE_KEYS) {
     if (value[mode] === undefined) continue;
-    palette[mode] = readPaletteMode(value[mode], [...keyPath, mode]);
+    lists[mode] = readColourList(value[mode], [...keyPath, mode], limit);
   }
-  return palette;
+  return lists;
 }
 
-function readPaletteMode(value: unknown, keyPath: string[]): string[] {
+function readColourList(
+  value: unknown,
+  keyPath: string[],
+  limit: ColourListLimit,
+): string[] {
   const fits =
-    Array.isArray(value) &&
-    value.length >= 1 &&
-    value.length <= SERIES_TOKENS.length;
+    Array.isArray(value) && value.length >= 1 && value.length <= limit.max;
   if (!fits) {
-    throw invalid(formatKeyPath(keyPath), keyPath, PALETTE_MODE_SHAPE, value);
+    throw invalid(formatKeyPath(keyPath), keyPath, limit.shape, value);
   }
   return value.map((entry, index) =>
     readHex(entry, [...keyPath, String(index)]),

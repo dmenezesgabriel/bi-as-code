@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { checkBrandContrast } from "./brand-contrast.js";
-import type { BrandColours, BrandPalette, BrandTheme } from "./types.js";
+import type { BrandColours, BrandTheme, ModeColourLists } from "./types.js";
 
-function brandOf(colors: BrandColours, palette: BrandPalette = {}): BrandTheme {
-  return { colors, palette };
+function brandOf(
+  colors: BrandColours,
+  palette: ModeColourLists = {},
+): BrandTheme {
+  return { colors, palette, scale: {} };
 }
 
-function failureOf(colours: BrandColours, palette: BrandPalette = {}): unknown {
+function failureOf(
+  colours: BrandColours,
+  palette: ModeColourLists = {},
+): unknown {
   try {
     checkBrandContrast(brandOf(colours, palette));
   } catch (error) {
@@ -40,6 +46,18 @@ describe("checkBrandContrast — passing colours", () => {
       { background: { light: "#fffdf5", dark: "#0a0a0a" } },
       { light: ["#1e40af"], dark: ["#60a5fa"] },
     );
+
+    const check = () => checkBrandContrast(brand);
+
+    expect(check).not.toThrow();
+  });
+
+  it("leaves the scale unchecked, even a stop identical to the background", () => {
+    const brand: BrandTheme = {
+      colors: {},
+      palette: {},
+      scale: { light: ["#ffffff", "#1e40af"], dark: ["#0a0a0a"] },
+    };
 
     const check = () => checkBrandContrast(brand);
 

@@ -36,7 +36,7 @@ const DEFAULTS: BiacConfig = {
     table_of_contents_label: "On this page",
   },
   directories: {},
-  brand: { colors: {}, palette: {} },
+  brand: { colors: {}, palette: {}, scale: {} },
 };
 
 // The keys of the closed objects. An unknown one throws rather than

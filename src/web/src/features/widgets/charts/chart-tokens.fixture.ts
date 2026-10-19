@@ -33,6 +33,7 @@ export const LIGHT_CHART_TOKENS: ChartTokens = {
   popoverBorder: "#e5e5e5",
   labelInside: "#ffffff",
   series: LIGHT_SERIES,
+  scale: ["#0072b2"],
 };
 
 /** The dark chart tokens, as `src/web/src/styles.css` defines them. */
@@ -46,4 +47,5 @@ export const DARK_CHART_TOKENS: ChartTokens = {
   popoverBorder: "#404040",
   labelInside: "#0a0a0a",
   series: DARK_SERIES,
+  scale: ["#0072b2"],
 };

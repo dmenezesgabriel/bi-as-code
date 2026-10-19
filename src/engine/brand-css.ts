@@ -1,4 +1,8 @@
-import { BRAND_TOKENS, SERIES_TOKENS } from "./default-theme-tokens.js";
+import {
+  BRAND_TOKENS,
+  SCALE_TOKEN,
+  SERIES_TOKENS,
+} from "./default-theme-tokens.js";
 import type { BrandColours, BrandTheme, ColourMode } from "./types.js";
 
 // The selectors `src/web/src/styles.css` declares each mode's tokens on:
@@ -10,12 +14,12 @@ const MODE_SELECTORS: Readonly<Record<ColourMode, string>> = {
 };
 
 /**
- * The stylesheet that sets each brand colour and palette entry over its
- * theme token, one rule per mode that sets any; empty when the project sets
- * none.
+ * The stylesheet that sets each brand colour, palette entry and scale over
+ * its theme token, one rule per mode that sets any; empty when the project
+ * sets none.
  *
  * @example
- * brandCss({ colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: {} });
+ * brandCss({ colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: {}, scale: {} });
  * // → ":root,\n.light {\n  --primary: #154886;\n}\n.dark {\n  --primary: #60a5fa;\n}\n"
  */
 export function brandCss(brand: BrandTheme): string {
@@ -35,5 +39,7 @@ function modeDeclarations(brand: BrandTheme, mode: ColourMode): string[] {
   const palette = (brand.palette[mode] ?? []).map(
     (colour, index) => `  ${SERIES_TOKENS[index]}: ${colour};\n`,
   );
-  return [...colours, ...palette];
+  const scale = brand.scale[mode];
+  const ramp = scale ? [`  ${SCALE_TOKEN}: ${scale.join(", ")};\n`] : [];
+  return [...colours, ...palette, ...ramp];
 }

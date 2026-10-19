@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import {
+  injectBrandStyle,
   withFilteredData,
   withQueryData,
   withThemeMode,
@@ -147,6 +148,57 @@ export const Dark: Story = {
     expect(option.visualMap?.[0]?.inRange?.color).toEqual([
       "#0a0a0a",
       "#0072b2",
+    ]);
+  },
+};
+
+type RampOption = { visualMap?: { inRange?: { color?: string[] } }[] };
+
+/** A one-colour brand scale (`brand.scale` in `biac.config.ts`) ramps from
+ * the surface to the brand colour on every heatmap without its own
+ * `colorScale`. */
+export const BrandScale: Story = {
+  beforeEach: injectBrandStyle(":root, .light { --chart-scale: #1e40af; }"),
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<RampOption>(canvasElement);
+    expect(option.visualMap?.[0]?.inRange?.color).toEqual([
+      "#ffffff",
+      "#1e40af",
+    ]);
+  },
+};
+
+/** A brand scale of two or more stops is the ramp as written, in dark mode
+ * too. */
+export const BrandScaleGradientDark: Story = {
+  beforeEach: injectBrandStyle(
+    ".dark { --chart-scale: #172554, #60a5fa, #dbeafe; }",
+  ),
+  decorators: [
+    withThemeMode("dark"),
+    withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS)),
+  ],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<RampOption>(canvasElement);
+    expect(option.visualMap?.[0]?.inRange?.color).toEqual([
+      "#172554",
+      "#60a5fa",
+      "#dbeafe",
+    ]);
+  },
+};
+
+/** A widget's own `colorScale` wins over the brand scale. */
+export const WidgetScaleOverBrand: Story = {
+  args: { colorScale: "#d97706" },
+  beforeEach: injectBrandStyle(":root, .light { --chart-scale: #1e40af; }"),
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<RampOption>(canvasElement);
+    expect(option.visualMap?.[0]?.inRange?.color).toEqual([
+      "#ffffff",
+      "#d97706",
     ]);
   },
 };

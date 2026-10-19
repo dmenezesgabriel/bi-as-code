@@ -34,6 +34,16 @@ export const SERIES_TOKENS: readonly SeriesTokenName[] = [
 ];
 
 /**
+ * The heatmap ramp token: one comma-separated list of colours, the way
+ * Tailwind's `--tw-gradient-stops` carries a gradient, since a ramp has no
+ * fixed length to number tokens by.
+ *
+ * @example
+ * `${SCALE_TOKEN}: #1e40af, #60a5fa;`; // → "--chart-scale: #1e40af, #60a5fa;"
+ */
+export const SCALE_TOKEN = "--chart-scale";
+
+/**
  * The default value of each checked token, per mode. These mirror
  * `src/web/src/styles.css`, which the engine cannot import — a unit test
  * fails when the two drift apart.

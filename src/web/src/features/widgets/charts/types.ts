@@ -188,6 +188,11 @@ export interface ChartTokens {
   readonly labelInside: string;
   /** The categorical palette; series pick colours by index. */
   readonly series: readonly string[];
+  /**
+   * The heatmap ramp a widget without its own `colorScale` draws — one stop
+   * ramps from `background` to it, two or more are the ramp as written.
+   */
+  readonly scale: readonly string[];
 }
 
 /** Looks up one custom property (`--border`) and returns its value. */

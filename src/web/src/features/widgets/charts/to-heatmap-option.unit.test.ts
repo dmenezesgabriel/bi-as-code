@@ -104,6 +104,40 @@ describe("toHeatmapOption", () => {
     expect(visualMap.inRange?.color).toEqual(["#fef3c7", "#d97706", "#7c2d12"]);
   });
 
+  it("ramps from the surface to a one-colour theme scale when colorScale is unset", () => {
+    const tokens = { ...DARK_CHART_TOKENS, scale: ["#60a5fa"] };
+
+    const visualMap = option(PROPS, TREND_ROWS, tokens).visualMap as {
+      inRange?: { color?: unknown };
+    };
+
+    expect(visualMap.inRange?.color).toEqual(["#0a0a0a", "#60a5fa"]);
+  });
+
+  it("draws a multi-colour theme scale as written when colorScale is empty", () => {
+    const tokens = {
+      ...LIGHT_CHART_TOKENS,
+      scale: ["#fef3c7", "#1e40af", "#172554"],
+    };
+
+    const visualMap = option({ ...PROPS, colorScale: [] }, TREND_ROWS, tokens)
+      .visualMap as { inRange?: { color?: unknown } };
+
+    expect(visualMap.inRange?.color).toEqual(["#fef3c7", "#1e40af", "#172554"]);
+  });
+
+  it("lets a widget's colorScale win over the theme scale", () => {
+    const tokens = { ...LIGHT_CHART_TOKENS, scale: ["#1e40af"] };
+
+    const visualMap = option(
+      { ...PROPS, colorScale: "#f59e0b" },
+      TREND_ROWS,
+      tokens,
+    ).visualMap as { inRange?: { color?: unknown } };
+
+    expect(visualMap.inRange?.color).toEqual(["#ffffff", "#f59e0b"]);
+  });
+
   it("labels the strip ends with valueFmt and hides it on legend=false", () => {
     const shown = option({ ...PROPS, valueFmt: "usd0" }).visualMap as {
       show?: boolean;

@@ -3,7 +3,7 @@ import { brandCss } from "./brand-css.js";
 
 describe("brandCss — colours", () => {
   it("emits nothing when no brand colour is set", () => {
-    const css = brandCss({ colors: {}, palette: {} });
+    const css = brandCss({ colors: {}, palette: {}, scale: {} });
 
     expect(css).toBe("");
   });
@@ -15,6 +15,7 @@ describe("brandCss — colours", () => {
         background: { light: "#fffdf5", dark: "#0a0a0a" },
       },
       palette: {},
+      scale: {},
     });
 
     expect(css).toBe(
@@ -27,6 +28,7 @@ describe("brandCss — colours", () => {
     const css = brandCss({
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
       palette: {},
+      scale: {},
     });
 
     expect(css).not.toContain("--background");
@@ -38,6 +40,7 @@ describe("brandCss — palette", () => {
     const css = brandCss({
       colors: {},
       palette: { light: ["#1e40af", "#d55e00"], dark: ["#60a5fa"] },
+      scale: {},
     });
 
     expect(css).toBe(
@@ -47,7 +50,11 @@ describe("brandCss — palette", () => {
   });
 
   it("emits no rule for a mode with neither a colour nor a palette", () => {
-    const css = brandCss({ colors: {}, palette: { light: ["#1e40af"] } });
+    const css = brandCss({
+      colors: {},
+      palette: { light: ["#1e40af"] },
+      scale: {},
+    });
 
     expect(css).toBe(":root,\n.light {\n  --chart-1: #1e40af;\n}\n");
   });
@@ -56,11 +63,39 @@ describe("brandCss — palette", () => {
     const css = brandCss({
       colors: { primary: { light: "#154886", dark: "#60a5fa" } },
       palette: { dark: ["#60a5fa"] },
+      scale: {},
     });
 
     expect(css).toBe(
       ":root,\n.light {\n  --primary: #154886;\n}\n" +
         ".dark {\n  --primary: #60a5fa;\n  --chart-1: #60a5fa;\n}\n",
+    );
+  });
+});
+
+describe("brandCss — scale", () => {
+  it("sets each mode's scale as one comma-separated ramp token", () => {
+    const css = brandCss({
+      colors: {},
+      palette: {},
+      scale: { light: ["#1e40af"], dark: ["#0a0a0a", "#60a5fa", "#ffffff"] },
+    });
+
+    expect(css).toBe(
+      ":root,\n.light {\n  --chart-scale: #1e40af;\n}\n" +
+        ".dark {\n  --chart-scale: #0a0a0a, #60a5fa, #ffffff;\n}\n",
+    );
+  });
+
+  it("puts the scale after the palette in its mode's rule", () => {
+    const css = brandCss({
+      colors: {},
+      palette: { light: ["#1e40af"] },
+      scale: { light: ["#60a5fa"] },
+    });
+
+    expect(css).toBe(
+      ":root,\n.light {\n  --chart-1: #1e40af;\n  --chart-scale: #60a5fa;\n}\n",
     );
   });
 });

@@ -75,13 +75,13 @@ describe("biac build", () => {
     );
   }, 120_000);
 
-  it("writes the brand colours and palette into build/index.html", () => {
+  it("writes the brand colours, palette and scale into build/index.html", () => {
     const root = makeTempProject("biac-e2e-build-brand-");
     writeProjectFile(root, "pages/index.md", "# Branded\n");
     writeProjectFile(
       root,
       "biac.config.ts",
-      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: { light: ["#1e40af"] } } };\n',
+      'export default { brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: { light: ["#1e40af"] }, scale: { dark: ["#60a5fa"] } } };\n',
     );
 
     execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
@@ -90,6 +90,7 @@ describe("biac build", () => {
     expect(html).toContain("--primary: #154886;");
     expect(html).toContain("--primary: #60a5fa;");
     expect(html).toContain("--chart-1: #1e40af;");
+    expect(html).toContain("--chart-scale: #60a5fa;");
   }, 120_000);
 
   it("exits 1 naming a brand colour under its contrast floor", () => {
