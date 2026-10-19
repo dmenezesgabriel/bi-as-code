@@ -20,16 +20,16 @@ An author writes `<Search id="q" column="region" data="order_amounts" />` and li
 
 ### Baseline
 
-To be measured with `playwright-cli` on `bin/biac dev` at the PRD commit's parent, before any code change, on `/weekly-review` (the host was above `nproc` load while this PRD was written; T1 records these numbers before its first edit):
+Measured 2026-10-19 with `playwright-cli` on `bin/biac dev`, on `/weekly-review` with today's `<TextInput id="q">` + `ilike` fence, before the page or the widget registry changed. The `order_detail` readout is the table's `· N rows` footer; at zero rows the table is replaced by a `0 rows` line:
 
 | Reading                                        | Value |
 | ---------------------------------------------- | ----- |
-| `order_detail` table rows, empty `q`           |       |
-| `order_detail` table rows, `q=we`              |       |
-| `order_detail` table rows, `q=zzz`             |       |
+| `order_detail` table rows, empty `q`           | 355   |
+| `order_detail` table rows, `q=we`              | 140   |
+| `order_detail` table rows, `q=zzz`             | 0     |
 | Visible match count beside the box             | none  |
-| `?q=` after typing `we`                        |       |
-| Console errors / warnings after the three runs |       |
+| `?q=` after typing `we`                        | `we`  |
+| Console errors / warnings after the three runs | 0 / 0 |
 
 ## Who else implements this
 
@@ -117,23 +117,23 @@ Our implementation is **present but unreachable**: the clause and the filter sea
 
 ## Open decisions
 
-| Id  | Decision                                              | Evidence                                                                                                                                                                 | Recommendation                                                                                                                                                                         |
-| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| O1  | Where `<TextInput>` lives once `q` becomes `<Search>` | `pages/weekly-review.md` is its only page; `test/e2e-browser/filter-inputs.spec.ts` drives it there                                                                      | Keep `<TextInput>` for `{{params.x}}` use; T1 moves its browser test to a remaining `{{params}}` consumer or a new example on `pages/weekly-review.md`, settled when T1 reads the page |
-| O2  | Count wording                                         | upstream `formatResults` → "N results"; no widget under `src/web/src/features/widgets/` states a row count today (grep for `of ${` / `rows` in `table/*.tsx` finds none) | "N matches" / "1 match" / "No matches", number via `formatValue` in `src/web/src/features/widgets/value/format.ts`                                                                     |
+| Id  | Decision                                              | Evidence                                                                                                                                                                 | Recommendation                                                                                                                                                                                                                                   |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| O1  | Where `<TextInput>` lives once `q` becomes `<Search>` | `pages/weekly-review.md` is its only page; `test/e2e-browser/filter-inputs.spec.ts` drives it there                                                                      | **Settled (T1):** `<TextInput id="order" title="Order id">` on `pages/weekly-review.md`, consumed by `({{params.order}} is null or order_id::varchar = {{params.order}})` in `order_detail`; its browser test drives `order=42` + `large_orders` |
+| O2  | Count wording                                         | upstream `formatResults` → "N results"; no widget under `src/web/src/features/widgets/` states a row count today (grep for `of ${` / `rows` in `table/*.tsx` finds none) | "N matches" / "1 match" / "No matches", number via `formatValue` in `src/web/src/features/widgets/value/format.ts`                                                                                                                               |
 
 ## Surface
 
-| Layer  | Files                                                                                                                                                                                                                                                                                           |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| engine | `src/engine/reserved-filter-id.ts` (`Search` in `FILTER_INPUT_TAGS`)                                                                                                                                                                                                                            |
-| client | `src/web/src/features/filters/use-filtered-query-rows.ts` (consumed, not changed), `src/web/src/features/crossfilter/clause.ts` (consumed)                                                                                                                                                      |
-| ui     | `src/web/src/features/widgets/inputs/search.tsx` (new) + `search.stories.tsx`, a draft/debounce hook shared with `src/web/src/features/widgets/inputs/text-input.tsx`, `src/web/src/features/widgets/inputs/types.ts`, `src/web/src/features/pages/markdown-page.tsx`, `pages/weekly-review.md` |
-| tests  | colocated `search.unit.test.tsx`, `src/engine/reserved-filter-id.unit.test.ts`, `test/integration/features/filter-inputs.feature`, `test/e2e-browser/filter-inputs.spec.ts`                                                                                                                     |
+| Layer  | Files                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| engine | `src/engine/reserved-filter-id.ts` (`Search` in `FILTER_INPUT_TAGS`), `src/engine/search-method.ts` (a bad literal `method` fails the compile at its attribute)                                                                                                                                                                                                                                                                                        |
+| client | `src/web/src/features/filters/use-filtered-query-rows.ts` (consumed, not changed), `src/web/src/features/crossfilter/clause.ts` (consumed)                                                                                                                                                                                                                                                                                                             |
+| ui     | `src/web/src/features/widgets/inputs/search.tsx` (new) + `search.stories.tsx`, `src/web/src/features/widgets/inputs/search-clause.ts`, `src/web/src/features/widgets/inputs/use-text-draft.ts` + `src/web/src/features/widgets/inputs/draft-text-field.tsx` shared with `src/web/src/features/widgets/inputs/text-input.tsx`, `src/web/src/features/widgets/inputs/types.ts`, `src/web/src/features/pages/markdown-page.tsx`, `pages/weekly-review.md` |
+| tests  | colocated `search.unit.test.tsx`, `src/engine/reserved-filter-id.unit.test.ts`, `test/integration/features/filter-inputs.feature`, `test/e2e-browser/filter-inputs.spec.ts`                                                                                                                                                                                                                                                                            |
 
 ## Tasks
 
-- [ ] T1 — `<Search id column method? title? placeholder? initialValue?>` publishes `clauseMatch` through `FilterOptions.clause`, persisted as `?id=`; the draft/debounce logic leaves `text-input.tsx` for a hook both widgets use; `Search` registered in `markdown-page.tsx` and `FILTER_INPUT_TAGS`; a bad `method` is a located error; stories (empty, held, disabled); `pages/weekly-review.md` replaces `<TextInput id="q">` + the `ilike` line with `<Search id="q" column="region">` and `q` in the `order_detail` table's `filters`; settle O1. playwright-cli: record Baseline first, then type/clear/reload on `/weekly-review`, rows and `?q=` against Baseline, console clean.
+- [x] T1 — `<Search id column method? title? placeholder? initialValue?>` publishes `clauseMatch` through `FilterOptions.clause`, persisted as `?id=`; the draft/debounce logic leaves `text-input.tsx` for a hook both widgets use; `Search` registered in `markdown-page.tsx` and `FILTER_INPUT_TAGS`; a bad `method` is a located error; stories (empty, held, disabled); `pages/weekly-review.md` replaces `<TextInput id="q">` + the `ilike` line with `<Search id="q" column="region">` and `q` in the `order_detail` table's `filters`; settle O1. playwright-cli: record Baseline first, then type/clear/reload on `/weekly-review`, rows and `?q=` against Baseline, console clean.
 - [ ] T2 — The match count: with `data`, an `<output>` beside the box reads the count of that fence's rows under its filters and the search itself; stories for loading, counted, none and a bad `data` source (`source-error.tsx` pattern); e2e asserts the count follows typing and reload; settle O2. playwright-cli: count text and `role=status` after `we`, `zzz`, clear.
 
 ## Out of scope
