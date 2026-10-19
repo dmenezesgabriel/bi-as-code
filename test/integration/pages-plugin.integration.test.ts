@@ -657,6 +657,11 @@ describe("virtual:biac-config", () => {
       'fontSize: "18px"',
       ":root {\n  font-size: 112.5%;\n}\n",
     ],
+    [
+      "the brand corner radius over --radius",
+      'radius: "0"',
+      ":root {\n  --radius: 0;\n}\n",
+    ],
   ])("injects %s", async (_what, brand, css) => {
     const root = makeProject();
     writeFile("biac.config.ts", `export default { brand: { ${brand} } };\n`);

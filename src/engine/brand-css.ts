@@ -20,7 +20,7 @@ const MODE_SELECTORS: Readonly<Record<ColourMode, string>> = {
 
 // The font token each `brand.fonts` key sets. A font is the same in both
 // modes, so it goes in one `:root` rule, ahead of the per-mode colours,
-// with the root font size.
+// with the root font size and the corner radius.
 const FONT_TOKENS: Readonly<Record<keyof BrandFonts, string>> = {
   body: "--body-font",
   heading: "--heading-font",
@@ -29,9 +29,9 @@ const FONT_TOKENS: Readonly<Record<keyof BrandFonts, string>> = {
 
 /**
  * The stylesheet that sets each brand font, colour, palette entry and scale
- * over its theme token, and the root font size: one `:root` rule for the
- * fonts and size, then one rule per mode that sets any colour; empty when
- * the project sets none.
+ * over its theme token, the root font size and the corner radius: one
+ * `:root` rule for the fonts, size and radius, then one rule per mode that
+ * sets any colour; empty when the project sets none.
  *
  * @example
  * brandCss({ colors: { primary: { light: "#154886", dark: "#60a5fa" } }, palette: {}, scale: {}, fonts: {} });
@@ -58,9 +58,14 @@ function fontDeclarations(fonts: BrandFonts): string[] {
 }
 
 function rootDeclarations(brand: BrandTheme): string[] {
-  const fonts = fontDeclarations(brand.fonts);
-  if (brand.fontSize === undefined) return fonts;
-  return [...fonts, `  font-size: ${rootFontSizePercent(brand.fontSize)};\n`];
+  const declarations = fontDeclarations(brand.fonts);
+  if (brand.fontSize !== undefined) {
+    declarations.push(`  font-size: ${rootFontSizePercent(brand.fontSize)};\n`);
+  }
+  if (brand.radius !== undefined) {
+    declarations.push(`  --radius: ${brand.radius};\n`);
+  }
+  return declarations;
 }
 
 // A percentage of the browser's 16px default rather than px, so a reader who

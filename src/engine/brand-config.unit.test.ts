@@ -146,6 +146,21 @@ describe("readBrand — accepted shapes", () => {
     expect(brand).not.toHaveProperty("fontSize");
   });
 
+  it.each(["0", "0px", "12px", "24px", "0.35rem", "1.5rem"])(
+    "reads a corner radius of %s as written",
+    (radius) => {
+      const brand = readBrand({ brand: { radius } });
+
+      expect(brand.radius).toBe(radius);
+    },
+  );
+
+  it("leaves the corner radius to the default when the author omits it", () => {
+    const brand = readBrand({ brand: { fonts: { body: "serif" } } });
+
+    expect(brand).not.toHaveProperty("radius");
+  });
+
   it("lower-cases a hex written in capitals", () => {
     const spec = {
       brand: { colors: { primary: { light: "#15488A", dark: "#60A5FA" } } },
@@ -162,7 +177,7 @@ describe("readBrand — rejected shapes", () => {
     [
       { brand: "blue" },
       ["brand"],
-      'brand: expected an object with optional fields { colors, palette, scale, fonts, fontSize }, got "blue"',
+      'brand: expected an object with optional fields { colors, palette, scale, fonts, fontSize, radius }, got "blue"',
     ],
     [
       { brand: { colors: [] } },
@@ -293,6 +308,51 @@ describe("readBrand — rejected shapes", () => {
       ["brand", "fontSize"],
       'brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got 18',
     ],
+    [
+      { brand: { radius: "25px" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "25px"',
+    ],
+    [
+      { brand: { radius: "2rem" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "2rem"',
+    ],
+    [
+      { brand: { radius: "1.6rem" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "1.6rem"',
+    ],
+    [
+      { brand: { radius: "-4px" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "-4px"',
+    ],
+    [
+      { brand: { radius: "1em" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "1em"',
+    ],
+    [
+      { brand: { radius: "50%" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "50%"',
+    ],
+    [
+      { brand: { radius: "8" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "8"',
+    ],
+    [
+      { brand: { radius: ".5rem" } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got ".5rem"',
+    ],
+    [
+      { brand: { radius: 8 } },
+      ["brand", "radius"],
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got 8',
+    ],
   ])(
     "names the field and the expected shape for %j",
     (spec, keyPath, message) => {
@@ -305,7 +365,7 @@ describe("readBrand — rejected shapes", () => {
   it.each([
     [
       { brand: { ramp: {} } },
-      "brand.ramp: unknown key, expected one of colors, palette, scale, fonts, fontSize",
+      "brand.ramp: unknown key, expected one of colors, palette, scale, fonts, fontSize, radius",
     ],
     [
       { brand: { colors: { accent: PASSING_PRIMARY } } },

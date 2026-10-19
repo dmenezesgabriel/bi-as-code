@@ -171,6 +171,12 @@ export interface BrandTheme {
    * Left out, the browser's default stands.
    */
   fontSize?: number;
+  /**
+   * The corner radius `--radius`, `"0"` or a px or rem length up to
+   * 24px / 1.5rem, as written; the sm/md/xl corner steps derive from it. A
+   * rem radius scales with `fontSize`, a px one does not. Left out, 0.5rem.
+   */
+  radius?: string;
 }
 
 /** Chrome/navigation settings from `biac.config.ts`'s optional `nav` block. */

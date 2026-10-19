@@ -219,3 +219,36 @@ describe("brandCss — root font size", () => {
     );
   });
 });
+
+describe("brandCss — corner radius", () => {
+  it.each(["0", "12px", "1.5rem"])(
+    "sets a radius of %s over --radius on :root",
+    (radius) => {
+      const css = brandCss({
+        colors: {},
+        palette: {},
+        scale: {},
+        fonts: {},
+        radius,
+      });
+
+      expect(css).toBe(`:root {\n  --radius: ${radius};\n}\n`);
+    },
+  );
+
+  it("puts the radius in the font rule, after the root font size", () => {
+    const css = brandCss({
+      colors: {},
+      palette: {},
+      scale: {},
+      fonts: { body: "serif" },
+      fontSize: 18,
+      radius: "1rem",
+    });
+
+    expect(css).toBe(
+      ":root {\n  --body-font: var(--font-stack-serif);\n" +
+        "  font-size: 112.5%;\n  --radius: 1rem;\n}\n",
+    );
+  });
+});

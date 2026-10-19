@@ -68,6 +68,7 @@ const BRAND_BLOCK = `  brand: {
     scale: { light: ["${BRAND.light.scaleEnd}"], dark: ["${BRAND.dark.scaleEnd}"] },
     fonts: { body: "serif", heading: "sans-serif", code: "mono" },
     fontSize: "18px",
+    radius: "12px",
   },
 `;
 
@@ -116,6 +117,10 @@ async function fontFamilyOf(locator: Locator): Promise<string> {
   return locator.evaluate((element) => getComputedStyle(element).fontFamily);
 }
 
+async function borderRadiusOf(locator: Locator): Promise<string> {
+  return locator.evaluate((element) => getComputedStyle(element).borderRadius);
+}
+
 async function heatmapRamp(page: Page): Promise<readonly string[] | undefined> {
   for (let index = 0; index < WEEKLY_REVIEW_CHART_COUNT; index += 1) {
     const ramp = (await optionAt(page, index)).visualMap?.[0]?.inRange?.color;
@@ -128,7 +133,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} mode`, () => {
     test.use({ colorScheme });
 
-    test("brand colours, palette, scale and fonts in biac.config.ts restyle the chrome, the sidebar, the input surface, the checked toggle, the deltas, the text, the chart surface, series, heatmap ramp and chart text", async ({
+    test("brand colours, palette, scale and fonts in biac.config.ts restyle the chrome, the sidebar, the input surface, the checked toggle, the deltas, the text, the chart surface, series, heatmap ramp, chart text and corners", async ({
       page,
       biacDev,
     }) => {
@@ -222,6 +227,11 @@ for (const colorScheme of ["light", "dark"] as const) {
           .first()
           .evaluate((element) => getComputedStyle(element).maxWidth),
       ).toBe("720px");
+      // A px radius ignores the root size; the md and sm steps derive from it.
+      expect(await borderRadiusOf(search)).toBe("10px");
+      expect(await borderRadiusOf(page.locator("main p a").first())).toBe(
+        "8px",
+      );
       expect(errors).toEqual([]);
     });
     test("pages/crossfilter-scale.md's front-matter brand applies to that page only, across client navigation both ways", async ({
@@ -342,6 +352,13 @@ const OVERLAY_FAILURES = [
     message:
       'brand.fonts.body: expected one of "sans-serif", "serif", "mono", got "comic"',
     location: /biac\.config\.ts:7:21$/,
+  },
+  {
+    what: "a corner radius past its cap",
+    brandLine: '  brand: { radius: "2rem" },\n',
+    message:
+      'brand.radius: expected "0" or a "<n>px" or "<n>rem" length from 0 to 24px / 1.5rem, got "2rem"',
+    location: /biac\.config\.ts:7:12$/,
   },
   {
     what: "a root font size out of range",
