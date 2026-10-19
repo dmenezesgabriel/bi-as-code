@@ -2,6 +2,7 @@
  * The error for a front-matter or `biac.config.ts` value of the wrong shape:
  * it names where the value was declared, the field, what was expected and
  * what the author wrote, so the fix needs no second look at the source.
+ * `hint` — a "did you mean" suggestion — follows the value.
  *
  * @example
  * throw invalidSetting("front-matter in pages/a.md", "page_width", '"article" | "full"', "wide");
@@ -12,8 +13,9 @@ export function invalidSetting(
   field: string,
   expected: string,
   value: unknown,
+  hint = "",
 ): Error {
   return new Error(
-    `Invalid ${location} — ${field}: expected ${expected}, got ${JSON.stringify(value)}`,
+    `Invalid ${location} — ${field}: expected ${expected}, got ${JSON.stringify(value)}${hint}`,
   );
 }

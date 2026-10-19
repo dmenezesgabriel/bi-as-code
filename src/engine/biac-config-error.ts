@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { readFileSync } from "node:fs";
-import { closestKey } from "./closest-key.js";
+import { didYouMean } from "./closest-key.js";
 import { findConfigKeyPosition } from "./config-key-position.js";
 import type { ContrastShortfall } from "./types.js";
 
@@ -80,11 +80,9 @@ export function unknownKey(
   accepted: readonly string[],
 ): ConfigFieldError {
   const keyPath = [...parentPath, key];
-  const suggestion = closestKey(key, accepted);
-  const hint = suggestion === undefined ? "" : ` (did you mean ${suggestion}?)`;
   return new ConfigFieldError(
     keyPath,
-    `${keyPath.join(".")}: unknown key, expected one of ${accepted.join(", ")}${hint}`,
+    `${keyPath.join(".")}: unknown key, expected one of ${accepted.join(", ")}${didYouMean(key, accepted)}`,
   );
 }
 

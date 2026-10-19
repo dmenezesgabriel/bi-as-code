@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closestKey } from "./closest-key.js";
+import { closestKey, didYouMean } from "./closest-key.js";
 
 const CONFIG_KEYS = ["title", "theme", "nav", "sql", "interpreters"];
 
@@ -52,5 +52,19 @@ describe("closestKey — no match", () => {
     const suggestion = closestKey(candidate, []);
 
     expect(suggestion).toBeUndefined();
+  });
+});
+
+describe("didYouMean", () => {
+  it("names the closest accepted key as a parenthesised hint", () => {
+    const hint = didYouMean("titel", CONFIG_KEYS);
+
+    expect(hint).toBe(" (did you mean title?)");
+  });
+
+  it("is empty when nothing is close", () => {
+    const hint = didYouMean("pagewidth", CONFIG_KEYS);
+
+    expect(hint).toBe("");
   });
 });

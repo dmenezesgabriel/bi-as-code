@@ -29,6 +29,21 @@ export function closestKey(
   return best;
 }
 
+/**
+ * The "did you mean" hint an error message ends with: the closest accepted
+ * key in parentheses, or nothing when no key is close.
+ *
+ * @example
+ * didYouMean("titel", ["title", "theme"]); // " (did you mean title?)"
+ */
+export function didYouMean(
+  candidate: string,
+  accepted: readonly string[],
+): string {
+  const suggestion = closestKey(candidate, accepted);
+  return suggestion === undefined ? "" : ` (did you mean ${suggestion}?)`;
+}
+
 /** Levenshtein distance, computed one row of the edit table at a time. */
 function editDistance(from: string, to: string): number {
   const firstRow = Array.from({ length: to.length + 1 }, (_, column) => column);

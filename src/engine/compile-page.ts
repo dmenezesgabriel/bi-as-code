@@ -9,6 +9,7 @@ import { NO_BRAND } from "./brand-config.js";
 import { brandCss } from "./brand-css.js";
 import { pageBrand } from "./page-brand-frontmatter.js";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
+import { assertPageIcon } from "./page-icon-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
@@ -79,6 +80,7 @@ export async function compilePage(
   const location = `front-matter in ${filePath}`;
   const sqlTables = sqlTableMap(frontmatter.sql, location);
   assertNoSqlTableCollision(sqlTables, configTables, location);
+  assertPageIcon(frontmatter.icon, location);
   const page = {
     frontmatter,
     title: resolveTitle(frontmatter, metadata.firstHeading),

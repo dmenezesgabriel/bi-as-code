@@ -295,6 +295,22 @@ describe("layout front-matter", () => {
   });
 });
 
+describe("icon front-matter", () => {
+  it("compiles a page whose icon is a catalog name", async () => {
+    const page = await compile("---\nicon: calendar\n---\n# Body\n");
+
+    expect(page.frontmatter.icon).toBe("calendar");
+  });
+
+  it("rejects an icon outside the catalog naming the page file and the closest name", async () => {
+    await expect(
+      compile("---\nicon: calender\n---\n# Body\n", "pages/a.md"),
+    ).rejects.toThrow(
+      /^Invalid front-matter in pages\/a\.md — icon: expected one of .*, got "calender" \(did you mean calendar\?\)$/,
+    );
+  });
+});
+
 describe("brand front-matter", () => {
   it("leaves brandCss empty when the page sets no brand", async () => {
     const page = await compile("# Body\n");

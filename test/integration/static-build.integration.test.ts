@@ -126,6 +126,23 @@ describe("biac build", () => {
     expect(existsSync(join(root, "build", "index.html"))).toBe(false);
   }, 120_000);
 
+  it("fails on a page whose icon is not in the catalog, naming the page and the closest name", async () => {
+    const root = makeTempProject();
+    writeProjectFile(
+      root,
+      "pages/index.md",
+      "---\nicon: calender\n---\n# Hi\n",
+    );
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    const failure = await build([root]).catch((error: unknown) => error);
+
+    expect(String(failure)).toMatch(
+      /Invalid front-matter in pages\/index\.md — icon: expected one of .*, got "calender" \(did you mean calendar\?\)/,
+    );
+    expect(existsSync(join(root, "build", "index.html"))).toBe(false);
+  }, 120_000);
+
   it("fails on an unknown biac.config.ts key, naming it and the accepted ones", async () => {
     const root = makeTempProject();
     writeProjectFile(root, "pages/index.md", "# Hi\n");

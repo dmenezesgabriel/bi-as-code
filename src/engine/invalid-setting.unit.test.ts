@@ -14,4 +14,18 @@ describe("invalidSetting", () => {
       "Invalid biac.config.ts — sql.orders: expected a string path, got 3",
     );
   });
+
+  it("appends a hint after the value", () => {
+    const error = invalidSetting(
+      "front-matter in pages/a.md",
+      "icon",
+      "one of calendar, clock",
+      "calender",
+      " (did you mean calendar?)",
+    );
+
+    expect(error.message).toBe(
+      'Invalid front-matter in pages/a.md — icon: expected one of calendar, clock, got "calender" (did you mean calendar?)',
+    );
+  });
 });
