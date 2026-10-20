@@ -118,7 +118,7 @@ Nothing in the ledger claims any part of this as shipped.
 ## Tasks
 
 - [x] T1 — `data="/queries/<path>"`: the engine finds the reference, reads `queries/<path>.sql`, emits it in the page module; the registry runs it and the widget renders. A missing file is a located compile error with a suggestion. `biac build` ships no unreferenced file. Example: `queries/region_orders.sql` drives the `/weekly-review` "Revenue by region" chart. Measure: Baseline rows before, the same rows after, the compile error's `file:line:column` on screen, `grep -rl` over `build/`.
-- [ ] T2 — `{{/queries/<path>}}` in a fence builds on a file query; `{{params.x}}` and nested file references work inside a file; a cycle is an error. Example: `region_share` on `/weekly-review` and `orders` on `/`. Measure: `region_share` echoed rows and `/` table rows with and without `?region=West` against the Baseline.
+- [x] T2 — `{{/queries/<path>}}` in a fence builds on a file query; `{{params.x}}` and nested file references work inside a file; a cycle is an error. Example: `region_share` on `/weekly-review` and `orders` on `/`. Measure: `region_share` echoed rows and `/` table rows with and without `?region=West` against the Baseline.
 - [ ] T3 — a saved edit to a `.sql` file hot-updates every open page that reads it (dev); a broken file shows the widget error state prefixed `queries/<path>.sql:`. Measure: no full reload (a `window` marker survives the edit), the error text via `eval`, `console` clean after the revert.
 
 Each task: unit, integration, e2e and e2e-browser tests, and a `playwright-cli` pass on the pages it changes (`prompt-execution.md` §5).
