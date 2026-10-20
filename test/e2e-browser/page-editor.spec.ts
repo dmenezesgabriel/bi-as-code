@@ -295,7 +295,7 @@ test("a self-closed widget typed in the editor is left as typed and the page com
 }) => {
   test.slow();
   const errors = collectConsoleErrors(page);
-  const selfClosed = '<Table data="orders" />';
+  const selfClosed = '<Table data="kpi" />';
   // The tag is typed on the line after the heading, so its table renders as
   // the heading's next block — counting every table on the page instead
   // races the preview's other widgets as they mount.
@@ -306,7 +306,7 @@ test("a self-closed widget typed in the editor is left as typed and the page com
   await appendToLine(page, "# Weekly review", `\n${selfClosed}`);
 
   await expect(
-    page.locator(".cm-line", { hasText: /^<Table data="orders"/ }),
+    page.locator(".cm-line", { hasText: /^<Table data="kpi"/ }),
   ).toHaveText(selfClosed);
   await saveWithModS(page);
   await expect(typedTable).toHaveCount(1);

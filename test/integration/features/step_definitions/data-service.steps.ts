@@ -76,22 +76,30 @@ Then(
 );
 
 Then(
-  "the weekly-review module exports orders, region_share and weekly_trend",
+  "the weekly-review module exports the region_orders query file, region_share and weekly_trend",
   async () => {
     const code = await pageModule("weekly-review.md");
-    for (const name of ["orders", "region_share", "weekly_trend"]) {
+    for (const name of [
+      "/queries/region_orders",
+      "region_share",
+      "weekly_trend",
+    ]) {
       assert.match(code, new RegExp(`\\{"name":"${name}"`));
     }
   },
 );
 
 Then(
-  "the weekly-review module's orders, region_week and order_amounts blocks carry no region param",
+  "the weekly-review module's region_orders query file, region_week and order_amounts blocks carry no region param",
   async () => {
     const code = await pageModule("weekly-review.md");
     // The block entry runs from its name to the sql string's closing brace;
     // its sql is the JSON-escaped text the browser interpolates.
-    for (const name of ["orders", "region_week", "order_amounts"]) {
+    for (const name of [
+      "/queries/region_orders",
+      "region_week",
+      "order_amounts",
+    ]) {
       const start = code.indexOf(`{"name":"${name}"`);
       assert.ok(start >= 0, `weekly-review must declare a ${name} block`);
       const end = code.indexOf('"}', start);

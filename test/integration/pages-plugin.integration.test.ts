@@ -147,6 +147,25 @@ describe("page transform", () => {
     );
   });
 
+  it("inlines the query files a fence builds on, and the files they read", async () => {
+    const root = makeProject();
+    writeFile("queries/totals.sql", "select * from {{/queries/base}}\n");
+    writeFile("queries/base.sql", "select 1 as x\n");
+    writeFile(
+      "pages/index.md",
+      "# Hi\n\n```sql share\nselect * from {{/queries/totals}}\n```\n",
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain(
+      'export const sqlBlocks = [{"name":"share","sql":"select * from {{/queries/totals}}"},{"name":"/queries/totals","sql":"select * from {{/queries/base}}\\n"},{"name":"/queries/base","sql":"select 1 as x\\n"}];',
+    );
+  });
+
   it("serves a page naming a missing query file as a compile error at the attribute", async () => {
     const root = makeProject();
     writeFile("queries/totals.sql", "select 1\n");

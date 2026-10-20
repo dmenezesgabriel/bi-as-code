@@ -30,7 +30,7 @@ test("index page runs the named sql block and renders its live result", async ({
   // The `echo` fence shows its highlighted source; the `<Table>` reading
   // `orders` is the page's only live table.
   const fence = page.locator("pre.shiki");
-  await expect(fence).toContainText("select region");
+  await expect(fence).toContainText("{{/queries/region_orders}}");
   await expect(fence).toContainText("{{params.region}}");
 
   const result = resultTables(page).first();
@@ -85,7 +85,7 @@ test("{{params.region}} binds the URL search param through a prepared arg", asyn
   expect(errors).toEqual([]);
 });
 
-test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
+test("weekly-review's region_share builds on {{/queries/region_orders}} and runs the 39-row trend", async ({
   page,
   biacDev,
 }) => {
@@ -102,8 +102,13 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
   // The caption appears twice: the tab <Table data="region_week" /> and
   // the <Table data="weekly_trend" /> — the fences behind them stay hidden.
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
-  // region_share composes {{orders}} + pct_of_total.
+  // region_share builds pct_of_total on queries/region_orders.sql.
   await expect(results.nth(0).getByRole("row")).toHaveCount(4);
+  expect(await results.nth(0).locator("tbody td").allTextContents()).toEqual([
+    ...["West", "140", "39"],
+    ...["North", "120", "34"],
+    ...["South", "95", "27"],
+  ]);
   // Result headers read humanized: `pct_of_total` → "Pct of Total".
   await expect(
     results.nth(0).getByRole("columnheader", { name: "Pct of Total" }),
@@ -130,7 +135,7 @@ test("weekly-review composes {{orders}} and runs the 39-row trend", async ({
 
   // The fences stay raw under the param — the widgets that declare
   // filters=["region"] are the filters spec's subject: region_share still
-  // composes all three regions out of `orders`.
+  // reads all three regions out of queries/region_orders.sql.
   await page.goto(`${biacDev.url}weekly-review?region=West`);
   await expect(results.nth(0).getByRole("row")).toHaveCount(4);
   expect(
@@ -202,7 +207,7 @@ test("a missing sql: source shows an inline error, not a page crash", async ({
   ]);
 });
 
-test("weekly-review's region chart reads queries/region_orders.sql", async ({
+test("weekly-review's region chart and region_share read queries/region_orders.sql", async ({
   page,
   biacDev,
 }) => {
@@ -217,14 +222,14 @@ test("weekly-review's region chart reads queries/region_orders.sql", async ({
   );
   await openWeeklyReviewCharts(page, biacDev.url);
 
-  // Chart 0 is "Revenue by region": its bars follow the file's edit, while
-  // region_share still composes the page's own `orders` fence.
+  // Chart 0 is "Revenue by region" and result table 0 is region_share:
+  // both follow the file's edit.
   const { series } = await optionAt(page, 0);
   expect(series[0]?.data).toEqual([
     ["North", 4800],
     ["South", 3700],
   ]);
-  await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(4);
+  await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(3);
   expect(errors).toEqual([]);
 });
 
@@ -244,8 +249,30 @@ test("a misspelled query file reference fails the page at its line", async ({
 
   const alert = page.getByRole("alert");
   await expect(alert).toContainText("This page failed to compile");
-  await expect(alert).toContainText(/pages\/weekly-review\.md:111:\d+/);
+  await expect(alert).toContainText(/pages\/weekly-review\.md:104:\d+/);
   await expect(alert).toContainText(
     'Query file queries/region_order.sql not found for data="/queries/region_order" (did you mean /queries/region_orders?)',
+  );
+});
+
+test("a misspelled query file token fails the page at its fence", async ({
+  page,
+  biacDev,
+}) => {
+  const pageFile = join(biacDev.projectDir, "pages/weekly-review.md");
+  writeFileSync(
+    pageFile,
+    readFileSync(pageFile, "utf8").replace(
+      "from {{/queries/region_orders}}",
+      "from {{/queries/region_order}}",
+    ),
+  );
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("This page failed to compile");
+  await expect(alert).toContainText(/pages\/weekly-review\.md:106:1/);
+  await expect(alert).toContainText(
+    "Query file queries/region_order.sql not found for {{/queries/region_order}} (did you mean /queries/region_orders?)",
   );
 });

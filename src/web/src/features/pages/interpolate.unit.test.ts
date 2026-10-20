@@ -112,6 +112,40 @@ describe("interpolateQuery", () => {
     expect(out.errors[0]).toMatch(/[Cc]ircular.*a/);
   });
 
+  it("inlines a query file by its root path, binding the file's own params", () => {
+    const out = interpolateQuery(
+      "select * from {{/queries/orders}} where r = {{params.region}}",
+      {
+        params: { region: "West", weeks: "4" },
+        queries: {
+          "/queries/orders":
+            "select * from orders where week > {{params.weeks}}",
+        },
+      },
+    );
+
+    expect(out.sql).toBe(
+      "select * from (select * from orders where week > ?) where r = ?",
+    );
+    expect(out.params).toEqual(["4", "West"]);
+  });
+
+  it("rejects a cycle between two query files", () => {
+    const out = interpolateQuery(
+      "select * from {{/queries/b}}",
+      {
+        params: {},
+        queries: {
+          "/queries/a": "select * from {{/queries/b}}",
+          "/queries/b": "select * from {{/queries/a}}",
+        },
+      },
+      new Set(["/queries/a"]),
+    );
+
+    expect(out.errors).toEqual(["Circular query reference: {{/queries/a}}"]);
+  });
+
   it("errors on a {{name}} that is neither a param nor a named query", () => {
     const out = interpolateQuery("select * from {{missing}}", {
       params: {},

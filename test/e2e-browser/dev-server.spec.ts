@@ -34,7 +34,7 @@ test("renders the index page: title, prose, gfm table, highlighted sql fence", a
 
   const fence = page.locator("pre.shiki");
   await expect(fence).toBeVisible();
-  await expect(fence).toContainText("select region");
+  await expect(fence).toContainText("{{/queries/region_orders}}");
   await expect(fence.locator('span[style*="color"]').first()).toBeAttached();
 
   expect(errors).toEqual([]);

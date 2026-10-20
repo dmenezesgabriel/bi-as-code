@@ -176,7 +176,7 @@ describe("biac build", () => {
     expect(html).not.toContain("--chart-1: #60a5fa;");
   }, 120_000);
 
-  it("ships a query file only inside the chunk of the page that names it", () => {
+  it("ships a query file only inside the chunk of the page that names it, directly or through another file", () => {
     const root = makeTempProject("biac-e2e-build-query-files-");
     writeProjectFile(root, "pages/index.md", "# Home\n");
     writeProjectFile(
@@ -184,7 +184,18 @@ describe("biac build", () => {
       "pages/report.md",
       '# Report\n\n<Table data="/queries/totals" />\n',
     );
+    writeProjectFile(
+      root,
+      "pages/share.md",
+      "# Share\n\n```sql share\nselect * from {{/queries/outer}}\n```\n",
+    );
     writeProjectFile(root, "queries/totals.sql", "select 'shipped-query'\n");
+    writeProjectFile(
+      root,
+      "queries/outer.sql",
+      "select * from {{/queries/inner}}\n",
+    );
+    writeProjectFile(root, "queries/inner.sql", "select 'nested-query'\n");
     writeProjectFile(root, "queries/unused.sql", "select 'never-shipped'\n");
 
     execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
@@ -198,6 +209,9 @@ describe("biac build", () => {
       );
     expect(carriers("shipped-query")).toEqual([
       expect.stringMatching(/^assets\/report-.*\.js$/),
+    ]);
+    expect(carriers("nested-query")).toEqual([
+      expect.stringMatching(/^assets\/share-.*\.js$/),
     ]);
     expect(carriers("never-shipped")).toEqual([]);
   }, 120_000);

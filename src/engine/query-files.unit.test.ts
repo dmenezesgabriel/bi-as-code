@@ -80,6 +80,89 @@ describe("a widget's data naming a query file", () => {
   });
 });
 
+describe("a sql fence building on a query file", () => {
+  it("adds the file a named fence's {{/queries/<path>}} reads", async () => {
+    const files = new FakeQueryFiles({ "region_orders.sql": "select 1" });
+
+    const blocks = await resolveBlocks(
+      "```sql share\nselect * from {{/queries/region_orders}}\n```\n",
+      files,
+    );
+
+    expect(blocks).toEqual([
+      { name: "/queries/region_orders", sql: "select 1" },
+    ]);
+  });
+
+  it("trims spaces inside the braces, as the interpolator does", async () => {
+    const files = new FakeQueryFiles({ "a.sql": "select 1" });
+
+    const blocks = await resolveBlocks(
+      "```sql share\nselect * from {{ /queries/a }}\n```\n",
+      files,
+    );
+
+    expect(blocks).toEqual([{ name: "/queries/a", sql: "select 1" }]);
+  });
+
+  it("ignores a token in an unnamed fence, which never runs", async () => {
+    const files = new FakeQueryFiles({});
+
+    const blocks = await resolveBlocks(
+      "```sql\nselect * from {{/queries/a}}\n```\n",
+      files,
+    );
+
+    expect(blocks).toEqual([]);
+    expect(files.reads).toEqual([]);
+  });
+
+  it("reads a file named by a fence and a widget once", async () => {
+    const files = new FakeQueryFiles({ "a.sql": "select 1" });
+
+    await resolveBlocks(
+      '<Table data="/queries/a" />\n\n```sql share\nselect * from {{/queries/a}}\n```\n',
+      files,
+    );
+
+    expect(files.reads).toEqual(["a.sql"]);
+  });
+});
+
+describe("a query file building on another", () => {
+  it("adds the file the first one reads", async () => {
+    const files = new FakeQueryFiles({
+      "a.sql": "select * from {{/queries/b}} where r = {{params.r}}",
+      "b.sql": "select 2",
+    });
+
+    const blocks = await resolveBlocks('<Table data="/queries/a" />\n', files);
+
+    expect(blocks).toEqual([
+      {
+        name: "/queries/a",
+        sql: "select * from {{/queries/b}} where r = {{params.r}}",
+      },
+      { name: "/queries/b", sql: "select 2" },
+    ]);
+  });
+
+  it("reads each file of a cycle once and leaves the cycle to the registry", async () => {
+    const files = new FakeQueryFiles({
+      "a.sql": "select * from {{/queries/b}}",
+      "b.sql": "select * from {{/queries/a}}",
+    });
+
+    const blocks = await resolveBlocks('<Table data="/queries/a" />\n', files);
+
+    expect(blocks.map((block) => block.name)).toEqual([
+      "/queries/a",
+      "/queries/b",
+    ]);
+    expect(files.reads).toEqual(["a.sql", "b.sql"]);
+  });
+});
+
 describe("a query file reference that does not resolve", () => {
   it("names the missing file and the closest one, at the attribute", async () => {
     const files = new FakeQueryFiles({ "region_orders.sql": "select 1" });
@@ -104,6 +187,49 @@ describe("a query file reference that does not resolve", () => {
       resolveBlocks('<Table data="/orders" />\n', files),
     ).rejects.toThrow(
       'data="/orders" names no query file — expected data="/queries/<path>" for queries/<path>.sql',
+    );
+  });
+  it("names the missing file at the fence that reads it", async () => {
+    const files = new FakeQueryFiles({ "region_orders.sql": "select 1" });
+
+    const failure = await resolveBlocks(
+      "# T\n\n```sql share\nselect * from {{/queries/region_order}}\n```\n",
+      files,
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message:
+        "Query file queries/region_order.sql not found for {{/queries/region_order}} (did you mean /queries/region_orders?)",
+      line: 3,
+      column: 1,
+    });
+  });
+
+  it("names the file that reads a missing one, at the page's reference", async () => {
+    const files = new FakeQueryFiles({
+      "a.sql": "select * from {{/queries/b}}",
+    });
+
+    const failure = await resolveBlocks(
+      '\n<Table data="/queries/a" />\n',
+      files,
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message:
+        "Query file queries/b.sql not found for {{/queries/b}} in queries/a.sql (did you mean /queries/a?)",
+      line: 2,
+      column: 8,
+    });
+  });
+
+  it("names the expected shape for a fence token outside queries/", async () => {
+    const files = new FakeQueryFiles({});
+
+    await expect(
+      resolveBlocks("```sql share\nselect * from {{/orders}}\n```\n", files),
+    ).rejects.toThrow(
+      "{{/orders}} names no query file — expected {{/queries/<path>}} for queries/<path>.sql",
     );
   });
 });

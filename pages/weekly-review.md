@@ -101,20 +101,13 @@ with the other two regions.
 | North  |    120 |  $4,800 |         0% |
 | South  |     95 |  $3,700 |         0% |
 
-```sql orders
-select region, count(*) as orders, sum(amount) as revenue
-from orders
-group by region
-order by revenue desc
-```
-
 <BarChart data="/queries/region_orders" x="region" y="revenue" title="Revenue by region" subtitle="Sum of order amounts, US dollars" labels filters={["region"]} select="crossfilter" />
 
 ```sql region_share echo display
--- composes the orders block above: each region's share of all orders
+-- builds on queries/region_orders.sql: each region's share of all orders
 select region, orders,
   round(orders * 100.0 / sum(orders) over (), 1) as pct_of_total
-from {{orders}}
+from {{/queries/region_orders}}
 order by orders desc
 ```
 

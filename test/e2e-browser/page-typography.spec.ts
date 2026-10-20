@@ -186,7 +186,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     // inherits the fence foreground.
     const fence = page.locator("main pre.shiki").first();
     await expect(
-      fence.locator("span[style]", { hasText: /^-- composes/ }),
+      fence.locator("span[style]", { hasText: /^-- builds on/ }),
     ).toBeVisible();
 
     const colors = await fence.evaluate((pre) => ({

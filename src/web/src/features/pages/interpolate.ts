@@ -1,16 +1,18 @@
 /**
  * The `{{…}}` template surface inside ` ```sql ` blocks. `{{params.name}}`
  * binds a URL search-param value through a `?` placeholder (injection-safe —
- * the value travels as a prepared-statement arg, never as text), and
- * `{{name}}` inlines another named block's SQL as a parenthesized subquery.
- * Filter/input/sql-file/front-matter tokens are not implemented yet; an
+ * the value travels as a prepared-statement arg, never as text),
+ * `{{name}}` inlines another named block's SQL as a parenthesized subquery,
+ * and `{{/queries/<path>}}` inlines a query file the engine put on the page
+ * under that name — its own `{{…}}` tokens resolve the same way.
+ * Filter/input/front-matter tokens are not implemented yet; an
  * unrecognized token is an error, and a query with errors is never run.
  */
 
 export interface InterpolationContext {
   /** URL search params — `{{params.name}}` binds `params[name]`, absent → NULL. */
   readonly params: Readonly<Record<string, unknown>>;
-  /** The page's named sql blocks — `{{name}}` inlines `queries[name]`. */
+  /** The page's named sql blocks and query files — `{{name}}` inlines `queries[name]`. */
   readonly queries: Readonly<Record<string, string>>;
 }
 
@@ -54,7 +56,7 @@ export function interpolateQuery(
     const inner = context.queries[token];
     if (inner === undefined) {
       errors.push(
-        `Unknown token {{${token}}} — expected {{params.<name>}} or the name of another sql block on this page`,
+        `Unknown token {{${token}}} — expected {{params.<name>}}, {{/queries/<path>}} or the name of another sql block on this page`,
       );
       return "";
     }

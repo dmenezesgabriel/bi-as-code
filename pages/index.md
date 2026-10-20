@@ -21,10 +21,8 @@ The West leads on revenue at <Value data="orders" column="revenue" fmt="usd0" />
 this quarter.
 
 ```sql orders echo
-select region, count(*) as orders, sum(amount) as revenue
-from orders
+select * from {{/queries/region_orders}}
 where {{params.region}} is null or region = {{params.region}}
-group by region
 order by revenue desc
 ```
 

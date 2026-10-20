@@ -7,5 +7,5 @@ Feature: the weekly-review demo page scopes regions through widget filters
   Scenario: the weekly-review module's filtered fences compile without the region param
     Given the shipped project with its data files
     When biac dev serves the project
-    Then the weekly-review module's orders, region_week and order_amounts blocks carry no region param
+    Then the weekly-review module's region_orders query file, region_week and order_amounts blocks carry no region param
     And the index page module declares its orders table and named block
