@@ -31,11 +31,13 @@ import {
   pageCompileError,
 } from "./page-compile-error.js";
 import { pageSourceEndpoint } from "./page-source-endpoint.js";
+import { queryFilesRead } from "./query-files.js";
 import { serveDataDir } from "./serve-data-dir.js";
 import { statFile } from "./stat-file.js";
 import type {
   BiacConfig,
   BrandTheme,
+  CompiledPage,
   DataLoaderInterpreters,
   DirectoryTitles,
   QueryFiles,
@@ -185,10 +187,16 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (!isPageFile(id, pagesDirPosix)) return;
       const file = `pages/${toPosix(id).slice(pagesDirPosix.length + 1)}`;
       const { sqlTables, brand } = await getConfig();
-      const moduleSource = isDevServer
+      const compiled = isDevServer
         ? await compiledOrErrorModule(code, file, sqlTables, brand, queryFiles)
-        : (await compilePage(code, file, sqlTables, brand, queryFiles)).code;
-      return { code: moduleSource, map: null };
+        : await compilePage(code, file, sqlTables, brand, queryFiles);
+      // The page module inlines each query file's SQL rather than importing
+      // it, so vite learns of the file here: an edit to it re-transforms
+      // every page that read it and swaps them in place like a page edit.
+      for (const queryFile of queryFilesRead(compiled.sqlBlocks)) {
+        this.addWatchFile(join(root, queryFile));
+      }
+      return { code: compiled.code, map: null };
     },
     // The inline theme script in index.html runs before any module loads,
     // so the `virtual:biac-config` default reaches it as a plain global.
@@ -330,13 +338,21 @@ async function compiledOrErrorModule(
   configTables: SqlTableMap,
   projectBrand: BrandTheme,
   queryFiles: QueryFiles,
-): Promise<string> {
+): Promise<Pick<CompiledPage, "code" | "sqlBlocks">> {
   try {
-    return (
-      await compilePage(markdown, file, configTables, projectBrand, queryFiles)
-    ).code;
+    return await compilePage(
+      markdown,
+      file,
+      configTables,
+      projectBrand,
+      queryFiles,
+    );
   } catch (error) {
-    return compileErrorModuleSource(pageCompileError(error, file));
+    // A page that fails to compile carries no blocks, so it reads no file.
+    return {
+      code: compileErrorModuleSource(pageCompileError(error, file)),
+      sqlBlocks: [],
+    };
   }
 }
 

@@ -1,5 +1,10 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Page } from "@playwright/test";
+import {
+  PAGE_SWAP_LOGGED_PATH,
+  rewriteUntilServerLogs,
+} from "../lib/write-until-logged.js";
 import {
   collectConsoleErrors,
   expect,
@@ -230,6 +235,99 @@ test("weekly-review's region chart and region_share read queries/region_orders.s
     ["South", 3700],
   ]);
   await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(3);
+  expect(errors).toEqual([]);
+});
+
+/**
+ * Saves `queries/region_orders.sql` under the running dev server, rewritten
+ * by `edit`, until vite logs the page swap it causes.
+ */
+async function saveRegionOrders(
+  biacDev: { projectDir: string; log(): readonly string[] },
+  edit: (sql: string) => string,
+): Promise<void> {
+  const queryFile = join(biacDev.projectDir, "queries/region_orders.sql");
+  const sql = edit(readFileSync(queryFile, "utf8"));
+  await rewriteUntilServerLogs({
+    rewrite: () => writeFileSync(queryFile, sql),
+    log: biacDev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+}
+
+/** Marks the window; a full reload would discard the mark. */
+async function markWindow(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as unknown as { __probe: string }).__probe = "kept";
+  });
+}
+
+function windowMark(page: Page): Promise<string | undefined> {
+  return page.evaluate(
+    () => (window as unknown as { __probe?: string }).__probe,
+  );
+}
+
+test("saving queries/region_orders.sql updates weekly-review in place", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await openWeeklyReviewCharts(page, biacDev.url);
+  await markWindow(page);
+
+  await saveRegionOrders(biacDev, (sql) =>
+    sql.replace("group by region", "where region <> 'West'\ngroup by region"),
+  );
+
+  await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(3);
+  await expect
+    .poll(async () => (await optionAt(page, 0)).series[0]?.data)
+    .toEqual([
+      ["North", 4800],
+      ["South", 3700],
+    ]);
+  expect(await windowMark(page)).toBe("kept");
+  expect(errors).toEqual([]);
+});
+
+test("a broken query file shows the error state of the chart that reads it, named by the file", async ({
+  page,
+  biacDev,
+}) => {
+  test.slow();
+  const errors = collectConsoleErrors(page);
+  await openWeeklyReviewCharts(page, biacDev.url);
+  const original = readFileSync(
+    join(biacDev.projectDir, "queries/region_orders.sql"),
+    "utf8",
+  );
+
+  await saveRegionOrders(biacDev, (sql) =>
+    sql.replace("select region", "selec region"),
+  );
+
+  const alert = page
+    .getByRole("alert")
+    .filter({ hasText: "/queries/region_orders:" });
+  await expect(alert).toContainText(
+    "/queries/region_orders: queries/region_orders.sql: query failed (",
+  );
+  await expect(alert).toContainText("syntax error at or near");
+
+  await saveRegionOrders(biacDev, () => original);
+
+  await expect(alert).toHaveCount(0);
+  await expect
+    .poll(async () => (await optionAt(page, 0)).series[0]?.data)
+    .toEqual([
+      ["West", 6100],
+      ["North", 4800],
+      ["South", 3700],
+    ]);
   expect(errors).toEqual([]);
 });
 

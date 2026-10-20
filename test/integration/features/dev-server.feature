@@ -19,3 +19,11 @@ Feature: biac dev serves a project's pages directory over HTTP
     Then the nested page file on disk reads "# Saved from the browser"
     And the nested page module compiles "Saved from the browser"
     And the dev server exits cleanly on SIGINT
+
+  Scenario: a saved query file recompiles the page that reads it
+    Given a project whose index page reads the query file "totals" holding "select 'before' as x"
+    When I start the dev server
+    Then the index page module compiles "select 'before' as x"
+    When I save "select 'after' as x" as the query file "totals"
+    Then the index page module compiles "select 'after' as x"
+    And the dev server exits cleanly on SIGINT

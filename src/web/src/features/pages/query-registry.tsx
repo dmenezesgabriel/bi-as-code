@@ -115,7 +115,7 @@ export function QueryRegistryProvider({
       const query = interpolated[name];
       if (!query) continue;
       const control = startRun(runs, name, query);
-      void runBlock(runtime, registered, query, control.signal).then(
+      void runBlock(runtime, registered, name, query, control.signal).then(
         (result) => {
           if (!control.signal.aborted) {
             setResults((prev) => ({ ...prev, [name]: result }));

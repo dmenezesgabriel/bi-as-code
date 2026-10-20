@@ -2,17 +2,35 @@ import { Cause, Exit } from "effect";
 import { DuckDb } from "../data/data-service";
 import type { DataRuntime } from "../data/runtime";
 import type { InterpolatedQuery } from "./interpolate";
+import { attributedToQueryFile } from "./query-file-source";
 import type { QueryResult } from "./types";
 
 /**
- * Runs one interpolated query to a `QueryResult`, awaiting the page's table
- * registration first — the registry's own block loop and the filtered
- * consumers (`useFilteredQueryRows`) share it. Never rejects: callers `void`
- * it and a rejection would be unobserved (a disposed runtime mid-unmount
- * throws on await). Every failure becomes an `error` result — or a discarded
- * one when aborted.
+ * Runs block `name`'s interpolated query to a `QueryResult`, awaiting the
+ * page's table registration first — the registry's own block loop and the
+ * filtered consumers (`useFilteredQueryRows`) share it. Never rejects:
+ * callers `void` it and a rejection would be unobserved (a disposed runtime
+ * mid-unmount throws on await). Every failure becomes an `error` result —
+ * or a discarded one when aborted — named by its query file when the block
+ * is one.
+ *
+ * @example
+ * const result = await runBlock(runtime, registered, "orders", interpolated["orders"], signal);
  */
 export async function runBlock(
+  runtime: DataRuntime,
+  registered: Promise<Exit.Exit<void, unknown>>,
+  name: string,
+  interpolated: InterpolatedQuery,
+  signal: AbortSignal,
+): Promise<QueryResult> {
+  return attributedToQueryFile(
+    name,
+    await resultOf(runtime, registered, interpolated, signal),
+  );
+}
+
+async function resultOf(
   runtime: DataRuntime,
   registered: Promise<Exit.Exit<void, unknown>>,
   interpolated: InterpolatedQuery,

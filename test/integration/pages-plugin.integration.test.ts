@@ -465,6 +465,23 @@ describe("file watching", () => {
     );
   });
 
+  it("invalidates the page module that reads a query file when the file is edited", async () => {
+    const root = makeProject();
+    const pagePath = join(root, "pages/index.md");
+    writeFile("queries/totals.sql", "select 'before' as x\n");
+    writeFile("pages/index.md", '# Hi\n\n<Table data="/queries/totals" />\n');
+    const dev = await makeServer(root);
+    await dev.transformRequest(`/@fs${pagePath}`);
+    await waitForWatch(dev, join(root, "queries"), "totals.sql");
+
+    await expectInvalidated(pageModule(dev, pagePath), () =>
+      writeFile("queries/totals.sql", "select 'after' as x\n"),
+    );
+
+    const result = await dev.transformRequest(`/@fs${pagePath}`);
+    expect(result?.code).toContain("select 'after' as x");
+  });
+
   it("makes the manifest the HMR boundary for every page module", async () => {
     const root = makeProject();
     const pagePath = join(root, "pages/index.md");

@@ -74,6 +74,20 @@ Given("a project with an index page and a nested page", () => {
   writeFileSync(join(projectRoot, "pages/nested/page.md"), "# Nested\n");
 });
 
+Given(
+  "a project whose index page reads the query file {string} holding {string}",
+  (name: string, sql: string) => {
+    projectRoot = mkdtempSync(join(tmpdir(), "biac-cucumber-"));
+    mkdirSync(join(projectRoot, "pages"));
+    mkdirSync(join(projectRoot, "queries"));
+    writeFileSync(join(projectRoot, `queries/${name}.sql`), `${sql}\n`);
+    writeFileSync(
+      join(projectRoot, "pages/index.md"),
+      `# Hi\n\n<Table data="/queries/${name}" />\n`,
+    );
+  },
+);
+
 When("I start the dev server", async () => {
   assert.ok(projectRoot, "project must exist before starting the server");
   const port = await freePort();
@@ -133,9 +147,28 @@ Then("the nested page file on disk reads {string}", (heading: string) => {
 });
 
 Then("the nested page module compiles {string}", async (text: string) => {
-  const url = `${base}@fs${projectRoot}/pages/nested/page.md?import`;
-  await eventually(async () => (await getOk(url)).includes(text));
+  await expectPageModuleCompiles("pages/nested/page.md", text);
 });
+
+When(
+  "I save {string} as the query file {string}",
+  (sql: string, name: string) => {
+    writeFileSync(join(projectRoot!, `queries/${name}.sql`), `${sql}\n`);
+  },
+);
+
+Then("the index page module compiles {string}", async (text: string) => {
+  await expectPageModuleCompiles("pages/index.md", text);
+});
+
+/** Waits until the page module vite serves for `page` carries `text`. */
+async function expectPageModuleCompiles(
+  page: string,
+  text: string,
+): Promise<void> {
+  const url = `${base}@fs${projectRoot}/${page}?import`;
+  await eventually(async () => (await getOk(url)).includes(text));
+}
 
 Then(
   "the nested page module reports the compile error {string}",

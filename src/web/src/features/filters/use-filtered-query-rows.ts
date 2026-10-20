@@ -164,7 +164,7 @@ export function useFilteredQueryClient(
       : undefined;
     const unsubscribeAll = subscribeAll(selections, forceRender);
     pageFilters.coordinator.connect(client, selections, (query, signal) =>
-      runBlock(runtime, registered, query, signal),
+      runBlock(runtime, registered, name, query, signal),
     );
     // registerClient mutates clauses' live skip sets without a publish, and
     // connect may early-return on a fully skipped predicate — no callback
@@ -175,7 +175,7 @@ export function useFilteredQueryClient(
       unregister?.();
       pageFilters.coordinator.disconnect(client);
     };
-  }, [pageFilters, idsKey, block, registered, runtime, owner, client]);
+  }, [pageFilters, idsKey, block, name, registered, runtime, owner, client]);
 
   const unfiltered = unfilteredRead(registryResult, client);
   if (!pageFilters || !block || block.errors.length > 0) return unfiltered;

@@ -278,6 +278,33 @@ describe("QueryRegistryProvider", () => {
     ).toContain("no such table");
   });
 
+  it("names a broken query file ahead of its error, but not in a fence built on it", async () => {
+    const db = new FakeDuckDb();
+    db.failWhen = (sql) => (sql.includes("selec ") ? "syntax error" : null);
+    const { resultsRef } = renderRegistry({
+      db,
+      blocks: [
+        { name: "/queries/region_orders", sql: "selec region from orders" },
+        { name: "share", sql: "select * from {{/queries/region_orders}}" },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(resultsRef.current["/queries/region_orders"]?.status).toBe(
+        "error",
+      );
+      expect(resultsRef.current.share?.status).toBe("error");
+    });
+    expect(resultsRef.current["/queries/region_orders"]).toMatchObject({
+      message: expect.stringMatching(
+        /^queries\/region_orders\.sql: .*syntax error/,
+      ),
+    });
+    expect(resultsRef.current.share).toMatchObject({
+      message: expect.not.stringMatching(/^queries\//),
+    });
+  });
+
   it("surfaces interpolation errors without sending the query", async () => {
     const { db, resultsRef } = renderRegistry({
       blocks: [{ name: "q", sql: "select * from {{nope}}" }],

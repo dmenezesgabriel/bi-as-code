@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildCli, startDevServer, type DevServer } from "../lib/dev-server.js";
 import { eventually } from "../lib/http.js";
-import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
+import {
+  PAGE_SWAP_LOGGED_PATH,
+  rewriteUntilServerLogs,
+} from "../lib/write-until-logged.js";
 
 let projectRoot: string | undefined;
 let server: DevServer | undefined;
@@ -115,6 +118,34 @@ describe("biac dev", () => {
     });
 
     expect(line).toMatch(/ page reload \S*\/pages\/added\.md/);
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("hot-updates a page, without a reload, when a query file it reads is saved", async () => {
+    mkdirSync(join(projectRoot!, "queries"), { recursive: true });
+    const queryFile = join(projectRoot!, "queries/totals.sql");
+    writeFileSync(queryFile, "select 1 as n\n");
+    const page = join(projectRoot!, "pages/totals.md");
+    writeFileSync(page, '# Totals\n\n<Table data="/queries/totals" />\n');
+    server = await startDevServer(projectRoot!);
+    // Only modules a client loaded join vite's graph: the manifest, which
+    // accepts every page, and the page that reads the file, requested as a
+    // module import (`?import`) the way the manifest's loader requests it.
+    await fetch(`${server.url}@id/__x00__virtual:biac-pages`);
+    await fetch(`${server.url}@fs${page}?import`);
+
+    const line = await rewriteUntilServerLogs({
+      rewrite: () => writeFileSync(queryFile, "select 2 as n\n"),
+      log: server.log,
+      loggedPath: PAGE_SWAP_LOGGED_PATH,
+      attemptMs: 3_000,
+      timeoutMs: 20_000,
+    });
+
+    expect(line).toMatch(/ hmr update /);
+    expect(server.log()).not.toContainEqual(
+      expect.stringMatching(/ page reload /),
+    );
     expect(await server.stop()).toBe(0);
   }, 60_000);
 

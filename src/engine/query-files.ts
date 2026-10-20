@@ -60,6 +60,20 @@ export const remarkQueryFiles: Plugin<[QueryFiles, SqlBlock[]], Root> =
     }
   };
 
+/**
+ * The query files a compiled page read, from the project root: the blocks
+ * `remarkQueryFiles` appended, which alone are named by a root path.
+ *
+ * @example
+ * queryFilesRead([{ name: "/queries/totals", sql: "…" }, { name: "orders", sql: "…" }]);
+ * // → ["queries/totals.sql"]
+ */
+export function queryFilesRead(sqlBlocks: readonly SqlBlock[]): string[] {
+  return sqlBlocks
+    .filter((block) => block.name.startsWith(QUERIES_PREFIX))
+    .map((block) => fileOf(block.name));
+}
+
 /** Every root-path `data` value and named-fence file token, in page order. */
 function pageReferences(tree: Root): QueryReference[] {
   const references: QueryReference[] = [];

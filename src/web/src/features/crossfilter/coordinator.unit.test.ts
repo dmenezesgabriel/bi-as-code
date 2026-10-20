@@ -85,7 +85,8 @@ function makeHarness(db: FakeDuckDb = new FakeDuckDb()) {
   const run = (
     query: InterpolatedQuery,
     signal: AbortSignal,
-  ): Promise<QueryResult> => runBlock(runtime, registered, query, signal);
+  ): Promise<QueryResult> =>
+    runBlock(runtime, registered, "orders", query, signal);
   return { db, run, coordinator: new Coordinator() };
 }
 

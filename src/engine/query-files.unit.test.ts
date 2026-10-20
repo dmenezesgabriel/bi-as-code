@@ -1,6 +1,6 @@
 import { compile } from "@mdx-js/mdx";
 import { describe, expect, it } from "vitest";
-import { remarkQueryFiles } from "./query-files.js";
+import { queryFilesRead, remarkQueryFiles } from "./query-files.js";
 import type { QueryFiles, SqlBlock } from "./types.js";
 
 /** Query files held in memory, keyed by their path under `queries/`. */
@@ -231,5 +231,29 @@ describe("a query file reference that does not resolve", () => {
     ).rejects.toThrow(
       "{{/orders}} names no query file — expected {{/queries/<path>}} for queries/<path>.sql",
     );
+  });
+});
+
+describe("the query files a compiled page read", () => {
+  it("maps each file block to its path from the project root", () => {
+    const blocks: SqlBlock[] = [
+      { name: "/queries/region_orders", sql: "select 1" },
+      { name: "/queries/sales/totals", sql: "select 2" },
+    ];
+
+    const files = queryFilesRead(blocks);
+
+    expect(files).toEqual([
+      "queries/region_orders.sql",
+      "queries/sales/totals.sql",
+    ]);
+  });
+
+  it("leaves out the page's own fences", () => {
+    const blocks: SqlBlock[] = [{ name: "orders", sql: "select 1" }];
+
+    const files = queryFilesRead(blocks);
+
+    expect(files).toEqual([]);
   });
 });
