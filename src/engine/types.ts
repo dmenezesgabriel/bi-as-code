@@ -51,10 +51,23 @@ export interface NavTree {
  * is deferred; the block is extracted so the manifest can register it.
  */
 export interface SqlBlock {
-  /** Query name declared in the fence info string. */
+  /**
+   * Query name declared in the fence info string, or the `/queries/<path>`
+   * reference of a query file a widget's `data` names.
+   */
   name: string;
-  /** Raw SQL text of the fence body. */
+  /** Raw SQL text of the fence body or the query file. */
   sql: string;
+}
+
+/**
+ * The project's `queries/` directory, read by path under it
+ * (`sales/totals.sql`). `read` resolves `undefined` for a file that does
+ * not exist or lies outside the directory; `list` names every `.sql` file.
+ */
+export interface QueryFiles {
+  read(name: string): Promise<string | undefined>;
+  list(): Promise<string[]>;
 }
 
 /**

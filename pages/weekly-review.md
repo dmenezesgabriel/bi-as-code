@@ -108,7 +108,7 @@ group by region
 order by revenue desc
 ```
 
-<BarChart data="orders" x="region" y="revenue" title="Revenue by region" subtitle="Sum of order amounts, US dollars" labels filters={["region"]} select="crossfilter" />
+<BarChart data="/queries/region_orders" x="region" y="revenue" title="Revenue by region" subtitle="Sum of order amounts, US dollars" labels filters={["region"]} select="crossfilter" />
 
 ```sql region_share echo display
 -- composes the orders block above: each region's share of all orders

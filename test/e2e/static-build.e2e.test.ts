@@ -176,6 +176,32 @@ describe("biac build", () => {
     expect(html).not.toContain("--chart-1: #60a5fa;");
   }, 120_000);
 
+  it("ships a query file only inside the chunk of the page that names it", () => {
+    const root = makeTempProject("biac-e2e-build-query-files-");
+    writeProjectFile(root, "pages/index.md", "# Home\n");
+    writeProjectFile(
+      root,
+      "pages/report.md",
+      '# Report\n\n<Table data="/queries/totals" />\n',
+    );
+    writeProjectFile(root, "queries/totals.sql", "select 'shipped-query'\n");
+    writeProjectFile(root, "queries/unused.sql", "select 'never-shipped'\n");
+
+    execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
+
+    const build = join(root, "build");
+    const carriers = (text: string) =>
+      readdirSync(build, { recursive: true, encoding: "utf8" }).filter(
+        (name) =>
+          statSync(join(build, name)).isFile() &&
+          readFileSync(join(build, name), "utf8").includes(text),
+      );
+    expect(carriers("shipped-query")).toEqual([
+      expect.stringMatching(/^assets\/report-.*\.js$/),
+    ]);
+    expect(carriers("never-shipped")).toEqual([]);
+  }, 120_000);
+
   it("exits 1 naming a page brand colour under its floor on the project brand", () => {
     const root = makeTempProject("biac-e2e-build-page-brand-contrast-");
     writeProjectFile(

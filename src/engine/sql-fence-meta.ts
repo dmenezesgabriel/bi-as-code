@@ -36,6 +36,13 @@ export function parseSqlFenceMeta(
 }
 
 function assertNameIsNotAttribute(name: string, location: string): void {
+  // A widget's data="/queries/<path>" names a query file, so a fence name
+  // with a leading "/" could never be told apart from one.
+  if (name.startsWith("/")) {
+    throw new Error(
+      `sql block name "${name}" at ${location} starts with "/", which names a query file — write a bare name, e.g. \`sql orders\``,
+    );
+  }
   if (!FLAG_TOKEN.test(name) && !name.includes("=")) return;
   throw new Error(
     `sql block name "${name}" at ${location} is an attribute — write the name first, e.g. \`sql orders echo\``,

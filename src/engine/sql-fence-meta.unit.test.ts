@@ -61,6 +61,14 @@ describe("flags", () => {
   });
 });
 
+describe("invalid names", () => {
+  it("rejects a name starting with / as a query file's reference", () => {
+    expect(() => parse("/queries/orders")).toThrow(
+      'sql block name "/queries/orders" at pages/a.md:3 starts with "/", which names a query file — write a bare name, e.g. `sql orders`',
+    );
+  });
+});
+
 describe("invalid attributes", () => {
   it.each(["shwo", "Echo", "echo=yes", "display=", "id=orders"])(
     "rejects %s naming it and the accepted attributes",

@@ -6,6 +6,7 @@ import {
   resultTables,
   test,
 } from "./dev-server.fixture.js";
+import { openWeeklyReviewCharts, optionAt } from "./echart-hosts.js";
 
 test("index page runs the named sql block and renders its live result", async ({
   page,
@@ -199,4 +200,52 @@ test("a missing sql: source shows an inline error, not a page crash", async ({
   expect(errors).toEqual([
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
   ]);
+});
+
+test("weekly-review's region chart reads queries/region_orders.sql", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const queryFile = join(biacDev.projectDir, "queries/region_orders.sql");
+  writeFileSync(
+    queryFile,
+    readFileSync(queryFile, "utf8").replace(
+      "group by region",
+      "where region <> 'West'\ngroup by region",
+    ),
+  );
+  await openWeeklyReviewCharts(page, biacDev.url);
+
+  // Chart 0 is "Revenue by region": its bars follow the file's edit, while
+  // region_share still composes the page's own `orders` fence.
+  const { series } = await optionAt(page, 0);
+  expect(series[0]?.data).toEqual([
+    ["North", 4800],
+    ["South", 3700],
+  ]);
+  await expect(resultTables(page).nth(0).getByRole("row")).toHaveCount(4);
+  expect(errors).toEqual([]);
+});
+
+test("a misspelled query file reference fails the page at its line", async ({
+  page,
+  biacDev,
+}) => {
+  const pageFile = join(biacDev.projectDir, "pages/weekly-review.md");
+  writeFileSync(
+    pageFile,
+    readFileSync(pageFile, "utf8").replace(
+      'data="/queries/region_orders"',
+      'data="/queries/region_order"',
+    ),
+  );
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("This page failed to compile");
+  await expect(alert).toContainText(/pages\/weekly-review\.md:111:\d+/);
+  await expect(alert).toContainText(
+    'Query file queries/region_order.sql not found for data="/queries/region_order" (did you mean /queries/region_orders?)',
+  );
 });

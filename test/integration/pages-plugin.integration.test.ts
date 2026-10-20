@@ -129,6 +129,39 @@ describe("page transform", () => {
     );
   });
 
+  it("inlines the query file a widget's data names into the page module", async () => {
+    const root = makeProject();
+    writeFile("queries/sales/totals.sql", "select 'from-the-file' as x\n");
+    writeFile(
+      "pages/index.md",
+      '# Hi\n\n<Table data="/queries/sales/totals" />\n',
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain(
+      'export const sqlBlocks = [{"name":"/queries/sales/totals","sql":"select \'from-the-file\' as x\\n"}];',
+    );
+  });
+
+  it("serves a page naming a missing query file as a compile error at the attribute", async () => {
+    const root = makeProject();
+    writeFile("queries/totals.sql", "select 1\n");
+    writeFile("pages/index.md", '# Hi\n\n<Table data="/queries/total" />\n');
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Query file queries\/total\.sql not found for data=\\"\/queries\/total\\" \(did you mean \/queries\/totals\?\)[^\n]*"line":3,"column":8\};\n$/,
+    );
+  });
+
   it("serves a page with unparseable front-matter as a compile error", async () => {
     const root = makeProject();
     writeFile("pages/index.md", "---\ntitle: [unclosed\n---\n");

@@ -2,7 +2,9 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { NO_BRAND } from "./brand-config.js";
 import { compilePage } from "./compile-page.js";
+import type { QueryFiles } from "./types.js";
 
 const compile = (markdown: string, filePath = "pages/page.md") =>
   compilePage(markdown, filePath);
@@ -203,6 +205,51 @@ describe("sql blocks", () => {
     const page = await compile("```sql\nselect 1\n```\n");
 
     expect(page.code).not.toContain("meta:");
+  });
+});
+
+describe("query files", () => {
+  const queryFiles: QueryFiles = {
+    read: async (name) => (name === "totals.sql" ? "select 2" : undefined),
+    list: async () => ["totals.sql"],
+  };
+
+  it("emits a file a widget's data names after the page's fences", async () => {
+    const markdown =
+      '```sql orders\nselect 1\n```\n\n<Table data="/queries/totals" />\n';
+
+    const page = await compilePage(
+      markdown,
+      "pages/a.md",
+      {},
+      NO_BRAND,
+      queryFiles,
+    );
+    const module = await importCompiledModule(page.code);
+
+    expect(module.sqlBlocks).toEqual([
+      { name: "orders", sql: "select 1" },
+      { name: "/queries/totals", sql: "select 2" },
+    ]);
+  });
+
+  it("fails a page naming a missing file at its line and column", async () => {
+    const markdown = '# T\n\n<Table data="/queries/total" />\n';
+
+    const failure = await compilePage(
+      markdown,
+      "pages/a.md",
+      {},
+      NO_BRAND,
+      queryFiles,
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining("(did you mean /queries/totals?)"),
+      file: "pages/a.md",
+      line: 3,
+      column: 8,
+    });
   });
 });
 

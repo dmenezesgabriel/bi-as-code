@@ -11,6 +11,7 @@ import { pageBrand } from "./page-brand-frontmatter.js";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
 import { assertPageIcon } from "./page-icon-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
+import { NO_QUERY_FILES, remarkQueryFiles } from "./query-files.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
 import { remarkRejectUnknownSearchMethod } from "./search-method.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
@@ -19,6 +20,7 @@ import type {
   BrandTheme,
   CompiledPage,
   PageFrontmatter,
+  QueryFiles,
   SqlBlock,
   SqlTableMap,
 } from "./types.js";
@@ -43,7 +45,9 @@ interface PageMetadata {
  * `configTables` carries `biac.config.ts`'s project-wide `sql:` map — a
  * page name colliding with it is a compile error naming both sources.
  * `projectBrand` is its `brand`, which the page's own `brand:` colours are
- * contrast-checked against.
+ * contrast-checked against. `queryFiles` is the project's `queries/`
+ * directory: each file a widget's `data="/queries/<path>"` names is read
+ * and appended to `sqlBlocks` under that reference.
  *
  * @example
  * const page = await compilePage("---\ntitle: T\n---\n```sql q\nselect 1\n```\n", "pages/a.md");
@@ -54,6 +58,7 @@ export async function compilePage(
   filePath: string,
   configTables: SqlTableMap = {},
   projectBrand: BrandTheme = NO_BRAND,
+  queryFiles: QueryFiles = NO_QUERY_FILES,
 ): Promise<CompiledPage> {
   const file = new VFile({ path: filePath, value: markdown });
   parseFrontmatterBlock(file, { strip: true });
@@ -74,6 +79,7 @@ export async function compilePage(
     remarkPlugins: [
       remarkGfm,
       [remarkPageMetadata, metadata],
+      [remarkQueryFiles, queryFiles, metadata.sqlBlocks],
       remarkRejectReservedFilterIds,
       remarkRejectUnknownSearchMethod,
     ],

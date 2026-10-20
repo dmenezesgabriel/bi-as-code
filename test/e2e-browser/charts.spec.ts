@@ -577,9 +577,9 @@ test("the index page renders a <BarChart> beside its <Table>", async ({
 const BAD_CHART_REFS = [
   {
     name: "an undeclared data name",
-    // `data="orders"` alone would hit the <Dropdown>, the page's first
-    // occurrence — the x prop anchors the mutation on the <BarChart>.
-    from: 'data="orders" x="region"',
+    // The "Revenue by region" <BarChart> is the page's only reader of the
+    // query file, so its reference anchors the mutation on that chart.
+    from: 'data="/queries/region_orders" x="region"',
     to: 'data="ghost_query" x="region"',
     want: ["ghost_query", "no sql fence on this page declares this name"],
   },

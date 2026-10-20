@@ -12,6 +12,7 @@ import { ConfigFieldError, locatedError } from "./biac-config-error.js";
 import { loadBiacConfig } from "./biac-config.js";
 import { brandCss } from "./brand-css.js";
 import { compilePage } from "./compile-page.js";
+import { diskQueryFiles } from "./disk-query-files.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
 import {
   createDataLoaderCache,
@@ -37,6 +38,7 @@ import type {
   BrandTheme,
   DataLoaderInterpreters,
   DirectoryTitles,
+  QueryFiles,
   SqlTableMap,
 } from "./types.js";
 
@@ -73,6 +75,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const pagesDirPosix = toPosix(pagesDir);
   const dataDir = join(root, "data");
   const configFile = join(root, CONFIG_FILE);
+  const queryFiles = diskQueryFiles(root);
   // Page transforms consult the config's `sql:` map; `loadBiacConfig`
   // re-bundles the file through esbuild on every call, so the resolved
   // config is memoized and dropped when the watcher reports an edit.
@@ -183,8 +186,8 @@ export function pagesPlugin(projectRoot: string): Plugin {
       const file = `pages/${toPosix(id).slice(pagesDirPosix.length + 1)}`;
       const { sqlTables, brand } = await getConfig();
       const moduleSource = isDevServer
-        ? await compiledOrErrorModule(code, file, sqlTables, brand)
-        : (await compilePage(code, file, sqlTables, brand)).code;
+        ? await compiledOrErrorModule(code, file, sqlTables, brand, queryFiles)
+        : (await compilePage(code, file, sqlTables, brand, queryFiles)).code;
       return { code: moduleSource, map: null };
     },
     // The inline theme script in index.html runs before any module loads,
@@ -326,9 +329,12 @@ async function compiledOrErrorModule(
   file: string,
   configTables: SqlTableMap,
   projectBrand: BrandTheme,
+  queryFiles: QueryFiles,
 ): Promise<string> {
   try {
-    return (await compilePage(markdown, file, configTables, projectBrand)).code;
+    return (
+      await compilePage(markdown, file, configTables, projectBrand, queryFiles)
+    ).code;
   } catch (error) {
     return compileErrorModuleSource(pageCompileError(error, file));
   }
