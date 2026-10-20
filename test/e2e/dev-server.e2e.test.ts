@@ -149,6 +149,33 @@ describe("biac dev", () => {
     expect(await server.stop()).toBe(0);
   }, 60_000);
 
+  it("hot-updates a page, without a reload, when translations.yaml is saved", async () => {
+    const translations = join(projectRoot!, "translations.yaml");
+    writeFileSync(translations, "en:\n  title: Before\n");
+    const page = join(projectRoot!, "pages/translated.md");
+    writeFileSync(page, "# {$translations.title}\n");
+    server = await startDevServer(projectRoot!);
+    // As above: the manifest and the page join vite's graph only once a
+    // client loads them, and the page pulls in the translations module.
+    await fetch(`${server.url}@id/__x00__virtual:biac-pages`);
+    await fetch(`${server.url}@fs${page}?import`);
+    await fetch(`${server.url}@id/__x00__virtual:biac-translations`);
+
+    const line = await rewriteUntilServerLogs({
+      rewrite: () => writeFileSync(translations, "en:\n  title: After\n"),
+      log: server.log,
+      loggedPath: PAGE_SWAP_LOGGED_PATH,
+      attemptMs: 3_000,
+      timeoutMs: 20_000,
+    });
+
+    expect(line).toMatch(/ hmr update /);
+    expect(server.log()).not.toContainEqual(
+      expect.stringMatching(/ page reload /),
+    );
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
   it("logs each data loader run, and a failing loader's error and stderr", async () => {
     mkdirSync(join(projectRoot!, "data"), { recursive: true });
     writeFileSync(

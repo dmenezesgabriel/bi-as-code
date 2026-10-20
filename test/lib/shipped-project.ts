@@ -6,7 +6,8 @@ const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 /**
  * Copies the shipped example project into a temp project dir — `pages/`,
- * `queries/`, `data/` (the `sql:` fixtures) and `biac.config.ts` — so test
+ * `queries/`, `data/` (the `sql:` fixtures), `biac.config.ts` and
+ * `translations.yaml` — so test
  * servers run the same tree a user gets.
  *
  * @example
@@ -19,5 +20,7 @@ export function copyShippedProject(projectRoot: string): void {
       recursive: true,
     });
   }
-  cpSync(join(repoRoot, "biac.config.ts"), join(projectRoot, "biac.config.ts"));
+  for (const file of ["biac.config.ts", "translations.yaml"]) {
+    cpSync(join(repoRoot, file), join(projectRoot, file));
+  }
 }

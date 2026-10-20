@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
-import { copyFile, cp, mkdir } from "node:fs/promises";
-import { dirname, join, resolve, sep } from "node:path";
+import { join, resolve, sep } from "node:path";
 import type {
   DevEnvironment,
+  EnvironmentModuleNode,
   HtmlTagDescriptor,
   Logger,
   NormalizedHotChannel,
@@ -15,11 +15,11 @@ import { compilePage } from "./compile-page.js";
 import { diskQueryFiles } from "./disk-query-files.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
 import {
-  createDataLoaderCache,
-  isDataLoaderSource,
-  listDataLoaderTargets,
-  type DataLoaderLog,
-} from "./data-loader.js";
+  copyDataDir,
+  copyLoaderOutputs,
+  runDataLoaders,
+} from "./build-data-dir.js";
+import { createDataLoaderCache, type DataLoaderLog } from "./data-loader.js";
 import { checkDirectoryTitles } from "./directory-titles.js";
 import { discoverPages } from "./discover-pages.js";
 import {
@@ -32,22 +32,25 @@ import {
 } from "./page-compile-error.js";
 import { pageSourceEndpoint } from "./page-source-endpoint.js";
 import { queryFilesRead } from "./query-files.js";
+import { loadProjectTranslations } from "./resolve-translations.js";
 import { serveDataDir } from "./serve-data-dir.js";
-import { statFile } from "./stat-file.js";
+import { TRANSLATIONS_FILE } from "./translations-file.js";
+import {
+  translationsModuleSource,
+  VIRTUAL_TRANSLATIONS_ID,
+} from "./translations-module.js";
 import type {
   BiacConfig,
-  BrandTheme,
   CompiledPage,
-  DataLoaderInterpreters,
   DirectoryTitles,
-  QueryFiles,
-  SqlTableMap,
+  ResolvedTranslations,
 } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = `\0${VIRTUAL_MANIFEST_ID}`;
 const VIRTUAL_CONFIG_ID = "virtual:biac-config";
 const RESOLVED_CONFIG_ID = `\0${VIRTUAL_CONFIG_ID}`;
+const RESOLVED_TRANSLATIONS_ID = `\0${VIRTUAL_TRANSLATIONS_ID}`;
 const CONFIG_FILE = "biac.config.ts";
 
 /**
@@ -78,6 +81,12 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const dataDir = join(root, "data");
   const configFile = join(root, CONFIG_FILE);
   const queryFiles = diskQueryFiles(root);
+  const translationsFile = join(root, TRANSLATIONS_FILE);
+  // Resolving runs i18next over every language, so — like the config — the
+  // result is memoized and dropped when the watcher reports an edit.
+  let translationsPromise: Promise<ResolvedTranslations> | undefined;
+  const getTranslations = () =>
+    (translationsPromise ??= loadProjectTranslations(root));
   // Page transforms consult the config's `sql:` map; `loadBiacConfig`
   // re-bundles the file through esbuild on every call, so the resolved
   // config is memoized and dropped when the watcher reports an edit.
@@ -87,8 +96,15 @@ export function pagesPlugin(projectRoot: string): Plugin {
   // in full — sent here rather than left to vite's propagation, which stops
   // without a reload at a module it never analyzed: the config module after
   // a failed load, so fixing a typo would leave the error on screen.
-  const reloadAfterConfigEdit = (environment: DevEnvironment) => {
+  // Creating or deleting translations.yaml reloads the same way: it changes
+  // which `$translations` keys exist for every page, and a page watches the
+  // file only while it exists.
+  const reloadAfterProjectFileEdit = (
+    environment: DevEnvironment,
+    file: string,
+  ) => {
     configPromise = undefined;
+    translationsPromise = undefined;
     const graph = environment.moduleGraph;
     // `sql:` collisions and a page brand's contrast against the project
     // brand are checked when a page compiles — a config edit can create or
@@ -104,8 +120,22 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (mod) graph.invalidateModule(mod);
     }
     if (environment.name !== "client") return;
-    environment.logger.info(`page reload ${configFile}`, { timestamp: true });
+    environment.logger.info(`page reload ${file}`, { timestamp: true });
     environment.hot.send({ type: "full-reload" });
+  };
+  // The pages that read the file watch it, so vite re-transforms them; the
+  // translations module is not a file, so it is invalidated here and goes
+  // out with them — each page's re-import then fetches its new text.
+  const hotUpdateTranslations = (
+    environment: DevEnvironment,
+    modules: EnvironmentModuleNode[],
+  ): EnvironmentModuleNode[] => {
+    translationsPromise = undefined;
+    const graph = environment.moduleGraph;
+    const translationsModule = graph.getModuleById(RESOLVED_TRANSLATIONS_ID);
+    if (!translationsModule) return modules;
+    graph.invalidateModule(translationsModule);
+    return [...modules, translationsModule];
   };
   // The manifest last handed to vite — a page change that regenerates the
   // same source is content-only and must not invalidate it.
@@ -166,6 +196,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
     resolveId(id) {
       if (id === VIRTUAL_MANIFEST_ID) return RESOLVED_MANIFEST_ID;
       if (id === VIRTUAL_CONFIG_ID) return RESOLVED_CONFIG_ID;
+      if (id === VIRTUAL_TRANSLATIONS_ID) return RESOLVED_TRANSLATIONS_ID;
       if (!id.startsWith(VIRTUAL_PAGE_PREFIX)) return;
       const file = join(root, id.slice(VIRTUAL_PAGE_PREFIX.length));
       if (!toPosix(file).startsWith(`${pagesDirPosix}/`)) return null;
@@ -174,6 +205,9 @@ export function pagesPlugin(projectRoot: string): Plugin {
     async load(id) {
       if (id === RESOLVED_CONFIG_ID) {
         return configModuleSource(await getConfig());
+      }
+      if (id === RESOLVED_TRANSLATIONS_ID) {
+        return translationsModuleSource(await getTranslations());
       }
       if (id !== RESOLVED_MANIFEST_ID) return;
       servedManifest = checkedManifestSource(
@@ -187,15 +221,21 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (!isPageFile(id, pagesDirPosix)) return;
       const file = `pages/${toPosix(id).slice(pagesDirPosix.length + 1)}`;
       const { sqlTables, brand } = await getConfig();
+      const compile = () =>
+        compilePage(code, file, sqlTables, brand, queryFiles, getTranslations);
       const compiled = isDevServer
-        ? await compiledOrErrorModule(code, file, sqlTables, brand, queryFiles)
-        : await compilePage(code, file, sqlTables, brand, queryFiles);
+        ? await compiledOrErrorModule(compile, file)
+        : await compile();
       // The page module inlines each query file's SQL rather than importing
       // it, so vite learns of the file here: an edit to it re-transforms
       // every page that read it and swaps them in place like a page edit.
       for (const queryFile of queryFilesRead(compiled.sqlBlocks)) {
         this.addWatchFile(join(root, queryFile));
       }
+      // Vite resolves a watched file as an import, so a missing one would
+      // fail the page; its creation reloads every page instead.
+      if (compiled.readsTranslations && existsSync(translationsFile))
+        this.addWatchFile(translationsFile);
       return { code: compiled.code, map: null };
     },
     // The inline theme script in index.html runs before any module loads,
@@ -231,6 +271,12 @@ export function pagesPlugin(projectRoot: string): Plugin {
         "/__biac/page-source",
         pageSourceEndpoint(pagesDir),
       );
+      // Watched even with no page reading it: the memo must drop on an edit
+      // so the next page to name a key checks it against the new file. Added
+      // ahead of pages/: measured on vite 8.2.2, once a sibling directory is
+      // watched, a root file that does not exist yet is never reported when
+      // it is created.
+      server.watcher.add(translationsFile);
       server.watcher.add(pagesDir);
       server.watcher.add(configFile);
       server.watcher.add(dataDir);
@@ -245,13 +291,20 @@ export function pagesPlugin(projectRoot: string): Plugin {
       await copyDataDir(dataDir, join(dir, "data"), interpreters);
       await copyLoaderOutputs(loaderOutputs, join(dir, "data"));
     },
-    async hotUpdate({ file, modules }) {
+    async hotUpdate({ file, modules, type }) {
       // Ahead of the data push, which awaits the config: after a failed
       // load that memo is a rejection, and awaiting it would throw before
       // the edit that fixes it could drop it.
       if (file === configFile) {
-        reloadAfterConfigEdit(this.environment);
+        reloadAfterProjectFileEdit(this.environment, configFile);
         return [];
+      }
+      if (file === translationsFile && type !== "update") {
+        reloadAfterProjectFileEdit(this.environment, translationsFile);
+        return [];
+      }
+      if (file === translationsFile) {
+        return hotUpdateTranslations(this.environment, modules);
       }
       // No module changed, so none is handed back to vite. Only the client
       // environment pushes: vite runs this hook once per environment.
@@ -272,86 +325,25 @@ export function pagesPlugin(projectRoot: string): Plugin {
 }
 
 /**
- * Copies the whole `data/` tree unhashed: `sql:` sources fetch `/data/<path>`
- * in dev and in the built site alike, so page SQL never rewrites. Symlinks
- * are followed because the dev mount serves their targets too. Loader
- * sources and the modules they import are program code that may hold
- * credentials, so they are never copied. A project without `data/` copies
- * nothing.
- */
-async function copyDataDir(
-  dataDir: string,
-  outDataDir: string,
-  interpreters: DataLoaderInterpreters,
-): Promise<void> {
-  if (!existsSync(dataDir)) return;
-  await cp(dataDir, outDataDir, {
-    recursive: true,
-    dereference: true,
-    filter: (source) =>
-      !(isDataLoaderSource(source, interpreters) && statFile(source)),
-  });
-}
-
-/**
- * Runs every loader under `<root>/data/` one after another, re-running
- * only those edited since their cached output, and maps each target to
- * that output. Every loader runs, not only those a page names: dev serves
- * any loader's output at `/data/<target>`, so the build ships the same set.
- */
-async function runDataLoaders(
-  root: string,
-  log: DataLoaderLog,
-  interpreters: DataLoaderInterpreters,
-): Promise<Map<string, string>> {
-  const cache = createDataLoaderCache(root, log);
-  const outputs = new Map<string, string>();
-  const dataDir = join(root, "data");
-  for (const target of listDataLoaderTargets(dataDir, interpreters)) {
-    // eslint-disable-next-line react-doctor/async-await-in-loop -- one at a time keeps each loader's forwarded stderr contiguous and spares the remote APIs loaders call
-    outputs.set(target, await cache.load(target, interpreters));
-  }
-  return outputs;
-}
-
-/** Writes each loader output at its target path under `build/data/`. */
-async function copyLoaderOutputs(
-  outputs: Map<string, string>,
-  outDataDir: string,
-): Promise<void> {
-  for (const [target, output] of outputs) {
-    const destination = join(outDataDir, target);
-    await mkdir(dirname(destination), { recursive: true });
-    await copyFile(output, destination);
-  }
-}
-
-/**
  * The page's compiled module, or — when it does not compile — the module
  * that carries the error to the SPA. Throwing here would make vite answer
  * the module request with a 500 and cover the whole app, the page's own
  * source editor included, with its error overlay.
  */
 async function compiledOrErrorModule(
-  markdown: string,
+  compile: () => Promise<CompiledPage>,
   file: string,
-  configTables: SqlTableMap,
-  projectBrand: BrandTheme,
-  queryFiles: QueryFiles,
-): Promise<Pick<CompiledPage, "code" | "sqlBlocks">> {
+): Promise<Pick<CompiledPage, "code" | "sqlBlocks" | "readsTranslations">> {
   try {
-    return await compilePage(
-      markdown,
-      file,
-      configTables,
-      projectBrand,
-      queryFiles,
-    );
+    return await compile();
   } catch (error) {
-    // A page that fails to compile carries no blocks, so it reads no file.
+    // A page that fails to compile carries no blocks, so it reads no query
+    // file. It may have failed on translations.yaml, so it counts as reading
+    // that: it watches the file, and fixing the file recovers the page.
     return {
       code: compileErrorModuleSource(pageCompileError(error, file)),
       sqlBlocks: [],
+      readsTranslations: true,
     };
   }
 }

@@ -176,6 +176,44 @@ describe("biac build", () => {
     expect(html).not.toContain("--chart-1: #60a5fa;");
   }, 120_000);
 
+  it("ships translations resolved, without the i18next runtime", () => {
+    const root = makeTempProject("biac-e2e-build-translations-");
+    writeProjectFile(root, "pages/index.md", "# {$translations.title}\n");
+    writeProjectFile(
+      root,
+      "translations.yaml",
+      "en:\n  brand: Acme\n  title: $t(brand) weekly\nfr:\n  title: Hebdo\n",
+    );
+
+    execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
+
+    const assets = join(root, "build/assets");
+    const carriers = (text: string) =>
+      readdirSync(assets).filter(
+        (name) =>
+          name.endsWith(".js") &&
+          readFileSync(join(assets, name), "utf8").includes(text),
+      );
+    expect(carriers("Acme weekly")).toHaveLength(1);
+    expect(carriers("Hebdo")).toEqual(carriers("Acme weekly"));
+    expect(carriers("$t(brand)")).toEqual([]);
+    expect(carriers("i18next")).toEqual([]);
+  }, 120_000);
+
+  it("fails the build on a malformed translations.yaml, naming its line", () => {
+    const root = makeTempProject("biac-e2e-build-bad-translations-");
+    writeProjectFile(root, "pages/index.md", "# {$translations.title}\n");
+    writeProjectFile(root, "translations.yaml", "en:\n  title: T\n bad: 1\n");
+
+    const run = () =>
+      execFileSync(process.execPath, [biac, "build", root], {
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+
+    expect(run).toThrow(/Invalid translations\.yaml:3:\d+/);
+  }, 120_000);
+
   it("ships a query file only inside the chunk of the page that names it, directly or through another file", () => {
     const root = makeTempProject("biac-e2e-build-query-files-");
     writeProjectFile(root, "pages/index.md", "# Home\n");

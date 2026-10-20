@@ -48,6 +48,34 @@ module.exports = {
       },
     },
     {
+      name: "yaml-only-behind-the-translations-file",
+      comment:
+        "yaml is wrapped by src/engine/translations-file.ts, so parsing and " +
+        "its located errors live in one module.",
+      severity: "error",
+      from: {
+        path: "^src/",
+        pathNot: "^src/engine/translations-file(\\.unit\\.test)?\\.ts$",
+      },
+      to: {
+        path: "node_modules/.*/yaml/",
+      },
+    },
+    {
+      name: "i18next-only-behind-translation-resolution",
+      comment:
+        "i18next is wrapped by src/engine/resolve-translations.ts, so it " +
+        "runs at build time only and never ships to the browser.",
+      severity: "error",
+      from: {
+        path: "^src/",
+        pathNot: "^src/engine/resolve-translations(\\.unit\\.test)?\\.ts$",
+      },
+      to: {
+        path: "node_modules/.*/i18next/",
+      },
+    },
+    {
       name: "syntax-highlight-only-behind-its-wrapper",
       comment:
         "shiki is wrapped by src/web/src/features/pages/, so fence rendering " +

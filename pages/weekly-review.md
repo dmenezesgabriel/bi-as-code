@@ -5,7 +5,7 @@ sql:
   orders: data/orders.parquet
 ---
 
-# Weekly review
+# {$translations.weekly_review}
 
 A standing read on the trading week: what moved, where it moved, and what
 to watch next. Figures below come from the `orders` data set shared with
@@ -22,15 +22,15 @@ histogram the `amount`-filtered ones; repeat the gesture (or click
 the histogram once) to clear.
 </Callout>
 
-## Overview
+## {$translations.overview}
 
 <FilterBar>
   <Dropdown id="region" data="order_amounts" valueColumn="region" title="Region" filters={["region", "amount"]} />
   <Slider id="amount" data="order_amounts" valueColumn="amount" range title="Amount" filters={["region"]} />
-  <DateRange id="ordered" valueColumn="order_date" title="Ordered" />
-  <Search id="q" column="region" title="Search regions" placeholder="e.g. West" data="order_detail" filters={["region", "amount", "ordered"]} />
-  <TextInput id="order" title="Order id" placeholder="e.g. 42" />
-  <Toggle id="large_orders" label="Large orders only" />
+  <DateRange id="ordered" valueColumn="order_date" title={$translations.ordered} />
+  <Search id="q" column="region" title={$translations.search_regions} placeholder="e.g. West" data="order_detail" filters={["region", "amount", "ordered"]} />
+  <TextInput id="order" title={$translations.order_id} placeholder="e.g. 42" />
+  <Toggle id="large_orders" label={$translations.large_orders_only} />
 </FilterBar>
 
 <Row>
@@ -88,7 +88,7 @@ region. The KPI and sparklines read the same parameter through
 Revenue is up roughly 10% week over week on volume, led by the West.
 </Details>
 
-## Regional split
+## {$translations.regional_split}
 
 The West remains the largest region by revenue and was also the fastest
 growing this week, widening its lead over the North. The South is flat
@@ -117,7 +117,7 @@ West and North. A quiet week for even one of them shows up directly in
 the trend lines below.
 </Callout>
 
-## Order mix
+## {$translations.order_mix}
 
 Orders and revenue track together across the quarter — the weeks each
 region booked more orders are the weeks it closed more revenue, and no
@@ -133,14 +133,14 @@ order by week, region
 
 <Tabs>
   <Tab title="Chart">
-    <ScatterChart data="region_week" x="orders" y="revenue" series="region" xTitle="Orders" yTitle="Revenue" title="Orders and revenue per region-week" subtitle="One point per region and week; revenue in US dollars" filters={["region"]} select="crossfilter" />
+    <ScatterChart data="region_week" x="orders" y="revenue" series="region" xTitle="Orders" yTitle={$translations.revenue} title="Orders and revenue per region-week" subtitle="One point per region and week; revenue in US dollars" filters={["region"]} select="crossfilter" />
   </Tab>
   <Tab title="Table">
     <Table data="region_week" filters={["region"]} />
   </Tab>
 </Tabs>
 
-## Order size
+## {$translations.order_size}
 
 Order amounts sit in a narrow band — the whole quarter's distribution
 fits inside a few dollars around $41, so the week's lift is a volume
@@ -170,7 +170,7 @@ where ({{params.order}} is null or order_id::varchar = {{params.order}})
 
 <Table data="order_detail" filters={["region", "amount", "ordered", "q"]} />
 
-## Trend lines
+## {$translations.trend_lines}
 
 Weekly volume has climbed in four of the last five weeks. The shape is a
 steady grind upward rather than a step change, which is consistent with
@@ -224,7 +224,7 @@ Returns and cancellations stayed inside their normal band — nothing in
 the trend suggests the growth is being bought at the cost of order
 quality.
 
-### Quarter detail
+### {$translations.quarter_detail}
 
 Zooming out to the quarter, the West's lead is recent: the North carried
 the first six weeks before the West overtook it. The South has been
@@ -238,7 +238,7 @@ reading part of a pattern rather than noise.
   <Column id="share" fmt="pct1" title="Share of week" />
 </Table>
 
-## Takeaways
+## {$translations.takeaways}
 
 - West growth is volume-led and concentrated — watch the top five
   accounts before calling it a trend.
@@ -273,23 +273,23 @@ the same sections against fresh data — the page edits itself once
 `orders` updates.
 
 <Accordion single>
-  <AccordionItem title="Methodology">
+  <AccordionItem title={$translations.methodology}>
     Figures aggregate the `orders` table over the 13-week quarter.
     Week over week compares the final week with the one before it; the
     regional split ranks regions by revenue.
   </AccordionItem>
-  <AccordionItem title="Data quality">
+  <AccordionItem title={$translations.data_quality}>
     Returns and cancellations stayed inside their normal band, and the
     `orders` extract carries no late-arriving adjustments this week.
   </AccordionItem>
 </Accordion>
 
 <Accordion>
-  <AccordionItem title="Change log">
+  <AccordionItem title={$translations.change_log}>
     This week: markdown layout widgets across the page. Last week:
     scatter, histogram and heatmap views.
   </AccordionItem>
-  <AccordionItem title="Sources">
+  <AccordionItem title={$translations.sources}>
     `data/orders.parquet` — the shared orders extract behind the
     [orders overview](/).
   </AccordionItem>

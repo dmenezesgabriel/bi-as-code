@@ -147,7 +147,10 @@ test("a content edit swaps the page in place: no reload, filters kept", async ({
     rewrite: () =>
       writeFileSync(
         file,
-        original.replace("# Weekly review", "# Weekly review, edited"),
+        original.replace(
+          "# {$translations.weekly_review}",
+          "# {$translations.weekly_review}, edited",
+        ),
       ),
     log: biacDev.log,
     loggedPath: PAGE_SWAP_LOGGED_PATH,

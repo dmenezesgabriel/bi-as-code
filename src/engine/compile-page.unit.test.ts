@@ -4,7 +4,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { NO_BRAND } from "./brand-config.js";
 import { compilePage } from "./compile-page.js";
-import type { QueryFiles } from "./types.js";
+import { NO_QUERY_FILES } from "./query-files.js";
+import type { QueryFiles, ResolvedTranslations } from "./types.js";
 
 const compile = (markdown: string, filePath = "pages/page.md") =>
   compilePage(markdown, filePath);
@@ -249,6 +250,48 @@ describe("query files", () => {
       file: "pages/a.md",
       line: 3,
       column: 8,
+    });
+  });
+});
+
+describe("translations", () => {
+  const translations: ResolvedTranslations = {
+    languages: ["en"],
+    byLanguage: { en: { revenue: "Revenue" } },
+  };
+  const compileWithTranslations = (markdown: string) =>
+    compilePage(
+      markdown,
+      "pages/a.md",
+      {},
+      NO_BRAND,
+      NO_QUERY_FILES,
+      async () => translations,
+    );
+
+  it("reports a page that reads $translations", async () => {
+    const page = await compileWithTranslations("# {$translations.revenue}\n");
+
+    expect(page.readsTranslations).toBe(true);
+    expect(page.code).toContain('from "virtual:biac-translations"');
+  });
+
+  it("reports a page that does not", async () => {
+    const page = await compileWithTranslations("# Revenue\n");
+
+    expect(page.readsTranslations).toBe(false);
+  });
+
+  it("fails an unknown key at its line in the file, front-matter included", async () => {
+    const failure = await compileWithTranslations(
+      "---\ntitle: T\n---\n\n# {$translations.revenu}\n",
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message:
+        "Undefined translation key: $translations.revenu (did you mean $translations.revenue?)",
+      line: 5,
+      column: 4,
     });
   });
 });

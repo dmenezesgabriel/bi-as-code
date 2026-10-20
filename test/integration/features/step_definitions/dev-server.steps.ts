@@ -88,6 +88,36 @@ Given(
   },
 );
 
+Given(
+  "a project whose index page reads the translation {string} holding {string}",
+  (key: string, text: string) => {
+    projectRoot = mkdtempSync(join(tmpdir(), "biac-cucumber-"));
+    mkdirSync(join(projectRoot, "pages"));
+    writeTranslation(key, text);
+    writeFileSync(
+      join(projectRoot, "pages/index.md"),
+      `# {$translations.${key}}\n`,
+    );
+  },
+);
+
+When(
+  "I save {string} as the translation {string}",
+  (text: string, key: string) => writeTranslation(key, text),
+);
+
+Then("the translations module serves {string}", async (text: string) => {
+  const url = `${base}@id/virtual:biac-translations`;
+  await eventually(async () => (await getOk(url)).includes(text));
+});
+
+function writeTranslation(key: string, text: string): void {
+  writeFileSync(
+    join(projectRoot!, "translations.yaml"),
+    `en:\n  ${key}: ${text}\n`,
+  );
+}
+
 When("I start the dev server", async () => {
   assert.ok(projectRoot, "project must exist before starting the server");
   const port = await freePort();

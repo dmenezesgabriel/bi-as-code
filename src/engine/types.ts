@@ -248,6 +248,8 @@ export interface CompiledPage {
   layout: PageLayout;
   /** The page's front-matter `brand:` as a stylesheet of only the keys it sets; empty when it sets none. */
   brandCss: string;
+  /** True when the page names `$translations`, so it imports `virtual:biac-translations`. */
+  readsTranslations: boolean;
 }
 
 /**
@@ -272,3 +274,32 @@ export interface PageCompileError {
 export type DataLoaderInterpreters = Readonly<
   Record<string, readonly string[]>
 >;
+
+/** One translation as the page reads it: text, or a nested map of keys. */
+export type TranslationValue = string | TranslationMap;
+
+/** A language's translations, key → text or nested keys. */
+export interface TranslationMap {
+  [key: string]: TranslationValue;
+}
+
+/**
+ * `translations.yaml` as authored: ISO 639-1 language code → its
+ * translations, in file order. Every value is already a string.
+ */
+export type TranslationsFile = Record<string, TranslationMap>;
+
+/**
+ * Every declared language with its keys resolved: the `en` translations
+ * merged under the language's own, `$t()` references expanded.
+ */
+export interface ResolvedTranslations {
+  /** Declared languages in file order; the first is the default. */
+  languages: string[];
+  byLanguage: Record<string, TranslationMap>;
+}
+
+/** Whether a page's MDX names `$translations`, found while it compiles. */
+export interface PageTranslationUse {
+  reads: boolean;
+}

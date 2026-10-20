@@ -1,0 +1,37 @@
+# Page text in each language the site offers. Pages read a key as
+# {$translations.key}; a key a language leaves out shows its en value.
+en:
+  weekly_review: Weekly review
+  overview: Overview
+  regional_split: Regional split
+  order_mix: Order mix
+  order_size: Order size
+  trend_lines: Trend lines
+  takeaways: Takeaways
+  ordered: Ordered
+  search_regions: Search regions
+  order_id: Order id
+  large_orders_only: Large orders only
+  revenue: Revenue
+  quarter_detail: Quarter detail
+  methodology: Methodology
+  data_quality: Data quality
+  change_log: Change log
+  sources: Sources
+fr:
+  weekly_review: Revue hebdomadaire
+  overview: Vue d'ensemble
+  regional_split: Répartition régionale
+  order_mix: Composition des commandes
+  order_size: Taille des commandes
+  trend_lines: Tendances
+  takeaways: À retenir
+  ordered: Commandé
+  search_regions: Rechercher des régions
+  order_id: Numéro de commande
+  large_orders_only: Grosses commandes uniquement
+  revenue: Chiffre d'affaires
+  quarter_detail: Détail du trimestre
+  data_quality: Qualité des données
+  change_log: Journal des modifications
+  sources: Sources

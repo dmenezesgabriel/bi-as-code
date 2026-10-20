@@ -11,16 +11,23 @@ import { pageBrand } from "./page-brand-frontmatter.js";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
 import { assertPageIcon } from "./page-icon-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
+import {
+  recmaBindTranslations,
+  remarkCheckTranslationKeys,
+} from "./page-translations.js";
 import { NO_QUERY_FILES, remarkQueryFiles } from "./query-files.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
 import { remarkRejectUnknownSearchMethod } from "./search-method.js";
 import { parseSqlFenceMeta } from "./sql-fence-meta.js";
 import { assertNoSqlTableCollision, sqlTableMap } from "./sql-frontmatter.js";
+import { NO_TRANSLATIONS } from "./resolve-translations.js";
 import type {
   BrandTheme,
   CompiledPage,
   PageFrontmatter,
+  PageTranslationUse,
   QueryFiles,
+  ResolvedTranslations,
   SqlBlock,
   SqlTableMap,
 } from "./types.js";
@@ -47,7 +54,9 @@ interface PageMetadata {
  * `projectBrand` is its `brand`, which the page's own `brand:` colours are
  * contrast-checked against. `queryFiles` is the project's `queries/`
  * directory: each file a widget's `data="/queries/<path>"` names is read
- * and appended to `sqlBlocks` under that reference.
+ * and appended to `sqlBlocks` under that reference. `loadTranslations`
+ * gives the project's resolved `translations.yaml`, asked for only when the
+ * page names `$translations`; each literal key must exist in it.
  *
  * @example
  * const page = await compilePage("---\ntitle: T\n---\n```sql q\nselect 1\n```\n", "pages/a.md");
@@ -59,6 +68,8 @@ export async function compilePage(
   configTables: SqlTableMap = {},
   projectBrand: BrandTheme = NO_BRAND,
   queryFiles: QueryFiles = NO_QUERY_FILES,
+  loadTranslations: () => Promise<ResolvedTranslations> = async () =>
+    NO_TRANSLATIONS,
 ): Promise<CompiledPage> {
   const file = new VFile({ path: filePath, value: markdown });
   parseFrontmatterBlock(file, { strip: true });
@@ -74,6 +85,7 @@ export async function compilePage(
     sqlBlocks: [],
     firstHeading: null,
   };
+  const translationUse: PageTranslationUse = { reads: false };
   const compiled = await compile(file, {
     format: "mdx",
     remarkPlugins: [
@@ -82,7 +94,9 @@ export async function compilePage(
       [remarkQueryFiles, queryFiles, metadata.sqlBlocks],
       remarkRejectReservedFilterIds,
       remarkRejectUnknownSearchMethod,
+      [remarkCheckTranslationKeys, loadTranslations, translationUse],
     ],
+    recmaPlugins: [[recmaBindTranslations, translationUse]],
   });
 
   const location = `front-matter in ${filePath}`;
@@ -97,7 +111,11 @@ export async function compilePage(
     layout: pageLayout(frontmatter, location),
     brandCss: brandCss(pageBrand(frontmatter, location, projectBrand)),
   };
-  return { code: `${compiled}\n${metadataExports(page)}\n`, ...page };
+  return {
+    code: `${compiled}\n${metadataExports(page)}\n`,
+    readsTranslations: translationUse.reads,
+    ...page,
+  };
 }
 
 function lineBreaks(text: string): number {
@@ -157,7 +175,9 @@ function resolveTitle(
   return title === null ? null : String(title);
 }
 
-function metadataExports(page: Omit<CompiledPage, "code">): string {
+function metadataExports(
+  page: Omit<CompiledPage, "code" | "readsTranslations">,
+): string {
   return [
     `export const frontmatter = ${JSON.stringify(page.frontmatter)};`,
     `export const title = ${JSON.stringify(page.title)};`,

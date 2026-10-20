@@ -22,7 +22,12 @@ function editorStatus(page: Page) {
 
 /** Appends `text` to the editor line reading exactly `line`. */
 async function appendToLine(page: Page, line: string, text: string) {
-  await page.locator(".cm-line", { hasText: new RegExp(`^${line}$`) }).click();
+  // Matched whole and literally: a source line such as
+  // `# {$translations.weekly_review}` holds regex metacharacters.
+  const literal = line.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  await page
+    .locator(".cm-line", { hasText: new RegExp(`^${literal}$`) })
+    .click();
   await page.keyboard.press("End");
   await page.keyboard.type(text);
 }
@@ -105,7 +110,7 @@ const LEAVE_ASK =
 async function openWithUnsavedEdit(page: Page, url: string) {
   await openEditorFromHeader(page, url);
   const dialogs = answerDialogs(page);
-  await appendToLine(page, "# Weekly review", " zz");
+  await appendToLine(page, "# {$translations.weekly_review}", " zz");
   await expect(editorStatus(page)).toHaveText("Unsaved changes");
   return dialogs;
 }
@@ -128,7 +133,9 @@ async function openEditorFromHeader(page: Page, url: string) {
   ]);
   await markWindow(page);
   await page.getByRole("banner").getByRole("link", { name: "Edit" }).click();
-  await expect(sourceEditor(page)).toContainText("# Weekly review");
+  await expect(sourceEditor(page)).toContainText(
+    "# {$translations.weekly_review}",
+  );
 }
 
 test("edits a page from the header: Mod-s saves to disk and the preview swaps in place", async ({
@@ -144,11 +151,13 @@ test("edits a page from the header: Mod-s saves to disk and the preview swaps in
   expect(url.searchParams.get("edit")).toBe("true");
   await expect(editorStatus(page)).toHaveText("No unsaved changes");
 
-  await appendToLine(page, "# Weekly review", ", edited");
+  await appendToLine(page, "# {$translations.weekly_review}", ", edited");
   await expect(editorStatus(page)).toHaveText("Unsaved changes");
   await saveWithModS(page);
 
-  expect(readFileSync(file, "utf8")).toContain("\n# Weekly review, edited\n");
+  expect(readFileSync(file, "utf8")).toContain(
+    "\n# {$translations.weekly_review}, edited\n",
+  );
   const preview = page.getByRole("region", {
     name: "Live preview",
     exact: true,
@@ -161,7 +170,7 @@ test("edits a page from the header: Mod-s saves to disk and the preview swaps in
     "West",
   );
 
-  await appendToLine(page, "# Weekly review, edited", " twice");
+  await appendToLine(page, "# {$translations.weekly_review}, edited", " twice");
   await saveWithModS(page);
   await expect(
     preview.getByRole("heading", { name: "Weekly review, edited twice" }),
@@ -178,11 +187,13 @@ test("a reload reopens the saved source, and Done returns to the plain page", as
   test.slow();
   const errors = collectConsoleErrors(page);
   await openEditorFromHeader(page, biacDev.url);
-  await appendToLine(page, "# Weekly review", ", on disk");
+  await appendToLine(page, "# {$translations.weekly_review}", ", on disk");
   await saveWithModS(page);
 
   await page.reload();
-  await expect(sourceEditor(page)).toContainText("# Weekly review, on disk");
+  await expect(sourceEditor(page)).toContainText(
+    "# {$translations.weekly_review}, on disk",
+  );
   await page.getByRole("banner").getByRole("link", { name: "Done" }).click();
 
   await expect(
@@ -276,7 +287,7 @@ test("a broken tag shows its compile error in the preview, and the fix renders t
   const errors = collectConsoleErrors(page);
   await openEditorFromHeader(page, biacDev.url);
 
-  await appendToLine(page, "# Weekly review", "\n<Callout");
+  await appendToLine(page, "# {$translations.weekly_review}", "\n<Callout");
   await saveWithModS(page);
 
   await expectCompileErrorInPreview(page, /pages\/weekly-review\.md:\d+:\d+/);
@@ -303,7 +314,11 @@ test("a self-closed widget typed in the editor is left as typed and the page com
   await openEditorFromHeader(page, biacDev.url);
   await expect(typedTable).toHaveCount(0);
 
-  await appendToLine(page, "# Weekly review", `\n${selfClosed}`);
+  await appendToLine(
+    page,
+    "# {$translations.weekly_review}",
+    `\n${selfClosed}`,
+  );
 
   await expect(
     page.locator(".cm-line", { hasText: /^<Table data="kpi"/ }),
@@ -331,7 +346,7 @@ test("a filter named with the editor's own URL key is a compile error at the att
   const alert = livePreview(page).getByRole("alert");
   await openEditorFromHeader(page, biacDev.url);
 
-  await appendToLine(page, "# Weekly review", reservedInput);
+  await appendToLine(page, "# {$translations.weekly_review}", reservedInput);
   await saveWithModS(page);
 
   await expectCompileErrorInPreview(page, /pages\/weekly-review\.md:\d+:12/);
@@ -413,8 +428,8 @@ test("a page already broken on disk still opens in the editor", async ({
   writeFileSync(
     file,
     readFileSync(file, "utf8").replace(
-      "# Weekly review\n",
-      "# Weekly review\n<Callout\n",
+      "# {$translations.weekly_review}\n",
+      "# {$translations.weekly_review}\n<Callout\n",
     ),
   );
 
@@ -438,7 +453,9 @@ test("a fence reading {{params.edit}} sees no value while the editor's flag is i
 
   await page.goto(`${biacDev.url}weekly-review?region=West&edit=true`);
 
-  await expect(sourceEditor(page)).toContainText("# Weekly review");
+  await expect(sourceEditor(page)).toContainText(
+    "# {$translations.weekly_review}",
+  );
   await expect(
     livePreview(page).getByRole("cell", { name: "edit absent, region West" }),
   ).toBeVisible();
@@ -459,7 +476,9 @@ test("leaving an editor with unsaved changes asks first; a filter change does no
   await expect.poll(() => dialogs.seen).toEqual([LEAVE_ASK]);
   expect(new URL(page.url()).pathname).toBe("/weekly-review");
   expect(new URL(page.url()).searchParams.get("edit")).toBe("true");
-  await expect(sourceEditor(page)).toContainText("# Weekly review zz");
+  await expect(sourceEditor(page)).toContainText(
+    "# {$translations.weekly_review} zz",
+  );
   await expect(editorStatus(page)).toHaveText("Unsaved changes");
 
   await page.getByRole("combobox", { name: "Region" }).click();
@@ -470,7 +489,9 @@ test("leaving an editor with unsaved changes asks first; a filter change does no
   const done = page.getByRole("banner").getByRole("link", { name: "Done" });
   await done.click();
   await expect.poll(() => dialogs.seen).toHaveLength(2);
-  await expect(sourceEditor(page)).toContainText("# Weekly review zz");
+  await expect(sourceEditor(page)).toContainText(
+    "# {$translations.weekly_review} zz",
+  );
 
   dialogs.accept = true;
   await done.click();
@@ -495,7 +516,9 @@ test("reloading an unsaved buffer raises the browser's leave prompt", async ({
   await page.evaluate(() => location.reload());
 
   await expect.poll(() => dialogs.seen).toEqual(["beforeunload: "]);
-  await expect(sourceEditor(page)).toContainText("# Weekly review zz");
+  await expect(sourceEditor(page)).toContainText(
+    "# {$translations.weekly_review} zz",
+  );
   expect(await windowMarker(page)).toBe("kept");
   expect(errors).toEqual([]);
 });
