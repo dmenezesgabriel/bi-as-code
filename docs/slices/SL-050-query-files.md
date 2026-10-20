@@ -20,11 +20,11 @@ An author writes a query once in `queries/region_orders.sql`, points any widget 
 
 ### Baseline
 
-Measured with `playwright-cli` on `bin/biac dev` on 2026-10-19, before any code change (`eval` over `table` bodies). The bar chart's per-bar values were not read; T1 reads them from the chart before its first edit.
+Measured with `playwright-cli` on `bin/biac dev` on 2026-10-19, before any code change (`eval` over `table` bodies and the chart's `echartsInstance.getOption()`).
 
 | Reading                                                         | Value                                             |
 | --------------------------------------------------------------- | ------------------------------------------------- |
-| `/weekly-review` "Revenue by region" chart in "Regional split"  | 1 chart; per-bar values: T1                       |
+| `/weekly-review` "Revenue by region" chart in "Regional split"  | West 6,100 · North 4,800 · South 3,700            |
 | `/weekly-review` `region_share` result rows (region, orders, %) | West 140 39 · North 120 34 · South 95 27          |
 | `/` `orders` result table, no `?region=`                        | West 140 6,100 · North 120 4,800 · South 95 3,700 |
 | `/` `orders` result table, `?region=West`                       | West 140 6,100                                    |
@@ -99,25 +99,25 @@ Nothing in the ledger claims any part of this as shipped.
 
 ## Open decisions
 
-| Id  | Decision                                                 | Evidence to gather                                                                                                                                                                  |
-| --- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| O1  | `fileQueries` export vs an optional `file` on `SqlBlock` | Count the consumers of `sqlBlocks` (`grep -rn "sqlBlocks" src/`) and pick the form that adds fewer branches; T1                                                                     |
-| O2  | How `compilePage` reads files                            | Inject a `readQueryFile(path) → Promise<string \| undefined>` (DI rule) with a named fake in unit tests; confirm remark accepts an async transformer in `@mdx-js/mdx` `compile`; T1 |
-| O3  | Prefixing a broken file's DuckDB error                   | Where the registry builds `status: "error"` messages in `query-registry.tsx`; whether the prefix also covers a fence that nests the file; T3                                        |
+| Id  | Decision                                                 | Evidence to gather                                                                                                                                                                                                                                                                                                            |
+| --- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O1  | `fileQueries` export vs an optional `file` on `SqlBlock` | Settled at T1: neither — a file joins `sqlBlocks` as `{ name: "/queries/<path>", sql }`. Every web consumer reads blocks by name (`interpolateBlocks`, `useFilteredQueryClient`), so no web file changed; fences render from hast `meta`, so a file block never renders. T3 derives `queries/<path>.sql` from the name        |
+| O2  | How `compilePage` reads files                            | Settled at T1: the `QueryFiles` port (`read`, `list`) in `src/engine/types.ts`, injected as `compilePage`'s last parameter (default `NO_QUERY_FILES`); `diskQueryFiles` in `src/engine/disk-query-files.ts` is the adapter; `remarkQueryFiles` in `src/engine/query-files.ts` is an async transformer, which `compile` awaits |
+| O3  | Prefixing a broken file's DuckDB error                   | Where the registry builds `status: "error"` messages in `query-registry.tsx`; whether the prefix also covers a fence that nests the file; T3                                                                                                                                                                                  |
 
 ## Surface
 
-| Layer  | Files                                                                                                                                                                                                              |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| engine | new `src/engine/query-files.ts` (resolve `/queries/<path>`, collect references, read, located errors) + `.unit.test.ts`; `src/engine/compile-page.ts`; `src/engine/types.ts`; `src/engine/pages-plugin.ts`         |
-| client | `src/web/src/features/pages/query-registry.tsx`; `src/web/src/features/pages/interpolate.ts` (doc comment and the file token); `src/web/src/features/pages/types.ts`                                               |
-| ui     | no new component; widget error state and `compile-error-page.tsx` reused — update their stories only if a new state appears                                                                                        |
-| tests  | `test/e2e/static-build.e2e.test.ts` (unreferenced file absent from `build/`); `test/e2e-browser/sql-queries.spec.ts`; a cucumber scenario beside `test/integration/features/dev-server.feature` for the hot update |
-| docs   | `queries/region_orders.sql` (new, example project); `pages/weekly-review.md`, `pages/index.md` use it                                                                                                              |
+| Layer  | Files                                                                                                                                                                                                                                                                                                                                                |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| engine | new `src/engine/query-files.ts` (resolve `/queries/<path>`, collect references, read, located errors) and `src/engine/disk-query-files.ts` (the `queries/` adapter), each + `.unit.test.ts`; `src/engine/sql-fence-meta.ts` (a fence name may not start with `/`); `src/engine/compile-page.ts`; `src/engine/types.ts`; `src/engine/pages-plugin.ts` |
+| client | `src/web/src/features/pages/query-registry.tsx`; `src/web/src/features/pages/interpolate.ts` (doc comment and the file token); `src/web/src/features/pages/types.ts`                                                                                                                                                                                 |
+| ui     | no new component; widget error state and `compile-error-page.tsx` reused — update their stories only if a new state appears                                                                                                                                                                                                                          |
+| tests  | `test/e2e/static-build.e2e.test.ts` (unreferenced file absent from `build/`); `test/e2e-browser/sql-queries.spec.ts`; a cucumber scenario beside `test/integration/features/dev-server.feature` for the hot update                                                                                                                                   |
+| docs   | `queries/region_orders.sql` (new, example project); `pages/weekly-review.md`, `pages/index.md` use it                                                                                                                                                                                                                                                |
 
 ## Tasks
 
-- [ ] T1 — `data="/queries/<path>"`: the engine finds the reference, reads `queries/<path>.sql`, emits it in the page module; the registry runs it and the widget renders. A missing file is a located compile error with a suggestion. `biac build` ships no unreferenced file. Example: `queries/region_orders.sql` drives the `/weekly-review` "Revenue by region" chart. Measure: Baseline rows before, the same rows after, the compile error's `file:line:column` on screen, `grep -rl` over `build/`.
+- [x] T1 — `data="/queries/<path>"`: the engine finds the reference, reads `queries/<path>.sql`, emits it in the page module; the registry runs it and the widget renders. A missing file is a located compile error with a suggestion. `biac build` ships no unreferenced file. Example: `queries/region_orders.sql` drives the `/weekly-review` "Revenue by region" chart. Measure: Baseline rows before, the same rows after, the compile error's `file:line:column` on screen, `grep -rl` over `build/`.
 - [ ] T2 — `{{/queries/<path>}}` in a fence builds on a file query; `{{params.x}}` and nested file references work inside a file; a cycle is an error. Example: `region_share` on `/weekly-review` and `orders` on `/`. Measure: `region_share` echoed rows and `/` table rows with and without `?region=West` against the Baseline.
 - [ ] T3 — a saved edit to a `.sql` file hot-updates every open page that reads it (dev); a broken file shows the widget error state prefixed `queries/<path>.sql:`. Measure: no full reload (a `window` marker survives the edit), the error text via `eval`, `console` clean after the revert.
 
