@@ -14,6 +14,7 @@ import { compilePage } from "./compile-page.js";
 import { configModuleSource, VIRTUAL_CONFIG_ID } from "./config-module.js";
 import { diskQueryFiles } from "./disk-query-files.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
+import { frameAncestorsMiddleware } from "./frame-ancestors.js";
 import {
   copyDataDir,
   copyLoaderOutputs,
@@ -298,6 +299,11 @@ export function pagesPlugin(projectRoot: string): Plugin {
       ];
     },
     configureServer(server) {
+      // First, so every response — shell, modules, /data, errors — carries
+      // the framing policy (ADR-0022), read fresh after a config edit.
+      server.middlewares.use(
+        frameAncestorsMiddleware(async () => (await getConfig()).embed.origins),
+      );
       // sql: sources resolve to /data/<path> — served from the real
       // directory so dev and the copied build/data/ stay identical.
       server.middlewares.use(

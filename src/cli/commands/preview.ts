@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { preview as vitePreview } from "vite";
+import { loadBiacConfig } from "../../engine/biac-config.js";
+import { frameAncestorsHeaders } from "../../engine/frame-ancestors.js";
 import {
   closeOnExitSignals,
   parsePort,
@@ -31,7 +33,8 @@ export function parsePreviewArgs(args: string[]): PreviewOptions {
 /**
  * Serves `<projectRoot>/build` as a static site — no page compilation, the
  * built bundle only — with vite's SPA fallback so deep links reach the
- * client router. Returns once listening; SIGINT/SIGTERM close the server.
+ * client router, and every response carries the project's framing policy
+ * (ADR-0022). Returns once listening; SIGINT/SIGTERM close the server.
  *
  * @example
  * // in main.ts: case "preview": await preview(["site", "--port", "0"]);
@@ -46,10 +49,16 @@ export async function preview(args: string[]): Promise<void> {
       `biac preview: no build at ${outDir} — run \`biac build\` first`,
     );
   }
+  // Read once: a preview serves a finished build, so a config edit takes a
+  // restart, as a rebuild does.
+  const { embed } = await loadBiacConfig(projectRoot);
   const server = await vitePreview({
     configFile: WEB_CONFIG,
     build: { outDir },
-    preview: port === undefined ? {} : { port },
+    preview: {
+      ...(port === undefined ? {} : { port }),
+      headers: frameAncestorsHeaders(embed.origins),
+    },
   });
   console.log(`biac preview — serving ${outDir}`);
   server.printUrls();

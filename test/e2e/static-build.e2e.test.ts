@@ -9,6 +9,11 @@ import {
   startBiacServer,
   type DevServer,
 } from "../lib/dev-server.js";
+import {
+  DENY_ALL,
+  framingPolicy,
+  withEmbedOrigins,
+} from "../lib/framing-policy.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
 import {
   cleanupProjects,
@@ -333,6 +338,57 @@ describe("biac preview", () => {
 
     expect(await server.stop()).toBe(0);
   }, 60_000);
+
+  // The SPA shell, a deep link through the SPA fallback, and a data file the build copies.
+  const FRAMED_PATHS = ["", "weekly-review", "data/channels.csv"];
+
+  function listOrigins(origins: readonly string[]): void {
+    const config = readFileSync(join(root, "biac.config.ts"), "utf8");
+    writeProjectFile(root, "biac.config.ts", withEmbedOrigins(config, origins));
+  }
+
+  async function framingPolicies(url: string): Promise<unknown[]> {
+    return Promise.all(
+      FRAMED_PATHS.map((path) => framingPolicy(`${url}${path}`)),
+    );
+  }
+
+  it("denies every framer on the shell, a deep link and a data file when no origin is listed", async () => {
+    server = await startBiacServer("preview", root);
+
+    const policies = await framingPolicies(server.url);
+
+    expect(policies).toEqual(FRAMED_PATHS.map(() => DENY_ALL));
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("allows exactly the origins biac.config.ts lists", async () => {
+    listOrigins(["http://localhost:8901"]);
+    server = await startBiacServer("preview", root);
+
+    const policies = await framingPolicies(server.url);
+
+    expect(policies).toEqual(
+      FRAMED_PATHS.map(() => ({
+        csp: "frame-ancestors http://localhost:8901",
+        xfo: "DENY",
+      })),
+    );
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("exits 1 naming an origin with a path at its line and column", () => {
+    listOrigins(["https://example.com/path"]);
+
+    const run = spawnSync(process.execPath, [biac, "preview", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toMatch(
+      /Invalid biac\.config\.ts:\d+:\d+ — embed\.origins\[0\]: expected an origin "scheme:\/\/host\[:port\]" \(http or https, no path, no wildcard\), got "https:\/\/example\.com\/path"/,
+    );
+  });
 
   it("exits 1 naming the missing build and the fix", () => {
     const empty = makeTempProject("biac-e2e-preview-empty-");

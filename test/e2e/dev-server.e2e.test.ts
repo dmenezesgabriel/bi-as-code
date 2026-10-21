@@ -3,6 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildCli, startDevServer, type DevServer } from "../lib/dev-server.js";
+import {
+  DENY_ALL,
+  framingPolicy,
+  withEmbedOrigins,
+} from "../lib/framing-policy.js";
 import { eventually } from "../lib/http.js";
 import {
   PAGE_SWAP_LOGGED_PATH,
@@ -202,6 +207,54 @@ describe("biac dev", () => {
     expect(log).toMatch(
       / stderr .*data loader data\/bad\.csv\.js exited with code 3, expected 0/,
     );
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+});
+
+describe("biac dev framing policy", () => {
+  /** A one-page project whose biac.config.ts lists `origins`; deleted after the block. */
+  function projectListing(origins: readonly string[]): string {
+    const root = mkdtempSync(join(tmpdir(), "biac-e2e-framing-"));
+    mkdirSync(join(root, "pages"));
+    writeFileSync(join(root, "pages/index.md"), "# Hi\n");
+    writeFileSync(
+      join(root, "biac.config.ts"),
+      withEmbedOrigins("export default {\n};\n", origins),
+    );
+    framingProjects.push(root);
+    return root;
+  }
+
+  const framingProjects: string[] = [];
+  afterAll(() => {
+    for (const root of framingProjects)
+      rmSync(root, { recursive: true, force: true });
+  });
+
+  it("allows exactly the origins biac.config.ts lists on a deep link", async () => {
+    server = await startDevServer(projectListing(["http://localhost:8901"]));
+
+    const policy = await framingPolicy(`${server.url}index`);
+
+    expect(policy).toEqual({
+      csp: "frame-ancestors http://localhost:8901",
+      xfo: "DENY",
+    });
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("denies every framer on the error page while biac.config.ts fails to load", async () => {
+    server = await startDevServer(projectListing(["*"]));
+
+    const response = await fetch(server.url);
+    const body = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(body).toContain("embed.origins[0]");
+    expect({
+      csp: response.headers.get("content-security-policy"),
+      xfo: response.headers.get("x-frame-options"),
+    }).toEqual(DENY_ALL);
     expect(await server.stop()).toBe(0);
   }, 60_000);
 });

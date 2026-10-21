@@ -42,6 +42,7 @@ describe("missing or empty config", () => {
       },
       directories: {},
       brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
+      embed: { origins: [] },
     });
   });
 
@@ -63,6 +64,7 @@ describe("missing or empty config", () => {
       },
       directories: {},
       brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
+      embed: { origins: [] },
     });
   });
 });
@@ -113,6 +115,7 @@ describe("field handling", () => {
       },
       directories: {},
       brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
+      embed: { origins: [] },
     });
   });
 
@@ -289,6 +292,37 @@ describe("brand", () => {
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
       "Invalid biac.config.ts:4:21 — brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light",
+    );
+  });
+});
+
+describe("embed", () => {
+  it("reads the origins allowed to frame the site", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      'export default { embed: { origins: ["http://localhost:8901"] } };\n',
+    );
+
+    await expect(loadBiacConfig(root)).resolves.toMatchObject({
+      embed: { origins: ["http://localhost:8901"] },
+    });
+  });
+
+  it("throws at the entry's line and column for an origin with a path", async () => {
+    const root = makeProject();
+    writeConfig(
+      root,
+      [
+        "export default {",
+        '  embed: { origins: ["https://example.com/path"] },',
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      'Invalid biac.config.ts:2:22 — embed.origins[0]: expected an origin "scheme://host[:port]" (http or https, no path, no wildcard), got "https://example.com/path"',
     );
   });
 });
@@ -542,7 +576,7 @@ describe("error position", () => {
 
 describe("unknown keys", () => {
   const ACCEPTED =
-    "expected one of title, theme, nav, sql, interpreters, layout, directories, brand";
+    "expected one of title, theme, nav, sql, interpreters, layout, directories, brand, embed";
 
   it.each([
     ["no close key", "pagewidth", `pagewidth: unknown key, ${ACCEPTED}`],

@@ -212,6 +212,12 @@ export interface BiacNavConfig {
   sidebar: boolean;
 }
 
+/** `biac.config.ts`'s optional `embed` block: who may frame the site's pages. */
+export interface EmbedConfig {
+  /** Origins (`scheme://host[:port]`) allowed to show the pages in an iframe; empty denies every framer. */
+  origins: readonly string[];
+}
+
 /**
  * Resolved `biac.config.ts`: every field is concrete after loading — the
  * loader substitutes defaults for anything the project omits.
@@ -231,6 +237,8 @@ export interface BiacConfig {
   directories: DirectoryTitles;
   /** Brand colours, palette, heatmap scale and fonts; colours and palette contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
   brand: BrandTheme;
+  /** Framing allowlist. Engine-only — the dev and preview servers send it as response headers. */
+  embed: EmbedConfig;
 }
 
 /**

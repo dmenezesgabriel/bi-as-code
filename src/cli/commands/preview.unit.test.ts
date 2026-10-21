@@ -6,6 +6,7 @@ import {
   cleanupProjects,
   makeTempProject,
 } from "../../../test/lib/temp-project.js";
+import { frameAncestorsHeaders } from "../../engine/frame-ancestors.js";
 import { parsePreviewArgs, preview } from "./preview.js";
 
 const { vitePreview } = vi.hoisted(() => ({ vitePreview: vi.fn() }));
@@ -69,7 +70,10 @@ describe("preview", () => {
     const config = vitePreview.mock.calls[0]![0];
     expect(config.configFile).toMatch(/src[/\\]web[/\\]vite\.config\.ts$/);
     expect(config.build).toEqual({ outDir: join(root, "build") });
-    expect(config.preview).toEqual({ port: 0 });
+    expect(config.preview).toEqual({
+      port: 0,
+      headers: frameAncestorsHeaders([]),
+    });
     expect(server.printUrls).toHaveBeenCalledOnce();
   });
 
@@ -80,7 +84,9 @@ describe("preview", () => {
 
     await preview([builtProject()]);
 
-    expect(vitePreview.mock.calls[0]![0].preview).toEqual({});
+    expect(vitePreview.mock.calls[0]![0].preview).toEqual({
+      headers: frameAncestorsHeaders([]),
+    });
   });
 
   it("refuses a project with no build, naming the path and the fix", async () => {

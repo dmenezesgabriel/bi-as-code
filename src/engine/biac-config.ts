@@ -8,6 +8,7 @@ import {
 } from "./biac-config-error.js";
 import { readBrand } from "./brand-config.js";
 import { isRecord, rejectUnknownKeys } from "./config-shape.js";
+import { readEmbed } from "./embed-config.js";
 import {
   DEFAULT_INTERPRETERS,
   mergeInterpreters,
@@ -37,6 +38,7 @@ const DEFAULTS: BiacConfig = {
   },
   directories: {},
   brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
+  embed: { origins: [] },
 };
 
 // The keys of the closed objects. An unknown one throws rather than
@@ -54,6 +56,7 @@ const CONFIG_KEYS = [
   "layout",
   "directories",
   "brand",
+  "embed",
 ] as const;
 const NAV_KEYS = ["sidebar"] as const;
 const LAYOUT_KEYS = [
@@ -141,6 +144,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
     layout: readLayout(raw),
     directories: readDirectories(raw),
     brand: readBrand(raw),
+    embed: readEmbed(raw),
   };
 }
 

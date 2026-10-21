@@ -13,10 +13,11 @@ export const VIRTUAL_CONFIG_ID = "virtual:biac-config";
  */
 export function configModuleSource(config: BiacConfig): string {
   // `directories` reaches the browser already applied, in the manifest's
-  // `navTree`; `brand` as the index.html style `brandStyleTags` injects.
+  // `navTree`; `brand` as the index.html style `brandStyleTags` injects;
+  // `embed` as the dev and preview servers' framing headers.
   const browserConfig: Omit<
     BiacConfig,
-    "interpreters" | "directories" | "brand"
+    "interpreters" | "directories" | "brand" | "embed"
   > = {
     title: config.title,
     theme: config.theme,
