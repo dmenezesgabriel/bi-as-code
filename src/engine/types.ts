@@ -237,7 +237,7 @@ export interface BiacConfig {
   directories: DirectoryTitles;
   /** Brand colours, palette, heatmap scale and fonts; colours and palette contrast-checked. Engine-only — they reach the browser as a `<style>` in index.html. */
   brand: BrandTheme;
-  /** Framing allowlist. Engine-only — the dev and preview servers send it as response headers. */
+  /** Framing allowlist: the dev and preview servers send it as response headers, and a framed page posts its height only to a listed parent. */
   embed: EmbedConfig;
 }
 

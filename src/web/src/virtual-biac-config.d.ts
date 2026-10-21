@@ -25,6 +25,10 @@ declare module "virtual:biac-config" {
       /** The table of contents' heading and the name of its `nav` landmark. */
       table_of_contents_label: string;
     };
+    embed: {
+      /** Origins allowed to frame the site; a framed page posts its height only to one of them. */
+      origins: readonly string[];
+    };
   }
   export const config: BiacConfig;
 }

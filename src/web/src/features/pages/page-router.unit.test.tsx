@@ -114,6 +114,7 @@ const site: BiacConfig = {
     table_of_contents: true,
     table_of_contents_label: "On this page",
   },
+  embed: { origins: [] },
 };
 
 const navTree: NavTree = {

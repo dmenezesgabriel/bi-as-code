@@ -1,9 +1,13 @@
 import { Outlet } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 import { Breadcrumbs } from "./features/chrome/breadcrumbs";
 import { EditPageLink } from "./features/chrome/edit-page-link";
+import {
+  useFrameHeightReporter,
+  useFramed,
+} from "./features/chrome/frame-height";
 import {
   fixedLanguages,
   useDeclaredLanguages,
@@ -18,7 +22,7 @@ import {
 } from "./features/chrome/sidebar-storage";
 import { ThemeModeProvider } from "./features/chrome/theme-mode";
 import { ThemeToggle } from "./features/chrome/theme-toggle";
-import type { DeclaredLanguages } from "./features/chrome/types";
+import type { DeclaredLanguages, FrameWindow } from "./features/chrome/types";
 import type { PageChromeEntry } from "./features/pages/types";
 import type { LoadPageSearchDocuments } from "./features/search/types";
 import { useLanguage } from "./features/chrome/use-language";
@@ -47,6 +51,8 @@ const FLOATING_TOGGLE = "fixed top-2 left-2 z-50 bg-background shadow-sm";
  * `loadSearchDocuments` adds the sidebar's search box, whose shortcuts
  * reveal a hidden sidebar for the moment — the drawer below `lg`, an
  * unpersisted show at `lg` and above, so a reload keeps the stored choice.
+ * Framed by an origin `embed.origins` lists, the shell posts its content's
+ * height to that parent; `frame` stands in for the page's own window.
  */
 export function AppShell({
   tree,
@@ -55,6 +61,7 @@ export function AppShell({
   languages: declaredLanguages = NO_LANGUAGES,
   loadSearchDocuments,
   editable = false,
+  frame,
 }: {
   tree: NavTree;
   site: BiacConfig;
@@ -62,6 +69,7 @@ export function AppShell({
   languages?: DeclaredLanguages;
   loadSearchDocuments?: LoadPageSearchDocuments;
   editable?: boolean;
+  frame?: FrameWindow;
 }) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const chrome = usePageChrome(pages, site.nav.sidebar);
@@ -72,6 +80,9 @@ export function AppShell({
     readDesktopOpen,
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const content = useRef<HTMLDivElement>(null);
+  useFrameHeightReporter(content, site.embed.origins, frame);
+  const framed = useFramed(frame);
 
   const desktopVisible = desktopOpen !== false;
   const visible = isMobile ? mobileOpen : desktopVisible;
@@ -137,9 +148,12 @@ export function AppShell({
               />
             </aside>
           )}
+          {/* Framed, the viewport is the iframe the host sized from this
+              element's height: a viewport-tall minimum would only let it grow. */}
           <div
+            ref={content}
             className={cn(
-              "min-h-screen",
+              !framed && "min-h-screen",
               chrome.sidebar && desktopVisible && "lg:pl-72",
             )}
           >

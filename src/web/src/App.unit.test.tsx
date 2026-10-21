@@ -11,8 +11,10 @@ import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 import { AppShell } from "./App";
 import { fixedLanguages } from "./features/chrome/declared-languages";
+import { FakeFrameWindow } from "./features/chrome/frame-window.stub";
 import { stubMatchMedia } from "./features/chrome/match-media.stub";
-import type { DeclaredLanguages } from "./features/chrome/types";
+import { stubResizeObserver } from "./features/chrome/resize-observer.stub";
+import type { DeclaredLanguages, FrameWindow } from "./features/chrome/types";
 import type { PageChromeEntry } from "./features/pages/types";
 import {
   FakeSearchDocuments,
@@ -41,6 +43,7 @@ const site: BiacConfig = {
     table_of_contents: true,
     table_of_contents_label: "On this page",
   },
+  embed: { origins: [] },
 };
 
 async function renderShell(
@@ -51,6 +54,7 @@ async function renderShell(
   loadSearchDocuments?: FakeSearchDocuments["load"],
   languages?: DeclaredLanguages,
   pages?: PageChromeEntry[],
+  frame?: FrameWindow,
 ) {
   const rootRoute = createRootRoute({
     component: () => (
@@ -61,6 +65,7 @@ async function renderShell(
         editable={editable}
         loadSearchDocuments={loadSearchDocuments}
         languages={languages}
+        frame={frame}
       />
     ),
   });
@@ -395,5 +400,51 @@ describe("AppShell — search language", () => {
     await renderFrenchSearchShell("en");
 
     expect(within(sidebar()).getByText("No results")).toBeInTheDocument();
+  });
+});
+
+describe("AppShell — framed", () => {
+  const INTRANET = "https://intranet.example.com";
+  const embeddable = { ...site, embed: { origins: [INTRANET] } };
+
+  function renderFramed(frame: FrameWindow) {
+    return renderShell(
+      "/",
+      embeddable,
+      tree,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      frame,
+    );
+  }
+
+  function content(): HTMLElement {
+    return screen.getByRole("banner").parentElement!;
+  }
+
+  it("posts the page's height to a listed parent", async () => {
+    const observer = stubResizeObserver();
+    const frame = new FakeFrameWindow({ ancestorOrigins: [INTRANET] });
+    await renderFramed(frame);
+
+    act(() => observer.fire());
+
+    expect(frame.parent.posted).toEqual([
+      { message: { type: "biac:height", height: 0 }, targetOrigin: INTRANET },
+    ]);
+  });
+
+  it("lets the content end where it ends, so the reported height can shrink", async () => {
+    await renderFramed(new FakeFrameWindow({ ancestorOrigins: [INTRANET] }));
+
+    expect(content()).not.toHaveClass("min-h-screen");
+  });
+
+  it("fills the viewport in a tab of its own", async () => {
+    await renderShell("/", embeddable);
+
+    expect(content()).toHaveClass("min-h-screen");
   });
 });

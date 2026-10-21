@@ -18,6 +18,18 @@ describe("configModuleSource", () => {
       "nav",
       "sqlTables",
       "layout",
+      "embed",
     ]);
+  });
+
+  it("serves the framing allowlist so a framed page can address its parent", async () => {
+    const config = await loadBiacConfig(NO_PROJECT);
+    const origins = ["https://intranet.example.com"];
+
+    const source = configModuleSource({ ...config, embed: { origins } });
+
+    expect(source).toContain(
+      '"embed":{"origins":["https://intranet.example.com"]}',
+    );
   });
 });

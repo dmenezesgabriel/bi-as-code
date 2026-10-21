@@ -4,6 +4,7 @@ import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 import { withMemoryRouter } from "../.storybook/decorators";
 import { AppShell } from "./App";
+import { FakeFrameWindow } from "./features/chrome/frame-window.stub";
 
 const TREE: NavTree = {
   rootPages: [
@@ -30,6 +31,7 @@ const SITE: BiacConfig = {
     table_of_contents: true,
     table_of_contents_label: "On this page",
   },
+  embed: { origins: [] },
 };
 
 const meta: Meta<typeof AppShell> = {
@@ -163,5 +165,28 @@ export const Editable: Story = {
     await expect(canvas.getByRole("banner")).toContainElement(
       canvas.getByRole("link", { name: "Edit" }),
     );
+  },
+};
+
+const INTRANET = "https://intranet.example.com";
+const INTRANET_FRAME = new FakeFrameWindow({ ancestorOrigins: [INTRANET] });
+
+/** Framed by an origin `embed.origins` lists, the shell posts its
+ * content's height to that parent, addressed to its exact origin. The stub
+ * route renders nothing, so the header is the content measured. */
+export const FramedByListedParent: Story = {
+  args: {
+    site: { ...SITE, embed: { origins: [INTRANET] } },
+    frame: INTRANET_FRAME,
+  },
+  play: async () => {
+    // The first post can measure the shell before the header renders;
+    // wait for the one that carries it.
+    await waitFor(() => {
+      const last = INTRANET_FRAME.parent.posted.at(-1);
+      expect(last?.targetOrigin).toBe(INTRANET);
+      expect(last?.message.type).toBe("biac:height");
+      expect(last?.message.height).toBeGreaterThan(0);
+    });
   },
 };

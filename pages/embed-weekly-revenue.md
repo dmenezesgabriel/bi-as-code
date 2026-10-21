@@ -15,3 +15,5 @@ order by week
 ```
 
 <LineChart data="weekly_revenue" x="week" y="revenue" title="Revenue by week" subtitle="Sum of order amounts, US dollars" />
+
+Revenue is the sum of order amounts in each week, read from `data/weekly-orders.csv`; the frame that shows this page grows to fit it.
