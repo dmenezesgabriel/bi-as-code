@@ -14,9 +14,10 @@ import { WEEKLY_REVIEW_CHART_COUNT } from "./echart-hosts.js";
  * wraps its fence's sql with the filter's bound predicate, and the fences
  * keep their raw read. These tests drive the URL and read the tables the
  * page renders — live tables in document order on weekly-review:
- * region_share (the one fence opting into `display`), the region_week
- * <Table> in the Order-mix tabs, the order_detail <Table>, then the
- * weekly_trend <Table> in Quarter detail.
+ * region_share (a fence opting into `display`), the region_week
+ * <Table> in the Order-mix tabs, the order_detail <Table>, the
+ * weekly_trend <Table> in Quarter detail, then the west_orders fence in
+ * Takeaways.
  */
 test("?region=West narrows the filter-declaring widgets while their fences stay raw", async ({
   page,
@@ -96,12 +97,12 @@ test("?region=Atlantis is pruned by the Region dropdown and the page renders unf
   // The Region dropdown validates the URL value once its options load:
   // Atlantis matches none of them, so the filter normalizes the stale
   // value away and the param drops from the URL. The settled page is the
-  // unfiltered read — region_share and the <Table> widgets at their full
-  // counts (the mounted-but-hidden Order-mix table included).
+  // unfiltered read — region_share, west_orders and the <Table> widgets at
+  // their full counts (the mounted-but-hidden Order-mix table included).
   await expect(page).toHaveURL(/weekly-review$/);
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
   await expect(page.getByText("Page 1 of 36 · 355 rows")).toHaveCount(1);
   await expect(page.locator("[data-chart-empty]")).toHaveCount(0);
-  await expect(resultTables(page)).toHaveCount(4);
+  await expect(resultTables(page)).toHaveCount(5);
   expect(errors).toEqual([]);
 });

@@ -14,6 +14,8 @@ import { pageLayout } from "./page-layout-frontmatter.js";
 import {
   recmaBindTranslations,
   remarkCheckTranslationKeys,
+  sqlReadsTranslations,
+  translationsForExport,
 } from "./page-translations.js";
 import { NO_QUERY_FILES, remarkQueryFiles } from "./query-files.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
@@ -111,9 +113,14 @@ export async function compilePage(
     layout: pageLayout(frontmatter, location),
     brandCss: brandCss(pageBrand(frontmatter, location, projectBrand)),
   };
+  const readsTranslations =
+    translationUse.reads || sqlReadsTranslations(page.sqlBlocks);
+  const exports = readsTranslations
+    ? [metadataExports(page), translationsForExport()]
+    : [metadataExports(page)];
   return {
-    code: `${compiled}\n${metadataExports(page)}\n`,
-    readsTranslations: translationUse.reads,
+    code: `${compiled}\n${exports.join("\n")}\n`,
+    readsTranslations,
     ...page,
   };
 }

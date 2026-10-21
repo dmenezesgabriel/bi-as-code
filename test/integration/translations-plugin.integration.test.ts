@@ -132,6 +132,34 @@ describe("a page reading $translations", () => {
   });
 });
 
+describe("a page whose sql reads $translations", () => {
+  it("re-exports translationsFor and re-serves on an edit to the file", async () => {
+    const { root, dev } = await serveProject({
+      "translations.yaml": TRANSLATIONS,
+      "queries/labels.sql": "select {{$translations.revenue}} as label\n",
+      "pages/index.md": '# Labels\n\n<Table data="/queries/labels" />\n',
+    });
+    const pagePath = join(root, "pages/index.md");
+
+    const code = await transformed(dev, `/@fs${pagePath}`);
+    await waitForWatch(dev, root, "translations.yaml");
+
+    // Vite rewrites the virtual id to its served `/@id/__x00__…` form.
+    expect(code).toMatch(
+      /export \{\s*translationsFor\s*\} from "[^"]*virtual:biac-translations"/,
+    );
+    await expectInvalidated(
+      dev.environments.client.moduleGraph.getModuleById(pagePath),
+      () =>
+        writeProjectFile(
+          root,
+          "translations.yaml",
+          "en:\n  revenue: Turnover\n",
+        ),
+    );
+  });
+});
+
 describe("a project without translations.yaml", () => {
   it("serves a page that fails to compile as its own compile error", async () => {
     const { root, dev } = await serveProject({

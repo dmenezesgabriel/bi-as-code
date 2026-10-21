@@ -98,9 +98,10 @@ test("weekly-review's region_share builds on {{/queries/region_orders}} and runs
   await page.goto(`${biacDev.url}weekly-review`);
 
   const results = resultTables(page);
-  // Live tables in document order: region_share (the one fence opting into
+  // Live tables in document order: region_share (a fence opting into
   // `display`), the <Table> widget in the Order-mix tabs, the order_detail
-  // <Table> widget, then the weekly_trend <Table> widget in Quarter detail.
+  // <Table> widget, the weekly_trend <Table> widget in Quarter detail, then
+  // the west_orders fence in Takeaways.
   // The trend's 39 rows paginate at pageSize 10, so the DOM holds the
   // first page plus the pager caption.
   await expect(results.nth(3).getByRole("row")).toHaveCount(11);

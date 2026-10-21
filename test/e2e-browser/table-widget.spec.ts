@@ -24,6 +24,14 @@ function tableRegions(page: Page) {
 }
 
 /**
+ * weekly-review's weekly_trend `<Table>` widget in Quarter detail: the last
+ * region paging its 39 rows (a fence result follows it on the page).
+ */
+function weeklyTrendRegion(page: Page) {
+  return tableRegions(page).filter({ hasText: "39 rows" }).last();
+}
+
+/**
  * How far a header label's text ends from its first-row figure's text, in
  * px: 0 when the label sits flush over its column.
  */
@@ -38,7 +46,7 @@ async function headerOffset(table: Locator, title: string): Promise<number> {
   return (await textBounds(cell)).right - (await textBounds(label)).right;
 }
 
-/** weekly-review's last `<Table>` widget, loaded at `width` px. */
+/** weekly-review's weekly_trend `<Table>` widget, loaded at `width` px. */
 async function weeklyReviewWidget(
   page: Page,
   baseUrl: string,
@@ -46,7 +54,7 @@ async function weeklyReviewWidget(
 ): Promise<Locator> {
   await page.setViewportSize({ width, height: 800 });
   await page.goto(`${baseUrl}weekly-review`);
-  const table = tableRegions(page).last().locator("table");
+  const table = weeklyTrendRegion(page).locator("table");
   await expect(table.getByRole("row")).toHaveCount(11);
   return table;
 }
@@ -68,9 +76,9 @@ test("weekly-review's <Table> sorts client-side through the 3-state cycle", asyn
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
 
-  // The widget is the last live table region — the named fences' results
-  // render ahead of it in document order.
-  const widget = tableRegions(page).last();
+  // The weekly_trend widget in Quarter detail — the last region paging 39
+  // rows; the west_orders fence's result follows it in document order.
+  const widget = weeklyTrendRegion(page);
   const table = widget.locator("table");
   await expect(table.getByRole("row")).toHaveCount(11);
 
@@ -85,15 +93,12 @@ test("weekly-review's <Table> sorts client-side through the 3-state cycle", asyn
 
   // Click-to-sorted latency, measured inside the page: dispatch the click
   // and wait on the tbody mutation React commits for the re-sorted rows.
-  const sortMs = await page.evaluate(() => {
-    const regions = document.querySelectorAll("div.overflow-x-auto table");
-    const table = regions[regions.length - 1];
-    if (!table) throw new Error("widget table not found");
-    const tbody = table.querySelector("tbody");
+  const sortMs = await table.evaluate((widgetTable) => {
+    const tbody = widgetTable.querySelector("tbody");
     if (!tbody) throw new Error("widget tbody not found");
-    const button = [
-      ...tbody.closest("table")!.querySelectorAll("th button"),
-    ].find((b) => b.textContent?.startsWith("Orders"));
+    const button = [...widgetTable.querySelectorAll("th button")].find((b) =>
+      b.textContent?.startsWith("Orders"),
+    );
     if (!button) throw new Error("Orders header button not found");
     const t0 = performance.now();
     return new Promise<number>((resolve) => {
@@ -135,7 +140,7 @@ test("weekly-review's <Column> children order, title and format the table", asyn
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
 
-  const table = tableRegions(page).last().locator("table");
+  const table = weeklyTrendRegion(page).locator("table");
   await expect(table.getByRole("row")).toHaveCount(11);
 
   // The fence selects week, region, orders, share; the <Column> list puts
@@ -226,7 +231,7 @@ test("the widget pager walks the 39 rows in pages of 10", async ({
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}weekly-review`);
 
-  const widget = tableRegions(page).last();
+  const widget = weeklyTrendRegion(page);
   const table = widget.locator("table");
   await expect(table.getByRole("row")).toHaveCount(11);
   await expect(widget).toContainText("Page 1 of 4 · 39 rows");

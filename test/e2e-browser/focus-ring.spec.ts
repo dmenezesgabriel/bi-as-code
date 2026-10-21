@@ -16,7 +16,7 @@ import {
 const STOPS = 40;
 
 /** The live result tables `/weekly-review` renders. */
-const RESULT_TABLES = 4;
+const RESULT_TABLES = 5;
 
 /** WCAG 2.4.13 Focus Appearance: a ring at least 2 CSS px thick … */
 const MIN_RING_WIDTH = 2;

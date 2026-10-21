@@ -12,6 +12,7 @@ import { VIRTUAL_TRANSLATIONS_ID } from "./translations-module.js";
 import type {
   PageTranslationUse,
   ResolvedTranslations,
+  SqlBlock,
   TranslationMap,
 } from "./types.js";
 
@@ -104,6 +105,33 @@ export const recmaBindTranslations: Plugin<
   content.body.body.unshift(translationsBinding());
   program.body.unshift(translationsForImport());
 };
+
+/** A `{{$translations.…}}` token in sql, spaces inside the braces allowed. */
+const SQL_TRANSLATION_TOKEN = /\{\{\s*\$translations\./;
+
+/**
+ * Whether any of a page's sql blocks — its fences and the query files it
+ * reads — binds a `{{$translations.key}}`. The browser binds those values
+ * when the query runs, from the `translationsFor` the page module
+ * re-exports (`translationsForExport`).
+ *
+ * @example
+ * sqlReadsTranslations([{ name: "q", sql: "select {{$translations.west}}" }]); // → true
+ */
+export function sqlReadsTranslations(sqlBlocks: readonly SqlBlock[]): boolean {
+  return sqlBlocks.some((block) => SQL_TRANSLATION_TOKEN.test(block.sql));
+}
+
+/**
+ * The page-module line that hands the browser `translationsFor`, so the
+ * query registry binds `{{$translations.*}}` in the page's language.
+ *
+ * @example
+ * translationsForExport(); // → 'export {translationsFor} from "virtual:biac-translations";'
+ */
+export function translationsForExport(): string {
+  return `export {translationsFor} from ${JSON.stringify(VIRTUAL_TRANSLATIONS_ID)};`;
+}
 
 /** The estree programs an mdast node carries: its own expression and its attributes'. */
 function estreePrograms(node: Nodes): unknown[] {

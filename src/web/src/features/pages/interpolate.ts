@@ -5,15 +5,24 @@
  * `{{name}}` inlines another named block's SQL as a parenthesized subquery,
  * and `{{/queries/<path>}}` inlines a query file the engine put on the page
  * under that name — its own `{{…}}` tokens resolve the same way.
+ * `{{$translations.key}}` binds the key's text in the page's language
+ * through a `?` placeholder too, so an apostrophe in a translation needs no
+ * escaping. A bound value is never an identifier: a column chosen by
+ * language is written `case {{$translations.langcode}} when 'fr' then
+ * label_fr else label_en end`, not spliced into its name.
  * Filter/input/front-matter tokens are not implemented yet; an
  * unrecognized token is an error, and a query with errors is never run.
  */
+
+import type { TranslationMap } from "./types";
 
 export interface InterpolationContext {
   /** URL search params — `{{params.name}}` binds `params[name]`, absent → NULL. */
   readonly params: Readonly<Record<string, unknown>>;
   /** The page's named sql blocks and query files — `{{name}}` inlines `queries[name]`. */
   readonly queries: Readonly<Record<string, string>>;
+  /** The page's translations in its language — `{{$translations.a.b}}` binds `a.b`'s text; absent → none. */
+  readonly translations?: TranslationMap;
 }
 
 export interface InterpolatedQuery {
@@ -26,6 +35,7 @@ export interface InterpolatedQuery {
 }
 
 const TEMPLATE_TOKEN = /\{\{([^{}]*)\}\}/g;
+const TRANSLATIONS_PREFIX = "$translations.";
 
 /**
  * Resolves one block's SQL against the page's params and named queries.
@@ -53,10 +63,13 @@ export function interpolateQuery(
       params.push(context.params[token.slice("params.".length)] ?? null);
       return "?";
     }
+    if (token.startsWith(TRANSLATIONS_PREFIX)) {
+      return bindTranslation(token, context.translations, params, errors);
+    }
     const inner = context.queries[token];
     if (inner === undefined) {
       errors.push(
-        `Unknown token {{${token}}} — expected {{params.<name>}}, {{/queries/<path>}} or the name of another sql block on this page`,
+        `Unknown token {{${token}}} — expected {{params.<name>}}, {{$translations.<key>}}, {{/queries/<path>}} or the name of another sql block on this page`,
       );
       return "";
     }
@@ -76,4 +89,40 @@ export function interpolateQuery(
     return `(${expanded.sql})`;
   });
   return { sql: resolved, params, errors };
+}
+
+/** Binds the text `token` names as a `?` arg, or records why it cannot. */
+function bindTranslation(
+  token: string,
+  translations: TranslationMap | undefined,
+  params: unknown[],
+  errors: string[],
+): string {
+  const text = translationText(
+    token.slice(TRANSLATIONS_PREFIX.length),
+    translations,
+  );
+  if (text === undefined) {
+    errors.push(
+      `Undefined translation key {{${token}}} — expected a key of translations.yaml whose value is text`,
+    );
+    return "";
+  }
+  params.push(text);
+  return "?";
+}
+
+/** The text at dotted `key`; undefined when absent or a map of keys. */
+function translationText(
+  key: string,
+  translations: TranslationMap | undefined,
+): string | undefined {
+  let value: string | TranslationMap | undefined = translations;
+  for (const part of key.split(".")) {
+    // `hasOwn`: a key spelled `constructor` must not reach the prototype.
+    if (typeof value !== "object" || !Object.hasOwn(value, part))
+      return undefined;
+    value = value[part];
+  }
+  return typeof value === "string" ? value : undefined;
 }

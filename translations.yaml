@@ -1,5 +1,6 @@
 # Page text in each language the site offers. Pages read a key as
-# {$translations.key}; a key a language leaves out shows its en value.
+# {$translations.key} and sql as {{$translations.key}}; a key a language
+# leaves out shows its en value.
 en:
   weekly_review: Weekly review
   overview: Overview
@@ -18,6 +19,7 @@ en:
   data_quality: Data quality
   change_log: Change log
   sources: Sources
+  region_west: West
 fr:
   weekly_review: Revue hebdomadaire
   overview: Vue d'ensemble
@@ -35,3 +37,4 @@ fr:
   data_quality: Qualité des données
   change_log: Journal des modifications
   sources: Sources
+  region_west: l'Ouest

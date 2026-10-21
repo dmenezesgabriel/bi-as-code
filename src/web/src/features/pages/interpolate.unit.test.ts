@@ -165,4 +165,87 @@ describe("interpolateQuery", () => {
     expect(out.errors).toHaveLength(1);
     expect(out.errors[0]).toContain("inputs.region");
   });
+
+  describe("{{$translations.key}}", () => {
+    const translations = {
+      region_west: "l'Ouest",
+      chart: { title: "Chiffre d'affaires" },
+    };
+
+    it("binds a key's text as a ? arg, in order with {{params.*}}", () => {
+      const out = interpolateQuery(
+        "select * from t where a = {{params.a}} and label = {{ $translations.region_west }}",
+        { params: { a: 1 }, queries: {}, translations },
+      );
+
+      expect(out.sql).toBe("select * from t where a = ? and label = ?");
+      expect(out.params).toEqual([1, "l'Ouest"]);
+      expect(out.errors).toEqual([]);
+    });
+
+    it("binds a nested key by its dotted path", () => {
+      const out = interpolateQuery("select {{$translations.chart.title}}", {
+        params: {},
+        queries: {},
+        translations,
+      });
+
+      expect(out.params).toEqual(["Chiffre d'affaires"]);
+    });
+
+    it("binds a token inside an inlined query file", () => {
+      const out = interpolateQuery("select * from {{/queries/west}}", {
+        params: {},
+        queries: {
+          "/queries/west":
+            "select * from t where label = {{$translations.region_west}}",
+        },
+        translations,
+      });
+
+      expect(out.sql).toBe("select * from (select * from t where label = ?)");
+      expect(out.params).toEqual(["l'Ouest"]);
+    });
+
+    it("errors on a key the translations do not have, naming the token", () => {
+      const out = interpolateQuery("select {{$translations.region_wst}}", {
+        params: {},
+        queries: {},
+        translations,
+      });
+
+      expect(out.errors).toEqual([
+        "Undefined translation key {{$translations.region_wst}} — expected a key of translations.yaml whose value is text",
+      ]);
+    });
+
+    it("errors on a key that names nested keys rather than text", () => {
+      const out = interpolateQuery("select {{$translations.chart}}", {
+        params: {},
+        queries: {},
+        translations,
+      });
+
+      expect(out.errors[0]).toContain("{{$translations.chart}}");
+    });
+
+    it("errors on every key when the page has no translations", () => {
+      const out = interpolateQuery("select {{$translations.region_west}}", {
+        params: {},
+        queries: {},
+      });
+
+      expect(out.errors[0]).toContain("{{$translations.region_west}}");
+    });
+
+    it("does not read a key inherited from Object.prototype", () => {
+      const out = interpolateQuery("select {{$translations.constructor}}", {
+        params: {},
+        queries: {},
+        translations,
+      });
+
+      expect(out.errors[0]).toContain("{{$translations.constructor}}");
+    });
+  });
 });

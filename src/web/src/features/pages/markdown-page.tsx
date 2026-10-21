@@ -255,6 +255,9 @@ function PageBody({
   // a new object and does so during render: a fresh object per render
   // would never settle.
   const params = useMemo(() => searchWithoutEditorKey(search), [search]);
+  // Memoized for the same reason; a hot-swapped page module brings the
+  // edited translations.yaml with it, so a new page re-reads them.
+  const translations = useMemo(() => page.translationsFor?.(undefined), [page]);
   const Content = page.default;
   const scoped = (
     <FiltersProvider key={pageVersion(Content)} port={browserFilterUrlPort}>
@@ -269,6 +272,7 @@ function PageBody({
       sqlBlocks={page.sqlBlocks}
       sqlTables={page.sqlTables}
       params={params}
+      translations={translations}
       dataUpdates={dataUpdates}
     >
       {scoped}

@@ -247,6 +247,32 @@ describe("MarkdownPage", () => {
     expect(db.queries.map((q) => q.sql)).toEqual(["select * from orders"]);
   });
 
+  it("binds a fence's {{$translations.*}} from the page's first declared language", async () => {
+    const db = new FakeDuckDb();
+    const languagesAsked: (string | undefined)[] = [];
+    renderPage(
+      page({
+        sqlBlocks: [{ name: "q", sql: "select {{$translations.west}}" }],
+        translationsFor: (language) => {
+          languagesAsked.push(language);
+          return { west: "l'Ouest" };
+        },
+        default: function Probe() {
+          const results = useQueryResults();
+          return <p data-testid="status">{results.q?.status ?? "none"}</p>;
+        },
+      }),
+      "biac",
+      db,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("success"),
+    );
+    expect(db.queries).toEqual([{ sql: "select ?", params: ["l'Ouest"] }]);
+    expect(new Set(languagesAsked)).toEqual(new Set([undefined]));
+  });
+
   it("hides the editor's edit flag from a fence's params and does not re-run it when the flag goes", async () => {
     // Arrange
     const db = new FakeDuckDb();

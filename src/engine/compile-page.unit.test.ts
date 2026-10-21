@@ -276,10 +276,40 @@ describe("translations", () => {
     expect(page.code).toContain('from "virtual:biac-translations"');
   });
 
-  it("reports a page that does not", async () => {
+  it("reports a page that does not, exporting no translations", async () => {
     const page = await compileWithTranslations("# Revenue\n");
 
     expect(page.readsTranslations).toBe(false);
+    expect(page.code).not.toContain("translationsFor");
+  });
+
+  it("exports translationsFor from a page whose sql fence reads $translations", async () => {
+    const page = await compileWithTranslations(
+      "```sql q\nselect {{ $translations.revenue }}\n```\n",
+    );
+
+    expect(page.readsTranslations).toBe(true);
+    expect(page.code).toContain(
+      'export {translationsFor} from "virtual:biac-translations";',
+    );
+  });
+
+  it("reports a page whose query file reads $translations", async () => {
+    const queryFiles: QueryFiles = {
+      read: async () => "select {{$translations.revenue}}",
+      list: async () => ["labels.sql"],
+    };
+
+    const page = await compilePage(
+      '<Table data="/queries/labels" />\n',
+      "pages/a.md",
+      {},
+      NO_BRAND,
+      queryFiles,
+      async () => translations,
+    );
+
+    expect(page.readsTranslations).toBe(true);
   });
 
   it("fails an unknown key at its line in the file, front-matter included", async () => {

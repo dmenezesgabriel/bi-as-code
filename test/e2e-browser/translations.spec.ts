@@ -5,7 +5,13 @@ import {
   PAGE_SWAP_LOGGED_PATH,
   rewriteUntilServerLogs,
 } from "../lib/write-until-logged.js";
-import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import {
+  collectConsoleErrors,
+  expect,
+  firstRowCells,
+  resultTables,
+  test,
+} from "./dev-server.fixture.js";
 
 // The /weekly-review headings and titles the example project reads from
 // translations.yaml, in page order.
@@ -93,6 +99,51 @@ test("saving a French-first translations.yaml swaps the page to French in place"
     ),
   ).toBe("kept");
   expect(errors).toEqual([]);
+});
+
+/** The west_orders fence's result: the last live table on /weekly-review. */
+function westOrders(page: Page) {
+  return resultTables(page).last();
+}
+
+test("a sql fence binds its translation, apostrophe and all, in place", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+  await expect(westOrders(page).locator("tbody tr")).toHaveCount(1);
+  expect(await firstRowCells(westOrders(page))).toEqual(["West", "140"]);
+
+  await saveTranslations(biacDev, frenchFirst);
+
+  await expect(westOrders(page).locator("tbody td").first()).toHaveText(
+    "l'Ouest",
+  );
+  expect(await firstRowCells(westOrders(page))).toEqual(["l'Ouest", "140"]);
+  expect(errors).toEqual([]);
+});
+
+test("a sql fence naming an unknown translation key shows the token", async ({
+  page,
+  biacDev,
+}) => {
+  const pageFile = join(biacDev.projectDir, "pages/weekly-review.md");
+  writeFileSync(
+    pageFile,
+    readFileSync(pageFile, "utf8").replace(
+      "{{$translations.region_west}}",
+      "{{$translations.region_wst}}",
+    ),
+  );
+
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  await expect(
+    page.getByText(
+      "Undefined translation key {{$translations.region_wst}} — expected a key of translations.yaml whose value is text",
+    ),
+  ).toBeVisible();
 });
 
 test("a misspelled translation key fails the page at its line", async ({

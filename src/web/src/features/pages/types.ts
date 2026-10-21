@@ -62,6 +62,19 @@ export interface CompiledPageModule {
   layout: PageLayout;
   /** The page's front-matter `brand:` as a stylesheet; empty when it sets none. */
   brandCss: string;
+  /**
+   * Present when the page reads `$translations`: the translations of
+   * `language`, the first declared language's when it is not one of them.
+   */
+  translationsFor?: (language: string | undefined) => TranslationMap;
+}
+
+/**
+ * One language's translations from `translations.yaml`, key → text or
+ * nested keys — mirrors `TranslationMap` in `src/engine/types.ts`.
+ */
+export interface TranslationMap {
+  readonly [key: string]: string | TranslationMap;
 }
 
 export interface SqlBlock {

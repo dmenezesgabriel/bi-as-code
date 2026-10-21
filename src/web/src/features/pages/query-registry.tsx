@@ -10,13 +10,18 @@ import {
 import { Effect, Exit } from "effect";
 import { DuckDb } from "../data/data-service";
 import { useDataRuntime } from "../data/runtime";
-import { interpolateQuery, type InterpolatedQuery } from "./interpolate";
+import {
+  interpolateQuery,
+  type InterpolatedQuery,
+  type InterpolationContext,
+} from "./interpolate";
 import { runBlock } from "./run-block";
 import type {
   DataUpdateSubscription,
   QueryResult,
   SqlBlock,
   SqlTableMap,
+  TranslationMap,
 } from "./types";
 
 /**
@@ -88,12 +93,15 @@ export function QueryRegistryProvider({
   sqlBlocks,
   sqlTables,
   params,
+  translations,
   dataUpdates,
   children,
 }: {
   sqlBlocks: readonly SqlBlock[];
   sqlTables: SqlTableMap;
   params: Readonly<Record<string, unknown>>;
+  /** The page's translations in its language, for `{{$translations.*}}`. */
+  translations?: TranslationMap;
   dataUpdates?: DataUpdateSubscription;
   children: ReactNode;
 }) {
@@ -102,7 +110,10 @@ export function QueryRegistryProvider({
     initialResults(sqlBlocks),
   );
   const registered = useTableRegistration(sqlTables, dataUpdates);
-  const interpolated = useStableInterpolation(sqlBlocks, params);
+  const interpolated = useStableInterpolation(sqlBlocks, {
+    params,
+    translations,
+  });
   const blockRuns = useRef<BlockRuns | null>(null);
 
   useEffect(() => {
@@ -141,6 +152,9 @@ export function QueryRegistryProvider({
 
 type Registration = Promise<Exit.Exit<void, unknown>>;
 
+/** What a block's `{{params.*}}` and `{{$translations.*}}` tokens bind to. */
+type BlockBindings = Pick<InterpolationContext, "params" | "translations">;
+
 /**
  * The page's current table registration: created on mount (once per
  * source-set signature), and replaced whenever `dataUpdates` reports a
@@ -175,7 +189,8 @@ function useTableRegistration(
 }
 
 /**
- * Every block interpolated against `params`, reusing the previous render's
+ * Every block interpolated against `bindings` (the page's params and
+ * translations), reusing the previous render's
  * `InterpolatedQuery` object for each block whose SQL, params and errors
  * are unchanged — identity is what tells the run effect and filtered
  * consumers (`useFilteredQueryClient`'s connect effect) that a block did
@@ -184,11 +199,11 @@ function useTableRegistration(
  */
 function useStableInterpolation(
   sqlBlocks: readonly SqlBlock[],
-  params: Readonly<Record<string, unknown>>,
+  { params, translations }: BlockBindings,
 ): Readonly<Record<string, InterpolatedQuery>> {
   const fresh = useMemo(
-    () => interpolateBlocks(sqlBlocks, params),
-    [sqlBlocks, params],
+    () => interpolateBlocks(sqlBlocks, { params, translations }),
+    [sqlBlocks, params, translations],
   );
   const [stable, setStable] = useState(() => ({ fresh, queries: fresh }));
   if (stable.fresh === fresh) return stable.queries;
@@ -199,7 +214,7 @@ function useStableInterpolation(
 
 function interpolateBlocks(
   sqlBlocks: readonly SqlBlock[],
-  params: Readonly<Record<string, unknown>>,
+  bindings: BlockBindings,
 ): Record<string, InterpolatedQuery> {
   const queries = Object.fromEntries(
     sqlBlocks.map((block) => [block.name, block.sql]),
@@ -207,7 +222,11 @@ function interpolateBlocks(
   return Object.fromEntries(
     sqlBlocks.map((block) => [
       block.name,
-      interpolateQuery(block.sql, { params, queries }, new Set([block.name])),
+      interpolateQuery(
+        block.sql,
+        { ...bindings, queries },
+        new Set([block.name]),
+      ),
     ]),
   );
 }

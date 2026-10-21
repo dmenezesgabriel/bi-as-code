@@ -12,7 +12,12 @@ import {
   useQuerySource,
   type QuerySource,
 } from "./query-registry";
-import type { QueryResult, SqlBlock, SqlTableMap } from "./types";
+import type {
+  QueryResult,
+  SqlBlock,
+  SqlTableMap,
+  TranslationMap,
+} from "./types";
 
 type Results = Readonly<Record<string, QueryResult>>;
 
@@ -37,18 +42,20 @@ function renderRegistry({
   blocks = [] as SqlBlock[],
   tables = {} as SqlTableMap,
   params = {} as Record<string, unknown>,
+  translations = undefined as TranslationMap | undefined,
   db = new FakeDuckDb(),
   strict = false,
   dataUpdates = undefined as FakeDataUpdates | undefined,
 } = {}) {
   const resultsRef: { current: Results } = { current: {} };
   const layer = Layer.succeed(DuckDb, db);
-  const tree = (p: Record<string, unknown>) => (
+  const tree = (p: Record<string, unknown>, t = translations) => (
     <DataRuntimeProvider layer={layer}>
       <QueryRegistryProvider
         sqlBlocks={blocks}
         sqlTables={tables}
         params={p}
+        translations={t}
         dataUpdates={dataUpdates?.subscription}
       >
         <ResultsProbe onChange={(r) => (resultsRef.current = r)} />
@@ -62,6 +69,8 @@ function renderRegistry({
     db,
     resultsRef,
     rerenderParams: (p: Record<string, unknown>) => rendered.rerender(tree(p)),
+    rerenderTranslations: (t: TranslationMap) =>
+      rendered.rerender(tree(params, t)),
     unmount: rendered.unmount,
   };
 }
@@ -144,6 +153,42 @@ describe("QueryRegistryProvider", () => {
     expect(db.queries).toEqual([
       { sql: "select * from orders where region = ?", params: ["West"] },
     ]);
+  });
+
+  it("binds {{$translations.*}} through prepared args from the translations prop", async () => {
+    const { db, resultsRef } = renderRegistry({
+      blocks: [
+        {
+          name: "q",
+          sql: "select * from labels where label = {{$translations.west}}",
+        },
+      ],
+      translations: { west: "l'Ouest" },
+    });
+
+    await waitFor(() => expect(resultsRef.current.q?.status).toBe("success"));
+    expect(db.queries).toEqual([
+      { sql: "select * from labels where label = ?", params: ["l'Ouest"] },
+    ]);
+  });
+
+  it("re-runs only the blocks that read a changed translation", async () => {
+    const { db, resultsRef, rerenderTranslations } = renderRegistry({
+      blocks: [
+        { name: "total", sql: "select count(*) from orders" },
+        { name: "q", sql: "select {{$translations.west}} as label" },
+      ],
+      translations: { west: "West" },
+    });
+    await waitFor(() => expect(resultsRef.current.q?.status).toBe("success"));
+
+    rerenderTranslations({ west: "l'Ouest" });
+
+    await waitFor(() => expect(db.queries).toHaveLength(3));
+    expect(db.queries[2]).toEqual({
+      sql: "select ? as label",
+      params: ["l'Ouest"],
+    });
   });
 
   it("re-runs queries when params change without re-registering tables", async () => {

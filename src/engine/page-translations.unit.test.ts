@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   recmaBindTranslations,
   remarkCheckTranslationKeys,
+  sqlReadsTranslations,
+  translationsForExport,
 } from "./page-translations.js";
 import type { PageTranslationUse, ResolvedTranslations } from "./types.js";
 
@@ -138,5 +140,32 @@ describe("checking literal translation keys", () => {
     const { use } = await compilePageBody('{$translations["rev" + "enue"]}\n');
 
     expect(use.reads).toBe(true);
+  });
+});
+
+describe("finding $translations in a page's sql", () => {
+  it("finds a token in any block, spaces inside the braces allowed", () => {
+    const blocks = [
+      { name: "a", sql: "select 1" },
+      { name: "/queries/b", sql: "where label = {{ $translations.west }}" },
+    ];
+
+    expect(sqlReadsTranslations(blocks)).toBe(true);
+  });
+
+  it("ignores params tokens and a bare $translations outside braces", () => {
+    const blocks = [
+      { name: "a", sql: "select '$translations.west', {{params.x}}" },
+    ];
+
+    expect(sqlReadsTranslations(blocks)).toBe(false);
+  });
+});
+
+describe("re-exporting translationsFor", () => {
+  it("re-exports it from the translations module", () => {
+    expect(translationsForExport()).toBe(
+      'export {translationsFor} from "virtual:biac-translations";',
+    );
   });
 });

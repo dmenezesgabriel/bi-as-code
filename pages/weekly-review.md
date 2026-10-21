@@ -272,6 +272,18 @@ graduates from watch item to its own section. Next week's review re-runs
 the same sections against fresh data — the page edits itself once
 `orders` updates.
 
+The West's orders, read under its label in the page's language:
+
+```sql west_orders echo display
+-- the West's label in every language; the bound translation keeps this
+-- language's, apostrophes included
+with labels(region, label) as (values ('West', 'West'), ('West', 'l''Ouest'))
+select label, count(*) as orders
+from orders join labels using (region)
+where label = {{$translations.region_west}}
+group by label
+```
+
 <Accordion single>
   <AccordionItem title={$translations.methodology}>
     Figures aggregate the `orders` table over the 13-week quarter.
