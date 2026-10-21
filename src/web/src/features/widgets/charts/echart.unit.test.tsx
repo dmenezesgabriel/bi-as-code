@@ -12,6 +12,10 @@ afterEach(() => {
 
 /** jsdom has no canvas — the svg renderer is the unit-test render path. */
 const OPTION = {
+  // `finished` (which sets data-echarts-ready) fires only after the entry
+  // animation — 1000 ms by default, the same as waitFor's timeout, so an
+  // animated chart raced the assertion.
+  animation: false,
   xAxis: { type: "category", data: ["North", "South", "West"] },
   yAxis: {},
   series: [{ type: "bar", data: [4800, 3700, 6100] }],
