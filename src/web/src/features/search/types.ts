@@ -21,10 +21,19 @@ export interface PageIndex {
   search(query: string): PageSearchResult[];
 }
 
+/**
+ * The search documents in every language the project declares, as
+ * `virtual:biac-search` serves them; in dev a saved page updates them.
+ */
+export interface PageSearchSource {
+  /** The documents in `language` — the first declared language's when it is undefined or not declared. The same array until an update. */
+  documentsFor(language: string | undefined): readonly PageSearchDocument[];
+  /** Calls `listener` whenever the documents change; returns the unsubscribe. */
+  subscribe(listener: () => void): () => void;
+}
+
 /** Fetches the search documents — the composition root lazy-imports them. */
-export type LoadPageSearchDocuments = () => Promise<
-  readonly PageSearchDocument[]
->;
+export type LoadPageSearchDocuments = () => Promise<PageSearchSource>;
 
 /** Where the index stands: not asked for, on its way, built, or failed. */
 export type PageIndexState =

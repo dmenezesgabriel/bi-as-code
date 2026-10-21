@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,7 +10,9 @@ import {
 import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 import { AppShell } from "./App";
+import { fixedLanguages } from "./features/chrome/declared-languages";
 import { stubMatchMedia } from "./features/chrome/match-media.stub";
+import type { DeclaredLanguages } from "./features/chrome/types";
 import {
   FakeSearchDocuments,
   SAMPLE_SEARCH_PAGES,
@@ -46,6 +48,7 @@ async function renderShell(
   navTree: NavTree = tree,
   editable = false,
   loadSearchDocuments?: FakeSearchDocuments["load"],
+  languages?: DeclaredLanguages,
 ) {
   const rootRoute = createRootRoute({
     component: () => (
@@ -54,6 +57,7 @@ async function renderShell(
         site={config}
         editable={editable}
         loadSearchDocuments={loadSearchDocuments}
+        languages={languages}
       />
     ),
   });
@@ -81,6 +85,32 @@ async function renderSearchShell() {
   });
   await renderShell("/", site, tree, false, documents.load);
   return screen.getByRole("combobox", { name: "Search pages" });
+}
+
+/** A shell in `?lang=` `language`, its search knowing "hebdomadaire" in fr only. */
+async function renderFrenchSearchShell(language: string) {
+  const documents = new FakeSearchDocuments(SAMPLE_SEARCH_PAGES, {
+    held: false,
+    byLanguage: {
+      fr: [
+        { id: "/", title: "Home", text: "Revue hebdomadaire", keywords: "" },
+      ],
+    },
+  });
+  const languages = fixedLanguages(["en", "fr"]);
+  await renderShell(
+    `/?lang=${language}`,
+    site,
+    tree,
+    false,
+    documents.load,
+    languages,
+  );
+  const box = screen.getByRole("combobox", { name: "Search pages" });
+  await act(async () => {
+    fireEvent.focus(box);
+    fireEvent.change(box, { target: { value: "hebdomadaire" } });
+  });
 }
 
 function sidebar(): HTMLElement {
@@ -280,5 +310,21 @@ describe("AppShell", () => {
 
       expect(sidebar()).toHaveClass("-translate-x-full");
     });
+  });
+});
+
+describe("AppShell — search language", () => {
+  it("searches the documents of the language the URL names", async () => {
+    await renderFrenchSearchShell("fr");
+
+    const options = within(sidebar()).getAllByRole("option");
+
+    expect(options.map((option) => option.textContent)).toEqual(["Home"]);
+  });
+
+  it("finds nothing for another language's words", async () => {
+    await renderFrenchSearchShell("en");
+
+    expect(within(sidebar()).getByText("No results")).toBeInTheDocument();
   });
 });

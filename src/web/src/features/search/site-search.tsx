@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Autocomplete } from "../../components/autocomplete";
+import { usePageLanguage } from "../chrome/page-language";
 import type {
   LoadPageSearchDocuments,
   PageIndexState,
@@ -16,10 +17,11 @@ import { useSearchShortcut } from "./use-search-shortcut";
  * `/` or ⌘K / Ctrl-K focuses the box after `onReveal` makes it visible;
  * Escape clears it, then leaves it. `onSearchingChange` reports when a
  * query starts and ends, so the host can hide what the results replace.
- * The documents load on first focus through `loadDocuments`.
+ * The documents load on first focus through `loadDocuments`; the box
+ * searches those in the page's language, and follows their updates.
  *
  * @example
- * <SiteSearch loadDocuments={() => import("virtual:biac-search").then((m) => m.documents)} onNavigate={closeDrawer} onReveal={openDrawer} onSearchingChange={setSearching} />
+ * <SiteSearch loadDocuments={documents.load} onNavigate={closeDrawer} onReveal={openDrawer} onSearchingChange={setSearching} />
  */
 export function SiteSearch({
   loadDocuments,
@@ -35,7 +37,7 @@ export function SiteSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   useSearchShortcut(inputRef, onReveal);
   const { query, searching, changeQuery } = useSearchQuery(onSearchingChange);
-  const { state, prepare } = usePageIndex(loadDocuments);
+  const { state, prepare } = usePageIndex(loadDocuments, usePageLanguage());
   const results = useMemo(
     () =>
       state.status === "ready" && searching ? state.index.search(query) : [],

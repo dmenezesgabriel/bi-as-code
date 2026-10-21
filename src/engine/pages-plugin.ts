@@ -8,10 +8,10 @@ import type {
   NormalizedHotChannel,
   Plugin,
 } from "vite";
-import { ConfigFieldError, locatedError } from "./biac-config-error.js";
 import { loadBiacConfig } from "./biac-config.js";
 import { brandCss } from "./brand-css.js";
 import { compilePage } from "./compile-page.js";
+import { configModuleSource, VIRTUAL_CONFIG_ID } from "./config-module.js";
 import { diskQueryFiles } from "./disk-query-files.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
 import {
@@ -20,10 +20,9 @@ import {
   runDataLoaders,
 } from "./build-data-dir.js";
 import { createDataLoaderCache, type DataLoaderLog } from "./data-loader.js";
-import { checkDirectoryTitles } from "./directory-titles.js";
-import { discoverPages } from "./discover-pages.js";
 import {
-  manifestModuleSource,
+  checkedManifestSource,
+  manifestChanged,
   VIRTUAL_PAGE_PREFIX,
 } from "./manifest-module.js";
 import {
@@ -51,13 +50,11 @@ import {
 import type {
   BiacConfig,
   CompiledPage,
-  DirectoryTitles,
   ResolvedTranslations,
 } from "./types.js";
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = `\0${VIRTUAL_MANIFEST_ID}`;
-const VIRTUAL_CONFIG_ID = "virtual:biac-config";
 const RESOLVED_CONFIG_ID = `\0${VIRTUAL_CONFIG_ID}`;
 const RESOLVED_TRANSLATIONS_ID = `\0${VIRTUAL_TRANSLATIONS_ID}`;
 const RESOLVED_LANGUAGES_ID = `\0${VIRTUAL_LANGUAGES_ID}`;
@@ -127,12 +124,15 @@ export function pagesPlugin(projectRoot: string): Plugin {
     const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
     // `directories` titles live in the manifest's nav tree.
     const manifest = graph.getModuleById(RESOLVED_MANIFEST_ID);
-    // A created or deleted translations.yaml changes the header's languages.
+    // A created or deleted translations.yaml changes the header's languages
+    // and every page's searchable text.
     const languagesModule = graph.getModuleById(RESOLVED_LANGUAGES_ID);
+    const searchModule = graph.getModuleById(RESOLVED_SEARCH_ID);
     for (const mod of [
       configModule,
       manifest,
       languagesModule,
+      searchModule,
       ...stalePages,
     ]) {
       if (mod) graph.invalidateModule(mod);
@@ -142,16 +142,21 @@ export function pagesPlugin(projectRoot: string): Plugin {
     environment.hot.send({ type: "full-reload" });
   };
   // The pages that read the file watch it, so vite re-transforms them; the
-  // translations and languages modules are not files, so they are
+  // translations, languages and search modules are not files, so they are
   // invalidated here and go out with them — each page's re-import then
-  // fetches its new text, and the languages module accepts itself.
+  // fetches its new text, and the languages and search modules accept
+  // themselves.
   const hotUpdateTranslations = (
     environment: DevEnvironment,
     modules: EnvironmentModuleNode[],
   ): EnvironmentModuleNode[] => {
     translationsPromise = undefined;
     const graph = environment.moduleGraph;
-    const generated = [RESOLVED_TRANSLATIONS_ID, RESOLVED_LANGUAGES_ID]
+    const generated = [
+      RESOLVED_TRANSLATIONS_ID,
+      RESOLVED_LANGUAGES_ID,
+      RESOLVED_SEARCH_ID,
+    ]
       .map((id) => graph.getModuleById(id))
       .filter((mod) => mod !== undefined);
     generated.forEach((mod) => graph.invalidateModule(mod));
@@ -350,16 +355,33 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (isClient && (await pushDataUpdate(this.environment.hot, file)))
         return [];
       if (!isPageFile(file, pagesDirPosix)) return;
-      if (!(await manifestChanged(root, getConfig, servedManifest))) return;
+      const graph = this.environment.moduleGraph;
+      const updated = [...modules, ...invalidatedSearchModule(graph)];
+      if (!(await manifestChanged(root, getConfig, servedManifest)))
+        return updated;
       // The manifest has no accepting importer upstream, so propagation
       // dead-ends into a full reload and the route tree rebuilds.
-      const graph = this.environment.moduleGraph;
       const manifest = graph.getModuleById(RESOLVED_MANIFEST_ID);
-      if (!manifest) return;
+      if (!manifest) return updated;
       graph.invalidateModule(manifest);
-      return [...modules, manifest];
+      return [...updated, manifest];
     },
   };
+}
+
+/**
+ * The search documents carry every page's text and search front-matter,
+ * so any page event — a save, an added or removed page — invalidates them.
+ * The module accepts itself, so an open search box re-reads them in place.
+ * Empty until a reader's first focus imports the module.
+ */
+function invalidatedSearchModule(
+  graph: DevEnvironment["moduleGraph"],
+): EnvironmentModuleNode[] {
+  const search = graph.getModuleById(RESOLVED_SEARCH_ID);
+  if (!search) return [];
+  graph.invalidateModule(search);
+  return [search];
 }
 
 /**
@@ -387,26 +409,6 @@ async function compiledOrErrorModule(
 }
 
 /**
- * The browser's `virtual:biac-config`. Interpreters stay behind: they
- * hold host paths (`process.execPath`) and the module ships in the build.
- */
-function configModuleSource(config: BiacConfig): string {
-  // `directories` reaches the browser already applied, in the manifest's
-  // `navTree`; `brand` as the index.html style `brandStyleTags` injects.
-  const browserConfig: Omit<
-    BiacConfig,
-    "interpreters" | "directories" | "brand"
-  > = {
-    title: config.title,
-    theme: config.theme,
-    nav: config.nav,
-    sqlTables: config.sqlTables,
-    layout: config.layout,
-  };
-  return `export const config = ${JSON.stringify(browserConfig)};\n`;
-}
-
-/**
  * The brand stylesheet as index.html's first `<body>` element, none when
  * empty. It must follow every theme stylesheet to win at their equal
  * specificity: in dev vite appends `styles.css` to `<head>` as a `<style>`
@@ -416,50 +418,6 @@ function configModuleSource(config: BiacConfig): string {
 function brandStyleTags(css: string): HtmlTagDescriptor[] {
   if (css === "") return [];
   return [{ tag: "style", children: css, injectTo: "body-prepend" }];
-}
-
-/**
- * The `virtual:biac-pages` source, failing at the `biac.config.ts` key when
- * a `directories` title names a folder with no page — which fails
- * `vite build` and puts vite's overlay, linked to the key, over the dev app.
- */
-function checkedManifestSource(
-  root: string,
-  directories: DirectoryTitles,
-  configFile: string,
-): string {
-  const entries = discoverPages(root);
-  try {
-    checkDirectoryTitles(directories, entries);
-  } catch (error) {
-    if (error instanceof ConfigFieldError)
-      throw locatedError(error, configFile);
-    throw error;
-  }
-  return manifestModuleSource(entries, directories);
-}
-
-/**
- * True when a page change alters what `virtual:biac-pages` would serve. An
- * edit that breaks discovery (front-matter that no longer parses) counts as
- * unchanged: reloading would re-run discovery, fail the manifest module and
- * leave the browser with no app at all. The served manifest stays, and the
- * edited page's own module reports the error. A broken config counts as
- * unchanged too — its own reload already put the error on screen.
- */
-async function manifestChanged(
-  root: string,
-  getConfig: () => Promise<BiacConfig>,
-  servedManifest: string | undefined,
-): Promise<boolean> {
-  try {
-    const { directories } = await getConfig();
-    return (
-      manifestModuleSource(discoverPages(root), directories) !== servedManifest
-    );
-  } catch {
-    return false;
-  }
 }
 
 const VITE_INTERNAL_QUERY_PARAMS = new Set(["import", "t", "v"]);

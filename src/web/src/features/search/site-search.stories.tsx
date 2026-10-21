@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor } from "storybook/test";
-import { withMemoryRouter } from "../../../.storybook/decorators";
+import {
+  withMemoryRouter,
+  withPageLanguage,
+} from "../../../.storybook/decorators";
 import {
   FakeSearchDocuments,
   SAMPLE_SEARCH_PAGES as PAGES,
@@ -149,5 +152,60 @@ export const EscapeClearsThenLeaves: Story = {
 
     await userEvent.keyboard("{Escape}");
     await expect(box).not.toHaveFocus();
+  },
+};
+
+/** A French reader searches the French text: "hebdomadaire" finds the review. */
+export const FrenchReader: Story = {
+  args: {
+    loadDocuments: new FakeSearchDocuments(PAGES, {
+      held: false,
+      byLanguage: {
+        fr: [
+          {
+            id: "/weekly-review",
+            title: "Weekly review",
+            text: "Revue hebdomadaire",
+            keywords: "",
+          },
+        ],
+      },
+    }).load,
+  },
+  decorators: [withPageLanguage("fr")],
+  play: async ({ canvas }) => {
+    await userEvent.type(canvas.getByRole("combobox"), "hebdomadaire");
+
+    await expect(
+      await canvas.findByRole("option", { name: "Weekly review" }),
+    ).toBeVisible();
+    await expect(canvas.getByRole("status")).toHaveTextContent("1 result");
+  },
+};
+
+const updating = new FakeSearchDocuments(PAGES, { held: false });
+
+/** A page saved while the box is open: its new keyword matches in place. */
+export const DocumentsUpdateWhileOpen: Story = {
+  args: { loadDocuments: updating.load },
+  play: async ({ canvas }) => {
+    // The fake outlives a replay of the story, so it starts from the sample.
+    updating.update(PAGES);
+    await userEvent.type(canvas.getByRole("combobox"), "margin");
+    await waitFor(() =>
+      expect(canvas.getByRole("status")).toHaveTextContent("No results"),
+    );
+
+    updating.update(
+      PAGES.map((page) =>
+        page.id === "/nested/allocation"
+          ? { ...page, keywords: "margin" }
+          : page,
+      ),
+    );
+
+    await expect(
+      await canvas.findByRole("option", { name: "Allocation" }),
+    ).toBeVisible();
   },
 };

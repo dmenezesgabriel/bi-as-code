@@ -105,62 +105,64 @@ export function AppShell({
     writeDesktopOpen(open);
   }
 
+  // The sidebar's search box sits inside the language too, so it searches
+  // the text the page shows.
   return (
     <ThemeModeProvider mode={theme.mode}>
-      <div className="min-h-screen bg-background text-foreground">
-        {mobileOpen && (
-          <div
-            data-testid="sidebar-backdrop"
-            aria-hidden
-            onClick={closeMobile}
-            className="fixed inset-0 z-30 bg-overlay lg:hidden"
-          />
-        )}
-        <aside
-          className={cn(
-            "fixed inset-y-0 left-0 z-40 w-72 border-r border-border bg-sidebar",
-            // A transition runs on the destination state's
-            // transition-property: opening skips `visibility`, so the
-            // search shortcut can focus the box at once; closing keeps it,
-            // so the sidebar stays visible while it slides out.
-            visible
-              ? "visible translate-x-0 transition-transform"
-              : "invisible -translate-x-full transition-[transform,visibility]",
-          )}
-        >
-          <SidebarNav
-            tree={tree}
-            siteTitle={site.title}
-            loadSearchDocuments={loadSearchDocuments}
-            onNavigate={closeMobile}
-            onRevealSearch={revealSidebar}
-          />
-        </aside>
-        <div className={cn("min-h-screen", desktopVisible && "lg:pl-72")}>
-          <header className="sticky top-0 z-20 flex h-12 items-center border-b border-border bg-background px-4">
-            <button
-              type="button"
-              aria-label="Toggle sidebar"
-              aria-expanded={visible}
-              onClick={toggleSidebar}
-              className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            >
-              <span aria-hidden>☰</span>
-            </button>
-            <Breadcrumbs tree={tree} />
-            {editable && <EditPageLink />}
-            <LanguageMenu
-              languages={languages}
-              language={language.language}
-              onChoose={language.choose}
+      <PageLanguageProvider language={language.language}>
+        <div className="min-h-screen bg-background text-foreground">
+          {mobileOpen && (
+            <div
+              data-testid="sidebar-backdrop"
+              aria-hidden
+              onClick={closeMobile}
+              className="fixed inset-0 z-30 bg-overlay lg:hidden"
             />
-            <ThemeToggle mode={theme.mode} onToggle={theme.toggle} />
-          </header>
-          <PageLanguageProvider language={language.language}>
+          )}
+          <aside
+            className={cn(
+              "fixed inset-y-0 left-0 z-40 w-72 border-r border-border bg-sidebar",
+              // A transition runs on the destination state's
+              // transition-property: opening skips `visibility`, so the
+              // search shortcut can focus the box at once; closing keeps it,
+              // so the sidebar stays visible while it slides out.
+              visible
+                ? "visible translate-x-0 transition-transform"
+                : "invisible -translate-x-full transition-[transform,visibility]",
+            )}
+          >
+            <SidebarNav
+              tree={tree}
+              siteTitle={site.title}
+              loadSearchDocuments={loadSearchDocuments}
+              onNavigate={closeMobile}
+              onRevealSearch={revealSidebar}
+            />
+          </aside>
+          <div className={cn("min-h-screen", desktopVisible && "lg:pl-72")}>
+            <header className="sticky top-0 z-20 flex h-12 items-center border-b border-border bg-background px-4">
+              <button
+                type="button"
+                aria-label="Toggle sidebar"
+                aria-expanded={visible}
+                onClick={toggleSidebar}
+                className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                <span aria-hidden>☰</span>
+              </button>
+              <Breadcrumbs tree={tree} />
+              {editable && <EditPageLink />}
+              <LanguageMenu
+                languages={languages}
+                language={language.language}
+                onChoose={language.choose}
+              />
+              <ThemeToggle mode={theme.mode} onToggle={theme.toggle} />
+            </header>
             <Outlet />
-          </PageLanguageProvider>
+          </div>
         </div>
-      </div>
+      </PageLanguageProvider>
     </ThemeModeProvider>
   );
 }

@@ -18,7 +18,10 @@ const dataUpdates = import.meta.hot
 // A dynamic import, so the search documents are their own chunk, fetched
 // when a reader first focuses the sidebar's search box.
 const loadSearchDocuments = () =>
-  import("virtual:biac-search").then((module) => module.documents);
+  import("virtual:biac-search").then((module) => ({
+    documentsFor: module.searchDocumentsFor,
+    subscribe: module.subscribeSearchDocuments,
+  }));
 
 export const router = buildPageRouter(
   pages,

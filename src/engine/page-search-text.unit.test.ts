@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { pageSearchText } from "./page-search-text.js";
+import { pageProse, proseText } from "./page-search-text.js";
+import type { TranslationMap } from "./types.js";
 
-describe("pageSearchText — prose", () => {
+function pageSearchText(body: string, translations: TranslationMap): string {
+  return proseText(pageProse(body), translations);
+}
+
+describe("pageProse + proseText — prose", () => {
   it("joins heading, paragraph and list text", () => {
     const markdown =
       "# Orders\n\nWeekly *volume* by region.\n\n- north\n- south\n";
@@ -20,7 +25,7 @@ describe("pageSearchText — prose", () => {
   });
 });
 
-describe("pageSearchText — skipped", () => {
+describe("pageProse + proseText — skipped", () => {
   it("leaves code fences out", () => {
     const markdown = "Before\n\n```sql orders\nselect 1\n```\n\nAfter\n";
 
@@ -44,7 +49,7 @@ describe("pageSearchText — skipped", () => {
   });
 });
 
-describe("pageSearchText — translations", () => {
+describe("pageProse + proseText — translations", () => {
   it("resolves a translated heading to its text", () => {
     const translations = { title: "Revue hebdomadaire" };
 
@@ -64,5 +69,19 @@ describe("pageSearchText — translations", () => {
 
   it("drops a key the translations lack", () => {
     expect(pageSearchText("# {$translations.missing}\n", {})).toBe("");
+  });
+});
+
+describe("pageProse — one parse, many languages", () => {
+  it("resolves the same parsed page in each language's translations", () => {
+    const prose = pageProse("# {$translations.title}\n\nWeekly.\n");
+
+    const english = proseText(prose, { title: "Weekly review" });
+    const french = proseText(prose, { title: "Revue hebdomadaire" });
+
+    expect([english, french]).toEqual([
+      "Weekly review Weekly.",
+      "Revue hebdomadaire Weekly.",
+    ]);
   });
 });

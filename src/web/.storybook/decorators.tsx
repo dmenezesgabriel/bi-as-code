@@ -17,6 +17,7 @@ import type { FilterUrlPort } from "../src/features/filters/filter-url-port";
 import { FiltersProvider } from "../src/features/filters/page-filters-context";
 import { QueryRegistryProvider } from "../src/features/pages/query-registry";
 import type { SqlBlock } from "../src/features/pages/types";
+import { PageLanguageProvider } from "../src/features/chrome/page-language";
 import { ThemeModeProvider } from "../src/features/chrome/theme-mode";
 import type { ThemeMode } from "../src/features/chrome/theme";
 
@@ -177,6 +178,21 @@ export function withThemeMode(mode: ThemeMode): Decorator {
     <ThemeModeProvider mode={mode}>
       <Story />
     </ThemeModeProvider>
+  );
+}
+
+/**
+ * Puts the story in `language`, as `AppShell` does from `?lang=` or the
+ * header menu — what translated pages and the sidebar search read.
+ *
+ * @example
+ * decorators: [withPageLanguage("fr")]
+ */
+export function withPageLanguage(language: string): Decorator {
+  return (Story) => (
+    <PageLanguageProvider language={language}>
+      <Story />
+    </PageLanguageProvider>
   );
 }
 

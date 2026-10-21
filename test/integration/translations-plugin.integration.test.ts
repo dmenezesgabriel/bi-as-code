@@ -94,7 +94,7 @@ describe("virtual:biac-languages", () => {
 
     const code = await transformed(dev, VIRTUAL_LANGUAGES_ID);
 
-    expect(code).toContain('store.languages = ["fr","en"];');
+    expect(code).toContain('{"languages":["fr","en"]}');
   });
 
   it("serves no languages for a malformed file, leaving the error to its pages", async () => {
@@ -104,7 +104,7 @@ describe("virtual:biac-languages", () => {
 
     const code = await transformed(dev, VIRTUAL_LANGUAGES_ID);
 
-    expect(code).toContain("store.languages = [];");
+    expect(code).toContain('{"languages":[]}');
   });
 });
 
@@ -265,7 +265,7 @@ describe("editing translations.yaml", () => {
     );
 
     expect(await transformed(dev, VIRTUAL_LANGUAGES_ID)).toContain(
-      'store.languages = ["fr","en"];',
+      '{"languages":["fr","en"]}',
     );
     expect(
       graph.getModuleById(RESOLVED_LANGUAGES_ID)?.lastHMRTimestamp,

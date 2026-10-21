@@ -6,44 +6,66 @@ import { expressionTranslationKey } from "./page-translations.js";
 import type { TranslationMap } from "./types.js";
 
 /**
- * The prose a reader sees on a page, as one space-joined string for site
- * search. Code fences are left out (sql is not prose), and so is any JSX
- * element with a `data` attribute — a widget rendering query results,
- * which change with the data. Layout elements (`<Callout>`, `<Details>`)
- * keep their text. A `{$translations.key}` contributes its text in
- * `translations`, so a translated heading is found by what it says.
- * `body` is the page without its front-matter block.
+ * A page's prose, parsed once: literal text, or the key of a
+ * `{$translations.key}` whose text depends on the language.
+ */
+export type PageProse = readonly (string | { readonly key: string })[];
+
+/**
+ * The prose a reader sees on a page, for site search. Code fences are left
+ * out (sql is not prose), and so is any JSX element with a `data`
+ * attribute — a widget rendering query results, which change with the
+ * data. Layout elements (`<Callout>`, `<Details>`) keep their text. A
+ * `{$translations.key}` is kept as its key, so one parse serves every
+ * language through {@link proseText}. `body` is the page without its
+ * front-matter block.
  *
  * @example
- * pageSearchText("# {$translations.title}\n", { title: "Revue" });
- * // → "Revue"
+ * pageProse("# {$translations.title}\n\nWeekly.\n");
+ * // → [{ key: "title" }, "Weekly."]
  */
-export function pageSearchText(
-  body: string,
-  translations: TranslationMap,
-): string {
+export function pageProse(body: string): PageProse {
   // Parse only: remark-gfm's syntax (tables) applies while parsing, and
   // running the pipeline would turn the tree into JavaScript.
   const processor = createProcessor({
     format: "mdx",
     remarkPlugins: [remarkGfm],
   });
-  const tree = processor.parse(body);
-  const words: string[] = [];
-  visit(tree, (node: Nodes) => {
+  const prose: (string | { key: string })[] = [];
+  visit(processor.parse(body), (node: Nodes) => {
     if (node.type === "code" || readsData(node)) return SKIP;
-    const text = nodeText(node, translations);
-    if (text) words.push(text);
+    const segment = proseSegment(node);
+    if (segment) prose.push(segment);
   });
+  return prose;
+}
+
+/**
+ * `prose` as one space-joined string, each translation key resolved in
+ * `translations`; a key they lack contributes nothing.
+ *
+ * @example
+ * proseText([{ key: "title" }, "Weekly."], { title: "Revue" });
+ * // → "Revue Weekly."
+ */
+export function proseText(
+  prose: PageProse,
+  translations: TranslationMap,
+): string {
+  const words = prose.map((segment) =>
+    typeof segment === "string"
+      ? segment
+      : translationText(translations, segment.key),
+  );
   return words.join(" ").replace(/\s+/g, " ").trim();
 }
 
-function nodeText(node: Nodes, translations: TranslationMap): string {
+function proseSegment(node: Nodes): string | { key: string } | undefined {
   if (node.type === "text" || node.type === "inlineCode") return node.value;
   if (node.type !== "mdxTextExpression" && node.type !== "mdxFlowExpression")
-    return "";
+    return;
   const key = expressionTranslationKey(node);
-  return key === undefined ? "" : translationText(translations, key);
+  return key === undefined ? undefined : { key };
 }
 
 function readsData(node: Nodes): boolean {

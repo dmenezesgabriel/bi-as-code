@@ -321,3 +321,13 @@ export interface SearchDocument {
   text: string;
   keywords: string;
 }
+
+/**
+ * Every searchable page in each declared language, as `virtual:biac-search`
+ * serves it. Without declared languages there is one set, under "".
+ */
+export interface SearchDocumentSets {
+  /** Declared languages in file order; the first is the default. */
+  languages: string[];
+  byLanguage: Record<string, SearchDocument[]>;
+}

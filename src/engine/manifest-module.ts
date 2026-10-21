@@ -1,5 +1,12 @@
+import { ConfigFieldError, locatedError } from "./biac-config-error.js";
+import { checkDirectoryTitles } from "./directory-titles.js";
+import { discoverPages } from "./discover-pages.js";
 import { buildNavTree } from "./nav-tree.js";
-import type { DirectoryTitles, PageManifestEntry } from "./types.js";
+import type {
+  BiacConfig,
+  DirectoryTitles,
+  PageManifestEntry,
+} from "./types.js";
 
 /** Module id prefix that resolves to one page file under `pages/`. */
 export const VIRTUAL_PAGE_PREFIX = "virtual:biac-page/";
@@ -72,4 +79,54 @@ function hotAcceptBlock(entries: PageManifestEntry[]): string[] {
 
 function pageId(entry: PageManifestEntry): string {
   return JSON.stringify(VIRTUAL_PAGE_PREFIX + entry.file);
+}
+
+/**
+ * The `virtual:biac-pages` source, failing at the `biac.config.ts` key when
+ * a `directories` title names a folder with no page — which fails
+ * `vite build` and puts vite's overlay, linked to the key, over the dev app.
+ *
+ * @example
+ * checkedManifestSource(root, config.directories, join(root, "biac.config.ts"));
+ */
+export function checkedManifestSource(
+  root: string,
+  directories: DirectoryTitles,
+  configFile: string,
+): string {
+  const entries = discoverPages(root);
+  try {
+    checkDirectoryTitles(directories, entries);
+  } catch (error) {
+    if (error instanceof ConfigFieldError)
+      throw locatedError(error, configFile);
+    throw error;
+  }
+  return manifestModuleSource(entries, directories);
+}
+
+/**
+ * True when a page change alters what `virtual:biac-pages` would serve. An
+ * edit that breaks discovery (front-matter that no longer parses) counts as
+ * unchanged: reloading would re-run discovery, fail the manifest module and
+ * leave the browser with no app at all. The served manifest stays, and the
+ * edited page's own module reports the error. A broken config counts as
+ * unchanged too — its own reload already put the error on screen.
+ *
+ * @example
+ * if (await manifestChanged(root, getConfig, servedManifest)) invalidate();
+ */
+export async function manifestChanged(
+  root: string,
+  getConfig: () => Promise<BiacConfig>,
+  servedManifest: string | undefined,
+): Promise<boolean> {
+  try {
+    const { directories } = await getConfig();
+    return (
+      manifestModuleSource(discoverPages(root), directories) !== servedManifest
+    );
+  } catch {
+    return false;
+  }
 }

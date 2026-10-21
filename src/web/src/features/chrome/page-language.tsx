@@ -7,7 +7,8 @@ import {
 
 /**
  * The resolved page language as a tree value. `useLanguage` in the shell
- * decides it once; the routed page reads it here to pick its translations,
+ * decides it once; the routed page reads it here to pick its translations
+ * and the sidebar's search box to pick the documents it searches,
  * so the header menu and the page can never disagree. Undefined for
  * provider-less mounts (stories, tests) and projects with no
  * `translations.yaml` — a page then renders the first declared language.

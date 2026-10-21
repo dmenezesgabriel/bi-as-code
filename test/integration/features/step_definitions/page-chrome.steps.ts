@@ -11,6 +11,7 @@ import {
 } from "../../../lib/dev-server.ts";
 import { eventually, getOk } from "../../../lib/http.ts";
 import { copyShippedProject } from "../../../lib/shipped-project.ts";
+import type { SearchDocumentSets } from "../../../../src/engine/types.ts";
 
 // Same @id/ rule as dev-server.steps.ts — join onto a base ending in "/".
 const MANIFEST_URL = "@id/virtual:biac-pages";
@@ -210,6 +211,38 @@ Then(
         `\\{"id":"/nested/allocation","title":"Allocation","text":"[^"]*${word}`,
       ),
     );
+  },
+);
+
+/** The served search documents, one set per declared language. */
+async function servedSearchSets(): Promise<SearchDocumentSets> {
+  const code = await getOk(`${server!.url}${SEARCH_URL}`);
+  const json = /Object\.assign\(store, (.*)\);/.exec(code)?.[1];
+  assert.ok(json, `expected "Object.assign(store, {...});" in ${code}`);
+  return JSON.parse(json) as SearchDocumentSets;
+}
+
+Then(
+  "the {string} search documents name Weekly review with {string}",
+  async (language: string, word: string) => {
+    const sets = await servedSearchSets();
+    const review = sets.byLanguage[language]?.find(
+      (document) => document.title === "Weekly review",
+    );
+    assert.match(review?.text ?? "", new RegExp(word));
+  },
+);
+
+Then(
+  "the search module serves Allocation with the keyword {string}",
+  async (keyword: string) => {
+    await eventually(async () => {
+      const sets = await servedSearchSets();
+      const allocation = sets.byLanguage[sets.languages[0] ?? ""]?.find(
+        (document) => document.id === "/nested/allocation",
+      );
+      return allocation?.keywords === keyword;
+    });
   },
 );
 

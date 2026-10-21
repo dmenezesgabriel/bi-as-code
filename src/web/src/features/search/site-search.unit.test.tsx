@@ -1,5 +1,6 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { PageLanguageProvider } from "../chrome/page-language";
 import { renderWithRouter } from "../chrome/router-harness";
 import {
   FakeSearchDocuments,
@@ -12,15 +13,18 @@ const PATHS = ["/", "/weekly-orders", "/weekly-review", "/nested/allocation"];
 async function renderSearch(
   documents: FakeSearchDocuments,
   onNavigate = vi.fn(),
+  language?: string,
 ) {
   const onSearchingChange = vi.fn();
   const router = await renderWithRouter(
-    <SiteSearch
-      loadDocuments={documents.load}
-      onNavigate={onNavigate}
-      onReveal={vi.fn()}
-      onSearchingChange={onSearchingChange}
-    />,
+    <PageLanguageProvider language={language}>
+      <SiteSearch
+        loadDocuments={documents.load}
+        onNavigate={onNavigate}
+        onReveal={vi.fn()}
+        onSearchingChange={onSearchingChange}
+      />
+    </PageLanguageProvider>,
     PATHS,
     "/",
   );
@@ -254,5 +258,57 @@ describe("SiteSearch — choosing", () => {
     );
 
     expect(box).toHaveValue("");
+  });
+});
+
+describe("SiteSearch — freshness", () => {
+  it("re-answers the open query when the documents update", async () => {
+    const documents = new FakeSearchDocuments(PAGES, { held: false });
+    const { box } = await renderSearch(documents);
+    await type(box, "margin");
+
+    await act(async () =>
+      documents.update(
+        PAGES.map((page) =>
+          page.id === "/nested/allocation"
+            ? { ...page, keywords: "margin" }
+            : page,
+        ),
+      ),
+    );
+
+    expect(optionNames()).toEqual(["Allocation"]);
+  });
+});
+
+describe("SiteSearch — language", () => {
+  const french = new FakeSearchDocuments(PAGES, {
+    held: false,
+    byLanguage: {
+      fr: [
+        {
+          id: "/weekly-review",
+          title: "Weekly review",
+          text: "Revue hebdomadaire",
+          keywords: "",
+        },
+      ],
+    },
+  });
+
+  it("searches the documents of the page's language", async () => {
+    const { box } = await renderSearch(french, vi.fn(), "fr");
+
+    await type(box, "hebdomadaire");
+
+    expect(optionNames()).toEqual(["Weekly review"]);
+  });
+
+  it("finds nothing in another language's words", async () => {
+    const { box } = await renderSearch(french, vi.fn(), "en");
+
+    await type(box, "hebdomadaire");
+
+    expect(screen.getByText("No results")).toBeInTheDocument();
   });
 });

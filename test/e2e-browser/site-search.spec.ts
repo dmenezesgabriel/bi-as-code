@@ -1,5 +1,12 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
+import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { chooseLanguage } from "./language-menu.js";
+
+/** The search documents accept their own updates, so vite logs them by id. */
+const SEARCH_SWAP_LOGGED_PATH = "/@id/__x00__virtual:biac-search";
 
 /** Opens `url` at 1280 px; returns its console errors, the nav and the box. */
 async function openAtDesktop(
@@ -109,5 +116,60 @@ test("below lg, / opens the drawer and focuses the search box; Escape clears it,
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(errors).toEqual([]);
+});
+
+test("a saved page's keywords reach the open search box in place, and index: false takes the page out", async ({
+  page,
+  biacDev,
+}) => {
+  const { errors, nav, box } = await openAtDesktop(page, biacDev.url);
+  await box.fill("tariff");
+  await expect(nav.getByText("No results")).toBeVisible();
+  await page.evaluate(() => {
+    (window as unknown as { __probe: string }).__probe = "kept";
+  });
+  const file = join(biacDev.projectDir, "pages/nested/allocation.md");
+  const original = readFileSync(file, "utf8");
+  const saveWith = (line: string) =>
+    rewriteUntilServerLogs({
+      rewrite: () =>
+        writeFileSync(file, original.replace("---\n", `---\n${line}\n`)),
+      log: biacDev.log,
+      loggedPath: SEARCH_SWAP_LOGGED_PATH,
+      attemptMs: 3_000,
+      timeoutMs: 20_000,
+    });
+
+  await saveWith("keywords: tariff");
+  await expect(nav.getByRole("option")).toHaveText(["Allocation"]);
+
+  await saveWith("index: false");
+  await box.fill("fulfilment");
+  await expect(nav.getByText("No results")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __probe?: string }).__probe,
+    ),
+  ).toBe("kept");
+  expect(errors).toEqual([]);
+});
+
+test("the search box searches the page's language: ?lang=fr finds French words, English does not", async ({
+  page,
+  biacDev,
+}) => {
+  const { errors, nav, box } = await openAtDesktop(
+    page,
+    `${biacDev.url}weekly-review?lang=fr`,
+  );
+
+  await box.fill("hebdomadaire");
+  await expect(nav.getByRole("option")).toHaveText(["Weekly review"]);
+
+  await box.fill("");
+  await chooseLanguage(page, "English");
+  await box.fill("hebdomadaire");
+  await expect(nav.getByText("No results")).toBeVisible();
   expect(errors).toEqual([]);
 });
