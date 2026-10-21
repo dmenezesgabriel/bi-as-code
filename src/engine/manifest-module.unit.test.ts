@@ -50,6 +50,16 @@ describe("manifest entries", () => {
     expect(source).not.toContain("icon: ");
   });
 
+  it("serves a page's chrome switches on its row, before its module loads", () => {
+    const embed = { ...report, sidebar: false, header: true };
+
+    const source = manifestModuleSource([embed], {});
+
+    expect(source).toContain(
+      "isIndex: false, sidebarPosition: 2, sidebar: false, header: true, load:",
+    );
+  });
+
   it("names a nav folder by its configured title", () => {
     const nested: PageManifestEntry = {
       route: "/nested/page",

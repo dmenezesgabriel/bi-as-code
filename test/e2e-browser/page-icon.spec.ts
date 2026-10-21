@@ -4,13 +4,14 @@ import { join } from "node:path";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 // The shipped example: every page but pages/nested/allocation.md names an
-// icon, so the sidebar draws 7 of its 8 links with a glyph.
+// icon, so the sidebar draws 8 of its 9 links with a glyph.
 const LINK_NAMES = [
   "Orders overview",
   "Cross-filter at scale",
   "Orders dashboard",
   "Regional orders",
   "Weekly orders",
+  "Weekly revenue (embed)",
   "Weekly review",
   "Region detail",
   "Allocation",
@@ -35,7 +36,7 @@ test("each page's front-matter icon shows, decorative, before its sidebar link's
   expect((await links.allTextContents()).sort()).toEqual(
     [...LINK_NAMES].sort(),
   );
-  await expect(links.locator("svg")).toHaveCount(7);
+  await expect(links.locator("svg")).toHaveCount(8);
   await expect(links.locator('svg:not([aria-hidden="true"])')).toHaveCount(0);
   // Located by text, so an icon that leaked into the name would show here.
   await expect(links.filter({ hasText: "Weekly review" })).toHaveAccessibleName(

@@ -1,8 +1,9 @@
 // Types the page manifest module served by the engine's vite plugin —
 // `virtual:` ids have no real file for tsc to resolve, so the contract is
 // declared here. The manifest regenerates on page add/remove/rename and on
-// nav front-matter edits (`title`/`sidebar_position`/`icon` feed `navTree`); any
-// other page edit hot-swaps the page module behind its entry's `load`.
+// nav front-matter edits (`title`/`sidebar_position`/`icon` feed `navTree`) and
+// chrome ones (`sidebar`/`header` ride on the entry); any other page edit
+// hot-swaps the page module behind its entry's `load`.
 declare module "virtual:biac-pages" {
   export const pages: import("./features/pages/types").ManifestPageEntry[];
 

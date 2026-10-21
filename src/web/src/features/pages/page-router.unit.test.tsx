@@ -214,6 +214,29 @@ describe("buildPageRouter", () => {
     within(nav).getByRole("link", { name: "Home" });
   });
 
+  it("drops the chrome a page's manifest entry turns off when that page shows, not while it loads", async () => {
+    let loadEmbed: (mod: PageModule) => void = () => {};
+    const embed: ManifestPageEntry = {
+      ...pageEntry("/embed", () => new Promise((done) => (loadEmbed = done))),
+      sidebar: false,
+      header: false,
+    };
+    const router = renderRouter([...pages, embed], "/");
+    await screen.findByText(/home body/);
+
+    await act(async () => void router.navigate({ to: "/embed" }));
+    const shownWhileLoading = screen.queryByText(/home body/);
+    const chromeWhileLoading = document.querySelectorAll("aside, header");
+    await act(async () => loadEmbed(textPage("embed body", "Embed")));
+
+    // The home page stays on screen while the embed loads, so its chrome
+    // stays with it: dropping it early would strip the page still shown.
+    expect(shownWhileLoading).not.toBeNull();
+    expect(chromeWhileLoading).toHaveLength(2);
+    expect(await screen.findByText("embed body")).toBeInTheDocument();
+    expect(document.querySelectorAll("aside, header")).toHaveLength(0);
+  });
+
   it("registers the config's project-wide sql tables on the page's registry", async () => {
     const db = new FakeDuckDb();
     const sqlPage: CompiledPageModule = {

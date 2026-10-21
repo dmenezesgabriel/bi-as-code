@@ -6,6 +6,7 @@ import {
   rewriteUntilServerLogs,
 } from "../lib/write-until-logged.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { readyCharts } from "./echart-hosts.js";
 
 /** Whether the document root currently carries the `dark` class. */
 function isDark(page: Page): Promise<boolean> {
@@ -236,6 +237,41 @@ test("nav.sidebar:false removes the chrome and the article spans the viewport", 
   // chrome-free, it begins well inside that edge.
   const box = await page.locator("main").boundingBox();
   expect(box?.x).toBeLessThan(288);
+  expect(errors).toEqual([]);
+});
+
+test("front-matter sidebar: false and header: false drop a page's chrome, an edit brings the header back, and a bad value shows its error", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}embed-weekly-revenue`);
+  await expect(readyCharts(page)).toHaveCount(1);
+  await expect(page.locator("aside, header")).toHaveCount(0);
+  await expect(page.getByRole("navigation")).toHaveCount(0);
+
+  const file = join(biacDev.projectDir, "pages/embed-weekly-revenue.md");
+  const original = readFileSync(file, "utf8");
+  const withHeader = (value: string) =>
+    original.replace("header: false\n", `header: ${value}\n`);
+  writeFileSync(file, withHeader("true"));
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }),
+  ).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("aside")).toHaveCount(0);
+
+  writeFileSync(file, withHeader("no thanks"));
+  await expect(page.getByRole("alert")).toContainText(
+    'header: expected a boolean, got "no thanks"',
+    { timeout: 20_000 },
+  );
+
+  writeFileSync(file, original);
+  await expect(readyCharts(page)).toHaveCount(1, { timeout: 20_000 });
+  await expect(page.locator("aside, header")).toHaveCount(0);
+  await page.goto(`${biacDev.url}weekly-review`);
+  await expect(page.locator("aside")).toHaveCount(2);
+  await expect(page.locator("header")).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 

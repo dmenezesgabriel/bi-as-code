@@ -13,6 +13,7 @@ import { AppShell } from "./App";
 import { fixedLanguages } from "./features/chrome/declared-languages";
 import { stubMatchMedia } from "./features/chrome/match-media.stub";
 import type { DeclaredLanguages } from "./features/chrome/types";
+import type { PageChromeEntry } from "./features/pages/types";
 import {
   FakeSearchDocuments,
   SAMPLE_SEARCH_PAGES,
@@ -49,12 +50,14 @@ async function renderShell(
   editable = false,
   loadSearchDocuments?: FakeSearchDocuments["load"],
   languages?: DeclaredLanguages,
+  pages?: PageChromeEntry[],
 ) {
   const rootRoute = createRootRoute({
     component: () => (
       <AppShell
         tree={navTree}
         site={config}
+        pages={pages}
         editable={editable}
         loadSearchDocuments={loadSearchDocuments}
         languages={languages}
@@ -310,6 +313,72 @@ describe("AppShell", () => {
 
       expect(sidebar()).toHaveClass("-translate-x-full");
     });
+  });
+});
+
+describe("AppShell — page chrome", () => {
+  const noSidebar = { ...site, nav: { sidebar: false } };
+
+  function renderPage(
+    chrome: Omit<PageChromeEntry, "route">,
+    config = site,
+    path = "/",
+  ) {
+    const pages = [{ route: "/nested/page", ...chrome }];
+    return renderShell(path, config, tree, false, undefined, undefined, pages);
+  }
+
+  it("drops the sidebar and header for a page that turns both off", async () => {
+    await renderPage({ sidebar: false, header: false }, site, "/nested/page");
+
+    expect(screen.getByText("nested body")).toBeInTheDocument();
+    expect(document.querySelectorAll("aside, header")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Toggle sidebar" })).toBeNull();
+  });
+
+  it("keeps the header without its sidebar toggle when only the sidebar is off", async () => {
+    await renderPage({ sidebar: false }, site, "/nested/page");
+
+    expect(
+      screen.getByRole("navigation", { name: "breadcrumb" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("navigation", { name: "Site navigation" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Toggle sidebar" })).toBeNull();
+    expect(screen.getByText("nested body").closest(".lg\\:pl-72")).toBeNull();
+  });
+
+  it("keeps the sidebar and its toggle when only the header is off", async () => {
+    await renderPage({ header: false }, site, "/nested/page");
+
+    expect(document.querySelectorAll("header")).toHaveLength(0);
+    expect(
+      screen.getByRole("navigation", { name: "Site navigation" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Toggle sidebar" }),
+    ).toBeInTheDocument();
+  });
+
+  it("brings a page's chrome back over nav.sidebar: false", async () => {
+    const chrome = { sidebar: true, header: true };
+
+    await renderPage(chrome, noSidebar, "/nested/page");
+
+    expect(
+      screen.getByRole("navigation", { name: "Site navigation" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "breadcrumb" }),
+    ).toBeVisible();
+  });
+
+  it("leaves every other page's chrome to the project", async () => {
+    await renderPage({ sidebar: false, header: false }, site, "/");
+
+    expect(document.querySelectorAll("aside")).toHaveLength(1);
+    expect(document.querySelectorAll("header")).toHaveLength(1);
   });
 });
 

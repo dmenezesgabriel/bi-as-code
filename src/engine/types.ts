@@ -15,7 +15,17 @@ export interface PageManifestEntry {
   sidebarPosition?: number;
   /** Front-matter `icon`; absent when omitted or outside the catalog. */
   icon?: string;
+  /** Front-matter `sidebar`; absent when omitted or not a boolean. */
+  sidebar?: boolean;
+  /** Front-matter `header`; absent when omitted or not a boolean. */
+  header?: boolean;
 }
+
+/**
+ * A page's own chrome switches. Each one the page sets wins over the
+ * project's `nav.sidebar`; an absent one falls back to it.
+ */
+export type PageChrome = Pick<PageManifestEntry, "sidebar" | "header">;
 
 /** One page link inside the sidebar nav tree. */
 export interface NavPage {

@@ -449,6 +449,24 @@ describe("search front-matter", () => {
   });
 });
 
+describe("chrome front-matter", () => {
+  it("compiles a page that drops its sidebar and header", async () => {
+    const page = await compile(
+      "---\nsidebar: false\nheader: false\n---\n# Body\n",
+    );
+
+    expect(page.frontmatter).toMatchObject({ sidebar: false, header: false });
+  });
+
+  it("rejects a non-boolean header naming the page file", async () => {
+    await expect(
+      compile("---\nheader: no thanks\n---\n# Body\n", "pages/a.md"),
+    ).rejects.toThrow(
+      /^Invalid front-matter in pages\/a\.md — header: expected a boolean, got "no thanks"$/,
+    );
+  });
+});
+
 describe("brand front-matter", () => {
   it("leaves brandCss empty when the page sets no brand", async () => {
     const page = await compile("# Body\n");

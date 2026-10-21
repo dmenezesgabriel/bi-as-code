@@ -91,6 +91,68 @@ export const NoSidebar: Story = {
   },
 };
 
+/** A page whose front-matter sets `sidebar: false` and `header: false` —
+ * the embed layout: content only, no toggle. */
+export const PageWithoutChrome: Story = {
+  args: { pages: [{ route: "/", sidebar: false, header: false }] },
+  play: async ({ canvas }) => {
+    // `hidden: true` also counts a rendered but collapsed sidebar, so the
+    // assertion proves the chrome is absent, not merely invisible.
+    await expect(
+      canvas.queryByRole("complementary", { hidden: true }),
+    ).toBeNull();
+    await expect(canvas.queryByRole("banner", { hidden: true })).toBeNull();
+    await expect(
+      canvas.queryByRole("button", { name: "Toggle sidebar", hidden: true }),
+    ).toBeNull();
+  },
+};
+
+/** `sidebar: false` alone keeps the header, without the sidebar toggle. */
+export const PageWithoutSidebar: Story = {
+  args: { pages: [{ route: "/", sidebar: false }] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("banner")).toBeVisible();
+    await expect(
+      canvas.queryByRole("navigation", { name: "Site navigation" }),
+    ).toBeNull();
+    await expect(
+      canvas.queryByRole("button", { name: "Toggle sidebar" }),
+    ).toBeNull();
+  },
+};
+
+/** `header: false` alone keeps the sidebar; its toggle floats beside it,
+ * so the drawer below `lg` stays reachable. */
+export const PageWithoutHeader: Story = {
+  args: { pages: [{ route: "/", header: false }] },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("banner")).toBeNull();
+    const toggle = canvas.getByRole("button", { name: "Toggle sidebar" });
+    await userEvent.click(toggle);
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(toggle);
+    await expect(
+      canvas.getByRole("navigation", { name: "Site navigation" }),
+    ).toBeVisible();
+  },
+};
+
+/** A page's `sidebar: true` and `header: true` win over the project's
+ * `nav.sidebar: false`. */
+export const PageRestoresChrome: Story = {
+  args: {
+    site: { ...SITE, nav: { sidebar: false } },
+    pages: [{ route: "/", sidebar: true, header: true }],
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByRole("navigation", { name: "Site navigation" }),
+    ).toBeVisible();
+    await expect(canvas.getByRole("banner")).toBeVisible();
+  },
+};
+
 /** Under `biac dev` the header carries the page's Edit link. */
 export const Editable: Story = {
   args: { editable: true },

@@ -53,6 +53,8 @@ function entryRow(entry: PageManifestEntry): string {
     entry.sidebarPosition === undefined
       ? null
       : `sidebarPosition: ${JSON.stringify(entry.sidebarPosition)}`,
+    entry.sidebar === undefined ? null : `sidebar: ${entry.sidebar}`,
+    entry.header === undefined ? null : `header: ${entry.header}`,
     `load: async () => hotPageModules.get(${file}) ?? import(${pageId(entry)})`,
   ];
   return `  { ${fields.filter(Boolean).join(", ")} }`;

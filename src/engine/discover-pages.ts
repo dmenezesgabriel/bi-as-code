@@ -1,11 +1,15 @@
 import { existsSync, globSync } from "node:fs";
 import { join, sep } from "node:path";
 import { basename, dirname } from "node:path/posix";
+import { pageChrome } from "./page-chrome-frontmatter.js";
 import { readPageFrontmatter } from "./page-frontmatter.js";
 import { isPageIconName } from "./page-icon-frontmatter.js";
 import type { PageFrontmatter, PageManifestEntry } from "./types.js";
 
-type NavFields = Pick<PageManifestEntry, "title" | "sidebarPosition" | "icon">;
+type NavFields = Pick<
+  PageManifestEntry,
+  "title" | "sidebarPosition" | "icon" | "sidebar" | "header"
+>;
 
 /**
  * Maps every `.md`/`.mdx` file under `pages/` in a project root to a route
@@ -78,13 +82,14 @@ function toEntry(
 }
 
 /**
- * The front-matter fields nav cares about. `title` coerces like the page
- * compiler's title resolution (a numeric title renders as text); a
- * non-number `sidebar_position` and an `icon` outside the catalog are
- * dropped rather than breaking the nav — `compilePage` reports the icon.
+ * The front-matter fields nav and chrome care about. `title` coerces like
+ * the page compiler's title resolution (a numeric title renders as text); a
+ * non-number `sidebar_position`, an `icon` outside the catalog and a
+ * non-boolean chrome switch are dropped rather than breaking the nav —
+ * `compilePage` reports the icon and the switch.
  */
 function navFields(frontmatter: PageFrontmatter): NavFields {
-  const fields: NavFields = {};
+  const fields: NavFields = pageChrome(frontmatter);
   if (frontmatter.title != null) fields.title = String(frontmatter.title);
   if (typeof frontmatter.sidebar_position === "number") {
     fields.sidebarPosition = frontmatter.sidebar_position;

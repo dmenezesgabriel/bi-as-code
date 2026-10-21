@@ -55,7 +55,7 @@ Then(
     // label is the deslugified file name, and it names no icon.
     assert.match(
       code,
-      /"rootPages":\[\{"name":"Orders overview","href":"\/","icon":"house"\},\{"name":"Cross-filter at scale","href":"\/crossfilter-scale","icon":"filter"\},\{"name":"Orders dashboard","href":"\/orders-dashboard","icon":"layout-dashboard"\},\{"name":"Regional orders","href":"\/regional-orders","icon":"map"\},\{"name":"Weekly orders","href":"\/weekly-orders","icon":"chart-column"\},\{"name":"Weekly review","href":"\/weekly-review","icon":"calendar"\}\]/,
+      /"rootPages":\[\{"name":"Orders overview","href":"\/","icon":"house"\},\{"name":"Cross-filter at scale","href":"\/crossfilter-scale","icon":"filter"\},\{"name":"Orders dashboard","href":"\/orders-dashboard","icon":"layout-dashboard"\},\{"name":"Regional orders","href":"\/regional-orders","icon":"map"\},\{"name":"Weekly orders","href":"\/weekly-orders","icon":"chart-column"\},\{"name":"Weekly revenue \(embed\)","href":"\/embed-weekly-revenue","icon":"chart-line"\},\{"name":"Weekly review","href":"\/weekly-review","icon":"calendar"\}\]/,
     );
     assert.match(
       code,

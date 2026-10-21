@@ -17,9 +17,22 @@ export interface ManifestPageEntry {
   title?: string;
   /** Front-matter `sidebar_position`, when the page declares a number. */
   sidebarPosition?: number;
+  /** Front-matter `sidebar`, when the page declares a boolean. */
+  sidebar?: boolean;
+  /** Front-matter `header`, when the page declares a boolean. */
+  header?: boolean;
   /** Lazily imports the page's module — invoked on route match. */
   load: () => Promise<PageModule>;
 }
+
+/**
+ * What the app chrome reads off a manifest entry: on the entry rather than
+ * the page module, so the chrome is right before the module loads.
+ */
+export type PageChromeEntry = Pick<
+  ManifestPageEntry,
+  "route" | "sidebar" | "header"
+>;
 
 /**
  * What a page's module resolves to: the compiled page, or — on the dev

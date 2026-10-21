@@ -33,7 +33,8 @@ import type { NavTree } from "virtual:biac-pages";
  * compile renders its compile error in the page's place — inside the editor
  * when `?edit` is on. `site` carries `biac.config.ts`
  * into chrome consumers — the title becomes the document-title fallback and
- * `nav.sidebar` gates the sidebar; `navTree` feeds the sidebar nav.
+ * `nav.sidebar` gates the sidebar and header, which each page's manifest
+ * entry may override; `navTree` feeds the sidebar nav.
  * `pageSource` — passed only by `biac dev` — lets `?edit` open a page in the
  * source editor; `dataUpdates` — likewise dev-only — re-runs a page's
  * queries when a data file it reads changes. `languages` — the ones
@@ -61,6 +62,7 @@ export function buildPageRouter(
       <AppShell
         tree={navTree}
         site={site}
+        pages={pages}
         languages={languages}
         loadSearchDocuments={loadSearchDocuments}
         editable={pageSource !== undefined}

@@ -8,6 +8,7 @@ import { VFile } from "vfile";
 import { NO_BRAND } from "./brand-config.js";
 import { brandCss } from "./brand-css.js";
 import { pageBrand } from "./page-brand-frontmatter.js";
+import { assertPageChrome } from "./page-chrome-frontmatter.js";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
 import { assertPageIcon } from "./page-icon-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
@@ -107,6 +108,7 @@ export async function compilePage(
   assertNoSqlTableCollision(sqlTables, configTables, location);
   assertPageIcon(frontmatter.icon, location);
   assertPageSearchFields(frontmatter, location);
+  assertPageChrome(frontmatter, location);
   const page = {
     frontmatter,
     title: resolveTitle(frontmatter, metadata.firstHeading),

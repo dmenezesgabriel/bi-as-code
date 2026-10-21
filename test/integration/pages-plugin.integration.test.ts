@@ -288,6 +288,20 @@ describe("page transform", () => {
     );
   });
 
+  it("serves a page whose header is not a boolean as a compile error", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "---\nheader: no thanks\n---\n# Hi\n");
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Invalid front-matter in pages\/index\.md — header: expected a boolean, got \\"no thanks\\""/,
+    );
+  });
+
   it("serves a page's front-matter brand as its brandCss export", async () => {
     const root = makeProject();
     writeFile(
@@ -550,6 +564,23 @@ describe("file watching", () => {
 
     expect(await loadManifest(dev)).toContain('title: "New"');
     expect(await loadManifest(dev)).toContain('"name":"New"');
+  });
+
+  it("invalidates the manifest when a page's chrome switch is edited, so the shell redraws it", async () => {
+    const root = makeProject();
+    writeFile("pages/embed.md", "---\nsidebar: false\n---\n# Hi\n");
+    const dev = await makeServer(root);
+    await waitForWatch(dev, join(root, "pages"), "embed.md");
+    expect(await loadManifest(dev)).toContain("sidebar: false");
+
+    await expectInvalidated(manifestModule(dev), () =>
+      writeFile(
+        "pages/embed.md",
+        "---\nsidebar: false\nheader: false\n---\n# Hi\n",
+      ),
+    );
+
+    expect(await loadManifest(dev)).toContain("sidebar: false, header: false");
   });
 
   it("invalidates the manifest when a page's icon is edited, so the sidebar redraws it", async () => {

@@ -175,6 +175,27 @@ describe("front-matter", () => {
     expect(discoverPages(root)[0]!.sidebarPosition).toBeUndefined();
   });
 
+  it("reads the sidebar and header switches into the manifest entry", () => {
+    const root = makeProject();
+    writeProjectFile(
+      root,
+      "pages/a.md",
+      "---\nsidebar: false\nheader: true\n---\n# A\n",
+    );
+
+    expect(discoverPages(root)[0]).toMatchObject({
+      sidebar: false,
+      header: true,
+    });
+  });
+
+  it("drops a non-boolean header", () => {
+    const root = makeProject();
+    writeProjectFile(root, "pages/a.md", "---\nheader: no\n---\n# A\n");
+
+    expect(discoverPages(root)[0]).not.toHaveProperty("header");
+  });
+
   it("throws naming the file when front-matter is not a mapping", () => {
     const root = makeProject();
     writeProjectFile(root, "pages/bad.md", "---\n- a\n- b\n---\n# Bad\n");
