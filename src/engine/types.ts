@@ -303,3 +303,21 @@ export interface ResolvedTranslations {
 export interface PageTranslationUse {
   reads: boolean;
 }
+
+/** A page's site-search front-matter after the tolerant read. */
+export interface PageSearchFields {
+  /** False when the page sets `index: false`. */
+  indexed: boolean;
+  /** `keywords` joined with ", "; "" when absent. */
+  keywords: string;
+}
+
+/** One page as `virtual:biac-search` hands it to the browser's index. */
+export interface SearchDocument {
+  /** The page's route — what a result links to. */
+  id: string;
+  title: string;
+  /** The page's prose, without code fences or widgets. */
+  text: string;
+  keywords: string;
+}

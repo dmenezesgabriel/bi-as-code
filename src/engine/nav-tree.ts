@@ -72,17 +72,33 @@ function toNavPage(item: FlatNavItem): NavPage {
 }
 
 function toFlatItem(entry: PageManifestEntry): FlatNavItem {
-  const slug = entry.file.slice("pages/".length).replace(/\.(md|mdx)$/, "");
-  const name = slug.split("/").pop()!;
-  const isHome = entry.route === "/";
   return {
-    slug,
-    isHome,
+    slug: pageSlug(entry),
+    isHome: entry.route === "/",
     href: entry.route,
     sidebarPosition: entry.sidebarPosition,
     icon: entry.icon,
-    displayName: entry.title ?? (isHome ? "Home" : deslugify(name)),
+    displayName: pageNavName(entry),
   };
+}
+
+/**
+ * The label a page's sidebar link shows: its front-matter title, "Home"
+ * for "/", or its deslugified file name. Site search names its results
+ * the same way, so a result reads like the link it stands in for.
+ *
+ * @example
+ * pageNavName({ route: "/nested/allocation", file: "pages/nested/allocation.md", isIndex: false });
+ * // → "Allocation"
+ */
+export function pageNavName(entry: PageManifestEntry): string {
+  if (entry.title !== undefined) return entry.title;
+  if (entry.route === "/") return "Home";
+  return deslugify(pageSlug(entry).split("/").pop()!);
+}
+
+function pageSlug(entry: PageManifestEntry): string {
+  return entry.file.slice("pages/".length).replace(/\.(md|mdx)$/, "");
 }
 
 function compareFlatItems(a: FlatNavItem, b: FlatNavItem): number {

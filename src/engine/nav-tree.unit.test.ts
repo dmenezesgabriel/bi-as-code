@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildNavTree } from "./nav-tree.js";
+import { buildNavTree, pageNavName } from "./nav-tree.js";
 import type { PageManifestEntry } from "./types.js";
 
 interface NavFields {
@@ -245,4 +245,22 @@ describe("directory titles", () => {
 
 it("returns an empty tree for an empty manifest", () => {
   expect(buildNavTree([], {})).toEqual({ rootPages: [], directories: [] });
+});
+
+describe("pageNavName", () => {
+  it("names a page by its front-matter title", () => {
+    const entry = page("pages/a.md", { title: "Alpha" });
+
+    expect(pageNavName(entry)).toBe("Alpha");
+  });
+
+  it("names the root page Home", () => {
+    expect(pageNavName(page("pages/index.md"))).toBe("Home");
+  });
+
+  it("names an untitled page by its deslugified file name", () => {
+    const entry = page("pages/nested/weekly-orders.md");
+
+    expect(pageNavName(entry)).toBe("Weekly Orders");
+  });
 });

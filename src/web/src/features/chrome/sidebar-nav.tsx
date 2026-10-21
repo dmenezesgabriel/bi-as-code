@@ -3,10 +3,13 @@ import { useState, type MouseEvent } from "react";
 import type { NavDirectory, NavPage, NavTree } from "virtual:biac-pages";
 import { PageIcon } from "../../components/page-icon";
 import { cn } from "../../lib/cn";
+import { SiteSearch } from "../search/site-search";
+import type { LoadPageSearchDocuments } from "../search/types";
 import { readDirOpenMap, writeDirOpen } from "./sidebar-storage";
 
 /**
- * The sidebar's page tree: site title up top, then root-level page links,
+ * The sidebar's page tree: site title up top, the search box under it when
+ * `loadSearchDocuments` is given, then root-level page links,
  * then one collapsible `<details>` group per first path segment. A group
  * opens by default when it contains the active page; once the user toggles
  * it, the explicit choice is persisted and wins on every later visit.
@@ -17,10 +20,12 @@ import { readDirOpenMap, writeDirOpen } from "./sidebar-storage";
 export function SidebarNav({
   tree,
   siteTitle,
+  loadSearchDocuments,
   onNavigate,
 }: {
   tree: NavTree;
   siteTitle: string;
+  loadSearchDocuments?: LoadPageSearchDocuments;
   onNavigate: () => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -49,6 +54,12 @@ export function SidebarNav({
       >
         {siteTitle}
       </Link>
+      {loadSearchDocuments && (
+        <SiteSearch
+          loadDocuments={loadSearchDocuments}
+          onNavigate={onNavigate}
+        />
+      )}
       <ul className="flex-1 px-2 pb-4">
         {tree.rootPages.map((page) => (
           <li key={page.href}>

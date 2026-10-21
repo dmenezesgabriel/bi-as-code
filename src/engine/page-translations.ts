@@ -133,6 +133,26 @@ export function translationsForExport(): string {
   return `export {translationsFor} from ${JSON.stringify(VIRTUAL_TRANSLATIONS_ID)};`;
 }
 
+/**
+ * The dotted key an MDX expression node spells as a bare
+ * `$translations.a.b`; undefined for any other expression. Site search
+ * reads it to index the text the page renders in that place.
+ *
+ * @example
+ * expressionTranslationKey(node); // {$translations.sections.trend} → "sections.trend"
+ */
+export function expressionTranslationKey(node: Nodes): string | undefined {
+  const program = (node.data as { estree?: { body?: unknown[] } } | undefined)
+    ?.estree;
+  const statement = program?.body?.length === 1 ? program.body[0] : undefined;
+  if (!isEstreeNode(statement) || statement.type !== "ExpressionStatement")
+    return;
+  const expression = statement.expression;
+  return isEstreeNode(expression)
+    ? memberPath(expression)?.join(".")
+    : undefined;
+}
+
 /** The estree programs an mdast node carries: its own expression and its attributes'. */
 function estreePrograms(node: Nodes): unknown[] {
   const own = (node.data as { estree?: unknown } | undefined)?.estree;

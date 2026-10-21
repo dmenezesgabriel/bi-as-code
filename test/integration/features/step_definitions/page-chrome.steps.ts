@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { After, BeforeAll, Given, Then, When } from "@cucumber/cucumber";
@@ -15,6 +15,8 @@ import { copyShippedProject } from "../../../lib/shipped-project.ts";
 // Same @id/ rule as dev-server.steps.ts — join onto a base ending in "/".
 const MANIFEST_URL = "@id/virtual:biac-pages";
 const CONFIG_URL = "@id/virtual:biac-config";
+const SEARCH_URL = "@id/virtual:biac-search";
+const ALLOCATION_PAGE = "pages/nested/allocation.md";
 
 let projectRoot: string | undefined;
 let server: DevServer | undefined;
@@ -197,3 +199,30 @@ Then("the server stops on SIGINT", async () => {
   assert.ok(server, "server must be running");
   assert.equal(await server.stop(), 0);
 });
+
+Then(
+  "the search module serves Allocation with its body word {string}",
+  async (word: string) => {
+    const code = await getOk(`${server!.url}${SEARCH_URL}`);
+    assert.match(
+      code,
+      new RegExp(
+        `\\{"id":"/nested/allocation","title":"Allocation","text":"[^"]*${word}`,
+      ),
+    );
+  },
+);
+
+When("I set {string} in the Allocation page's front-matter", (line: string) => {
+  const file = join(projectRoot!, ALLOCATION_PAGE);
+  const source = readFileSync(file, "utf8");
+  writeFileSync(file, source.replace("---\n", `---\n${line}\n`));
+});
+
+Then(
+  "the Allocation page module fails naming {string}",
+  async (message: string) => {
+    const url = `${server!.url}@fs${projectRoot}/${ALLOCATION_PAGE}?import`;
+    await eventually(async () => (await getOk(url)).includes(message));
+  },
+);

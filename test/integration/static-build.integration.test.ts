@@ -55,7 +55,13 @@ function assetsContaining(outDir: string, needle: string): string[] {
 describe("biac build", () => {
   it("writes the SPA shell and compiled page chunks to <project>/build", async () => {
     const root = makeTempProject();
-    writeProjectFile(root, "pages/index.md", `# ${PAGE_MARKER}\n`);
+    // Out of site search, whose chunk would carry the marker too: this
+    // test counts the page's own chunk.
+    writeProjectFile(
+      root,
+      "pages/index.md",
+      `---\nindex: false\n---\n# ${PAGE_MARKER}\n`,
+    );
     vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     await build([root]);
@@ -68,6 +74,25 @@ describe("biac build", () => {
     // The manifest's dev-only HMR accept list spells page ids out as
     // literals; their absence proves the `import.meta.hot` block was dropped.
     expect(assetsContaining(outDir, "virtual:biac-page/")).toEqual([]);
+  }, 120_000);
+
+  it("ships the search documents as their own chunk, not in the entry", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", `# Home\n\n${PAGE_MARKER}\n`);
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await build([root]);
+
+    const outDir = join(root, "build");
+    const html = readFileSync(join(outDir, "index.html"), "utf8");
+    const entry = /src="\/assets\/([^"]+\.js)"/.exec(html)?.[1];
+    const chunks = assetsContaining(outDir, PAGE_MARKER);
+    // One page chunk, one search-documents chunk; neither is the entry.
+    expect(chunks).toHaveLength(2);
+    expect(entry).toBeDefined();
+    expect(chunks).not.toContain(entry);
+    // The search library loads with the documents, on first focus.
+    expect(assetsContaining(outDir, "MiniSearch: ")).not.toContain(entry);
   }, 120_000);
 
   it("ships no page editor and no page-source client", async () => {

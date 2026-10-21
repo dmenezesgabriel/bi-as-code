@@ -18,6 +18,7 @@ import {
 import { ThemeModeProvider } from "./features/chrome/theme-mode";
 import { ThemeToggle } from "./features/chrome/theme-toggle";
 import type { DeclaredLanguages } from "./features/chrome/types";
+import type { LoadPageSearchDocuments } from "./features/search/types";
 import { useLanguage } from "./features/chrome/use-language";
 import { useMediaQuery } from "./features/chrome/use-media-query";
 import { useTheme } from "./features/chrome/use-theme";
@@ -35,17 +36,20 @@ const NO_LANGUAGES = fixedLanguages([]);
  * only an explicit toggle — persisted to sessionStorage — hides it there.
  * `nav.sidebar: false` in `biac.config.ts` removes the chrome entirely.
  * `editable` (true only under `biac dev`) adds the header's Edit link;
- * two or more `languages` add the header's language menu.
+ * two or more `languages` add the header's language menu;
+ * `loadSearchDocuments` adds the sidebar's search box.
  */
 export function AppShell({
   tree,
   site,
   languages: declaredLanguages = NO_LANGUAGES,
+  loadSearchDocuments,
   editable = false,
 }: {
   tree: NavTree;
   site: BiacConfig;
   languages?: DeclaredLanguages;
+  loadSearchDocuments?: LoadPageSearchDocuments;
   editable?: boolean;
 }) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
@@ -114,6 +118,7 @@ export function AppShell({
           <SidebarNav
             tree={tree}
             siteTitle={site.title}
+            loadSearchDocuments={loadSearchDocuments}
             onNavigate={closeMobile}
           />
         </aside>

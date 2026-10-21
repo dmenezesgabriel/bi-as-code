@@ -88,7 +88,7 @@ test("the Region dropdown's search narrows options and Clear drops the param", a
   // Typing `no` narrows the option list to North alone — the popup's
   // search input is itself an ARIA combobox labelled "Search".
   await region.click();
-  await page.getByRole("combobox", { name: "Search" }).fill("no");
+  await page.getByRole("combobox", { name: "Search", exact: true }).fill("no");
   await expect(page.getByRole("option")).toHaveCount(1);
   await expect(page.getByRole("option", { name: "North" })).toBeVisible();
 

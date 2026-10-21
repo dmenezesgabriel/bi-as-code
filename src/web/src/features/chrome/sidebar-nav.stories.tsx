@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent } from "storybook/test";
 import type { NavTree } from "virtual:biac-pages";
 import { withMemoryRouter } from "../../../.storybook/decorators";
+import { FakeSearchDocuments } from "../search/fake-search-documents";
 import { SidebarNav } from "./sidebar-nav";
 
 const TREE: NavTree = {
@@ -144,5 +145,32 @@ export const WithIcons: Story = {
     await expect(
       canvas.getByRole("link", { name: "Reference" }).querySelector("svg"),
     ).toBeNull();
+  },
+};
+
+/** With search on: the box sits between the site title and the page links. */
+export const WithSearch: Story = {
+  args: {
+    loadSearchDocuments: new FakeSearchDocuments(
+      [
+        {
+          id: "/weekly-review",
+          title: "Weekly review",
+          text: "",
+          keywords: "",
+        },
+      ],
+      { held: false },
+    ).load,
+  },
+  play: async ({ canvas }) => {
+    await userEvent.type(
+      canvas.getByRole("combobox", { name: "Search pages" }),
+      "review",
+    );
+
+    await expect(
+      await canvas.findByRole("option", { name: "Weekly review" }),
+    ).toHaveAttribute("href", "/weekly-review");
   },
 };

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
 import type { NavTree } from "virtual:biac-pages";
+import { FakeSearchDocuments } from "../search/fake-search-documents";
 import { renderWithRouter } from "./router-harness";
 import { SidebarNav } from "./sidebar-nav";
 
@@ -141,5 +142,38 @@ describe("SidebarNav", () => {
     fireEvent.click(screen.getByRole("link", { name: "About" }));
 
     expect(onNavigate).toHaveBeenCalled();
+  });
+});
+
+describe("search box", () => {
+  it("sits under the site title, above the page links, when search is on", async () => {
+    const documents = new FakeSearchDocuments([], { held: false });
+    await renderWithRouter(
+      <SidebarNav
+        tree={tree}
+        siteTitle="ACME"
+        loadSearchDocuments={documents.load}
+        onNavigate={vi.fn()}
+      />,
+      paths,
+      "/",
+    );
+
+    const box = screen.getByRole("combobox", { name: "Search pages" });
+    const title = screen.getByRole("link", { name: "ACME" });
+    const firstPage = screen.getByRole("link", { name: "Home" });
+
+    expect(title.compareDocumentPosition(box)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(box.compareDocumentPosition(firstPage)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("is absent when no search documents are wired", async () => {
+    await renderNav("/");
+
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });

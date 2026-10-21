@@ -11,6 +11,7 @@ import { pageBrand } from "./page-brand-frontmatter.js";
 import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
 import { assertPageIcon } from "./page-icon-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
+import { assertPageSearchFields } from "./page-search-frontmatter.js";
 import {
   recmaBindTranslations,
   remarkCheckTranslationKeys,
@@ -105,6 +106,7 @@ export async function compilePage(
   const sqlTables = sqlTableMap(frontmatter.sql, location);
   assertNoSqlTableCollision(sqlTables, configTables, location);
   assertPageIcon(frontmatter.icon, location);
+  assertPageSearchFields(frontmatter, location);
   const page = {
     frontmatter,
     title: resolveTitle(frontmatter, metadata.firstHeading),

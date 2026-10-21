@@ -431,6 +431,24 @@ describe("icon front-matter", () => {
   });
 });
 
+describe("search front-matter", () => {
+  it("compiles a page with index and keywords", async () => {
+    const source = "---\nindex: false\nkeywords: [margin]\n---\n# Body\n";
+
+    const page = await compile(source);
+
+    expect(page.frontmatter).toMatchObject({ index: false });
+  });
+
+  it("rejects a non-boolean index naming the page file", async () => {
+    await expect(
+      compile("---\nindex: no way\n---\n# Body\n", "pages/a.md"),
+    ).rejects.toThrow(
+      /^Invalid front-matter in pages\/a\.md — index: expected true \| false, got "no way"$/,
+    );
+  });
+});
+
 describe("brand front-matter", () => {
   it("leaves brandCss empty when the page sets no brand", async () => {
     const page = await compile("# Body\n");

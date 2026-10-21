@@ -90,6 +90,20 @@ module.exports = {
       },
     },
     {
+      name: "page-search-only-behind-its-wrapper",
+      comment:
+        "minisearch is wrapped by src/web/src/features/search/, so the " +
+        "index options and term processing live in one place.",
+      severity: "error",
+      from: {
+        path: "^src/web/src/",
+        pathNot: "^src/web/src/features/search/",
+      },
+      to: {
+        path: "node_modules/.*minisearch/",
+      },
+    },
+    {
       name: "duckdb-only-behind-data",
       comment:
         "@duckdb/duckdb-wasm and apache-arrow are wrapped by " +

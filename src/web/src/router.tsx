@@ -15,6 +15,11 @@ const dataUpdates = import.meta.hot
   ? hmrDataUpdates(import.meta.hot)
   : undefined;
 
+// A dynamic import, so the search documents are their own chunk, fetched
+// when a reader first focuses the sidebar's search box.
+const loadSearchDocuments = () =>
+  import("virtual:biac-search").then((module) => module.documents);
+
 export const router = buildPageRouter(
   pages,
   config,
@@ -23,6 +28,7 @@ export const router = buildPageRouter(
   pageSource,
   dataUpdates,
   { get: getLanguages, subscribe: subscribeLanguages },
+  loadSearchDocuments,
 );
 
 // A hot-swapped page re-runs the matched route's loader, which now resolves

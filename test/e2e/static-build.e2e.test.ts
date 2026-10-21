@@ -178,7 +178,13 @@ describe("biac build", () => {
 
   it("ships translations resolved, without the i18next runtime", () => {
     const root = makeTempProject("biac-e2e-build-translations-");
-    writeProjectFile(root, "pages/index.md", "# {$translations.title}\n");
+    // Out of site search, whose chunk would carry the resolved title too:
+    // this test counts the chunks the translations module ships in.
+    writeProjectFile(
+      root,
+      "pages/index.md",
+      "---\nindex: false\n---\n# {$translations.title}\n",
+    );
     writeProjectFile(
       root,
       "translations.yaml",

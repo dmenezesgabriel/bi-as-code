@@ -37,6 +37,11 @@ import {
   VIRTUAL_LANGUAGES_ID,
 } from "./languages-module.js";
 import { loadProjectTranslations } from "./resolve-translations.js";
+import {
+  projectSearchDocuments,
+  searchModuleSource,
+  VIRTUAL_SEARCH_ID,
+} from "./search-module.js";
 import { serveDataDir } from "./serve-data-dir.js";
 import { TRANSLATIONS_FILE } from "./translations-file.js";
 import {
@@ -56,6 +61,7 @@ const VIRTUAL_CONFIG_ID = "virtual:biac-config";
 const RESOLVED_CONFIG_ID = `\0${VIRTUAL_CONFIG_ID}`;
 const RESOLVED_TRANSLATIONS_ID = `\0${VIRTUAL_TRANSLATIONS_ID}`;
 const RESOLVED_LANGUAGES_ID = `\0${VIRTUAL_LANGUAGES_ID}`;
+const RESOLVED_SEARCH_ID = `\0${VIRTUAL_SEARCH_ID}`;
 const CONFIG_FILE = "biac.config.ts";
 
 /**
@@ -212,6 +218,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (id === VIRTUAL_CONFIG_ID) return RESOLVED_CONFIG_ID;
       if (id === VIRTUAL_TRANSLATIONS_ID) return RESOLVED_TRANSLATIONS_ID;
       if (id === VIRTUAL_LANGUAGES_ID) return RESOLVED_LANGUAGES_ID;
+      if (id === VIRTUAL_SEARCH_ID) return RESOLVED_SEARCH_ID;
       if (!id.startsWith(VIRTUAL_PAGE_PREFIX)) return;
       const file = join(root, id.slice(VIRTUAL_PAGE_PREFIX.length));
       if (!toPosix(file).startsWith(`${pagesDirPosix}/`)) return null;
@@ -233,6 +240,12 @@ export function pagesPlugin(projectRoot: string): Plugin {
           () => [],
         );
         return languagesModuleSource(languages);
+      }
+      if (id === RESOLVED_SEARCH_ID) {
+        // A broken translations.yaml indexes translated text as nothing,
+        // as the language menu then offers nothing.
+        const translations = await getTranslations().catch(() => undefined);
+        return searchModuleSource(projectSearchDocuments(root, translations));
       }
       if (id !== RESOLVED_MANIFEST_ID) return;
       servedManifest = checkedManifestSource(

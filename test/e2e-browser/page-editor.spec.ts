@@ -248,7 +248,7 @@ test("the panes sit side by side at desktop width and stack on a phone", async (
   // not 4rem down, where the page would show through above it.
   const gapAboveDockedBar = await page.evaluate(async () => {
     const pane = document.querySelector('section[aria-label="Live preview"]');
-    const bar = document.querySelector('[role="combobox"]')?.closest(".sticky");
+    const bar = pane?.querySelector('[role="combobox"]')?.closest(".sticky");
     if (!pane || !bar) throw new Error("no preview pane or filter bar");
     pane.scrollTop = 2000;
     await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -269,7 +269,7 @@ test("the panes sit side by side at desktop width and stack on a phone", async (
   const barTopInViewport = () =>
     page.evaluate(() => {
       const bar = document
-        .querySelector('[role="combobox"]')
+        .querySelector('main [role="combobox"]')
         ?.closest(".sticky");
       if (!bar) throw new Error("no filter bar");
       window.scrollTo(0, 4000);

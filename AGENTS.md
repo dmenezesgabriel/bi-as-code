@@ -98,8 +98,9 @@ Every session ends with a `playwright-cli` pass over the real running app (`bin/
   `.dependency-cruiser.cjs` enforces the wrap sites (`@base-ui/react` and
   `lucide-react` behind `src/web/src/components/`, `echarts` behind
   `features/widgets/charts/`, `codemirror` behind `features/editor/`,
-  `shiki` behind `features/pages/`, `@duckdb/duckdb-wasm`/`apache-arrow`
-  behind `features/data/`, `clsx`/`tailwind-merge` behind `lib/cn.ts`).
+  `shiki` behind `features/pages/`, `minisearch` behind `features/search/`,
+  `@duckdb/duckdb-wasm`/`apache-arrow` behind `features/data/`,
+  `clsx`/`tailwind-merge` behind `lib/cn.ts`).
 - Install only safe, official, well-maintained packages; pin exact versions
   (`save-exact`), respect `minimumReleaseAge`/`trustPolicy`. Reference repos
   are never dependencies.

@@ -18,11 +18,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // The page editor is reached only through a lazy `import()`, which the
-  // startup crawl may never have followed when the dep cache was written.
-  // Vite keys that cache on the lockfile and this config alone, so a
-  // source-only change never invalidates it: the editor's deps are then
-  // discovered on first `?edit`, re-optimized at runtime, and the page can
+  // The page editor and the site-search index are reached only through a
+  // lazy `import()`, which the startup crawl may never have followed when
+  // the dep cache was written. Vite keys that cache on the lockfile and this
+  // config alone, so a source-only change never invalidates it: their deps
+  // are then discovered on first `?edit` or first search, re-optimized at
+  // runtime, and the page can
   // full-reload or fail the lazy import ("Failed to fetch dynamically
   // imported module"). Listing them here puts them in the config hash, so
   // they are pre-bundled at every start
@@ -40,6 +41,7 @@ export default defineConfig({
       "@codemirror/lang-html",
       "@codemirror/lang-markdown",
       "@codemirror/lang-sql",
+      "minisearch",
     ],
   },
   server: {
@@ -53,11 +55,11 @@ export default defineConfig({
 });
 
 /**
- * `virtual:biac-pages` and `virtual:biac-config` are served by the engine's
+ * `virtual:biac-pages`, `virtual:biac-config` and `virtual:biac-search` are served by the engine's
  * `biac:pages` plugin, which `biac dev` registers inline with the project
  * dir. Bare vite invocations (`pnpm dev`, `vite build`, storybook) register
- * no pages plugin — this fallback resolves both imports to defaults (empty
- * manifest, stock config) so the SPA still bundles and serves, with every
+ * no pages plugin — this fallback resolves them to defaults (empty
+ * manifest, stock config, no search documents) so the SPA still bundles and serves, with every
  * URL landing on the not-found page.
  */
 function emptyProjectFallback(): Plugin {
@@ -71,6 +73,7 @@ function emptyProjectFallback(): Plugin {
       if (!armed) return;
       if (id === "virtual:biac-pages") return "\0biac:empty-pages";
       if (id === "virtual:biac-config") return "\0biac:empty-config";
+      if (id === "virtual:biac-search") return "\0biac:empty-search";
     },
     load(id) {
       if (!armed) return;
@@ -80,6 +83,7 @@ function emptyProjectFallback(): Plugin {
       if (id === "\0biac:empty-config") {
         return 'export const config = {"title":"biac","theme":"system","nav":{"sidebar":true},"sqlTables":{}};\n';
       }
+      if (id === "\0biac:empty-search") return "export const documents = [];\n";
     },
   };
 }
