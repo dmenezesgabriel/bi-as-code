@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  assertNotEditorSearchKey,
-  isEditSearch,
-  searchWithoutEditorKey,
-} from "./edit-search";
+import { isEditSearch, searchWithoutEditorKey } from "./edit-search";
 
 describe("isEditSearch", () => {
   it.each([
@@ -58,25 +54,5 @@ describe("searchWithoutEditorKey", () => {
 
     // Assert
     expect(search).toEqual({ region: "West", edit: true });
-  });
-});
-
-describe("assertNotEditorSearchKey", () => {
-  it("rejects the editor's key as a filter id, naming it", () => {
-    // Arrange / Act
-    const assertion = () => assertNotEditorSearchKey("edit");
-
-    // Assert
-    expect(assertion).toThrow(
-      'Reserved filter id "edit" — "edit" opens the source editor in biac dev; choose another id',
-    );
-  });
-
-  it.each(["region", "Edit", "edited"])("accepts %s", (filterId) => {
-    // Arrange / Act
-    const assertion = () => assertNotEditorSearchKey(filterId);
-
-    // Assert
-    expect(assertion).not.toThrow();
   });
 });

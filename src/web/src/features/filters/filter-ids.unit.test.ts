@@ -20,4 +20,10 @@ describe("toFilterIds", () => {
   ] as const)("rejects the editor's URL key in %s", (_case, filters) => {
     expect(() => toFilterIds(filters)).toThrow('Reserved filter id "edit"');
   });
+
+  it("rejects the language's URL key", () => {
+    expect(() => toFilterIds(["region", "lang"])).toThrow(
+      'Reserved filter id "lang"',
+    );
+  });
 });

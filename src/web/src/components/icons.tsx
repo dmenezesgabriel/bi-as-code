@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Languages,
   LoaderCircle,
   Moon,
   Search,
@@ -32,6 +33,11 @@ export function SunIcon(props: LucideProps) {
 /** Moon glyph — the theme toggle shows it while the UI is light. */
 export function MoonIcon(props: LucideProps) {
   return <Moon aria-hidden size={16} {...props} />;
+}
+
+/** Speech-and-script glyph — the header's language menu trigger. */
+export function LanguagesIcon(props: LucideProps) {
+  return <Languages aria-hidden size={16} {...props} />;
 }
 
 /** Double-ended arrow — a sortable column header with no active sort. */
@@ -74,7 +80,7 @@ export function ChevronDownIcon(props: LucideProps) {
   return <ChevronDown aria-hidden size={16} {...props} />;
 }
 
-/** Check mark — the selected indicator inside a `Combobox.Item`. */
+/** Check mark — the selected indicator inside a `Combobox.Item` or a checked `Menu.RadioItem`. */
 export function CheckIcon(props: LucideProps) {
   return <Check aria-hidden size={14} {...props} />;
 }

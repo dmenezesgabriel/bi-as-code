@@ -5,14 +5,19 @@ import { visit } from "unist-util-visit";
 import type { VFile } from "vfile";
 
 /**
- * The URL search key the source editor owns in `biac dev` (ADR-0010). A page
- * filter persists under its id as a search key, so a filter with this id
- * would open the editor whenever it held a value. Matched exactly: search
- * keys are case-sensitive, so `Edit` is an ordinary filter id. The browser
- * declares the same key in `src/web/src/features/editor/edit-search.ts`;
- * the engine and the SPA share no module.
+ * The URL search keys the app itself owns, each with what it does. A page
+ * filter persists under its id as a search key, so a filter named with one
+ * would drive it: `edit` opens the source editor in `biac dev` (ADR-0010),
+ * `lang` chooses the page language. Matched exactly: search keys are
+ * case-sensitive, so `Edit` is an ordinary filter id. The browser declares
+ * the same keys in `src/web/src/features/editor/edit-search.ts` and
+ * `src/web/src/features/chrome/language.ts`; the engine and the SPA share
+ * no module.
  */
-const EDITOR_SEARCH_KEY = "edit";
+const RESERVED_SEARCH_KEYS: ReadonlyMap<string, string> = new Map([
+  ["edit", "opens the source editor in biac dev"],
+  ["lang", "chooses the page language"],
+]);
 
 /**
  * The tags whose `id` is a filter id. Other tags use `id` for something
@@ -32,8 +37,8 @@ const FILTER_INPUT_TAGS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Remark plugin that fails a page naming a filter with the source editor's
- * URL key — as an input's `id` or in any tag's `filters` — at the position
+ * Remark plugin that fails a page naming a filter with a URL key the app
+ * owns — as an input's `id` or in any tag's `filters` — at the position
  * of the attribute that does it. Only ids written as literals are read: an
  * id computed by an expression is not known until the page runs.
  *
@@ -63,9 +68,12 @@ function rejectReservedFilterId(
   file: VFile,
 ): void {
   if (!namesFilterIds(tagName, attribute)) return;
-  if (!literalStrings(attribute.value).includes(EDITOR_SEARCH_KEY)) return;
+  const reserved = literalStrings(attribute.value).find((id) =>
+    RESERVED_SEARCH_KEYS.has(id),
+  );
+  if (reserved === undefined) return;
   file.fail(
-    `Reserved filter id "${EDITOR_SEARCH_KEY}" on <${tagName} ${attribute.name}> — "${EDITOR_SEARCH_KEY}" opens the source editor in biac dev; choose another id`,
+    `Reserved filter id "${reserved}" on <${tagName} ${attribute.name}> — "${reserved}" ${RESERVED_SEARCH_KEYS.get(reserved)}; choose another id`,
     attribute.position,
   );
 }

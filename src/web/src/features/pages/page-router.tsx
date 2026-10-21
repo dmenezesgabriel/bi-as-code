@@ -8,6 +8,7 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AppShell } from "../../App";
+import type { DeclaredLanguages } from "../chrome/types";
 import type { PageSourcePort } from "../editor/types";
 import { CompileErrorPage } from "./compile-error-page";
 import { EditablePage } from "./editable-page";
@@ -34,7 +35,8 @@ import type { NavTree } from "virtual:biac-pages";
  * `nav.sidebar` gates the sidebar; `navTree` feeds the sidebar nav.
  * `pageSource` — passed only by `biac dev` — lets `?edit` open a page in the
  * source editor; `dataUpdates` — likewise dev-only — re-runs a page's
- * queries when a data file it reads changes.
+ * queries when a data file it reads changes. `languages` — the ones
+ * `translations.yaml` declares — feed the header's language menu.
  *
  * @example
  * // src/web/src/router.tsx
@@ -49,12 +51,14 @@ export function buildPageRouter(
   history?: RouterHistory,
   pageSource?: PageSourcePort,
   dataUpdates?: DataUpdateSubscription,
+  languages?: DeclaredLanguages,
 ) {
   const rootRoute = createRootRoute({
     component: () => (
       <AppShell
         tree={navTree}
         site={site}
+        languages={languages}
         editable={pageSource !== undefined}
       />
     ),

@@ -126,6 +126,8 @@ export type DataUpdateSubscription = (
 
 export interface MdxPageProps {
   components?: MdxComponentMap;
+  /** The language a page that reads `$translations` renders; the first declared one when absent. */
+  language?: string;
 }
 
 /** MDX element overrides — tag name → component or intrinsic element. */

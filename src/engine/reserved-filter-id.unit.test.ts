@@ -37,6 +37,14 @@ describe("an input's id", () => {
     );
   });
 
+  it("says the language key chooses the page language", async () => {
+    const markdown = '<Dropdown id="lang" />\n';
+
+    await expect(compileBody(markdown)).rejects.toThrow(
+      'Reserved filter id "lang" on <Dropdown id> — "lang" chooses the page language; choose another id',
+    );
+  });
+
   it("points at the attribute's line and column", async () => {
     const markdown = '# Title\n\n<TextInput id="edit" title="Edit" />\n';
 
@@ -57,6 +65,10 @@ describe("an input's id", () => {
     ["another id", '<TextInput id="region" />\n'],
     ["a different case", '<TextInput id="Edit" />\n'],
     ["an id that only starts with the key", '<TextInput id="edited" />\n'],
+    [
+      "an id that only starts with the language key",
+      '<TextInput id="language" />\n',
+    ],
     ["an id the compiler cannot read", "<TextInput id={chosenId} />\n"],
     ["an id spread in from an object", "<TextInput {...inputProps} />\n"],
     ["an id on a tag that is not an input", '<Column id="edit" />\n'],
@@ -73,6 +85,14 @@ describe("a widget's filters", () => {
   ])("rejects the editor's key written as %s", async (_case, markdown) => {
     await expect(compileBody(markdown)).rejects.toThrow(
       'Reserved filter id "edit" on <Table filters>',
+    );
+  });
+
+  it("rejects the language key in a list", async () => {
+    const markdown = '<Table data="orders" filters={["region", "lang"]} />\n';
+
+    await expect(compileBody(markdown)).rejects.toThrow(
+      'Reserved filter id "lang" on <Table filters>',
     );
   });
 

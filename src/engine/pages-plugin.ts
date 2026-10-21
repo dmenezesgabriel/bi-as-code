@@ -32,6 +32,10 @@ import {
 } from "./page-compile-error.js";
 import { pageSourceEndpoint } from "./page-source-endpoint.js";
 import { queryFilesRead } from "./query-files.js";
+import {
+  languagesModuleSource,
+  VIRTUAL_LANGUAGES_ID,
+} from "./languages-module.js";
 import { loadProjectTranslations } from "./resolve-translations.js";
 import { serveDataDir } from "./serve-data-dir.js";
 import { TRANSLATIONS_FILE } from "./translations-file.js";
@@ -51,6 +55,7 @@ const RESOLVED_MANIFEST_ID = `\0${VIRTUAL_MANIFEST_ID}`;
 const VIRTUAL_CONFIG_ID = "virtual:biac-config";
 const RESOLVED_CONFIG_ID = `\0${VIRTUAL_CONFIG_ID}`;
 const RESOLVED_TRANSLATIONS_ID = `\0${VIRTUAL_TRANSLATIONS_ID}`;
+const RESOLVED_LANGUAGES_ID = `\0${VIRTUAL_LANGUAGES_ID}`;
 const CONFIG_FILE = "biac.config.ts";
 
 /**
@@ -116,7 +121,14 @@ export function pagesPlugin(projectRoot: string): Plugin {
     const configModule = graph.getModuleById(RESOLVED_CONFIG_ID);
     // `directories` titles live in the manifest's nav tree.
     const manifest = graph.getModuleById(RESOLVED_MANIFEST_ID);
-    for (const mod of [configModule, manifest, ...stalePages]) {
+    // A created or deleted translations.yaml changes the header's languages.
+    const languagesModule = graph.getModuleById(RESOLVED_LANGUAGES_ID);
+    for (const mod of [
+      configModule,
+      manifest,
+      languagesModule,
+      ...stalePages,
+    ]) {
       if (mod) graph.invalidateModule(mod);
     }
     if (environment.name !== "client") return;
@@ -124,18 +136,20 @@ export function pagesPlugin(projectRoot: string): Plugin {
     environment.hot.send({ type: "full-reload" });
   };
   // The pages that read the file watch it, so vite re-transforms them; the
-  // translations module is not a file, so it is invalidated here and goes
-  // out with them — each page's re-import then fetches its new text.
+  // translations and languages modules are not files, so they are
+  // invalidated here and go out with them — each page's re-import then
+  // fetches its new text, and the languages module accepts itself.
   const hotUpdateTranslations = (
     environment: DevEnvironment,
     modules: EnvironmentModuleNode[],
   ): EnvironmentModuleNode[] => {
     translationsPromise = undefined;
     const graph = environment.moduleGraph;
-    const translationsModule = graph.getModuleById(RESOLVED_TRANSLATIONS_ID);
-    if (!translationsModule) return modules;
-    graph.invalidateModule(translationsModule);
-    return [...modules, translationsModule];
+    const generated = [RESOLVED_TRANSLATIONS_ID, RESOLVED_LANGUAGES_ID]
+      .map((id) => graph.getModuleById(id))
+      .filter((mod) => mod !== undefined);
+    generated.forEach((mod) => graph.invalidateModule(mod));
+    return [...modules, ...generated];
   };
   // The manifest last handed to vite — a page change that regenerates the
   // same source is content-only and must not invalidate it.
@@ -197,6 +211,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (id === VIRTUAL_MANIFEST_ID) return RESOLVED_MANIFEST_ID;
       if (id === VIRTUAL_CONFIG_ID) return RESOLVED_CONFIG_ID;
       if (id === VIRTUAL_TRANSLATIONS_ID) return RESOLVED_TRANSLATIONS_ID;
+      if (id === VIRTUAL_LANGUAGES_ID) return RESOLVED_LANGUAGES_ID;
       if (!id.startsWith(VIRTUAL_PAGE_PREFIX)) return;
       const file = join(root, id.slice(VIRTUAL_PAGE_PREFIX.length));
       if (!toPosix(file).startsWith(`${pagesDirPosix}/`)) return null;
@@ -208,6 +223,16 @@ export function pagesPlugin(projectRoot: string): Plugin {
       }
       if (id === RESOLVED_TRANSLATIONS_ID) {
         return translationsModuleSource(await getTranslations());
+      }
+      if (id === RESOLVED_LANGUAGES_ID) {
+        // A broken translations.yaml offers no languages rather than
+        // failing the shell: each page that reads the file shows its
+        // located error, and fixing the file hot-updates the list back.
+        const languages = await getTranslations().then(
+          (resolved) => resolved.languages,
+          () => [],
+        );
+        return languagesModuleSource(languages);
       }
       if (id !== RESOLVED_MANIFEST_ID) return;
       servedManifest = checkedManifestSource(

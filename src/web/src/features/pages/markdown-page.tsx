@@ -5,6 +5,7 @@ import { searchWithoutEditorKey } from "../editor/edit-search";
 import { browserFilterUrlPort } from "../filters/filter-url-port";
 import { FiltersProvider } from "../filters/page-filters-context";
 import { NavToc } from "../chrome/nav-toc";
+import { usePageLanguage } from "../chrome/page-language";
 import { CardsProvider } from "../widgets/card/card-scope";
 import { withCard } from "../widgets/card/with-card";
 import { Column } from "../widgets/table/column";
@@ -255,13 +256,17 @@ function PageBody({
   // a new object and does so during render: a fresh object per render
   // would never settle.
   const params = useMemo(() => searchWithoutEditorKey(search), [search]);
+  const language = usePageLanguage();
   // Memoized for the same reason; a hot-swapped page module brings the
   // edited translations.yaml with it, so a new page re-reads them.
-  const translations = useMemo(() => page.translationsFor?.(undefined), [page]);
+  const translations = useMemo(
+    () => page.translationsFor?.(language),
+    [page, language],
+  );
   const Content = page.default;
   const scoped = (
     <FiltersProvider key={pageVersion(Content)} port={browserFilterUrlPort}>
-      <Content components={mdxComponents} />
+      <Content components={mdxComponents} language={language} />
     </FiltersProvider>
   );
   // A page with no named ```sql blocks mounts no registry, so it never

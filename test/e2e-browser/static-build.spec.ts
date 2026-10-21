@@ -32,6 +32,7 @@ import {
   optionAt,
   readyCharts,
 } from "./echart-hosts.js";
+import { chooseLanguage, documentLanguage } from "./language-menu.js";
 import { cardCount, mainWidth, readCards } from "./widget-cards.js";
 
 // chromium-headless-shell crashes its renderer under 200k-row slider
@@ -178,6 +179,28 @@ test("the static build offers no page editor, even on ?edit", async ({
   await expect(heading).toHaveCount(1);
   await expect(editLink).toHaveCount(0);
   await expect(page.locator(".cm-editor")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the static build chooses the page language from ?lang= and the header menu", async ({
+  page,
+}) => {
+  const errors = collectConsoleErrors(page);
+  const heading = page.getByRole("heading", { level: 1 });
+
+  await page.goto(`${preview.url}weekly-review?lang=fr`);
+  await expect(heading).toHaveText("Revue hebdomadaire");
+  expect(await documentLanguage(page)).toBe("fr");
+
+  await page.goto(`${preview.url}weekly-review`);
+  await expect(heading).toHaveText("Weekly review");
+  await chooseLanguage(page, "Français");
+  await expect(heading).toHaveText("Revue hebdomadaire");
+
+  // No ?lang= — the stored choice applies with no server to read it.
+  await page.goto(`${preview.url}weekly-review`);
+  await expect(heading).toHaveText("Revue hebdomadaire");
+  expect(await documentLanguage(page)).toBe("fr");
   expect(errors).toEqual([]);
 });
 

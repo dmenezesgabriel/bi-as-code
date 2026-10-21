@@ -1,5 +1,6 @@
 import { pages, navTree, subscribePageUpdates } from "virtual:biac-pages";
 import { config } from "virtual:biac-config";
+import { getLanguages, subscribeLanguages } from "virtual:biac-languages";
 import { pageSourceClient } from "./features/editor/page-source-client";
 import { hmrDataUpdates } from "./features/pages/data-updates";
 import { buildPageRouter } from "./features/pages/page-router";
@@ -21,6 +22,7 @@ export const router = buildPageRouter(
   undefined,
   pageSource,
   dataUpdates,
+  { get: getLanguages, subscribe: subscribeLanguages },
 );
 
 // A hot-swapped page re-runs the matched route's loader, which now resolves

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
@@ -17,6 +17,8 @@ import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
 import { mountedView } from "../editor/editor-test-view";
 import { FakePageSourcePort } from "../editor/fake-page-source-port";
+import { fixedLanguages } from "../chrome/declared-languages";
+import type { DeclaredLanguages } from "../chrome/types";
 import type { PageSourcePort } from "../editor/types";
 import { FakeDataUpdates } from "./fake-data-updates";
 import { buildPageRouter } from "./page-router";
@@ -133,6 +135,7 @@ function renderRouter(
   db?: DuckDbService,
   pageSource?: PageSourcePort,
   dataUpdates?: FakeDataUpdates,
+  languages?: DeclaredLanguages,
 ) {
   const router = buildPageRouter(
     entries,
@@ -141,6 +144,7 @@ function renderRouter(
     createMemoryHistory({ initialEntries: [initialPath] }),
     pageSource,
     dataUpdates?.subscription,
+    languages,
   );
   const app = <RouterProvider router={router} />;
   render(
@@ -558,5 +562,46 @@ describe("buildPageRouter edit mode", () => {
     expect(await screen.findByText("new body")).toBeInTheDocument();
     expect(mountedView("Page source")).toBe(viewBefore);
     expect(router.state.location.searchStr).toBe("?region=West&edit=true");
+  });
+});
+
+describe("buildPageRouter languages", () => {
+  const languagePage: CompiledPageModule = {
+    ...textPage("", "Home"),
+    default: ({ language }) => <p>page in {language}</p>,
+  };
+  const languageEntries = [pageEntry("/", async () => languagePage)];
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    document.documentElement.lang = "en";
+  });
+
+  it("renders the page in the URL's language and declares it on <html lang>", async () => {
+    // Arrange / Act
+    renderRouter(
+      languageEntries,
+      "/?lang=fr",
+      navTree,
+      site,
+      undefined,
+      undefined,
+      undefined,
+      fixedLanguages(["en", "fr"]),
+    );
+
+    // Assert
+    expect(await screen.findByText("page in fr")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Language" })).toBeVisible();
+    expect(document.documentElement.lang).toBe("fr");
+  });
+
+  it("shows no language menu when the project declares none", async () => {
+    // Arrange / Act
+    renderRouter(languageEntries, "/?lang=fr");
+
+    // Assert
+    expect(await screen.findByText("page in")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Language" })).toBeNull();
   });
 });

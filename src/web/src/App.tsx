@@ -4,6 +4,12 @@ import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 import { Breadcrumbs } from "./features/chrome/breadcrumbs";
 import { EditPageLink } from "./features/chrome/edit-page-link";
+import {
+  fixedLanguages,
+  useDeclaredLanguages,
+} from "./features/chrome/declared-languages";
+import { LanguageMenu } from "./features/chrome/language-menu";
+import { PageLanguageProvider } from "./features/chrome/page-language";
 import { SidebarNav } from "./features/chrome/sidebar-nav";
 import {
   readDesktopOpen,
@@ -11,11 +17,14 @@ import {
 } from "./features/chrome/sidebar-storage";
 import { ThemeModeProvider } from "./features/chrome/theme-mode";
 import { ThemeToggle } from "./features/chrome/theme-toggle";
+import type { DeclaredLanguages } from "./features/chrome/types";
+import { useLanguage } from "./features/chrome/use-language";
 import { useMediaQuery } from "./features/chrome/use-media-query";
 import { useTheme } from "./features/chrome/use-theme";
 import { cn } from "./lib/cn";
 
 const MOBILE_QUERY = "(max-width: 1023px)";
+const NO_LANGUAGES = fixedLanguages([]);
 
 /**
  * The app chrome wrapping every route: a fixed sidebar nav, a slim header
@@ -25,21 +34,26 @@ const MOBILE_QUERY = "(max-width: 1023px)";
  * Escape dismisses it); at `lg` and above it sits beside the content, and
  * only an explicit toggle — persisted to sessionStorage — hides it there.
  * `nav.sidebar: false` in `biac.config.ts` removes the chrome entirely.
- * `editable` (true only under `biac dev`) adds the header's Edit link.
+ * `editable` (true only under `biac dev`) adds the header's Edit link;
+ * two or more `languages` add the header's language menu.
  */
 export function AppShell({
   tree,
   site,
+  languages: declaredLanguages = NO_LANGUAGES,
   editable = false,
 }: {
   tree: NavTree;
   site: BiacConfig;
+  languages?: DeclaredLanguages;
   editable?: boolean;
 }) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   // Applied here, above the `nav.sidebar: false` early return, so a
-  // chrome-free project still honours its configured theme.
+  // chrome-free project still honours its configured theme and language.
   const theme = useTheme(site.theme);
+  const languages = useDeclaredLanguages(declaredLanguages);
+  const language = useLanguage(languages);
   const [desktopOpen, setDesktopOpen] = useState<boolean | null>(
     readDesktopOpen,
   );
@@ -61,9 +75,11 @@ export function AppShell({
   if (!site.nav.sidebar) {
     return (
       <ThemeModeProvider mode={theme.mode}>
-        <div className="min-h-screen bg-background text-foreground">
-          <Outlet />
-        </div>
+        <PageLanguageProvider language={language.language}>
+          <div className="min-h-screen bg-background text-foreground">
+            <Outlet />
+          </div>
+        </PageLanguageProvider>
       </ThemeModeProvider>
     );
   }
@@ -114,9 +130,16 @@ export function AppShell({
             </button>
             <Breadcrumbs tree={tree} />
             {editable && <EditPageLink />}
+            <LanguageMenu
+              languages={languages}
+              language={language.language}
+              onChoose={language.choose}
+            />
             <ThemeToggle mode={theme.mode} onToggle={theme.toggle} />
           </header>
-          <Outlet />
+          <PageLanguageProvider language={language.language}>
+            <Outlet />
+          </PageLanguageProvider>
         </div>
       </div>
     </ThemeModeProvider>

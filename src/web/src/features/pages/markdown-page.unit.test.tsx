@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { Layer } from "effect";
+import { PageLanguageProvider } from "../chrome/page-language";
 import { DuckDb, type DuckDbService } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
@@ -21,9 +22,14 @@ function renderPage(
   siteTitle = "biac",
   db?: DuckDbService,
   initialUrl = "/",
+  language?: string,
 ) {
   const rootRoute = createRootRoute({
-    component: () => <MarkdownPage page={page} siteTitle={siteTitle} />,
+    component: () => (
+      <PageLanguageProvider language={language}>
+        <MarkdownPage page={page} siteTitle={siteTitle} />
+      </PageLanguageProvider>
+    ),
   });
   const router = createRouter({
     routeTree: rootRoute,
@@ -271,6 +277,40 @@ describe("MarkdownPage", () => {
     );
     expect(db.queries).toEqual([{ sql: "select ?", params: ["l'Ouest"] }]);
     expect(new Set(languagesAsked)).toEqual(new Set([undefined]));
+  });
+
+  it("renders text and binds fences in the shell's chosen language", async () => {
+    // Arrange
+    const db = new FakeDuckDb();
+    const translations = { en: { west: "West" }, fr: { west: "l'Ouest" } };
+    const translationsFor = (language: string | undefined) =>
+      language === "fr" ? translations.fr : translations.en;
+
+    // Act
+    renderPage(
+      page({
+        sqlBlocks: [{ name: "q", sql: "select {{$translations.west}}" }],
+        translationsFor,
+        default: function Probe({ language }) {
+          const results = useQueryResults();
+          return (
+            <p data-testid="status">
+              {language} {results.q?.status ?? "none"}
+            </p>
+          );
+        },
+      }),
+      "biac",
+      db,
+      "/",
+      "fr",
+    );
+
+    // Assert
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("fr success"),
+    );
+    expect(db.queries).toEqual([{ sql: "select ?", params: ["l'Ouest"] }]);
   });
 
   it("hides the editor's edit flag from a fence's params and does not re-run it when the flag goes", async () => {

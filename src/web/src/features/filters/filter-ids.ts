@@ -1,4 +1,4 @@
-import { assertNotEditorSearchKey } from "../editor/edit-search";
+import { assertNotReservedSearchKey } from "./reserved-search-keys";
 
 /**
  * The `filters` widget prop's authoring shape: MDX authors write a lone id
@@ -8,8 +8,8 @@ export type FilterIds = string | readonly string[];
 
 /**
  * The hook-shaped id list: an absent prop contributes none, a lone string
- * is a one-element list, a list passes through. Throws on the editor's URL
- * key, which a page filter must not take.
+ * is a one-element list, a list passes through. Throws on a URL key the
+ * app owns (`edit`, `lang`), which a page filter must not take.
  *
  * @example
  * toFilterIds("region"); // ["region"]
@@ -17,6 +17,6 @@ export type FilterIds = string | readonly string[];
 export function toFilterIds(filters: FilterIds | undefined): readonly string[] {
   if (filters === undefined) return [];
   const ids = typeof filters === "string" ? [filters] : filters;
-  ids.forEach(assertNotEditorSearchKey);
+  ids.forEach(assertNotReservedSearchKey);
   return ids;
 }

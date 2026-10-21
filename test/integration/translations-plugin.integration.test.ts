@@ -15,6 +15,8 @@ import {
 
 const VIRTUAL_TRANSLATIONS_ID = "virtual:biac-translations";
 const RESOLVED_TRANSLATIONS_ID = "\0virtual:biac-translations";
+const VIRTUAL_LANGUAGES_ID = "virtual:biac-languages";
+const RESOLVED_LANGUAGES_ID = "\0virtual:biac-languages";
 const TRANSLATIONS = "en:\n  revenue: Revenue\nfr:\n  revenue: Revenu\n";
 const PAGE = "# {$translations.revenue}\n";
 
@@ -81,6 +83,28 @@ describe("virtual:biac-translations", () => {
       message: expect.stringMatching(/^Invalid translations\.yaml:3:\d+ — /),
       loc: { file: join(root, "translations.yaml"), line: 3 },
     });
+  });
+});
+
+describe("virtual:biac-languages", () => {
+  it("serves the declared languages in file order", async () => {
+    const { dev } = await serveProject({
+      "translations.yaml": "fr:\n  a: A fr\nen:\n  a: A\n",
+    });
+
+    const code = await transformed(dev, VIRTUAL_LANGUAGES_ID);
+
+    expect(code).toContain('store.languages = ["fr","en"];');
+  });
+
+  it("serves no languages for a malformed file, leaving the error to its pages", async () => {
+    const { dev } = await serveProject({
+      "translations.yaml": "en:\n  a: 1\n b: 2\n",
+    });
+
+    const code = await transformed(dev, VIRTUAL_LANGUAGES_ID);
+
+    expect(code).toContain("store.languages = [];");
   });
 });
 
@@ -218,6 +242,33 @@ describe("editing translations.yaml", () => {
     );
     expect(
       graph.getModuleById(RESOLVED_TRANSLATIONS_ID)?.lastHMRTimestamp,
+    ).toBeGreaterThan(0);
+  });
+
+  it("hot-updates the languages module with the new list", async () => {
+    const { root, dev } = await serveProject({
+      "translations.yaml": TRANSLATIONS,
+      "pages/index.md": PAGE,
+    });
+    const pagePath = join(root, "pages/index.md");
+    await transformed(dev, `/@fs${pagePath}`);
+    await transformed(dev, VIRTUAL_LANGUAGES_ID);
+    await waitForWatch(dev, root, "translations.yaml");
+    const graph = dev.environments.client.moduleGraph;
+
+    await expectInvalidated(graph.getModuleById(pagePath), () =>
+      writeProjectFile(
+        root,
+        "translations.yaml",
+        "fr:\n  revenue: Revenu\nen:\n  revenue: Revenue\n",
+      ),
+    );
+
+    expect(await transformed(dev, VIRTUAL_LANGUAGES_ID)).toContain(
+      'store.languages = ["fr","en"];',
+    );
+    expect(
+      graph.getModuleById(RESOLVED_LANGUAGES_ID)?.lastHMRTimestamp,
     ).toBeGreaterThan(0);
   });
 

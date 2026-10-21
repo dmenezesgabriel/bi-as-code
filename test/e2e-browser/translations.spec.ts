@@ -12,6 +12,7 @@ import {
   resultTables,
   test,
 } from "./dev-server.fixture.js";
+import { chooseLanguage, documentLanguage } from "./language-menu.js";
 
 // The /weekly-review headings and titles the example project reads from
 // translations.yaml, in page order.
@@ -89,6 +90,8 @@ test("saving a French-first translations.yaml swaps the page to French in place"
   await saveTranslations(biacDev, frenchFirst);
 
   await expect(headings(page)).toHaveText(FR_HEADINGS);
+  // The shell heard of the new first language without a reload.
+  await expect.poll(() => documentLanguage(page)).toBe("fr");
   // fr leaves `methodology` out, so it shows its en value.
   await expect(
     page.getByRole("button", { name: "Methodology", exact: true }),
@@ -122,6 +125,57 @@ test("a sql fence binds its translation, apostrophe and all, in place", async ({
   );
   expect(await firstRowCells(westOrders(page))).toEqual(["l'Ouest", "140"]);
   expect(errors).toEqual([]);
+});
+
+test("picking Français in the header menu translates the page in place and keeps the choice", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+  await expect(headings(page)).toHaveText(EN_HEADINGS);
+  expect(await documentLanguage(page)).toBe("en");
+
+  await chooseLanguage(page, "Français");
+
+  await expect(headings(page)).toHaveText(FR_HEADINGS);
+  expect(new URL(page.url()).searchParams.get("lang")).toBe("fr");
+  expect(await documentLanguage(page)).toBe("fr");
+  // fr leaves `methodology` out, so it shows its en value.
+  await expect(
+    page.getByRole("button", { name: "Methodology", exact: true }),
+  ).toBeVisible();
+  await expect(westOrders(page).locator("tbody td").first()).toHaveText(
+    "l'Ouest",
+  );
+  await page.getByRole("button", { name: "Language" }).click();
+  await expect(
+    page.getByRole("menuitemradio", { name: "Français" }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+
+  await page.reload();
+  await expect(headings(page)).toHaveText(FR_HEADINGS);
+
+  // No ?lang= — the stored choice applies.
+  await page.goto(`${biacDev.url}weekly-review`);
+  await expect(headings(page)).toHaveText(FR_HEADINGS);
+  expect(await documentLanguage(page)).toBe("fr");
+  expect(errors).toEqual([]);
+});
+
+test("?lang= names the page language and outranks the stored choice", async ({
+  page,
+  biacDev,
+}) => {
+  await page.goto(`${biacDev.url}weekly-review`);
+  await chooseLanguage(page, "Français");
+  await expect(headings(page)).toHaveText(FR_HEADINGS);
+
+  await page.goto(`${biacDev.url}weekly-review?lang=en`);
+
+  await expect(headings(page)).toHaveText(EN_HEADINGS);
+  expect(await documentLanguage(page)).toBe("en");
 });
 
 test("a sql fence naming an unknown translation key shows the token", async ({

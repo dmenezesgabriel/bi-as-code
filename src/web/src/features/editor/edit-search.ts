@@ -3,7 +3,7 @@
  * Matched exactly: router search keys are case-sensitive, so `?Edit` is an
  * ordinary page parameter.
  */
-const EDITOR_SEARCH_KEY = "edit";
+export const EDITOR_SEARCH_KEY = "edit";
 
 /**
  * True when a page URL's parsed search asks for the source editor. Any
@@ -36,23 +36,5 @@ export function searchWithoutEditorKey(
   if (!(EDITOR_SEARCH_KEY in search)) return search;
   return Object.fromEntries(
     Object.entries(search).filter(([key]) => key !== EDITOR_SEARCH_KEY),
-  );
-}
-
-/**
- * Fails a page filter named with the editor's key: the filter would persist
- * its value as `?edit=…` and open the source editor whenever it held one.
- * Literal ids are rejected at compile time (`src/engine/reserved-filter-id.ts`);
- * this catches an id computed by an expression, which the compiler cannot
- * read.
- *
- * @example
- * assertNotEditorSearchKey("region"); // passes
- * assertNotEditorSearchKey("edit"); // throws: Reserved filter id "edit" — …
- */
-export function assertNotEditorSearchKey(filterId: string): void {
-  if (filterId !== EDITOR_SEARCH_KEY) return;
-  throw new Error(
-    `Reserved filter id "${filterId}" — "${EDITOR_SEARCH_KEY}" opens the source editor in biac dev; choose another id`,
   );
 }
