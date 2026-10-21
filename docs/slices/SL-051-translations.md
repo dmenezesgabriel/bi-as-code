@@ -1,6 +1,6 @@
 # SL-051 — Page text, widget titles and SQL values read the chosen language from one translations file
 
-Milestone: Phase 5 — Query files, translations, search · State: open · Depends on: — · Closes: GAP-048, GAP-049
+Milestone: Phase 5 — Query files, translations, search · State: partial — awaits its demo · Depends on: — · Closes: GAP-048, GAP-049
 
 > Delete this file when the slice ships. Every path below was verified on disk on 2026-10-20 (`test -e`); paths marked **new** do not exist yet. Settled with the owner on 2026-10-20: translations live in `translations.yaml` at the project root; every other choice follows the references and community convention, decided below from the evidence.
 
@@ -109,7 +109,8 @@ Nothing in the ledger claims `shipped` for any of this.
 - No `.sql` accessor: binding makes it unnecessary.
 - A broken `translations.yaml` fails loudly instead of yielding `{}`.
 - `<html lang>` follows the language, which evidence does not do.
-- Language is chosen in the browser (`?lang=`, `localStorage`), not by a server cookie, because `biac build` is a static SPA folder (ADR-0008). A durable record of this and of bound SQL values goes in an ADR when T3 lands.
+- Language is chosen in the browser (`?lang=`, `localStorage`), not by a server cookie, because `biac build` is a static SPA folder (ADR-0008). Recorded with bound SQL values in ADR-0020.
+- The shell reads the declared languages from `virtual:biac-languages` (`src/engine/languages-module.ts`), not `virtual:biac-translations`: importing the translations module from `src/web/src/router.tsx` put the file in the entry graph, so a malformed file blanked the whole app (500 on the module) and a saved file full-reloaded instead of hot-swapping — measured by 3 failing tests in `test/e2e-browser/translations.spec.ts`. The languages module serves `[]` for a broken file and accepts its own updates, its list kept in `import.meta.hot.data`.
 
 ## Open decisions
 
@@ -133,7 +134,7 @@ Nothing in the ledger claims `shipped` for any of this.
 
 - [x] T1 — `translations.yaml` is read, validated (located errors) and resolved per language in the engine (`en` merge, i18next `$t()`), served as `virtual:biac-translations` and hot-updated on save; `{$translations.key}` in page text and attributes renders the first declared language; a literal missing key is a compile error with a did-you-mean. `/weekly-review` reads its Baseline headings and titles from a new `translations.yaml` (`en`, `fr`). `playwright-cli`: Baseline rows unchanged in `en`, save a `fr`-first file and see French, a typo'd key shows the located error, console clean.
 - [x] T2 — `{{$translations.key}}` in sql fences and `queries/*.sql` binds as a `?` arg in the current language; an unknown key is an interpolation error naming the token. `playwright-cli`: a fence filtering on a translated value with an apostrophe returns its row; console clean.
-- [ ] T3 — Language choice: `?lang=` when declared, else `localStorage` `biac.lang`, else first declared; header language menu (`components/menu.tsx` + `language-menu.tsx` with stories) with native names and a checked current item, hidden below 2 languages; `<html lang>` follows; `lang` reserved as a filter id; `biac build && biac preview` behave the same. `playwright-cli`: Demo steps 2–4 and 8, `aria-checked` on the menu items, `document.documentElement.lang`, 390 px header fits (`scrollWidth`), console clean. Then the ADR named in Deviations.
+- [x] T3 — Language choice: `?lang=` when declared, else `localStorage` `biac.lang`, else first declared; header language menu (`components/menu.tsx` + `language-menu.tsx` with stories) with native names and a checked current item, hidden below 2 languages; `<html lang>` follows; `lang` reserved as a filter id; `biac build && biac preview` behave the same. `playwright-cli`: Demo steps 2–4 and 8, `aria-checked` on the menu items, `document.documentElement.lang`, 390 px header fits (`scrollWidth`), console clean. Then the ADR named in Deviations.
 
 ## Out of scope
 
