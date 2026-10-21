@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Autocomplete } from "../../components/autocomplete";
 import type {
   LoadPageSearchDocuments,
@@ -7,33 +7,42 @@ import type {
   PageSearchResult,
 } from "./types";
 import { usePageIndex } from "./use-page-index";
+import { useSearchShortcut } from "./use-search-shortcut";
 
 /**
  * The sidebar's search box: typing lists the pages whose title, text or
  * keywords match, ranked, in place under the box; a click, or Enter on the
  * highlighted result (the first, until the arrows move it), opens the page.
+ * `/` or ⌘K / Ctrl-K focuses the box after `onReveal` makes it visible;
+ * Escape clears it, then leaves it. `onSearchingChange` reports when a
+ * query starts and ends, so the host can hide what the results replace.
  * The documents load on first focus through `loadDocuments`.
  *
  * @example
- * <SiteSearch loadDocuments={() => import("virtual:biac-search").then((m) => m.documents)} onNavigate={closeDrawer} />
+ * <SiteSearch loadDocuments={() => import("virtual:biac-search").then((m) => m.documents)} onNavigate={closeDrawer} onReveal={openDrawer} onSearchingChange={setSearching} />
  */
 export function SiteSearch({
   loadDocuments,
   onNavigate,
+  onReveal,
+  onSearchingChange,
 }: {
   loadDocuments: LoadPageSearchDocuments;
   onNavigate: () => void;
+  onReveal: () => void;
+  onSearchingChange: (searching: boolean) => void;
 }) {
-  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  useSearchShortcut(inputRef, onReveal);
+  const { query, searching, changeQuery } = useSearchQuery(onSearchingChange);
   const { state, prepare } = usePageIndex(loadDocuments);
-  const searching = query.trim() !== "";
   const results = useMemo(
     () =>
       state.status === "ready" && searching ? state.index.search(query) : [],
     [state, query, searching],
   );
   const open = (result: PageSearchResult) => {
-    setQuery("");
+    changeQuery("");
     onNavigate();
     return result;
   };
@@ -47,53 +56,92 @@ export function SiteSearch({
         autoHighlight="always"
         items={results}
         value={query}
-        onValueChange={setQuery}
+        onValueChange={changeQuery}
         itemToStringValue={(result: PageSearchResult) => result.title}
       >
         <Autocomplete.Input
+          ref={inputRef}
           type="search"
           placeholder="Search"
           aria-label="Search pages"
+          aria-keyshortcuts="/ Control+K Meta+K"
           onFocus={prepare}
-          onKeyDown={prepare}
+          onKeyDown={(event) => {
+            prepare();
+            if (event.key === "Escape") escape(event, query, changeQuery);
+          }}
           className="h-8 w-full rounded-md border border-input bg-field px-2 text-sm text-foreground placeholder:text-muted-foreground-faded"
         />
-        {searching && <SearchResults state={state} onOpen={open} />}
+        <Autocomplete.Status className="px-2 pt-1.5 text-xs text-muted-foreground empty:hidden">
+          {searching ? searchStatusMessage(state, results.length) : ""}
+        </Autocomplete.Status>
+        {searching && <SearchResults onOpen={open} />}
       </Autocomplete.Root>
     </div>
   );
 }
 
+/** The box's text, reporting each switch between empty and a query. */
+function useSearchQuery(onSearchingChange: (searching: boolean) => void): {
+  query: string;
+  searching: boolean;
+  changeQuery: (next: string) => void;
+} {
+  const [query, setQuery] = useState("");
+  const searching = isQuery(query);
+  const changeQuery = (next: string) => {
+    if (isQuery(next) !== searching) onSearchingChange(!searching);
+    setQuery(next);
+  };
+  return { query, searching, changeQuery };
+}
+
+function isQuery(value: string): boolean {
+  return value.trim() !== "";
+}
+
+/**
+ * Escape with a query clears it and stops there, so a drawer listening for
+ * Escape stays open; on an empty box it leaves the box and lets the key
+ * through.
+ */
+function escape(
+  event: KeyboardEvent<HTMLInputElement>,
+  query: string,
+  changeQuery: (next: string) => void,
+) {
+  if (query === "") {
+    event.currentTarget.blur();
+    return;
+  }
+  event.stopPropagation();
+  changeQuery("");
+}
+
 function SearchResults({
-  state,
   onOpen,
 }: {
-  state: PageIndexState;
   onOpen: (result: PageSearchResult) => void;
 }) {
   return (
-    <>
-      <Autocomplete.Empty className="px-2 py-1.5 text-sm text-muted-foreground empty:hidden">
-        {emptyMessage(state)}
-      </Autocomplete.Empty>
-      <Autocomplete.List className="mt-1 empty:hidden">
-        {(result: PageSearchResult) => (
-          <Autocomplete.Item
-            key={result.id}
-            value={result}
-            render={<Link to={result.id} onClick={() => onOpen(result)} />}
-            className="block rounded-sm px-2 py-1.5 text-sm text-muted-foreground data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-          >
-            {result.title}
-          </Autocomplete.Item>
-        )}
-      </Autocomplete.List>
-    </>
+    <Autocomplete.List className="mt-1 empty:hidden">
+      {(result: PageSearchResult) => (
+        <Autocomplete.Item
+          key={result.id}
+          value={result}
+          render={<Link to={result.id} onClick={() => onOpen(result)} />}
+          className="block rounded-sm px-2 py-1.5 text-sm text-muted-foreground data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+        >
+          {result.title}
+        </Autocomplete.Item>
+      )}
+    </Autocomplete.List>
   );
 }
 
-function emptyMessage(state: PageIndexState): string {
+function searchStatusMessage(state: PageIndexState, count: number): string {
   if (state.status === "failed") return "Search is unavailable";
-  if (state.status === "ready") return "No results";
-  return "Loading…";
+  if (state.status !== "ready") return "Loading…";
+  if (count === 0) return "No results";
+  return `${count.toLocaleString("en-US")} result${count === 1 ? "" : "s"}`;
 }

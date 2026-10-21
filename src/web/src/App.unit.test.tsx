@@ -11,6 +11,10 @@ import type { BiacConfig } from "virtual:biac-config";
 import type { NavTree } from "virtual:biac-pages";
 import { AppShell } from "./App";
 import { stubMatchMedia } from "./features/chrome/match-media.stub";
+import {
+  FakeSearchDocuments,
+  SAMPLE_SEARCH_PAGES,
+} from "./features/search/fake-search-documents";
 
 const tree: NavTree = {
   rootPages: [{ name: "Home", href: "/" }],
@@ -41,10 +45,16 @@ async function renderShell(
   config: BiacConfig = site,
   navTree: NavTree = tree,
   editable = false,
+  loadSearchDocuments?: FakeSearchDocuments["load"],
 ) {
   const rootRoute = createRootRoute({
     component: () => (
-      <AppShell tree={navTree} site={config} editable={editable} />
+      <AppShell
+        tree={navTree}
+        site={config}
+        editable={editable}
+        loadSearchDocuments={loadSearchDocuments}
+      />
     ),
   });
   const indexRoute = createRoute({
@@ -63,6 +73,14 @@ async function renderShell(
   });
   render(<RouterProvider router={router} />);
   await screen.findByText(/body/);
+}
+
+async function renderSearchShell() {
+  const documents = new FakeSearchDocuments(SAMPLE_SEARCH_PAGES, {
+    held: false,
+  });
+  await renderShell("/", site, tree, false, documents.load);
+  return screen.getByRole("combobox", { name: "Search pages" });
 }
 
 function sidebar(): HTMLElement {
@@ -199,7 +217,42 @@ describe("AppShell", () => {
     expect(sidebar()).toHaveClass("-translate-x-full");
   });
 
+  it("shows a collapsed sidebar for a search shortcut without persisting it", async () => {
+    window.sessionStorage.setItem("biac.sidebar.open", "false");
+    const box = await renderSearchShell();
+
+    fireEvent.keyDown(document.body, { key: "k", code: "KeyK", ctrlKey: true });
+
+    expect(sidebar()).toHaveClass("translate-x-0");
+    expect(document.activeElement).toBe(box);
+    expect(window.sessionStorage.getItem("biac.sidebar.open")).toBe("false");
+  });
+
   describe("below the lg breakpoint", () => {
+    it("opens the drawer for / and focuses the search box", async () => {
+      stubMatchMedia(true);
+      const box = await renderSearchShell();
+
+      fireEvent.keyDown(document.body, { key: "/" });
+
+      expect(sidebar()).toHaveClass("translate-x-0");
+      expect(document.activeElement).toBe(box);
+    });
+
+    it("keeps the drawer open while Escape clears the box, and closes it on the next", async () => {
+      stubMatchMedia(true);
+      const box = await renderSearchShell();
+      fireEvent.keyDown(document.body, { key: "/" });
+      fireEvent.change(box, { target: { value: "weekly" } });
+
+      fireEvent.keyDown(box, { key: "Escape" });
+      expect(box).toHaveValue("");
+      expect(sidebar()).toHaveClass("translate-x-0");
+
+      fireEvent.keyDown(box, { key: "Escape" });
+      expect(sidebar()).toHaveClass("-translate-x-full");
+    });
+
     it("starts closed, opens as an overlay, and Escape closes it without persisting", async () => {
       stubMatchMedia(true);
       await renderShell("/");

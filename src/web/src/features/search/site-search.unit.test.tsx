@@ -13,14 +13,21 @@ async function renderSearch(
   documents: FakeSearchDocuments,
   onNavigate = vi.fn(),
 ) {
+  const onSearchingChange = vi.fn();
   const router = await renderWithRouter(
-    <SiteSearch loadDocuments={documents.load} onNavigate={onNavigate} />,
+    <SiteSearch
+      loadDocuments={documents.load}
+      onNavigate={onNavigate}
+      onReveal={vi.fn()}
+      onSearchingChange={onSearchingChange}
+    />,
     PATHS,
     "/",
   );
   return {
     router,
     onNavigate,
+    onSearchingChange,
     box: screen.getByRole("combobox", { name: "Search pages" }),
   };
 }
@@ -117,7 +124,93 @@ describe("SiteSearch — results", () => {
 
     await type(box, "zebra");
 
-    expect(screen.getByText("No results")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("No results");
+  });
+
+  it.each([
+    ["fulfilment", "1 result"],
+    ["weekly", "3 results"],
+  ])(
+    "announces the count for %s in a polite live region",
+    async (query, count) => {
+      const { box } = await renderSearch(
+        new FakeSearchDocuments(PAGES, { held: false }),
+      );
+
+      await type(box, query);
+
+      const status = screen.getByRole("status");
+      expect(status).toHaveTextContent(count);
+      expect(status).toHaveAttribute("aria-live", "polite");
+    },
+  );
+
+  it("reports when a search starts and when it ends", async () => {
+    const { box, onSearchingChange } = await renderSearch(
+      new FakeSearchDocuments(PAGES, { held: false }),
+    );
+
+    await type(box, "weekly");
+    await type(box, "weekl");
+    await type(box, "");
+
+    expect(onSearchingChange.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it("names its shortcuts on the box", async () => {
+    const { box } = await renderSearch(
+      new FakeSearchDocuments(PAGES, { held: false }),
+    );
+
+    expect(box).toHaveAttribute("aria-keyshortcuts", "/ Control+K Meta+K");
+  });
+});
+
+/** Presses Escape on the box; returns how often it reached the window. */
+async function pressEscapeCountingPageHears(box: HTMLElement): Promise<number> {
+  const pageEscape = vi.fn();
+  window.addEventListener("keydown", pageEscape);
+  await act(async () => fireEvent.keyDown(box, { key: "Escape" }));
+  window.removeEventListener("keydown", pageEscape);
+  return pageEscape.mock.calls.length;
+}
+
+describe("SiteSearch — Escape", () => {
+  it("clears a typed query and keeps the box focused", async () => {
+    const { box } = await renderSearch(
+      new FakeSearchDocuments(PAGES, { held: false }),
+    );
+    box.focus();
+    await type(box, "weekly");
+
+    await act(async () => fireEvent.keyDown(box, { key: "Escape" }));
+
+    expect(box).toHaveValue("");
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(document.activeElement).toBe(box);
+  });
+
+  it("does not let the clearing Escape reach the page", async () => {
+    const { box } = await renderSearch(
+      new FakeSearchDocuments(PAGES, { held: false }),
+    );
+    await type(box, "weekly");
+
+    const heard = await pressEscapeCountingPageHears(box);
+
+    expect(heard).toBe(0);
+  });
+
+  it("leaves an empty box, letting the Escape through", async () => {
+    const { box } = await renderSearch(
+      new FakeSearchDocuments(PAGES, { held: false }),
+    );
+    box.focus();
+
+    const heard = await pressEscapeCountingPageHears(box);
+
+    expect(document.activeElement).toBe(document.body);
+    expect(heard).toBe(1);
   });
 });
 

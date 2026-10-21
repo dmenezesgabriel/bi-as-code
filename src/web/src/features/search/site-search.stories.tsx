@@ -15,6 +15,8 @@ const meta: Meta<typeof SiteSearch> = {
   args: {
     loadDocuments: new FakeSearchDocuments(PAGES, { held: false }).load,
     onNavigate: fn(),
+    onReveal: fn(),
+    onSearchingChange: fn(),
   },
   decorators: [
     withMemoryRouter(PATHS, "/"),
@@ -29,6 +31,7 @@ const meta: Meta<typeof SiteSearch> = {
 export default meta;
 
 type Story = StoryObj<typeof SiteSearch>;
+type Canvas = Parameters<NonNullable<Story["play"]>>[0]["canvas"];
 
 /** The empty box: nothing listed until the reader types. */
 export const Idle: Story = {
@@ -53,6 +56,7 @@ export const Results: Story = {
     await expect(
       canvas.getByRole("option", { name: "Weekly orders" }),
     ).toHaveAttribute("data-highlighted");
+    await expect(canvas.getByRole("status")).toHaveTextContent("3 results");
   },
 };
 
@@ -61,7 +65,9 @@ export const NoResults: Story = {
   play: async ({ canvas }) => {
     await userEvent.type(canvas.getByRole("combobox"), "zebra");
 
-    await expect(await canvas.findByText("No results")).toBeVisible();
+    await waitFor(() =>
+      expect(canvas.getByRole("status")).toHaveTextContent("No results"),
+    );
   },
 };
 
@@ -90,12 +96,18 @@ export const Unavailable: Story = {
   },
 };
 
+/** Types `weekly` and waits for its last result, returning the box. */
+async function typeWeekly(canvas: Canvas): Promise<HTMLElement> {
+  const box = canvas.getByRole("combobox");
+  await userEvent.type(box, "weekly");
+  await canvas.findByRole("option", { name: "Allocation" });
+  return box;
+}
+
 /** ArrowDown moves the highlight; Enter opens that page and clears the box. */
 export const ChooseWithKeyboard: Story = {
   play: async ({ args, canvas }) => {
-    const box = canvas.getByRole("combobox");
-    await userEvent.type(box, "weekly");
-    await canvas.findByRole("option", { name: "Allocation" });
+    const box = await typeWeekly(canvas);
 
     await userEvent.keyboard("{ArrowDown}");
     await expect(
@@ -105,5 +117,37 @@ export const ChooseWithKeyboard: Story = {
 
     await waitFor(() => expect(args.onNavigate).toHaveBeenCalledOnce());
     await expect(box).toHaveValue("");
+  },
+};
+
+/** `/` from the page focuses the box, revealing it first, its text selected. */
+export const FocusWithShortcut: Story = {
+  play: async ({ args, canvas }) => {
+    const box = canvas.getByRole<HTMLInputElement>("combobox");
+    await userEvent.type(box, "weekly");
+    box.blur();
+
+    await userEvent.keyboard("/");
+
+    await expect(args.onReveal).toHaveBeenCalledOnce();
+    await expect(box).toHaveFocus();
+    await expect(
+      box.value.slice(box.selectionStart ?? 0, box.selectionEnd ?? 0),
+    ).toBe("weekly");
+  },
+};
+
+/** Escape clears the query, then a second Escape leaves the box. */
+export const EscapeClearsThenLeaves: Story = {
+  play: async ({ args, canvas }) => {
+    const box = await typeWeekly(canvas);
+
+    await userEvent.keyboard("{Escape}");
+    await expect(box).toHaveValue("");
+    await expect(box).toHaveFocus();
+    await expect(args.onSearchingChange).toHaveBeenLastCalledWith(false);
+
+    await userEvent.keyboard("{Escape}");
+    await expect(box).not.toHaveFocus();
   },
 };

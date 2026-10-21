@@ -38,7 +38,12 @@ const PATHS = [
 const meta: Meta<typeof SidebarNav> = {
   title: "Chrome/SidebarNav",
   component: SidebarNav,
-  args: { tree: TREE, siteTitle: "biac", onNavigate: fn() },
+  args: {
+    tree: TREE,
+    siteTitle: "biac",
+    onNavigate: fn(),
+    onRevealSearch: fn(),
+  },
   decorators: [
     withMemoryRouter(PATHS, "/"),
     (Story) => (
@@ -148,7 +153,10 @@ export const WithIcons: Story = {
   },
 };
 
-/** With search on: the box sits between the site title and the page links. */
+/**
+ * With search on: the box sits between the site title and the page links,
+ * and its results take the links' place until the box is cleared.
+ */
 export const WithSearch: Story = {
   args: {
     loadSearchDocuments: new FakeSearchDocuments(
@@ -172,5 +180,11 @@ export const WithSearch: Story = {
     await expect(
       await canvas.findByRole("option", { name: "Weekly review" }),
     ).toHaveAttribute("href", "/weekly-review");
+    await expect(
+      canvas.queryByRole("link", { name: "Home" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    await expect(canvas.getByRole("link", { name: "Home" })).toBeVisible();
   },
 };

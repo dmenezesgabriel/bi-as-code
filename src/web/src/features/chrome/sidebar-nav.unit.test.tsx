@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import type { NavTree } from "virtual:biac-pages";
 import { FakeSearchDocuments } from "../search/fake-search-documents";
+import type { PageSearchDocument } from "../search/types";
 import { renderWithRouter } from "./router-harness";
 import { SidebarNav } from "./sidebar-nav";
 
@@ -28,7 +29,12 @@ const paths = ["/", "/about", "/nested/page", "/guides/intro"];
 
 async function renderNav(initialPath: string, onNavigate = vi.fn()) {
   await renderWithRouter(
-    <SidebarNav tree={tree} siteTitle="ACME" onNavigate={onNavigate} />,
+    <SidebarNav
+      tree={tree}
+      siteTitle="ACME"
+      onNavigate={onNavigate}
+      onRevealSearch={vi.fn()}
+    />,
     paths,
     initialPath,
   );
@@ -146,18 +152,24 @@ describe("SidebarNav", () => {
 });
 
 describe("search box", () => {
-  it("sits under the site title, above the page links, when search is on", async () => {
-    const documents = new FakeSearchDocuments([], { held: false });
+  async function renderSearchNav(pages: readonly PageSearchDocument[] = []) {
+    const documents = new FakeSearchDocuments(pages, { held: false });
     await renderWithRouter(
       <SidebarNav
         tree={tree}
         siteTitle="ACME"
         loadSearchDocuments={documents.load}
         onNavigate={vi.fn()}
+        onRevealSearch={vi.fn()}
       />,
       paths,
       "/",
     );
+    return screen.getByRole("combobox", { name: "Search pages" });
+  }
+
+  it("sits under the site title, above the page links, when search is on", async () => {
+    await renderSearchNav();
 
     const box = screen.getByRole("combobox", { name: "Search pages" });
     const title = screen.getByRole("link", { name: "ACME" });
@@ -169,6 +181,26 @@ describe("search box", () => {
     expect(box.compareDocumentPosition(firstPage)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+
+  it("hides the page links while results show, and brings them back once cleared", async () => {
+    const box = await renderSearchNav([
+      { id: "/about", title: "About", text: "", keywords: "" },
+    ]);
+
+    await act(async () => {
+      fireEvent.focus(box);
+      fireEvent.change(box, { target: { value: "about" } });
+    });
+    expect(
+      screen.queryByRole("link", { name: "Home" }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("option", { name: "About" }),
+    ).toBeInTheDocument();
+
+    await act(async () => fireEvent.change(box, { target: { value: "" } }));
+    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
   });
 
   it("is absent when no search documents are wired", async () => {

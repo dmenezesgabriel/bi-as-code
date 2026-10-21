@@ -37,7 +37,9 @@ const NO_LANGUAGES = fixedLanguages([]);
  * `nav.sidebar: false` in `biac.config.ts` removes the chrome entirely.
  * `editable` (true only under `biac dev`) adds the header's Edit link;
  * two or more `languages` add the header's language menu;
- * `loadSearchDocuments` adds the sidebar's search box.
+ * `loadSearchDocuments` adds the sidebar's search box, whose shortcuts
+ * reveal a hidden sidebar for the moment — the drawer below `lg`, an
+ * unpersisted show at `lg` and above, so a reload keeps the stored choice.
  */
 export function AppShell({
   tree,
@@ -88,6 +90,11 @@ export function AppShell({
     );
   }
 
+  function revealSidebar() {
+    if (isMobile) setMobileOpen(true);
+    else setDesktopOpen(true);
+  }
+
   function toggleSidebar() {
     if (isMobile) {
       setMobileOpen((open) => !open);
@@ -111,8 +118,14 @@ export function AppShell({
         )}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 w-72 border-r border-border bg-sidebar transition-[transform,visibility]",
-            visible ? "visible translate-x-0" : "invisible -translate-x-full",
+            "fixed inset-y-0 left-0 z-40 w-72 border-r border-border bg-sidebar",
+            // A transition runs on the destination state's
+            // transition-property: opening skips `visibility`, so the
+            // search shortcut can focus the box at once; closing keeps it,
+            // so the sidebar stays visible while it slides out.
+            visible
+              ? "visible translate-x-0 transition-transform"
+              : "invisible -translate-x-full transition-[transform,visibility]",
           )}
         >
           <SidebarNav
@@ -120,6 +133,7 @@ export function AppShell({
             siteTitle={site.title}
             loadSearchDocuments={loadSearchDocuments}
             onNavigate={closeMobile}
+            onRevealSearch={revealSidebar}
           />
         </aside>
         <div className={cn("min-h-screen", desktopVisible && "lg:pl-72")}>
