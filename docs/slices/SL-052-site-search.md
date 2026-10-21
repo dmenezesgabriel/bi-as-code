@@ -124,7 +124,7 @@ State: **absent**. No ledger row claims any part of this; GAP-051 (`docs/researc
 ## Tasks
 
 - [x] T1 — Settle O1–O4 and O6. `index` and `keywords` front-matter are validated (a non-boolean `index` is a located error); every page not marked `index: false` contributes its title, text (O4) and keywords to `virtual:biac-search`; the sidebar box, a Base UI `Autocomplete`, imports it on first focus, lists matching page titles ranked with framework's boosts, fuzziness and prefix, ArrowUp/ArrowDown move the highlight with `aria-activedescendant`, and a click or Enter navigates. `playwright-cli`: Demo steps 1–3 on `/`, result counts and `href`s by `eval`, console clean.
-- [ ] T2 — Keyboard shortcuts and states: `/` and ⌘K / Ctrl-K focus and select (opening the drawer below `lg`), Escape clears then blurs, "N results" / "No results" in a polite live region, the page list hidden while results show. `playwright-cli`: Demo steps 4–5 at 1280 px and 390 px, `aria-*` by `eval`, `scrollWidth` 390 at 390 px.
+- [x] T2 — Keyboard shortcuts and states: `/` and ⌘K / Ctrl-K focus and select (opening the drawer below `lg`), Escape clears then blurs, "N results" / "No results" in a polite live region, the page list hidden while results show. `playwright-cli`: Demo steps 4–5 at 1280 px and 390 px, `aria-*` by `eval`, `scrollWidth` 390 at 390 px.
 - [ ] T3 — Settle O5. Freshness and language: saving a page, adding one, or changing its `index`/`keywords` updates the index in dev without a reload; each declared language has its own documents and the box searches the current one, switching with `?lang=` and the menu. `playwright-cli`: Demo steps 6–8, then the build/preview pass.
 
 ## Out of scope
