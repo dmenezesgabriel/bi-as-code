@@ -42,4 +42,41 @@ describe("withTokenProbe", () => {
     expect(read).toThrow("unreadable");
     expect(document.body.childElementCount).toBe(before);
   });
+
+  it("appends the probe to the given parent instead of the body", () => {
+    const parent = document.createElement("div");
+    document.body.append(parent);
+    const before = document.body.childElementCount;
+    const probes: Element[] = [];
+
+    withTokenProbe(
+      "light",
+      () => {
+        probes.push(...parent.querySelectorAll("div.light"));
+      },
+      parent,
+    );
+
+    expect(probes).toHaveLength(1);
+    expect(document.body.childElementCount).toBe(before);
+    parent.remove();
+  });
+
+  it("removes the probe from the given parent when the reader throws", () => {
+    const parent = document.createElement("div");
+    document.body.append(parent);
+
+    const read = () =>
+      withTokenProbe(
+        "light",
+        () => {
+          throw new Error("unreadable");
+        },
+        parent,
+      );
+
+    expect(read).toThrow("unreadable");
+    expect(parent.childElementCount).toBe(0);
+    parent.remove();
+  });
 });
