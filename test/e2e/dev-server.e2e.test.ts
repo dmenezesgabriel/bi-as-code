@@ -6,6 +6,7 @@ import { buildCli, startDevServer, type DevServer } from "../lib/dev-server.js";
 import {
   DENY_ALL,
   framingPolicy,
+  revalidatedFramingPolicy,
   withEmbedOrigins,
 } from "../lib/framing-policy.js";
 import { eventually } from "../lib/http.js";
@@ -240,6 +241,15 @@ describe("biac dev framing policy", () => {
       csp: "frame-ancestors http://localhost:8901",
       xfo: "DENY",
     });
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("keeps the policy on a 304, so a cached page is not framed under an earlier list", async () => {
+    server = await startDevServer(projectListing([]));
+
+    const policy = await revalidatedFramingPolicy(`${server.url}index`);
+
+    expect(policy).toEqual({ status: 304, ...DENY_ALL });
     expect(await server.stop()).toBe(0);
   }, 60_000);
 

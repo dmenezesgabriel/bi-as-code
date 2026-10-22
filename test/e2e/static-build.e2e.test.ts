@@ -12,6 +12,7 @@ import {
 import {
   DENY_ALL,
   framingPolicy,
+  revalidatedFramingPolicy,
   withEmbedOrigins,
 } from "../lib/framing-policy.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
@@ -359,6 +360,21 @@ describe("biac preview", () => {
     const policies = await framingPolicies(server.url);
 
     expect(policies).toEqual(FRAMED_PATHS.map(() => DENY_ALL));
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("keeps the policy on a 304, so a cached page is not framed under an earlier list", async () => {
+    server = await startBiacServer("preview", root);
+
+    const policies = await Promise.all(
+      FRAMED_PATHS.map((path) =>
+        revalidatedFramingPolicy(`${server!.url}${path}`),
+      ),
+    );
+
+    expect(policies).toEqual(
+      FRAMED_PATHS.map(() => ({ status: 304, ...DENY_ALL })),
+    );
     expect(await server.stop()).toBe(0);
   }, 60_000);
 

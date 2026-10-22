@@ -6,7 +6,6 @@ import {
   cleanupProjects,
   makeTempProject,
 } from "../../../test/lib/temp-project.js";
-import { frameAncestorsHeaders } from "../../engine/frame-ancestors.js";
 import { parsePreviewArgs, preview } from "./preview.js";
 
 const { vitePreview } = vi.hoisted(() => ({ vitePreview: vi.fn() }));
@@ -70,10 +69,7 @@ describe("preview", () => {
     const config = vitePreview.mock.calls[0]![0];
     expect(config.configFile).toMatch(/src[/\\]web[/\\]vite\.config\.ts$/);
     expect(config.build).toEqual({ outDir: join(root, "build") });
-    expect(config.preview).toEqual({
-      port: 0,
-      headers: frameAncestorsHeaders([]),
-    });
+    expect(config.preview).toEqual({ port: 0 });
     expect(server.printUrls).toHaveBeenCalledOnce();
   });
 
@@ -84,9 +80,21 @@ describe("preview", () => {
 
     await preview([builtProject()]);
 
-    expect(vitePreview.mock.calls[0]![0].preview).toEqual({
-      headers: frameAncestorsHeaders([]),
-    });
+    expect(vitePreview.mock.calls[0]![0].preview).toEqual({});
+  });
+
+  it("serves the framing policy from a middleware ahead of vite's, so a 304 carries it too", async () => {
+    vitePreview.mockResolvedValue(fakeServer());
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(process, "once").mockImplementation(() => process);
+    const use = vi.fn();
+
+    await preview([builtProject()]);
+    const [plugin] = vitePreview.mock.calls[0]![0].plugins;
+    plugin.configurePreviewServer({ middlewares: { use } });
+
+    expect(plugin.name).toBe("biac:preview-framing-policy");
+    expect(use).toHaveBeenCalledExactlyOnceWith(expect.any(Function));
   });
 
   it("refuses a project with no build, naming the path and the fix", async () => {

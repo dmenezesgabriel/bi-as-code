@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { preview as vitePreview } from "vite";
+import { preview as vitePreview, type Plugin } from "vite";
 import { loadBiacConfig } from "../../engine/biac-config.js";
-import { frameAncestorsHeaders } from "../../engine/frame-ancestors.js";
+import { frameAncestorsMiddleware } from "../../engine/frame-ancestors.js";
 import {
   closeOnExitSignals,
   parsePort,
@@ -55,12 +55,30 @@ export async function preview(args: string[]): Promise<void> {
   const server = await vitePreview({
     configFile: WEB_CONFIG,
     build: { outDir },
-    preview: {
-      ...(port === undefined ? {} : { port }),
-      headers: frameAncestorsHeaders(embed.origins),
-    },
+    plugins: [previewFramingPolicy(embed.origins)],
+    preview: port === undefined ? {} : { port },
   });
   console.log(`biac preview — serving ${outDir}`);
   server.printUrls();
   closeOnExitSignals(server);
+}
+
+/**
+ * Puts the framing policy ahead of vite's preview middlewares. vite's
+ * `preview.headers` cannot carry it: vite 8.2.2 answers a matching
+ * `If-None-Match` with a bare 304 before applying them, and a cache keeps
+ * the stored headers a 304 omits (RFC 9111 §4.3.4) — so a reader who first
+ * loaded a page under a longer `embed.origins` would stay framable by an
+ * origin since removed.
+ *
+ * @example
+ * vitePreview({ plugins: [previewFramingPolicy(["https://intranet.example.com"])] });
+ */
+function previewFramingPolicy(origins: readonly string[]): Plugin {
+  return {
+    name: "biac:preview-framing-policy",
+    configurePreviewServer(server) {
+      server.middlewares.use(frameAncestorsMiddleware(async () => origins));
+    },
+  };
 }

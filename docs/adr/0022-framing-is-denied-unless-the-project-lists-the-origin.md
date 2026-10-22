@@ -45,11 +45,12 @@ Every response from `biac dev` and `biac preview` carries (`src/engine/frame-anc
 - `Content-Security-Policy: frame-ancestors 'none'` when no origin is listed, otherwise `frame-ancestors <origin> <origin>…` with exactly the listed origins and no `'self'`;
 - `X-Frame-Options: DENY`.
 
-`biac dev` reads the list on every request through the memoized config (`frameAncestorsMiddleware`, mounted first in `src/engine/pages-plugin.ts`), so an edit applies on the reload the config edit already triggers; while the config fails to load the policy denies every framer. `biac preview` reads it once at start (`src/cli/commands/preview.ts`), and an invalid list stops it with the located error.
+`biac dev` reads the list on every request through the memoized config (`frameAncestorsMiddleware`, mounted first in `src/engine/pages-plugin.ts`), so an edit applies on the reload the config edit already triggers; while the config fails to load the policy denies every framer. `biac preview` reads it once at start and mounts the same middleware ahead of vite's (`src/cli/commands/preview.ts`), and an invalid list stops it with the located error.
 
 ## Consequences
 
 - A project that sets nothing is not frameable, its own site included.
+- A 304 carries the policy too. A cache keeps the stored headers a 304 omits (RFC 9111 §4.3.4, https://www.rfc-editor.org/rfc/rfc9111#section-4.3.4), so a 304 without them would leave a reader framable by an origin removed since the page was cached. vite 8.2.2's `preview.headers` are skipped on its 304s, which is why preview sets the headers from a middleware that runs before any conditional-request handling; any later server must do the same.
 - `frameAncestorsHeaders` is the one place the policy is built; any later server or host config (`biac serve`, a bucket or CDN) reuses it rather than restating the rule.
 - A static build copied to another host carries no policy: that host must send these headers. `biac build` cannot ([ADR-0008](0008-static-build-is-a-spa-folder.md)).
 - Wildcard subdomains are not offered; each framing site is listed by its exact origin.
