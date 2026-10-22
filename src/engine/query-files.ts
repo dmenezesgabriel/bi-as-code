@@ -29,7 +29,8 @@ interface QueryReference {
 
 // The web interpolator's token shape; a token is trimmed the same way.
 // Fence names never start with "/", so a root-path token is always a file.
-const TEMPLATE_TOKEN = /\{\{([^{}]*)\}\}/g;
+// Shared with the export build's block-closure walk (widget-exports.ts).
+export const TEMPLATE_TOKEN = /\{\{([^{}]*)\}\}/g;
 
 /**
  * Remark plugin that reads each query file a page names — a widget's

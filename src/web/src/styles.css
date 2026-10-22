@@ -118,8 +118,11 @@
    so changing it reshapes every corner. 0.5rem keeps the 4/6/8 px corners
    the page had. Source uses only the named steps (and `rounded-full` for a
    pill): Tailwind 4 compiles bare `rounded` to a literal 0.25rem that never
-   reads this variable. */
-:root {
+   reads this variable. `:host` carries the same declarations into an
+   exported widget module's shadow root, where `:root` matches nothing and
+   the host page's document supplies no tokens to inherit. */
+:root,
+:host {
   --radius: 0.5rem;
 
   /* The three font stacks a brand names: Tailwind's system stacks, so a

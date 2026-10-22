@@ -30,6 +30,9 @@ export interface RegistrationConnection {
  * Registers one `sql:` source as a DuckDB table. `source` is a
  * project-relative `data/…` path — served at `/data/…` in dev and copied to
  * `build/data/` by `biac build`, so the URL is `"/" + source` in both modes.
+ * `dataOrigin` overrides the base: an exported widget module's data lives on
+ * the publishing origin, not the host page's, so its layer passes the
+ * publishing origin here.
  *
  * csv/json/parquet read through duckdb's HTTP filesystem (ranged GETs
  * against `/data/`); arrow has no lazy reader so the file is fetched whole
@@ -44,8 +47,9 @@ export async function registerSource(
   connection: RegistrationConnection,
   name: string,
   source: string,
+  dataOrigin: string = location.origin,
 ): Promise<void> {
-  const url = new URL(`/${source}`, location.origin).href;
+  const url = new URL(`/${source}`, dataOrigin).href;
   // duckdb-wasm 1.32.0, measured in the browser: re-registering a name at
   // the same URL is a no-op that keeps reading the file's first bytes, and
   // at another URL it throws "File already registered". Dropping first

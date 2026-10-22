@@ -251,6 +251,24 @@ export interface BiacConfig {
 export type DirectoryTitles = Record<string, { title: string }>;
 
 /**
+ * A widget tag marked `export="name"` — the declaration of one exported
+ * widget module. The sweep strips the attribute, so the compiled page never
+ * passes it to the widget's props.
+ */
+export interface ExportedWidgetTag {
+  /** The module's file name under `build/widgets/`, as the attribute wrote it. */
+  name: string;
+  /** The widget tag's name — one the web's mount entry renders. */
+  widget: string;
+  /**
+   * The tag's literal string attributes, `export` stripped. `data` is
+   * always present: the sweep fails an export whose `data` names no sql
+   * block on the page.
+   */
+  props: Record<string, string> & { readonly data: string };
+}
+
+/**
  * The compiled form of one page: `code` is an ESM module whose default export
  * is the MDX component and whose `frontmatter`/`title`/`sqlBlocks`/`sqlTables`
  * named exports mirror the returned fields. `title` is the front-matter title, the
@@ -264,6 +282,8 @@ export interface CompiledPage {
   sqlBlocks: SqlBlock[];
   /** Validated `sql:` front-matter — table name → `data/` file path. */
   sqlTables: SqlTableMap;
+  /** Widget tags marked `export="name"`, the attribute stripped from the tag. */
+  exportedWidgets: ExportedWidgetTag[];
   /** Validated layout front-matter — `page_width` and `cards` when the page sets them. */
   layout: PageLayout;
   /** The page's front-matter `brand:` as a stylesheet of only the keys it sets; empty when it sets none. */

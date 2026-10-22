@@ -300,7 +300,7 @@ describe("biac preview", () => {
     copyShippedProject(root);
     writeProjectFile(root, "data/gen.csv.js", LOADER);
     buildProject(root);
-  }, 120_000);
+  }, 240_000);
 
   afterAll(() => {
     server?.kill();
@@ -344,6 +344,21 @@ describe("biac preview", () => {
     const unknown = await fetch(`${server.url}nope`);
     expect(unknown.status).toBe(200);
     expect(await unknown.text()).toBe(shell);
+
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("serves the exported widget module with a JavaScript media type and the spec baked", async () => {
+    server = await startBiacServer("preview", root);
+
+    const module = await fetch(`${server.url}widgets/revenue-by-region.js`);
+    expect(module.status).toBe(200);
+    expect(module.headers.get("content-type")).toMatch(/javascript/);
+    const source = await module.text();
+    expect(source).toContain("Revenue by region");
+    // The runtime rides inside the module (the library build inlines every
+    // asset), so serving it needs no grant beyond the file itself.
+    expect(source).toContain("data:application/wasm;base64");
 
     expect(await server.stop()).toBe(0);
   }, 60_000);

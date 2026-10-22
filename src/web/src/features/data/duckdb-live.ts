@@ -21,7 +21,7 @@ const acquireDuckDb = Effect.acquireRelease(
       }
       const db = new AsyncDuckDB(
         new VoidLogger(),
-        new Worker(bundle.mainWorker),
+        await startWorker(bundle.mainWorker),
       );
       await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
       await db.open({
@@ -68,11 +68,27 @@ async function disableExternalFileCache(db: AsyncDuckDB): Promise<void> {
  * dies when the layer's scope closes (`ManagedRuntime.dispose`). The layer
  * is thin glue — the query path lives in `run-query.ts` and source dispatch
  * in `register-source.ts`, both unit-tested without wasm.
+ *
+ * `dataOrigin` overrides where the data files live: an exported widget
+ * module passes its publishing origin, so registration resolves `/data/…`
+ * against it instead of the host page's. The SPA's `DuckDbLive` passes
+ * nothing — the page's own origin.
+ *
+ * @example
+ * const moduleLayer = duckDbLive({ dataOrigin: "https://biac.example.com" });
  */
-export const DuckDbLive: Layer.Layer<DuckDb, DataError> = Layer.effect(
-  DuckDb,
-  Effect.zipWith(acquireDuckDb, Semaphore.make(1), serviceOf),
-);
+export function duckDbLive(
+  options: { dataOrigin?: string } = {},
+): Layer.Layer<DuckDb, DataError> {
+  return Layer.effect(
+    DuckDb,
+    Effect.zipWith(acquireDuckDb, Semaphore.make(1), (db, registrations) =>
+      serviceOf(db, registrations, options.dataOrigin),
+    ),
+  );
+}
+
+export const DuckDbLive: Layer.Layer<DuckDb, DataError> = duckDbLive();
 
 /**
  * Registrations run one at a time: each drops and re-registers its file,
@@ -84,10 +100,13 @@ export const DuckDbLive: Layer.Layer<DuckDb, DataError> = Layer.effect(
 function serviceOf(
   db: AsyncDuckDB,
   registrations: Semaphore.Semaphore,
+  dataOrigin: string | undefined,
 ): DuckDbService {
   return {
     registerTable: (name, source) =>
-      registrations.withPermit(registerTableEffect(db, name, source)),
+      registrations.withPermit(
+        registerTableEffect(db, name, source, dataOrigin),
+      ),
     query: (sql, params = []) => runQuery(db, sql, params),
     queryRows: (sql, params = []) =>
       Effect.map(runQuery(db, sql, params), toRows),
@@ -98,6 +117,7 @@ function registerTableEffect(
   db: AsyncDuckDB,
   name: string,
   source: string,
+  dataOrigin: string | undefined,
 ): Effect.Effect<void, DataError> {
   const fail = (cause: unknown) =>
     new DataError({
@@ -111,8 +131,32 @@ function registerTableEffect(
       (conn) => Effect.promise(() => conn.close()),
     );
     yield* Effect.tryPromise({
-      try: () => registerSource(db, connection, name, source),
+      try: () => registerSource(db, connection, name, source, dataOrigin),
       catch: fail,
     });
   }).pipe(Effect.scoped);
+}
+
+/**
+ * A worker's URL resolves against the document's location and the script
+ * must be same-origin with the document
+ * (https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker). The
+ * SPA's worker is; an exported module's lives on the publishing origin, so
+ * its script is fetched and started from a blob URL — same-origin by
+ * construction. The fetch needs the module CORS grant (the wasm/worker
+ * assets answer the origins the module grant lists).
+ */
+async function startWorker(url: string): Promise<Worker> {
+  if (new URL(url, location.href).origin === location.origin) {
+    return new Worker(url);
+  }
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `fetch ${url} → HTTP ${response.status} — the duckdb worker script`,
+    );
+  }
+  const source = await response.text();
+  const blob = new Blob([source], { type: "text/javascript" });
+  return new Worker(URL.createObjectURL(blob));
 }

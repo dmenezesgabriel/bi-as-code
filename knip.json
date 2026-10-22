@@ -18,7 +18,11 @@
     "src/web/src/lib/index.ts",
     // Vitest `setupFiles` entry — knip does not descend into the `projects`
     // array in vitest.config.ts, so the reference is invisible to it.
-    "src/web/vitest.setup.ts"
+    "src/web/vitest.setup.ts",
+    // Imported only by the widget-module entry the build generates at build
+    // time (src/cli/commands/build.ts writes it to a temp dir for the
+    // library-mode build) — never statically imported, so knip can't see it.
+    "src/web/src/features/widget-module/module-runtime.ts"
   ],
   "ignoreDependencies": [
     "minimal",

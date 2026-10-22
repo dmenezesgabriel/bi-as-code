@@ -2,24 +2,26 @@ import { Layer } from "effect";
 import { DuckDb } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import type { Row } from "../data/types";
-import {
-  ORDERS_REGIONAL,
-  REGIONAL_ROWS,
-} from "../widgets/charts/series-chart.fixture";
+import { REGIONAL_ROWS } from "../widgets/charts/series-chart.fixture";
 import type { WidgetSpec } from "./types";
 
-/** The dashboard's `<BarChart data="region_revenue">` as the build would bake it. */
+/** The dashboard's `<BarChart data="region_revenue" export="revenue-by-region">` as the build bakes it. */
 export const REVENUE_BY_REGION: WidgetSpec = {
   widget: "BarChart",
   props: {
-    data: "orders",
+    data: "region_revenue",
     x: "region",
     y: "revenue",
     title: "Revenue by region",
     subtitle: "Sum of order amounts, US dollars",
   },
-  sqlBlocks: [ORDERS_REGIONAL],
-  sqlTables: { orders: "data/orders.csv" },
+  sqlBlocks: [
+    {
+      name: "region_revenue",
+      sql: "select region, sum(amount) as revenue\nfrom orders\nwhere {{params.region}} is null or region = {{params.region}}\ngroup by region\norder by region",
+    },
+  ],
+  sqlTables: { orders: "data/orders.parquet" },
   cards: true,
 };
 

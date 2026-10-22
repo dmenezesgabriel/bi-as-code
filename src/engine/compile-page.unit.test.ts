@@ -550,6 +550,131 @@ describe("module source", () => {
   });
 });
 
+describe("widget exports", () => {
+  it("records an export attribute into exportedWidgets and strips it from the tag", async () => {
+    const page = await compile(
+      '```sql region_revenue\nselect 1\n```\n\n<BarChart data="region_revenue" x="region" y="revenue" export="revenue-by-region" />\n',
+    );
+
+    expect(page.exportedWidgets).toEqual([
+      {
+        name: "revenue-by-region",
+        widget: "BarChart",
+        props: { data: "region_revenue", x: "region", y: "revenue" },
+      },
+    ]);
+    expect(page.code).not.toContain("revenue-by-region");
+  });
+
+  it("records no export for a widget without the attribute", async () => {
+    const page = await compile('<BarChart data="q" x="a" y="b" />\n');
+
+    expect(page.exportedWidgets).toEqual([]);
+  });
+
+  it("records two exports on one page, in tag order", async () => {
+    const page = await compile(
+      '```sql q\nselect 1\n```\n\n<BarChart data="q" x="a" y="b" export="first" />\n\n<BarChart data="q" x="b" y="a" export="second" />\n',
+    );
+
+    expect(page.exportedWidgets.map((widget) => widget.name)).toEqual([
+      "first",
+      "second",
+    ]);
+  });
+
+  it("rejects an export on a tag that is not exportable", async () => {
+    const failure = await compile('<BigValue data="q" export="big" />\n').catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining(
+        'export="big" on <BigValue> — BigValue is not an exportable widget; expected one of: BarChart',
+      ),
+      line: 1,
+      column: 20,
+    });
+  });
+
+  it("rejects an export name outside lowercase kebab-case, at the attribute", async () => {
+    const failure = await compile(
+      '<BarChart data="q" export="Revenue_By_Region" />\n',
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining(
+        'export="Revenue_By_Region" on <BarChart> — expected a lowercase kebab-case name (letters, digits, hyphens)',
+      ),
+      line: 1,
+      column: 20,
+    });
+  });
+
+  it("rejects a computed attribute on an exported widget, naming it", async () => {
+    const failure = await compile(
+      '<BarChart data="q" x="a" y="b" title={subtitle} export="chart" />\n',
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining(
+        'title on exported <BarChart export="chart"> — expected a literal string; a computed value is not known at build',
+      ),
+      line: 1,
+    });
+  });
+
+  it("rejects filters on an exported widget — the module has no filter coordinator", async () => {
+    const failure = await compile(
+      '<BarChart data="q" x="a" y="b" filters="region" export="chart" />\n',
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining(
+        'export="chart" on <BarChart> — an exported widget cannot carry filters; remove filters or drop the export',
+      ),
+      line: 1,
+    });
+  });
+
+  it("rejects select on an exported widget, same rule as filters", async () => {
+    const failure = await compile(
+      '<BarChart data="q" x="a" y="b" select="crossfilter" export="chart" />\n',
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining(
+        'export="chart" on <BarChart> — an exported widget cannot carry filters; remove select or drop the export',
+      ),
+      line: 1,
+    });
+  });
+
+  it("rejects a data naming no sql block on the page, naming the closest", async () => {
+    const failure = await compile(
+      '```sql region_revenue\nselect 1\n```\n\n<BarChart data="region_revenu" export="chart" />\n',
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining(
+        'no sql block named "region_revenu" on this page (did you mean region_revenue?)',
+      ),
+      line: 5,
+    });
+  });
+
+  it("rejects a duplicate export name, at the second tag", async () => {
+    const failure = await compile(
+      '```sql q\nselect 1\n```\n\n<BarChart data="q" x="a" y="b" export="same" />\n\n<BarChart data="q" x="b" y="a" export="same" />\n',
+    ).catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: expect.stringContaining('Duplicate export name "same"'),
+      line: 7,
+    });
+  });
+});
+
 describe("markdown constructs", () => {
   it("compiles gfm tables", async () => {
     const page = await compile("| a | b |\n| - | - |\n| 1 | 2 |\n");

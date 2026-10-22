@@ -42,7 +42,7 @@ group by region
 order by region
 ```
 
-<BarChart data="region_revenue" x="region" y="revenue" title="Revenue by region" subtitle="Sum of order amounts, US dollars" />
+<BarChart data="region_revenue" x="region" y="revenue" title="Revenue by region" subtitle="Sum of order amounts, US dollars" export="revenue-by-region" />
 
 ```sql weekly_orders
 select week, region, count(*) as orders

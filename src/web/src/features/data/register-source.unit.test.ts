@@ -69,6 +69,26 @@ describe("registerSource", () => {
     expect(files.calls).toEqual(["drop data/a.csv", "register data/a.csv"]);
   });
 
+  it("resolves the data URL against an explicit origin, not the page's", async () => {
+    const files = new FakeFileRegistry();
+    const connection = new FakeConnection();
+
+    await registerSource(
+      files,
+      connection,
+      "orders",
+      "data/orders.parquet",
+      "https://biac.example.com",
+    );
+
+    expect(files.urls).toEqual([
+      {
+        name: "data/orders.parquet",
+        url: "https://biac.example.com/data/orders.parquet",
+      },
+    ]);
+  });
+
   it("fetches an arrow file in full and inserts its IPC stream", async () => {
     const files = new FakeFileRegistry();
     const connection = new FakeConnection();

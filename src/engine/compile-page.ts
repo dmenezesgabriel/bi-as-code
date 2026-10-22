@@ -28,6 +28,7 @@ import { NO_TRANSLATIONS } from "./resolve-translations.js";
 import type {
   BrandTheme,
   CompiledPage,
+  ExportedWidgetTag,
   PageFrontmatter,
   PageTranslationUse,
   QueryFiles,
@@ -35,11 +36,13 @@ import type {
   SqlBlock,
   SqlTableMap,
 } from "./types.js";
+import { remarkWidgetExports } from "./widget-export-sweep.js";
 
 interface PageMetadata {
   /** Page path, for error messages that need to name their file. */
   filePath: string;
   sqlBlocks: SqlBlock[];
+  exportedWidgets: ExportedWidgetTag[];
   /** First non-empty h1 text seen so far; null until one is found. */
   firstHeading: string | null;
 }
@@ -87,6 +90,7 @@ export async function compilePage(
   const metadata: PageMetadata = {
     filePath,
     sqlBlocks: [],
+    exportedWidgets: [],
     firstHeading: null,
   };
   const translationUse: PageTranslationUse = { reads: false };
@@ -96,6 +100,7 @@ export async function compilePage(
       remarkGfm,
       [remarkPageMetadata, metadata],
       [remarkQueryFiles, queryFiles, metadata.sqlBlocks],
+      [remarkWidgetExports, metadata],
       remarkRejectReservedFilterIds,
       remarkRejectUnknownSearchMethod,
       [remarkCheckTranslationKeys, loadTranslations, translationUse],
@@ -114,6 +119,7 @@ export async function compilePage(
     title: resolveTitle(frontmatter, metadata.firstHeading),
     sqlBlocks: metadata.sqlBlocks,
     sqlTables,
+    exportedWidgets: metadata.exportedWidgets,
     layout: pageLayout(frontmatter, location),
     brandCss: brandCss(pageBrand(frontmatter, location, projectBrand)),
   };
