@@ -321,6 +321,9 @@ describe("biac preview", () => {
       headers: { Range: "bytes=0-3" },
     });
     expect(ranged.status).toBe(206);
+    expect(ranged.headers.get("content-type")).toBe(
+      "application/vnd.apache.parquet",
+    );
     expect(ranged.headers.get("content-range")).toBe(
       `bytes 0-3/${statSync(parquet).size}`,
     );
@@ -328,10 +331,14 @@ describe("biac preview", () => {
 
     const generated = await fetch(`${server.url}data/gen.csv`);
     expect(generated.status).toBe(200);
+    expect(generated.headers.get("content-type")).toBe("text/csv");
     expect(await generated.text()).toBe(LOADER_OUTPUT);
     // The loader source was never copied: its path falls through to the shell.
     const source = await fetch(`${server.url}data/gen.csv.js`);
     expect(await source.text()).toBe(shell);
+    // So does a missing data file, typed as the shell it is.
+    const missing = await fetch(`${server.url}data/nope.parquet`);
+    expect(missing.headers.get("content-type")).toMatch(/^text\/html/);
 
     const unknown = await fetch(`${server.url}nope`);
     expect(unknown.status).toBe(200);

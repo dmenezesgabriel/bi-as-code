@@ -49,7 +49,10 @@ function pageModule(file: string): Promise<string> {
 Then("the orders parquet serves with parquet magic bytes", async () => {
   assert.ok(server, "server must be running");
   const res = await getOkResponse(`${server.url}data/orders.parquet`);
-  assert.equal(res.headers.get("content-type"), "application/octet-stream");
+  assert.equal(
+    res.headers.get("content-type"),
+    "application/vnd.apache.parquet",
+  );
   const bytes = Buffer.from(await res.arrayBuffer());
   assert.equal(bytes.subarray(0, 4).toString(), "PAR1");
   assert.equal(bytes.subarray(-4).toString(), "PAR1");

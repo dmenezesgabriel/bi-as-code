@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { preview as vitePreview, type Plugin } from "vite";
 import { loadBiacConfig } from "../../engine/biac-config.js";
+import { dataMediaTypeMiddleware } from "../../engine/data-media-type.js";
 import { frameAncestorsMiddleware } from "../../engine/frame-ancestors.js";
 import {
   closeOnExitSignals,
@@ -33,8 +34,9 @@ export function parsePreviewArgs(args: string[]): PreviewOptions {
 /**
  * Serves `<projectRoot>/build` as a static site — no page compilation, the
  * built bundle only — with vite's SPA fallback so deep links reach the
- * client router, and every response carries the project's framing policy
- * (ADR-0022). Returns once listening; SIGINT/SIGTERM close the server.
+ * client router, every response carries the project's framing policy
+ * (ADR-0022), and data files carry their media type. Returns once
+ * listening; SIGINT/SIGTERM close the server.
  *
  * @example
  * // in main.ts: case "preview": await preview(["site", "--port", "0"]);
@@ -55,7 +57,10 @@ export async function preview(args: string[]): Promise<void> {
   const server = await vitePreview({
     configFile: WEB_CONFIG,
     build: { outDir },
-    plugins: [previewFramingPolicy(embed.origins)],
+    plugins: [
+      previewFramingPolicy(embed.origins),
+      previewDataMediaTypes(join(outDir, "data")),
+    ],
     preview: port === undefined ? {} : { port },
   });
   console.log(`biac preview — serving ${outDir}`);
@@ -79,6 +84,22 @@ function previewFramingPolicy(origins: readonly string[]): Plugin {
     name: "biac:preview-framing-policy",
     configurePreviewServer(server) {
       server.middlewares.use(frameAncestorsMiddleware(async () => origins));
+    },
+  };
+}
+
+/**
+ * Types `build/data/` files ahead of vite's preview middlewares, whose
+ * built-in table leaves parquet and arrow untyped.
+ *
+ * @example
+ * vitePreview({ plugins: [previewDataMediaTypes("/site/build/data")] });
+ */
+function previewDataMediaTypes(dataDir: string): Plugin {
+  return {
+    name: "biac:preview-data-media-types",
+    configurePreviewServer(server) {
+      server.middlewares.use("/data", dataMediaTypeMiddleware(dataDir));
     },
   };
 }

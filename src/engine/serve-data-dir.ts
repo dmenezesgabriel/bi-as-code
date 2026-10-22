@@ -1,8 +1,9 @@
 import { createReadStream } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { extname, relative, sep } from "node:path";
+import { relative, sep } from "node:path";
 import type { Connect } from "vite";
 import { decodePathname, resolveContained } from "./contained-path.js";
+import { dataMediaType } from "./data-media-type.js";
 import {
   DataLoaderFailure,
   findDataLoader,
@@ -11,11 +12,6 @@ import {
 } from "./data-loader.js";
 import { statFile } from "./stat-file.js";
 import type { DataLoaderInterpreters } from "./types.js";
-
-const CONTENT_TYPES: Record<string, string> = {
-  ".csv": "text/csv",
-  ".json": "application/json",
-};
 
 /**
  * Serves the project's `data/` directory over HTTP for DuckDB-WASM, which
@@ -166,8 +162,7 @@ function sendFile(
   const start = range?.start ?? 0;
   const end = range?.end ?? size - 1;
   res.writeHead(range === null ? 200 : 206, {
-    "Content-Type":
-      CONTENT_TYPES[extname(file).toLowerCase()] ?? "application/octet-stream",
+    "Content-Type": dataMediaType(file),
     "Content-Length": end - start + 1,
     "Accept-Ranges": "bytes",
     "Cache-Control": "no-cache",

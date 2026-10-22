@@ -64,8 +64,23 @@ describe("/data/ serving", () => {
     const res = await fetch(`${baseUrl}/data/sub/nested.parquet`);
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toBe("application/octet-stream");
+    expect(res.headers.get("content-type")).toBe(
+      "application/vnd.apache.parquet",
+    );
     expect(Buffer.from(await res.arrayBuffer())).toEqual(PARQUET_STUB);
+  });
+
+  it.each([
+    ["orders.tsv", "text/tab-separated-values"],
+    ["orders.arrow", "application/vnd.apache.arrow.file"],
+    ["orders.xlsx", "application/octet-stream"],
+  ])("serves %s as %s", async (file, expected) => {
+    await serve();
+    writeFile(`data/${file}`, PARQUET_STUB);
+
+    const res = await fetch(`${baseUrl}/data/${file}`);
+
+    expect(res.headers.get("content-type")).toBe(expected);
   });
 
   it("404s a missing file", async () => {
@@ -174,6 +189,22 @@ describe("/data/ loader output", () => {
       `bytes 0-3/${LOADER_OUTPUT.length}`,
     );
     expect(await res.text()).toBe(LOADER_OUTPUT.slice(0, 4));
+  });
+
+  it("types the output by the extension of the path it generates", async () => {
+    await serve();
+    writeFile(
+      "data/gen.parquet.js",
+      `process.stdout.write(Buffer.from(${JSON.stringify([...PARQUET_STUB])}));\n`,
+    );
+
+    const res = await fetch(`${baseUrl}/data/gen.parquet`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe(
+      "application/vnd.apache.parquet",
+    );
+    expect(Buffer.from(await res.arrayBuffer())).toEqual(PARQUET_STUB);
   });
 
   it("answers HEAD on the output with its length and no body", async () => {
