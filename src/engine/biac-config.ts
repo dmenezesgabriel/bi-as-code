@@ -38,7 +38,7 @@ const DEFAULTS: BiacConfig = {
   },
   directories: {},
   brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
-  embed: { origins: [] },
+  embed: { origins: [], dataOrigins: [] },
 };
 
 // The keys of the closed objects. An unknown one throws rather than

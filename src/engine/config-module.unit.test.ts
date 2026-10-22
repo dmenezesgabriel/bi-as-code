@@ -26,10 +26,26 @@ describe("configModuleSource", () => {
     const config = await loadBiacConfig(NO_PROJECT);
     const origins = ["https://intranet.example.com"];
 
-    const source = configModuleSource({ ...config, embed: { origins } });
+    const source = configModuleSource({
+      ...config,
+      embed: { origins, dataOrigins: [] },
+    });
 
     expect(source).toContain(
       '"embed":{"origins":["https://intranet.example.com"]}',
     );
+  });
+
+  it("keeps the data-reading origins behind, since the build would publish every consumer", async () => {
+    const config = await loadBiacConfig(NO_PROJECT);
+    const dataOrigins = ["https://notebook.example.com"];
+
+    const source = configModuleSource({
+      ...config,
+      embed: { origins: [], dataOrigins },
+    });
+
+    expect(source).not.toContain("notebook.example.com");
+    expect(source).toContain('"embed":{"origins":[]}');
   });
 });

@@ -69,7 +69,7 @@ describe("preview", () => {
     const config = vitePreview.mock.calls[0]![0];
     expect(config.configFile).toMatch(/src[/\\]web[/\\]vite\.config\.ts$/);
     expect(config.build).toEqual({ outDir: join(root, "build") });
-    expect(config.preview).toEqual({ port: 0 });
+    expect(config.preview).toEqual({ cors: false, port: 0 });
     expect(server.printUrls).toHaveBeenCalledOnce();
   });
 
@@ -80,7 +80,7 @@ describe("preview", () => {
 
     await preview([builtProject()]);
 
-    expect(vitePreview.mock.calls[0]![0].preview).toEqual({});
+    expect(vitePreview.mock.calls[0]![0].preview).toEqual({ cors: false });
   });
 
   it("serves the framing policy from a middleware ahead of vite's, so a 304 carries it too", async () => {
@@ -95,6 +95,20 @@ describe("preview", () => {
 
     expect(plugin.name).toBe("biac:preview-framing-policy");
     expect(use).toHaveBeenCalledExactlyOnceWith(expect.any(Function));
+  });
+
+  it("answers the listed data origins on /data from a middleware ahead of vite's", async () => {
+    vitePreview.mockResolvedValue(fakeServer());
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(process, "once").mockImplementation(() => process);
+    const use = vi.fn();
+
+    await preview([builtProject()]);
+    const plugin = vitePreview.mock.calls[0]![0].plugins[1];
+    plugin.configurePreviewServer({ middlewares: { use } });
+
+    expect(plugin.name).toBe("biac:preview-data-cors");
+    expect(use).toHaveBeenCalledExactlyOnceWith("/data", expect.any(Function));
   });
 
   it("refuses a project with no build, naming the path and the fix", async () => {

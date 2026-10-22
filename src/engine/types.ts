@@ -212,10 +212,12 @@ export interface BiacNavConfig {
   sidebar: boolean;
 }
 
-/** `biac.config.ts`'s optional `embed` block: who may frame the site's pages. */
+/** `biac.config.ts`'s optional `embed` block: who may frame the site's pages, and who may read its data files. */
 export interface EmbedConfig {
   /** Origins (`scheme://host[:port]`) allowed to show the pages in an iframe; empty denies every framer. */
   origins: readonly string[];
+  /** Origins allowed to read `/data/` files cross-origin (CORS); empty refuses every other origin. */
+  dataOrigins: readonly string[];
 }
 
 /**

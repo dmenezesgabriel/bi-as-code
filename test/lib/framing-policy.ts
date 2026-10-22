@@ -52,8 +52,9 @@ export async function revalidatedFramingPolicy(
 }
 
 /**
- * `configSource` — a `biac.config.ts` ending in `};` — with `embed.origins`
- * added as its last key.
+ * `configSource` — a `biac.config.ts` ending in `};` — with an `embed`
+ * origin list (`origins` to frame, `dataOrigins` to read `/data/`) added as
+ * its last key.
  *
  * @example
  * withEmbedOrigins("export default {\n  title: \"biac\",\n};\n", ["http://localhost:8901"]);
@@ -62,11 +63,12 @@ export async function revalidatedFramingPolicy(
 export function withEmbedOrigins(
   configSource: string,
   origins: readonly string[],
+  key: "origins" | "dataOrigins" = "origins",
 ): string {
   if (!/\n};\s*$/.test(configSource))
     throw new Error(
       `withEmbedOrigins needs a config ending in "\\n};", got ${JSON.stringify(configSource)}`,
     );
-  const embed = `  embed: { origins: ${JSON.stringify(origins)} },`;
+  const embed = `  embed: { ${key}: ${JSON.stringify(origins)} },`;
   return configSource.replace(/\n};\s*$/, `\n${embed}\n};\n`);
 }

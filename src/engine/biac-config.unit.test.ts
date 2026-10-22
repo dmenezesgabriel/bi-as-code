@@ -42,7 +42,7 @@ describe("missing or empty config", () => {
       },
       directories: {},
       brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
-      embed: { origins: [] },
+      embed: { origins: [], dataOrigins: [] },
     });
   });
 
@@ -64,7 +64,7 @@ describe("missing or empty config", () => {
       },
       directories: {},
       brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
-      embed: { origins: [] },
+      embed: { origins: [], dataOrigins: [] },
     });
   });
 });
@@ -115,7 +115,7 @@ describe("field handling", () => {
       },
       directories: {},
       brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
-      embed: { origins: [] },
+      embed: { origins: [], dataOrigins: [] },
     });
   });
 

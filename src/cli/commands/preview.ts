@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { preview as vitePreview, type Plugin } from "vite";
 import { loadBiacConfig } from "../../engine/biac-config.js";
+import { dataCorsMiddleware } from "../../engine/data-cors.js";
 import { dataMediaTypeMiddleware } from "../../engine/data-media-type.js";
 import { frameAncestorsMiddleware } from "../../engine/frame-ancestors.js";
 import {
@@ -35,8 +36,9 @@ export function parsePreviewArgs(args: string[]): PreviewOptions {
  * Serves `<projectRoot>/build` as a static site — no page compilation, the
  * built bundle only — with vite's SPA fallback so deep links reach the
  * client router, every response carries the project's framing policy
- * (ADR-0022), and data files carry their media type. Returns once
- * listening; SIGINT/SIGTERM close the server.
+ * (ADR-0022), and data files carry their media type and answer only the
+ * origins `embed.dataOrigins` lists (ADR-0025). Returns once listening;
+ * SIGINT/SIGTERM close the server.
  *
  * @example
  * // in main.ts: case "preview": await preview(["site", "--port", "0"]);
@@ -59,9 +61,12 @@ export async function preview(args: string[]): Promise<void> {
     build: { outDir },
     plugins: [
       previewFramingPolicy(embed.origins),
+      previewDataCors(embed.dataOrigins),
       previewDataMediaTypes(join(outDir, "data")),
     ],
-    preview: port === undefined ? {} : { port },
+    // vite's default CORS rule lets every loopback origin read every
+    // response; the listed origins on `/data/` are the only rule (ADR-0025).
+    preview: { cors: false, ...(port === undefined ? {} : { port }) },
   });
   console.log(`biac preview — serving ${outDir}`);
   server.printUrls();
@@ -84,6 +89,26 @@ function previewFramingPolicy(origins: readonly string[]): Plugin {
     name: "biac:preview-framing-policy",
     configurePreviewServer(server) {
       server.middlewares.use(frameAncestorsMiddleware(async () => origins));
+    },
+  };
+}
+
+/**
+ * Answers the listed origins on `build/data/` ahead of vite's preview
+ * middlewares, so a 304 carries the headers too — the reason
+ * `previewFramingPolicy` is a middleware.
+ *
+ * @example
+ * vitePreview({ plugins: [previewDataCors(["https://notebook.example.com"])] });
+ */
+function previewDataCors(origins: readonly string[]): Plugin {
+  return {
+    name: "biac:preview-data-cors",
+    configurePreviewServer(server) {
+      server.middlewares.use(
+        "/data",
+        dataCorsMiddleware(async () => origins),
+      );
     },
   };
 }

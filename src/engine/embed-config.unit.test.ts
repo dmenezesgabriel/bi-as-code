@@ -5,13 +5,13 @@ describe("readEmbed — accepted shapes", () => {
   it("lists no origins when embed is absent", () => {
     const embed = readEmbed({});
 
-    expect(embed).toEqual({ origins: [] });
+    expect(embed).toEqual({ origins: [], dataOrigins: [] });
   });
 
   it("lists no origins for an embed block without origins", () => {
     const embed = readEmbed({ embed: {} });
 
-    expect(embed).toEqual({ origins: [] });
+    expect(embed).toEqual({ origins: [], dataOrigins: [] });
   });
 
   it("keeps http and https origins, with and without a port", () => {
@@ -23,7 +23,15 @@ describe("readEmbed — accepted shapes", () => {
 
     const embed = readEmbed({ embed: { origins } });
 
-    expect(embed).toEqual({ origins });
+    expect(embed).toEqual({ origins, dataOrigins: [] });
+  });
+
+  it("keeps the data origins apart from the framing origins", () => {
+    const dataOrigins = ["https://notebook.example.com"];
+
+    const embed = readEmbed({ embed: { dataOrigins } });
+
+    expect(embed).toEqual({ origins: [], dataOrigins });
   });
 });
 
@@ -54,6 +62,20 @@ describe("readEmbed — refused shapes", () => {
     );
   });
 
+  it("refuses a data origin with the same rule, naming its key", () => {
+    const spec = { embed: { dataOrigins: ["https://example.com/"] } };
+
+    expect(() => readEmbed(spec)).toThrow(
+      `embed.dataOrigins[0]: ${ORIGIN_SHAPE}, got "https://example.com/"`,
+    );
+  });
+
+  it("refuses data origins that are not an array", () => {
+    expect(() => readEmbed({ embed: { dataOrigins: "*" } })).toThrow(
+      'embed.dataOrigins: expected an array of origins, got "*"',
+    );
+  });
+
   it("refuses origins that are not an array", () => {
     expect(() =>
       readEmbed({ embed: { origins: "https://example.com" } }),
@@ -64,13 +86,13 @@ describe("readEmbed — refused shapes", () => {
 
   it("refuses an embed that is not an object", () => {
     expect(() => readEmbed({ embed: true })).toThrow(
-      "embed: expected an object with an optional origins array, got true",
+      "embed: expected an object with optional origins and dataOrigins arrays, got true",
     );
   });
 
   it("refuses an unknown key under embed, suggesting the close one", () => {
     expect(() => readEmbed({ embed: { origin: [] } })).toThrow(
-      "embed.origin: unknown key, expected one of origins (did you mean origins?)",
+      "embed.origin: unknown key, expected one of origins, dataOrigins (did you mean origins?)",
     );
   });
 

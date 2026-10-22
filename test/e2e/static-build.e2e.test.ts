@@ -9,6 +9,7 @@ import {
   startBiacServer,
   type DevServer,
 } from "../lib/dev-server.js";
+import { corsPolicy, type CorsRequestInit } from "../lib/cors-policy.js";
 import {
   DENY_ALL,
   framingPolicy,
@@ -399,6 +400,74 @@ describe("biac preview", () => {
     );
     expect(await server.stop()).toBe(0);
   }, 60_000);
+
+  describe("cross-origin reads of /data/", () => {
+    const LISTED = "http://127.0.0.1:8901";
+    const READS: [string, CorsRequestInit][] = [
+      ["data/channels.csv", {}],
+      ["data/flights.parquet", { headers: { Range: "bytes=0-3" } }],
+      ["data/flights.parquet", { method: "HEAD" }],
+      ["data/gen.csv", {}],
+    ];
+
+    beforeAll(() => {
+      const config = readFileSync(join(root, "biac.config.ts"), "utf8");
+      writeProjectFile(
+        root,
+        "biac.config.ts",
+        withEmbedOrigins(config, [LISTED], "dataOrigins"),
+      );
+    });
+
+    it("echoes the listed origin on a file, a range, a HEAD and a loader output", async () => {
+      server = await startBiacServer("preview", root);
+
+      const policies = await Promise.all(
+        READS.map(([path, init]) =>
+          corsPolicy(`${server!.url}${path}`, LISTED, init),
+        ),
+      );
+
+      expect(policies.map(({ status }) => status)).toEqual([
+        200, 206, 200, 200,
+      ]);
+      for (const policy of policies)
+        expect(policy).toMatchObject({
+          allowOrigin: LISTED,
+          exposeHeaders: "Content-Range, Accept-Ranges",
+          vary: "Origin",
+        });
+      expect(await server.stop()).toBe(0);
+    }, 60_000);
+
+    it("refuses an unlisted origin on a file, and every origin on a page", async () => {
+      server = await startBiacServer("preview", root);
+
+      const unlisted = await corsPolicy(
+        `${server.url}data/channels.csv`,
+        "http://127.0.0.1:8902",
+      );
+      const page = await corsPolicy(`${server.url}weekly-review`, LISTED);
+
+      expect(unlisted.allowOrigin).toBeNull();
+      expect(page.allowOrigin).toBeNull();
+      expect(await server.stop()).toBe(0);
+    }, 60_000);
+
+    it("keeps the allowed origin on a 304", async () => {
+      server = await startBiacServer("preview", root);
+      const url = `${server.url}data/channels.csv`;
+      const first = await fetch(url, { headers: { Origin: LISTED } });
+      await first.arrayBuffer();
+
+      const revalidated = await corsPolicy(url, LISTED, {
+        headers: { "If-None-Match": first.headers.get("etag") ?? "" },
+      });
+
+      expect(revalidated).toMatchObject({ status: 304, allowOrigin: LISTED });
+      expect(await server.stop()).toBe(0);
+    }, 60_000);
+  });
 
   it("exits 1 naming an origin with a path at its line and column", () => {
     listOrigins(["https://example.com/path"]);

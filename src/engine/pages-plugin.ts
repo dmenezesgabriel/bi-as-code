@@ -14,6 +14,7 @@ import { compilePage } from "./compile-page.js";
 import { configModuleSource, VIRTUAL_CONFIG_ID } from "./config-module.js";
 import { diskQueryFiles } from "./disk-query-files.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
+import { dataCorsMiddleware } from "./data-cors.js";
 import { frameAncestorsMiddleware } from "./frame-ancestors.js";
 import {
   copyDataDir,
@@ -200,6 +201,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
           // the web root so pages and the SPA share one runtime copy.
           dedupe: ["react", "react-dom"],
         },
+        // vite's default CORS rule lets every loopback origin read every
+        // response, pages and modules included; `/data/` answers only the
+        // origins `embed.dataOrigins` lists instead (ADR-0025).
+        server: { cors: false },
       };
     },
     configResolved(config) {
@@ -303,6 +308,10 @@ export function pagesPlugin(projectRoot: string): Plugin {
       // the framing policy (ADR-0022), read fresh after a config edit.
       server.middlewares.use(
         frameAncestorsMiddleware(async () => (await getConfig()).embed.origins),
+      );
+      server.middlewares.use(
+        "/data",
+        dataCorsMiddleware(async () => (await getConfig()).embed.dataOrigins),
       );
       // sql: sources resolve to /data/<path> — served from the real
       // directory so dev and the copied build/data/ stay identical.
