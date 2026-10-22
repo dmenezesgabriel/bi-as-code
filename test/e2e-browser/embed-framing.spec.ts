@@ -1,11 +1,8 @@
 import type { Frame, Page } from "@playwright/test";
-import { readFileSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
-import { withEmbedOrigins } from "../lib/framing-policy.js";
-import { rewriteUntilServerLogs } from "../lib/write-until-logged.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { listOrigins } from "./embed-origins.js";
 
 const EMBED_PAGE = "embed-weekly-revenue";
 // Chromium replaces a frame the browser refused with its error document.
@@ -40,23 +37,6 @@ async function openFrame(page: Page, hostOrigin: string): Promise<Frame> {
   await page.goto(`${hostOrigin}/host.html`);
   const element = await page.locator("#f").elementHandle();
   return (await element!.contentFrame())!;
-}
-
-/** Rewrites the project's own config with `embed.origins` set to `origins`, until the server reports the edit. */
-async function listOrigins(
-  projectDir: string,
-  log: () => readonly string[],
-  origins: readonly string[],
-): Promise<void> {
-  const configFile = join(projectDir, "biac.config.ts");
-  const config = readFileSync(configFile, "utf8");
-  await rewriteUntilServerLogs({
-    rewrite: () => writeFileSync(configFile, withEmbedOrigins(config, origins)),
-    log,
-    loggedPath: "biac.config.ts",
-    attemptMs: 3_000,
-    timeoutMs: 20_000,
-  });
 }
 
 /** The height the host page gave its frame. */
