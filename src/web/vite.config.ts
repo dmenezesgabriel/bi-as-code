@@ -55,11 +55,12 @@ export default defineConfig({
 });
 
 /**
- * `virtual:biac-pages`, `virtual:biac-config` and `virtual:biac-search` are served by the engine's
+ * `virtual:biac-pages`, `virtual:biac-config`, `virtual:biac-search` and
+ * `virtual:biac-languages` are served by the engine's
  * `biac:pages` plugin, which `biac dev` registers inline with the project
  * dir. Bare vite invocations (`pnpm dev`, `vite build`, storybook) register
  * no pages plugin — this fallback resolves them to defaults (empty
- * manifest, stock config, no search documents) so the SPA still bundles and serves, with every
+ * manifest, stock config, no search documents, no languages) so the SPA still bundles and serves, with every
  * URL landing on the not-found page.
  */
 function emptyProjectFallback(): Plugin {
@@ -74,6 +75,7 @@ function emptyProjectFallback(): Plugin {
       if (id === "virtual:biac-pages") return "\0biac:empty-pages";
       if (id === "virtual:biac-config") return "\0biac:empty-config";
       if (id === "virtual:biac-search") return "\0biac:empty-search";
+      if (id === "virtual:biac-languages") return "\0biac:empty-languages";
     },
     load(id) {
       if (!armed) return;
@@ -81,9 +83,14 @@ function emptyProjectFallback(): Plugin {
         return 'export const pages = [];\nexport const navTree = {"rootPages":[],"directories":[]};\nexport function subscribePageUpdates() {\n  return () => {};\n}\n';
       }
       if (id === "\0biac:empty-config") {
-        return 'export const config = {"title":"biac","theme":"system","nav":{"sidebar":true},"sqlTables":{}};\n';
+        return 'export const config = {"title":"biac","theme":"system","nav":{"sidebar":true},"sqlTables":{},"layout":{"page_width":"article","cards":false,"table_of_contents":true,"table_of_contents_label":"On this page"},"embed":{"origins":[]}};\n';
       }
       if (id === "\0biac:empty-search") return "export const documents = [];\n";
+      // One array for every call: the language menu reads it as an
+      // external store, which re-renders forever on a fresh `[]` each time.
+      if (id === "\0biac:empty-languages") {
+        return "const languages = [];\nexport function getLanguages() {\n  return languages;\n}\nexport function subscribeLanguages() {\n  return () => {};\n}\n";
+      }
     },
   };
 }
