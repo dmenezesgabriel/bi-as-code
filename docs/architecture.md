@@ -17,7 +17,7 @@ This document and everything under `docs/adr/` are **durable**: they describe de
 
 biac is a **business-intelligence-as-code** tool: a report is a directory of markdown pages. Each page mixes prose, fenced ` ```sql name ` query blocks, and JSX widgets (`<BigValue data="orders"/>`, `<BarChart>`, `<Dropdown>`). Widgets render live query results and cross-filter each other — brushing a chart or picking values in a filter input re-queries every linked widget.
 
-A user runs `biac dev` in a project directory: a dev server watches `pages/**/*.md`, hot-updates content edits in place ([ADR-0009](adr/0009-page-edits-hot-update-without-a-reload.md)), serves an in-browser page editor on `?edit` that only the dev server carries ([ADR-0010](adr/0010-page-authoring-is-dev-server-only.md)), and serves the app. `biac build` emits a fully static site; `biac preview` serves it ([ADR-0008](adr/0008-static-build-is-a-spa-folder.md)). There is no runtime backend — SQL executes in the browser via DuckDB-WASM ([ADR-0005](adr/0005-queries-run-client-side-in-duckdb-wasm.md)).
+A user runs `biac dev` in a project directory: a dev server watches `pages/**/*.md`, hot-updates content edits in place ([ADR-0009](adr/0009-page-edits-hot-update-without-a-reload.md)), serves an in-browser page editor on `?edit` that only the dev server carries ([ADR-0010](adr/0010-page-authoring-is-dev-server-only.md)), and serves the app. `biac build` emits a fully static site; `biac preview` serves it ([ADR-0008](adr/0008-static-build-is-a-spa-folder.md), [ADR-0029](adr/0029-the-build-copies-its-shell-per-route-and-honors-an-absolute-base.md)). There is no runtime backend — SQL executes in the browser via DuckDB-WASM ([ADR-0005](adr/0005-queries-run-client-side-in-duckdb-wasm.md)).
 
 ### Quality goals
 
@@ -58,7 +58,7 @@ Three categories only: development tooling, the frameworks the application runs 
 
 ````
 author → pages/*.md ──> biac dev ──> vite (dev) ──> browser SPA
-                        biac build ──> <project>/build/ (static SPA + data/)
+                        biac build ──> <project>/build/ (SPA shell copied per route + 404.html + data/ + widgets/)
                         biac preview ──> static server
 
 browser SPA: page module (compiled MDX) ──> widget registry

@@ -47,8 +47,8 @@ export async function build(args: string[]): Promise<void> {
   // vite's build error names the page. The export sweep runs after, on
   // pages that already compiled clean, so its own errors (a name declared
   // by two pages) are the only ones it can raise.
-  // `base` is deploy config the pages plugin never reads: vite prepends it
-  // to every asset URL in index.html and bakes it as
+  // `base` is deploy config the pages plugin never reads (ADR-0029): vite
+  // prepends it to every asset URL in index.html and bakes it as
   // import.meta.env.BASE_URL. `biac dev` stays at "/" — the prefix only
   // exists on a static host.
   const { base } = await loadBiacConfig(projectRoot);

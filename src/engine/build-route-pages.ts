@@ -42,12 +42,12 @@ export function assertRoutesBuildable(projectRoot: string): void {
 
 /**
  * Copies the emitted shell to `<route>/index.html` for every discovered
- * route and to `404.html`, byte-identical. A static host with no rewrite
- * rule then answers every deep link with the shell — an index document at
- * every folder level is what S3 website endpoints, GitHub Pages and Garage
- * serve — and the client renders the route as today. The shell's asset
- * refs are root-absolute, so a copy one level deep resolves them from the
- * origin root; no per-copy rewriting.
+ * route and to `404.html`, byte-identical (ADR-0029). A static host with
+ * no rewrite rule then answers every deep link with the shell — an index
+ * document at every folder level is what S3 website endpoints, GitHub
+ * Pages and Garage serve — and the client renders the route as today. The
+ * shell's asset refs are root-absolute, so a copy one level deep resolves
+ * them from the origin root; no per-copy rewriting.
  *
  * @example
  * // in pagesPlugin's writeBundle, after the data/ copies

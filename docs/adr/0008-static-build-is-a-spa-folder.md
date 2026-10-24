@@ -1,6 +1,6 @@
 # ADR-0008 — The static build is one SPA folder with an unhashed copy of `data/`, previewed by vite
 
-Status: accepted
+Status: accepted — deep-link and sub-path consequences amended by [ADR-0029](0029-the-build-copies-its-shell-per-route-and-honors-an-absolute-base.md)
 Date: 2026-10-10
 
 ## Context
