@@ -28,8 +28,8 @@ import {
 import {
   chartPoint,
   chartHosts,
+  expectScatterRegions,
   openWeeklyReviewCharts,
-  optionAt,
   readyCharts,
 } from "./echart-hosts.js";
 import { chooseLanguage, documentLanguage } from "./language-menu.js";
@@ -64,13 +64,6 @@ test.afterAll(async () => {
 test.beforeEach(async ({ page }) => {
   await installCrossfilterProbe(page);
 });
-
-/** Scatter series names once the cross-filter re-query repainted it. */
-async function expectScatterRegions(page: Page, regions: string[]) {
-  await expect
-    .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
-    .toEqual(regions);
-}
 
 /**
  * Clicks the West bar and returns ms from the click to the scatter's first

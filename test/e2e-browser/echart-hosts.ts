@@ -253,6 +253,16 @@ export async function openWeeklyReviewCharts(
   await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
 }
 
+/** Scatter series names once the cross-filter re-query repainted it. */
+export async function expectScatterRegions(
+  page: Page,
+  regions: string[],
+): Promise<void> {
+  await expect
+    .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
+    .toEqual(regions);
+}
+
 /** The colours a chart's live model resolved from its theme and option. */
 export interface ChartPaint {
   axisLabel: string;

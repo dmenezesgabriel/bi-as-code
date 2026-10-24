@@ -2,27 +2,15 @@ import { rmSync } from "node:fs";
 import { builtShippedProject } from "../lib/built-preview.js";
 import { startBiacServer } from "../lib/dev-server.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
-import { originOf, serveHostPage } from "./host-page.js";
-
-// The module's default export mounts the widget; a refused cross-origin
-// import rejects with TypeError — either way the page reports one word.
-const HOST_PAGE = `<h1>Host page</h1><div id="widget"></div><pre id="status"></pre><script type="module">
-const base = new URLSearchParams(location.search).get("biac");
-try {
-  const mod = await import(base + "widgets/revenue-by-region.js");
-  mod.default(document.getElementById("widget"));
-  document.getElementById("status").textContent = "mounted";
-} catch (error) {
-  document.getElementById("status").textContent = error.name;
-}</script>`;
+import { originOf, serveHostPage, WIDGET_HOST_PAGE } from "./host-page.js";
 
 const CORS_REFUSAL = "has been blocked by CORS policy";
 
 test("a listed host imports and mounts the exported widget module; an unlisted host's import is refused", async ({
   page,
 }) => {
-  const listed = await serveHostPage(HOST_PAGE);
-  const unlisted = await serveHostPage(HOST_PAGE);
+  const listed = await serveHostPage(WIDGET_HOST_PAGE);
+  const unlisted = await serveHostPage(WIDGET_HOST_PAGE);
   const projectDir = builtShippedProject("biac-widget-module-", [
     originOf(listed),
   ]);
