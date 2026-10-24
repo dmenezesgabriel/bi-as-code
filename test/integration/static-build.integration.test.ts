@@ -128,6 +128,18 @@ describe("biac build", () => {
     );
   }, 120_000);
 
+  it("emits asset URLs under the configured base and copies data/ unchanged", async () => {
+    const root = projectWithBase('"/bi-as-code"');
+
+    await build([root]);
+
+    const outDir = join(root, "build");
+    const html = readFileSync(join(outDir, "index.html"), "utf8");
+    expect(html).toMatch(/src="\/bi-as-code\/assets\/[^"]+\.js"/);
+    expect(html).toContain('href="/bi-as-code/favicon.svg"');
+    expect(readFileSync(join(outDir, "data", "orders.csv"), "utf8")).toBe(CSV);
+  }, 120_000);
+
   it("fails on a page that does not compile, naming the page", async () => {
     const root = makeTempProject();
     writeProjectFile(root, "pages/index.md", "# Hi\n\n<Callout\n");
@@ -195,6 +207,19 @@ describe("biac build", () => {
     expect(existsSync(join(root, "build", "data"))).toBe(false);
   }, 120_000);
 });
+
+function projectWithBase(base: string): string {
+  const root = makeTempProject();
+  writeProjectFile(root, "pages/index.md", "# Prefixed\n");
+  writeProjectFile(root, "data/orders.csv", CSV);
+  writeProjectFile(
+    root,
+    "biac.config.ts",
+    `export default { base: ${base} };\n`,
+  );
+  vi.spyOn(console, "log").mockImplementation(() => undefined);
+  return root;
+}
 
 function projectWithLoader(): string {
   const root = makeTempProject();

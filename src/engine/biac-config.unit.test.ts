@@ -24,25 +24,32 @@ function writeConfig(root: string, source: string): void {
   writeProjectFile(root, "biac.config.ts", source);
 }
 
+// The loaded defaults with `title` left to each assertion — the three
+// full-shape assertions below spread this and name their own title.
+const DEFAULTS_WITHOUT_TITLE = {
+  theme: "system",
+  nav: { sidebar: true },
+  sqlTables: {},
+  interpreters: DEFAULT_INTERPRETERS,
+  layout: {
+    page_width: "article",
+    cards: false,
+    table_of_contents: true,
+    table_of_contents_label: "On this page",
+  },
+  directories: {},
+  brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
+  embed: { origins: [], dataOrigins: [] },
+  base: "/",
+} as const;
+
 describe("missing or empty config", () => {
   it("returns defaults when biac.config.ts does not exist", async () => {
     const root = makeProject();
 
     await expect(loadBiacConfig(root)).resolves.toEqual({
       title: "biac",
-      theme: "system",
-      nav: { sidebar: true },
-      sqlTables: {},
-      interpreters: DEFAULT_INTERPRETERS,
-      layout: {
-        page_width: "article",
-        cards: false,
-        table_of_contents: true,
-        table_of_contents_label: "On this page",
-      },
-      directories: {},
-      brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
-      embed: { origins: [], dataOrigins: [] },
+      ...DEFAULTS_WITHOUT_TITLE,
     });
   });
 
@@ -52,19 +59,7 @@ describe("missing or empty config", () => {
 
     await expect(loadBiacConfig(root)).resolves.toEqual({
       title: "biac",
-      theme: "system",
-      nav: { sidebar: true },
-      sqlTables: {},
-      interpreters: DEFAULT_INTERPRETERS,
-      layout: {
-        page_width: "article",
-        cards: false,
-        table_of_contents: true,
-        table_of_contents_label: "On this page",
-      },
-      directories: {},
-      brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
-      embed: { origins: [], dataOrigins: [] },
+      ...DEFAULTS_WITHOUT_TITLE,
     });
   });
 });
@@ -103,19 +98,7 @@ describe("field handling", () => {
 
     await expect(loadBiacConfig(root)).resolves.toEqual({
       title: "ACME",
-      theme: "system",
-      nav: { sidebar: true },
-      sqlTables: {},
-      interpreters: DEFAULT_INTERPRETERS,
-      layout: {
-        page_width: "article",
-        cards: false,
-        table_of_contents: true,
-        table_of_contents_label: "On this page",
-      },
-      directories: {},
-      brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
-      embed: { origins: [], dataOrigins: [] },
+      ...DEFAULTS_WITHOUT_TITLE,
     });
   });
 
@@ -323,6 +306,43 @@ describe("embed", () => {
 
     await expect(loadBiacConfig(root)).rejects.toThrow(
       'Invalid biac.config.ts:2:22 — embed.origins[0]: expected an origin "scheme://host[:port]" (http or https, no path, no wildcard), got "https://example.com/path"',
+    );
+  });
+});
+
+describe("base", () => {
+  it.each([
+    ['"/bi-as-code/"', "/bi-as-code/"],
+    ['"/bi-as-code"', "/bi-as-code/"],
+    ['"/"', "/"],
+    ['"/a/b"', "/a/b/"],
+  ])("reads %s as %s", async (source, expected) => {
+    const root = makeProject();
+    writeConfig(root, `export default { base: ${source} };\n`);
+
+    await expect(loadBiacConfig(root)).resolves.toMatchObject({
+      base: expected,
+    });
+  });
+
+  it.each(['"bi-as-code/"', '"./"', '""', "42", "true"])(
+    "throws naming the value and expected shape for a base of %s",
+    async (source) => {
+      const root = makeProject();
+      writeConfig(root, `export default { base: ${source} };\n`);
+
+      await expect(loadBiacConfig(root)).rejects.toThrow(
+        `base: expected a path starting with "/", got ${source}`,
+      );
+    },
+  );
+
+  it("locates a bad base at its line and column", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default {\n  base: "bi-as-code",\n};\n');
+
+    await expect(loadBiacConfig(root)).rejects.toThrow(
+      'Invalid biac.config.ts:2:3 — base: expected a path starting with "/", got "bi-as-code"',
     );
   });
 });
@@ -576,7 +596,7 @@ describe("error position", () => {
 
 describe("unknown keys", () => {
   const ACCEPTED =
-    "expected one of title, theme, nav, sql, interpreters, layout, directories, brand, embed";
+    "expected one of title, theme, nav, sql, interpreters, layout, directories, brand, embed, base";
 
   it.each([
     ["no close key", "pagewidth", `pagewidth: unknown key, ${ACCEPTED}`],

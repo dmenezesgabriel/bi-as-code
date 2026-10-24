@@ -39,6 +39,7 @@ const DEFAULTS: BiacConfig = {
   directories: {},
   brand: { colors: {}, palette: {}, scale: {}, fonts: {} },
   embed: { origins: [], dataOrigins: [] },
+  base: "/",
 };
 
 // The keys of the closed objects. An unknown one throws rather than
@@ -57,6 +58,7 @@ const CONFIG_KEYS = [
   "directories",
   "brand",
   "embed",
+  "base",
 ] as const;
 const NAV_KEYS = ["sidebar"] as const;
 const LAYOUT_KEYS = [
@@ -145,6 +147,7 @@ function toBiacConfig(raw: unknown): BiacConfig {
     directories: readDirectories(raw),
     brand: readBrand(raw),
     embed: readEmbed(raw),
+    base: readBase(raw),
   };
 }
 
@@ -164,6 +167,17 @@ function readTheme(spec: Record<string, unknown>): BiacConfig["theme"] {
   )
     return spec.theme;
   throw invalid("theme", ["theme"], '"light" | "dark" | "system"', spec.theme);
+}
+
+// The emitted shell is copied to <route>/index.html for every route, so
+// the deploy prefix must be absolute: a relative base resolves against
+// whatever path the copy sits under. `biac build` hands it to vite, which
+// emits asset URLs beneath it and bakes it as import.meta.env.BASE_URL.
+function readBase(spec: Record<string, unknown>): string {
+  if (spec.base === undefined) return DEFAULTS.base;
+  if (typeof spec.base !== "string" || !spec.base.startsWith("/"))
+    throw invalid("base", ["base"], 'a path starting with "/"', spec.base);
+  return spec.base.endsWith("/") ? spec.base : `${spec.base}/`;
 }
 
 function readSidebar(spec: Record<string, unknown>): boolean {

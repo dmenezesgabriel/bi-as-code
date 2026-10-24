@@ -18,9 +18,11 @@ export function configModuleSource(config: BiacConfig): string {
   // publishes them, and a framed page needs them to address its parent.
   // `embed.dataOrigins` stays behind: no browser code reads it, and each
   // origin is told only its own match (ADR-0025), not the whole list.
+  // `base` stays behind: vite bakes it as `import.meta.env.BASE_URL` at
+  // build, which is the value the SPA reads.
   const browserConfig: Omit<
     BiacConfig,
-    "interpreters" | "directories" | "brand" | "embed"
+    "interpreters" | "directories" | "brand" | "embed" | "base"
   > & { embed: Pick<BiacConfig["embed"], "origins"> } = {
     title: config.title,
     theme: config.theme,

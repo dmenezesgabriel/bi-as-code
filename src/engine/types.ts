@@ -241,6 +241,8 @@ export interface BiacConfig {
   brand: BrandTheme;
   /** Framing allowlist: the dev and preview servers send it as response headers, and a framed page posts its height only to a listed parent. */
   embed: EmbedConfig;
+  /** Absolute path the built site deploys under, "/"-wrapped ("/bi-as-code/"); vite emits asset URLs beneath it. */
+  base: string;
 }
 
 /**
