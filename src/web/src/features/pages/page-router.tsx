@@ -85,6 +85,10 @@ export function buildPageRouter(
   return createRouter({
     routeTree,
     history,
+    // vite bakes the configured `base` as import.meta.env.BASE_URL at
+    // build; the router strips it when matching the URL and prepends it to
+    // every href it builds, so a prefixed deploy routes and links beneath it.
+    basepath: import.meta.env.BASE_URL,
     defaultErrorComponent: PageError,
     scrollRestoration: ({ location }) => {
       const moved =

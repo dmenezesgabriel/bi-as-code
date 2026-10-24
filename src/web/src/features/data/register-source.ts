@@ -28,11 +28,14 @@ export interface RegistrationConnection {
 
 /**
  * Registers one `sql:` source as a DuckDB table. `source` is a
- * project-relative `data/…` path — served at `/data/…` in dev and copied to
- * `build/data/` by `biac build`, so the URL is `"/" + source` in both modes.
- * `dataOrigin` overrides the base: an exported widget module's data lives on
- * the publishing origin, not the host page's, so its layer passes the
- * publishing origin here.
+ * project-relative `data/…` path — served under the deployment's base
+ * (`/data/…` at the root, `<base>/data/…` when `biac.config.ts` sets
+ * `base`), so the URL resolves `source` against `dataBase`. The default is
+ * the SPA's own: its origin plus the base vite baked as
+ * `import.meta.env.BASE_URL`. An exported widget module passes
+ * `new URL("../", import.meta.url)` instead (`module-runtime.ts`), so its
+ * data resolves beside the module on the publishing origin, never under
+ * the host page's root.
  *
  * csv/json/parquet read through duckdb's HTTP filesystem (ranged GETs
  * against `/data/`); arrow has no lazy reader so the file is fetched whole
@@ -47,9 +50,13 @@ export async function registerSource(
   connection: RegistrationConnection,
   name: string,
   source: string,
-  dataOrigin: string = location.origin,
+  dataBase: string = new URL(import.meta.env.BASE_URL, location.origin).href,
 ): Promise<void> {
-  const url = new URL(`/${source}`, dataOrigin).href;
+  // `new URL` resolves a relative `source` beside the base's last segment
+  // unless the base ends in "/", so a slash-less base gets one before the
+  // join — a caller's "…/bi-as-code" still means "…/bi-as-code/".
+  const base = dataBase.endsWith("/") ? dataBase : `${dataBase}/`;
+  const url = new URL(source, base).href;
   // duckdb-wasm 1.32.0, measured in the browser: re-registering a name at
   // the same URL is a no-op that keeps reading the file's first bytes, and
   // at another URL it throws "File already registered". Dropping first

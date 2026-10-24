@@ -69,21 +69,24 @@ async function disableExternalFileCache(db: AsyncDuckDB): Promise<void> {
  * is thin glue — the query path lives in `run-query.ts` and source dispatch
  * in `register-source.ts`, both unit-tested without wasm.
  *
- * `dataOrigin` overrides where the data files live: an exported widget
- * module passes its publishing origin, so registration resolves `/data/…`
- * against it instead of the host page's. The SPA's `DuckDbLive` passes
- * nothing — the page's own origin.
+ * `dataBase` overrides where the data files live: an exported widget
+ * module passes its deployment base (`new URL("../", import.meta.url)` in
+ * `module-runtime.ts`), so registration resolves `data/…` beside the
+ * module instead of under the host page's root. The SPA's `DuckDbLive`
+ * passes nothing — the page's origin plus the baked base path.
  *
  * @example
- * const moduleLayer = duckDbLive({ dataOrigin: "https://biac.example.com" });
+ * const moduleLayer = duckDbLive({
+ *   dataBase: "https://biac.example.com/bi-as-code/",
+ * });
  */
 export function duckDbLive(
-  options: { dataOrigin?: string } = {},
+  options: { dataBase?: string } = {},
 ): Layer.Layer<DuckDb, DataError> {
   return Layer.effect(
     DuckDb,
     Effect.zipWith(acquireDuckDb, Semaphore.make(1), (db, registrations) =>
-      serviceOf(db, registrations, options.dataOrigin),
+      serviceOf(db, registrations, options.dataBase),
     ),
   );
 }
@@ -100,13 +103,11 @@ export const DuckDbLive: Layer.Layer<DuckDb, DataError> = duckDbLive();
 function serviceOf(
   db: AsyncDuckDB,
   registrations: Semaphore.Semaphore,
-  dataOrigin: string | undefined,
+  dataBase: string | undefined,
 ): DuckDbService {
   return {
     registerTable: (name, source) =>
-      registrations.withPermit(
-        registerTableEffect(db, name, source, dataOrigin),
-      ),
+      registrations.withPermit(registerTableEffect(db, name, source, dataBase)),
     query: (sql, params = []) => runQuery(db, sql, params),
     queryRows: (sql, params = []) =>
       Effect.map(runQuery(db, sql, params), toRows),
@@ -117,7 +118,7 @@ function registerTableEffect(
   db: AsyncDuckDB,
   name: string,
   source: string,
-  dataOrigin: string | undefined,
+  dataBase: string | undefined,
 ): Effect.Effect<void, DataError> {
   const fail = (cause: unknown) =>
     new DataError({
@@ -131,7 +132,7 @@ function registerTableEffect(
       (conn) => Effect.promise(() => conn.close()),
     );
     yield* Effect.tryPromise({
-      try: () => registerSource(db, connection, name, source, dataOrigin),
+      try: () => registerSource(db, connection, name, source, dataBase),
       catch: fail,
     });
   }).pipe(Effect.scoped);

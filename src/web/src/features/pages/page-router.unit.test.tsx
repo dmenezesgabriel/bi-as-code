@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
@@ -586,6 +586,29 @@ describe("buildPageRouter edit mode", () => {
     expect(await screen.findByText("new body")).toBeInTheDocument();
     expect(mountedView("Page source")).toBe(viewBefore);
     expect(router.state.location.searchStr).toBe("?region=West&edit=true");
+  });
+});
+
+describe("buildPageRouter under a configured base path", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("strips the baked base path when matching routes", async () => {
+    vi.stubEnv("BASE_URL", "/bi-as-code/");
+    renderRouter(pages, "/bi-as-code/nested");
+
+    expect(await screen.findByText("nested body")).toBeInTheDocument();
+    expect(document.title).toBe("Nested");
+  });
+
+  it("prepends the baked base path to link hrefs", async () => {
+    vi.stubEnv("BASE_URL", "/bi-as-code/");
+    renderRouter(pages, "/bi-as-code/");
+    await screen.findByText(/home body/);
+
+    expect(screen.getByRole("link", { name: "go nested" })).toHaveAttribute(
+      "href",
+      "/bi-as-code/nested",
+    );
   });
 });
 

@@ -37,7 +37,10 @@ class UnreadableSourceConnection extends FakeConnection {
   }
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe("registerSource", () => {
   it.each(["csv", "json", "parquet"])(
@@ -69,7 +72,7 @@ describe("registerSource", () => {
     expect(files.calls).toEqual(["drop data/a.csv", "register data/a.csv"]);
   });
 
-  it("resolves the data URL against an explicit origin, not the page's", async () => {
+  it("resolves the data URL against an explicit data base, not the page's", async () => {
     const files = new FakeFileRegistry();
     const connection = new FakeConnection();
 
@@ -85,6 +88,63 @@ describe("registerSource", () => {
       {
         name: "data/orders.parquet",
         url: "https://biac.example.com/data/orders.parquet",
+      },
+    ]);
+  });
+
+  it("joins the source under a data base carrying a path prefix", async () => {
+    const files = new FakeFileRegistry();
+
+    await registerSource(
+      files,
+      new FakeConnection(),
+      "orders",
+      "data/orders.parquet",
+      "https://biac.example.com/bi-as-code/",
+    );
+
+    expect(files.urls).toEqual([
+      {
+        name: "data/orders.parquet",
+        url: "https://biac.example.com/bi-as-code/data/orders.parquet",
+      },
+    ]);
+  });
+
+  it("defaults the data base to the origin plus vite's baked base path", async () => {
+    vi.stubEnv("BASE_URL", "/bi-as-code/");
+    const files = new FakeFileRegistry();
+
+    await registerSource(
+      files,
+      new FakeConnection(),
+      "orders",
+      "data/orders.csv",
+    );
+
+    expect(files.urls).toEqual([
+      {
+        name: "data/orders.csv",
+        url: `${location.origin}/bi-as-code/data/orders.csv`,
+      },
+    ]);
+  });
+
+  it("joins below a data base given without its trailing slash", async () => {
+    const files = new FakeFileRegistry();
+
+    await registerSource(
+      files,
+      new FakeConnection(),
+      "orders",
+      "data/orders.csv",
+      "https://biac.example.com/bi-as-code",
+    );
+
+    expect(files.urls).toEqual([
+      {
+        name: "data/orders.csv",
+        url: "https://biac.example.com/bi-as-code/data/orders.csv",
       },
     ]);
   });
