@@ -1,14 +1,10 @@
 import type { Page } from "@playwright/test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { buildProject, startBiacServer } from "../lib/dev-server.js";
-import { withEmbedOrigins } from "../lib/framing-policy.js";
-import { copyShippedProject } from "../lib/shipped-project.js";
+import { rmSync } from "node:fs";
+import { builtShippedProject } from "../lib/built-preview.js";
+import { startBiacServer } from "../lib/dev-server.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 import { listOrigins } from "./embed-origins.js";
+import { originOf, serveHostPage } from "./host-page.js";
 
 // A whole CSV, a ranged parquet read and a loader output — what another
 // site fetches from a project, each read in the host page's own script.
@@ -38,26 +34,8 @@ const READ = [
 const REFUSED = ["TypeError", "TypeError", "TypeError"];
 const CORS_REFUSAL = "has been blocked by CORS policy";
 
-/**
- * A host page on its own `127.0.0.1` server that fetches the biac server's
- * `/data/` files and prints each result. It must be a real loopback origin:
- * Chromium's Local Network Access checks refuse a page it counts as public
- * fetching localhost, which would hide whether CORS refused it.
- */
-async function serveFetchingHost(): Promise<Server> {
-  const server = createServer((_request, response) => {
-    response.setHeader("Content-Type", "text/html");
-    response.end(
-      `<!doctype html><title>host</title><pre id="results"></pre><script type="module">${READS_SCRIPT}</script>`,
-    );
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return server;
-}
-
-function originOf(server: Server): string {
-  return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-}
+/** The host page's markup: fetch the biac server's `/data/` files, print each result. */
+const FETCH_PAGE = `<pre id="results"></pre><script type="module">${READS_SCRIPT}</script>`;
 
 /** Opens the host page at `hostOrigin` against `biacUrl` and waits for its three results. */
 async function readsFrom(
@@ -89,8 +67,8 @@ test("biac dev lets only the origins biac.config.ts lists read /data/", async ({
   page,
   biacDev,
 }) => {
-  const listed = await serveFetchingHost();
-  const unlisted = await serveFetchingHost();
+  const listed = await serveHostPage(FETCH_PAGE);
+  const unlisted = await serveHostPage(FETCH_PAGE);
   const errors = collectConsoleErrors(page);
   try {
     const host = originOf(listed);
@@ -113,17 +91,11 @@ test("biac dev lets only the origins biac.config.ts lists read /data/", async ({
 test("a built biac preview lets only the origins biac.config.ts lists read /data/", async ({
   page,
 }) => {
-  const listed = await serveFetchingHost();
-  const unlisted = await serveFetchingHost();
-  const projectDir = mkdtempSync(join(tmpdir(), "biac-data-exports-"));
-  copyShippedProject(projectDir);
-  const configFile = join(projectDir, "biac.config.ts");
-  const config = readFileSync(configFile, "utf8");
-  writeFileSync(
-    configFile,
-    withEmbedOrigins(config, [originOf(listed)], "dataOrigins"),
-  );
-  buildProject(projectDir);
+  const listed = await serveHostPage(FETCH_PAGE);
+  const unlisted = await serveHostPage(FETCH_PAGE);
+  const projectDir = builtShippedProject("biac-data-exports-", [
+    originOf(listed),
+  ]);
   const preview = await startBiacServer("preview", projectDir);
   const errors = collectConsoleErrors(page);
   try {

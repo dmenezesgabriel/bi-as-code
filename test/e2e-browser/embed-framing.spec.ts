@@ -1,35 +1,24 @@
 import type { Frame, Page } from "@playwright/test";
-import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 import { listOrigins } from "./embed-origins.js";
+import { serveHostPage } from "./host-page.js";
 
 const EMBED_PAGE = "embed-weekly-revenue";
 // Chromium replaces a frame the browser refused with its error document.
 const REFUSED_FRAME_URL = "chrome-error://chromewebdata/";
 
 /**
- * A host page on its own loopback server framing `src` across its width,
- * sizing the frame from the `biac:height` messages `src`'s origin posts —
- * the listener the embedding docs ask a host to write. It must be a real
- * loopback origin: Chromium's Local Network Access checks refuse a page it
- * counts as public — a `page.route`-fulfilled `http://host.test` — framing
- * localhost (`net::ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS`), which would
- * hide whether the CSP refused it.
+ * The host page framing `src` across its width, sizing the frame from the
+ * `biac:height` messages `src`'s origin posts — the listener the embedding
+ * docs ask a host to write.
  */
-async function serveHostPage(src: string): Promise<Server> {
+function framedPage(src: string): string {
   const listener = `addEventListener("message", (event) => {
     if (event.origin !== "${new URL(src).origin}" || event.data?.type !== "biac:height") return;
     document.getElementById("f").height = event.data.height;
   });`;
-  const server = createServer((_request, response) => {
-    response.setHeader("Content-Type", "text/html");
-    response.end(
-      `<!doctype html><title>host</title><style>body{margin:0}iframe{display:block;width:100%;border:0}</style><iframe id="f" src="${src}" height="600" scrolling="no"></iframe><script>${listener}</script>`,
-    );
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  return server;
+  return `<style>body{margin:0}iframe{display:block;width:100%;border:0}</style><iframe id="f" src="${src}" height="600" scrolling="no"></iframe><script>${listener}</script>`;
 }
 
 /** Opens the host page at `hostOrigin` and returns its iframe. */
@@ -66,7 +55,7 @@ test("a page is framed only by an origin biac.config.ts lists", async ({
   biacDev,
 }) => {
   const src = `${biacDev.url}${EMBED_PAGE}`;
-  const host = await serveHostPage(src);
+  const host = await serveHostPage(framedPage(src));
   const { port } = host.address() as AddressInfo;
   const listedHost = `http://localhost:${port}`;
   const unlistedHost = `http://127.0.0.1:${port}`;
@@ -95,7 +84,7 @@ test("a listed parent sizes its frame to the framed page's height", async ({
   page,
   biacDev,
 }) => {
-  const host = await serveHostPage(`${biacDev.url}${EMBED_PAGE}`);
+  const host = await serveHostPage(framedPage(`${biacDev.url}${EMBED_PAGE}`));
   const { port } = host.address() as AddressInfo;
   const listedHost = `http://localhost:${port}`;
   await listOrigins(biacDev.projectDir, biacDev.log, [listedHost]);

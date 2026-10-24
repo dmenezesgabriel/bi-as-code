@@ -416,13 +416,14 @@ describe("biac preview", () => {
     expect(await server.stop()).toBe(0);
   }, 60_000);
 
-  describe("cross-origin reads of /data/", () => {
+  describe("the dataOrigins grant — /data/ reads and /widgets/ imports", () => {
     const LISTED = "http://127.0.0.1:8901";
     const READS: [string, CorsRequestInit][] = [
       ["data/channels.csv", {}],
       ["data/flights.parquet", { headers: { Range: "bytes=0-3" } }],
       ["data/flights.parquet", { method: "HEAD" }],
       ["data/gen.csv", {}],
+      ["widgets/revenue-by-region.js", { method: "HEAD" }],
     ];
 
     beforeAll(() => {
@@ -444,7 +445,7 @@ describe("biac preview", () => {
       );
 
       expect(policies.map(({ status }) => status)).toEqual([
-        200, 206, 200, 200,
+        200, 206, 200, 200, 200,
       ]);
       for (const policy of policies)
         expect(policy).toMatchObject({
@@ -455,16 +456,23 @@ describe("biac preview", () => {
       expect(await server.stop()).toBe(0);
     }, 60_000);
 
-    it("refuses an unlisted origin on a file, and every origin on a page", async () => {
+    it("refuses an unlisted origin on a file and the widget module, and every origin on a page", async () => {
       server = await startBiacServer("preview", root);
 
       const unlisted = await corsPolicy(
         `${server.url}data/channels.csv`,
         "http://127.0.0.1:8902",
       );
+      const widget = await corsPolicy(
+        `${server.url}widgets/revenue-by-region.js`,
+        "http://127.0.0.1:8902",
+        { method: "HEAD" },
+      );
       const page = await corsPolicy(`${server.url}weekly-review`, LISTED);
 
       expect(unlisted.allowOrigin).toBeNull();
+      expect(widget.allowOrigin).toBeNull();
+      expect(widget.vary).toBe("Origin");
       expect(page.allowOrigin).toBeNull();
       expect(await server.stop()).toBe(0);
     }, 60_000);
@@ -472,6 +480,20 @@ describe("biac preview", () => {
     it("keeps the allowed origin on a 304", async () => {
       server = await startBiacServer("preview", root);
       const url = `${server.url}data/channels.csv`;
+      const first = await fetch(url, { headers: { Origin: LISTED } });
+      await first.arrayBuffer();
+
+      const revalidated = await corsPolicy(url, LISTED, {
+        headers: { "If-None-Match": first.headers.get("etag") ?? "" },
+      });
+
+      expect(revalidated).toMatchObject({ status: 304, allowOrigin: LISTED });
+      expect(await server.stop()).toBe(0);
+    }, 60_000);
+
+    it("keeps the allowed origin on the widget module's 304", async () => {
+      server = await startBiacServer("preview", root);
+      const url = `${server.url}widgets/revenue-by-region.js`;
       const first = await fetch(url, { headers: { Origin: LISTED } });
       await first.arrayBuffer();
 

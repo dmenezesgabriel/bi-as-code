@@ -36,9 +36,10 @@ export function parsePreviewArgs(args: string[]): PreviewOptions {
  * Serves `<projectRoot>/build` as a static site — no page compilation, the
  * built bundle only — with vite's SPA fallback so deep links reach the
  * client router, every response carries the project's framing policy
- * (ADR-0022), and data files carry their media type and answer only the
- * origins `embed.dataOrigins` lists (ADR-0025). Returns once listening;
- * SIGINT/SIGTERM close the server.
+ * (ADR-0022), and data files carry their media type and, like the exported
+ * widget modules, answer only the origins `embed.dataOrigins` lists
+ * (ADR-0025, ADR-0027). Returns once listening; SIGINT/SIGTERM close the
+ * server.
  *
  * @example
  * // in main.ts: case "preview": await preview(["site", "--port", "0"]);
@@ -62,6 +63,7 @@ export async function preview(args: string[]): Promise<void> {
     plugins: [
       previewFramingPolicy(embed.origins),
       previewDataCors(embed.dataOrigins),
+      previewModuleCors(embed.dataOrigins),
       previewDataMediaTypes(join(outDir, "data")),
     ],
     // vite's default CORS rule lets every loopback origin read every
@@ -107,6 +109,29 @@ function previewDataCors(origins: readonly string[]): Plugin {
     configurePreviewServer(server) {
       server.middlewares.use(
         "/data",
+        dataCorsMiddleware(async () => origins),
+      );
+    },
+  };
+}
+
+/**
+ * Answers the listed origins on `build/widgets/` — the exported widget
+ * modules. A cross-origin `<script type="module">` import is a CORS fetch:
+ * without `Access-Control-Allow-Origin` echoing the host's origin the
+ * browser refuses the module outright. The grant is `embed.dataOrigins`
+ * itself — the module's queries read `/data/` under the same list, so a
+ * module-only origin could import but never render (ADR-0027).
+ *
+ * @example
+ * vitePreview({ plugins: [previewModuleCors(["https://notebook.example.com"])] });
+ */
+function previewModuleCors(origins: readonly string[]): Plugin {
+  return {
+    name: "biac:preview-module-cors",
+    configurePreviewServer(server) {
+      server.middlewares.use(
+        "/widgets",
         dataCorsMiddleware(async () => origins),
       );
     },

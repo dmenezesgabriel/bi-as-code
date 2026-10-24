@@ -111,6 +111,23 @@ describe("preview", () => {
     expect(use).toHaveBeenCalledExactlyOnceWith("/data", expect.any(Function));
   });
 
+  it("answers the listed data origins on /widgets from a middleware ahead of vite's", async () => {
+    vitePreview.mockResolvedValue(fakeServer());
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(process, "once").mockImplementation(() => process);
+    const use = vi.fn();
+
+    await preview([builtProject()]);
+    const plugin = vitePreview.mock.calls[0]![0].plugins[2];
+    plugin.configurePreviewServer({ middlewares: { use } });
+
+    expect(plugin.name).toBe("biac:preview-module-cors");
+    expect(use).toHaveBeenCalledExactlyOnceWith(
+      "/widgets",
+      expect.any(Function),
+    );
+  });
+
   it("refuses a project with no build, naming the path and the fix", async () => {
     const root = makeTempProject("biac-preview-");
 

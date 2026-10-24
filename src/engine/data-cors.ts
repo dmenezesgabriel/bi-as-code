@@ -36,6 +36,11 @@ export function dataCorsHeaders(
  * own CORS middleware is off. While the config fails to load every origin is
  * refused.
  *
+ * `biac preview` mounts the same middleware on `/widgets/` (ADR-0027): a
+ * widget module's import is the same embedding relationship as its `/data/`
+ * reads, and its simple GET never preflights, so the OPTIONS answer is
+ * inert there.
+ *
  * @example
  * server.middlewares.use("/data", dataCorsMiddleware(async () => (await getConfig()).embed.dataOrigins));
  */
