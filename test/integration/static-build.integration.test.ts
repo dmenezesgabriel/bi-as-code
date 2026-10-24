@@ -140,6 +140,60 @@ describe("biac build", () => {
     expect(readFileSync(join(outDir, "data", "orders.csv"), "utf8")).toBe(CSV);
   }, 120_000);
 
+  it("answers every route with its own index.html, byte-identical to the shell", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", "# Home\n");
+    writeProjectFile(root, "pages/weekly-review.md", "# Weekly\n");
+    writeProjectFile(root, "pages/nested/allocation.md", "# Allocated\n");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await build([root]);
+
+    const outDir = join(root, "build");
+    const shell = readFileSync(join(outDir, "index.html"));
+    expect(readFileSync(join(outDir, "weekly-review", "index.html"))).toEqual(
+      shell,
+    );
+    expect(
+      readFileSync(join(outDir, "nested", "allocation", "index.html")),
+    ).toEqual(shell);
+    expect(readFileSync(join(outDir, "404.html"))).toEqual(shell);
+  }, 120_000);
+
+  it("fails on a page under a reserved first segment, naming the page and the segment", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", "# Home\n");
+    writeProjectFile(root, "pages/data/notes.md", "# Notes\n");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    const failure = await build([root]).catch((error: unknown) => error);
+
+    expect(String(failure)).toMatch(
+      /Reserved route "\/data\/notes" from "pages\/data\/notes\.md" — the build output owns the first segment "data"/,
+    );
+    expect(existsSync(join(root, "build", "index.html"))).toBe(false);
+  }, 120_000);
+
+  it("keeps the copies' asset refs root-absolute under the configured base", async () => {
+    const root = makeTempProject();
+    writeProjectFile(root, "pages/index.md", "# Home\n");
+    writeProjectFile(root, "pages/weekly-review.md", "# Weekly\n");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      'export default { base: "/bi-as-code/" };\n',
+    );
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await build([root]);
+
+    const copy = readFileSync(
+      join(root, "build", "weekly-review", "index.html"),
+      "utf8",
+    );
+    expect(copy).toMatch(/src="\/bi-as-code\/assets\/[^"]+\.js"/);
+  }, 120_000);
+
   it("fails on a page that does not compile, naming the page", async () => {
     const root = makeTempProject();
     writeProjectFile(root, "pages/index.md", "# Hi\n\n<Callout\n");

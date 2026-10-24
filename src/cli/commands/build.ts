@@ -28,10 +28,13 @@ export function parseBuildArgs(args: string[]): BuildOptions {
 
 /**
  * Bundles `projectRoot`'s pages into a static SPA under `<projectRoot>/build`,
- * emptied first so a removed page never lingers in the output. Pages that
- * carry `export="name"` widget tags also get one self-contained ES module
- * each under `build/widgets/` — a library-mode build of the web mount entry
- * with the widget's spec baked, for a host page on another origin to import.
+ * emptied first so a removed page never lingers in the output. Every manifest
+ * route gets its own byte-identical copy of the shell at
+ * `build/<route>/index.html` (plus `build/404.html`), so a static host with
+ * no rewrite rule answers every deep link. Pages that carry `export="name"`
+ * widget tags also get one self-contained ES module each under
+ * `build/widgets/` — a library-mode build of the web mount entry with the
+ * widget's spec baked, for a host page on another origin to import.
  *
  * @example
  * // in main.ts: case "build": await build(["site"]);
@@ -58,9 +61,6 @@ export async function build(args: string[]): Promise<void> {
   const modules = await widgetExports(projectRoot);
   if (modules.length > 0) await buildWidgetModules(modules, outDir);
   console.log(`biac build — wrote ${outDir}`);
-  // One index.html serves every route: the router resolves the path
-  // client-side, so a static host must rewrite unknown paths to it.
-  console.log("Static hosts need an SPA rewrite: /* -> /index.html");
   for (const module of modules) {
     const file = join(outDir, "widgets", `${module.name}.js`);
     console.log(`Widget module: ${file}`);

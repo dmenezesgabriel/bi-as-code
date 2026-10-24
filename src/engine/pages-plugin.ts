@@ -21,6 +21,10 @@ import {
   copyLoaderOutputs,
   runDataLoaders,
 } from "./build-data-dir.js";
+import {
+  assertRoutesBuildable,
+  copyShellToRoutes,
+} from "./build-route-pages.js";
 import { createDataLoaderCache, type DataLoaderLog } from "./data-loader.js";
 import {
   checkedManifestSource,
@@ -218,6 +222,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
     // time it takes to run, and leaves no half-written build/ behind.
     async buildStart() {
       if (isDevServer) return;
+      assertRoutesBuildable(root);
       loaderOutputs = await runDataLoaders(
         root,
         viteLoaderLog(this.environment.logger),
@@ -348,6 +353,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
       const { interpreters } = await getConfig();
       await copyDataDir(dataDir, join(dir, "data"), interpreters);
       await copyLoaderOutputs(loaderOutputs, join(dir, "data"));
+      await copyShellToRoutes(dir, root);
     },
     async hotUpdate({ file, modules, type }) {
       // Ahead of the data push, which awaits the config: after a failed
