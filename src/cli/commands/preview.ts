@@ -34,12 +34,13 @@ export function parsePreviewArgs(args: string[]): PreviewOptions {
 
 /**
  * Serves `<projectRoot>/build` as a static site — no page compilation, the
- * built bundle only — with vite's SPA fallback so deep links reach the
- * client router, every response carries the project's framing policy
- * (ADR-0022), and data files carry their media type and, like the exported
- * widget modules, answer only the origins `embed.dataOrigins` lists
- * (ADR-0025, ADR-0027). Returns once listening; SIGINT/SIGTERM close the
- * server.
+ * built bundle only — under the `base` `biac.config.ts` deploys it at:
+ * vite redirects `/` into it and answers nothing outside it. The SPA
+ * fallback reaches deep links, every response carries the project's
+ * framing policy (ADR-0022), and data files carry their media type and,
+ * like the exported widget modules, answer only the origins
+ * `embed.dataOrigins` lists (ADR-0025, ADR-0027). Returns once listening;
+ * SIGINT/SIGTERM close the server.
  *
  * @example
  * // in main.ts: case "preview": await preview(["site", "--port", "0"]);
@@ -56,15 +57,19 @@ export async function preview(args: string[]): Promise<void> {
   }
   // Read once: a preview serves a finished build, so a config edit takes a
   // restart, as a rebuild does.
-  const { embed } = await loadBiacConfig(projectRoot);
+  const { embed, base } = await loadBiacConfig(projectRoot);
   const server = await vitePreview({
     configFile: WEB_CONFIG,
+    base,
     build: { outDir },
     plugins: [
       previewFramingPolicy(embed.origins),
-      previewDataCors(embed.dataOrigins),
-      previewModuleCors(embed.dataOrigins),
-      previewDataMediaTypes(join(outDir, "data")),
+      // configurePreviewServer middlewares run before vite strips the base
+      // (measured on vite 8.2.2), so req.url still carries the prefix and
+      // the /data and /widgets mounts go on the full prefixed path.
+      previewDataCors(base, embed.dataOrigins),
+      previewModuleCors(base, embed.dataOrigins),
+      previewDataMediaTypes(base, join(outDir, "data")),
     ],
     // vite's default CORS rule lets every loopback origin read every
     // response; the listed origins on `/data/` are the only rule (ADR-0025).
@@ -96,19 +101,19 @@ function previewFramingPolicy(origins: readonly string[]): Plugin {
 }
 
 /**
- * Answers the listed origins on `build/data/` ahead of vite's preview
- * middlewares, so a 304 carries the headers too — the reason
+ * Answers the listed origins on `build/data/` under `base` ahead of vite's
+ * preview middlewares, so a 304 carries the headers too — the reason
  * `previewFramingPolicy` is a middleware.
  *
  * @example
- * vitePreview({ plugins: [previewDataCors(["https://notebook.example.com"])] });
+ * vitePreview({ plugins: [previewDataCors("/bi-as-code/", ["https://notebook.example.com"])] });
  */
-function previewDataCors(origins: readonly string[]): Plugin {
+function previewDataCors(base: string, origins: readonly string[]): Plugin {
   return {
     name: "biac:preview-data-cors",
     configurePreviewServer(server) {
       server.middlewares.use(
-        "/data",
+        `${base}data`,
         dataCorsMiddleware(async () => origins),
       );
     },
@@ -124,14 +129,14 @@ function previewDataCors(origins: readonly string[]): Plugin {
  * module-only origin could import but never render (ADR-0027).
  *
  * @example
- * vitePreview({ plugins: [previewModuleCors(["https://notebook.example.com"])] });
+ * vitePreview({ plugins: [previewModuleCors("/bi-as-code/", ["https://notebook.example.com"])] });
  */
-function previewModuleCors(origins: readonly string[]): Plugin {
+function previewModuleCors(base: string, origins: readonly string[]): Plugin {
   return {
     name: "biac:preview-module-cors",
     configurePreviewServer(server) {
       server.middlewares.use(
-        "/widgets",
+        `${base}widgets`,
         dataCorsMiddleware(async () => origins),
       );
     },
@@ -139,17 +144,17 @@ function previewModuleCors(origins: readonly string[]): Plugin {
 }
 
 /**
- * Types `build/data/` files ahead of vite's preview middlewares, whose
- * built-in table leaves parquet and arrow untyped.
+ * Types `build/data/` files under `base` ahead of vite's preview
+ * middlewares, whose built-in table leaves parquet and arrow untyped.
  *
  * @example
- * vitePreview({ plugins: [previewDataMediaTypes("/site/build/data")] });
+ * vitePreview({ plugins: [previewDataMediaTypes("/bi-as-code/", "/site/build/data")] });
  */
-function previewDataMediaTypes(dataDir: string): Plugin {
+function previewDataMediaTypes(base: string, dataDir: string): Plugin {
   return {
     name: "biac:preview-data-media-types",
     configurePreviewServer(server) {
-      server.middlewares.use("/data", dataMediaTypeMiddleware(dataDir));
+      server.middlewares.use(`${base}data`, dataMediaTypeMiddleware(dataDir));
     },
   };
 }

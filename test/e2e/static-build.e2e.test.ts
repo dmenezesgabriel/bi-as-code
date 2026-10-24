@@ -531,3 +531,97 @@ describe("biac preview", () => {
     expect(run.stderr).toContain("run `biac build` first");
   });
 });
+
+describe("biac preview under a configured base", () => {
+  const LISTED = "http://127.0.0.1:8901";
+  let root: string;
+  let server: DevServer | undefined;
+
+  beforeAll(() => {
+    root = makeTempProject("biac-e2e-preview-base-");
+    copyShippedProject(root);
+    // base is baked at build — vite emits asset URLs beneath it — so the
+    // config names it before buildProject, with the dataOrigins grant.
+    const config = readFileSync(join(root, "biac.config.ts"), "utf8");
+    writeProjectFile(
+      root,
+      "biac.config.ts",
+      config.replace(
+        /\n};\s*$/,
+        `\n  base: "/bi-as-code/",\n  embed: { dataOrigins: ${JSON.stringify([LISTED])} },\n};\n`,
+      ),
+    );
+    buildProject(root);
+  }, 240_000);
+
+  afterAll(() => {
+    server?.kill();
+  });
+
+  it("serves the shell, a deep link and ranged data reads under the base only", async () => {
+    server = await startBiacServer("preview", root);
+    const url = `${server.url}bi-as-code/`;
+
+    const shell = await fetch(url);
+    expect(shell.status).toBe(200);
+    expect(await shell.text()).toContain('id="root"');
+
+    const deepLink = await fetch(`${url}weekly-review`);
+    expect(deepLink.status).toBe(200);
+    expect(await deepLink.text()).toContain('id="root"');
+
+    // vite answers the host root with a redirect into the base.
+    const rootResponse = await fetch(server.url, { redirect: "manual" });
+    expect(rootResponse.status).toBe(302);
+    expect(rootResponse.headers.get("location")).toBe("/bi-as-code/");
+
+    const ranged = await fetch(`${url}data/flights.parquet`, {
+      headers: { Range: "bytes=0-3" },
+    });
+    expect(ranged.status).toBe(206);
+    expect(ranged.headers.get("content-type")).toBe(
+      "application/vnd.apache.parquet",
+    );
+    expect(await ranged.text()).toBe("PAR1");
+
+    // Nothing answers outside the base: the root-absolute data URL 404s.
+    const unprefixed = await fetch(`${server.url}data/flights.parquet`, {
+      headers: { Range: "bytes=0-3" },
+    });
+    expect(unprefixed.status).toBe(404);
+
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+
+  it("answers the dataOrigins grant under the base", async () => {
+    server = await startBiacServer("preview", root);
+    const url = `${server.url}bi-as-code/`;
+
+    const file = await corsPolicy(`${url}data/channels.csv`, LISTED);
+    const ranged = await corsPolicy(`${url}data/flights.parquet`, LISTED, {
+      headers: { Range: "bytes=0-3" },
+    });
+    const widget = await corsPolicy(
+      `${url}widgets/revenue-by-region.js`,
+      LISTED,
+      { method: "HEAD" },
+    );
+    const unlisted = await corsPolicy(
+      `${url}data/channels.csv`,
+      "http://127.0.0.1:8902",
+    );
+    const page = await corsPolicy(`${url}weekly-review`, LISTED);
+
+    expect(file).toMatchObject({
+      status: 200,
+      allowOrigin: LISTED,
+      exposeHeaders: "Content-Range, Accept-Ranges",
+      vary: "Origin",
+    });
+    expect(ranged).toMatchObject({ status: 206, allowOrigin: LISTED });
+    expect(widget.allowOrigin).toBe(LISTED);
+    expect(unlisted.allowOrigin).toBeNull();
+    expect(page.allowOrigin).toBeNull();
+    expect(await server.stop()).toBe(0);
+  }, 60_000);
+});
