@@ -6,6 +6,7 @@ Commands:
   dev       Start the dev server for a pages directory
   build     Build a static site from a pages directory
   preview   Serve a built site locally
+  serve     Serve a built site in production, behind basic auth
 `;
 
 export async function main(args: string[]): Promise<void> {
@@ -24,6 +25,11 @@ export async function main(args: string[]): Promise<void> {
   if (command === "preview") {
     const { preview } = await import("./commands/preview.js");
     await preview(rest);
+    return;
+  }
+  if (command === "serve") {
+    const { serve } = await import("./commands/serve.js");
+    await serve(rest);
     return;
   }
   process.stdout.write(USAGE);

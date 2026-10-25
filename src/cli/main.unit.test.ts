@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { main } from "./main.js";
 
-const { dev, build, preview } = vi.hoisted(() => ({
+const { dev, build, preview, serve } = vi.hoisted(() => ({
   dev: vi.fn(),
   build: vi.fn(),
   preview: vi.fn(),
+  serve: vi.fn(),
 }));
 vi.mock("./commands/dev.js", () => ({ dev }));
 vi.mock("./commands/build.js", () => ({ build }));
 vi.mock("./commands/preview.js", () => ({ preview }));
+vi.mock("./commands/serve.js", () => ({ serve }));
 
 function mockExit() {
   return vi.spyOn(process, "exit").mockImplementation(() => {
@@ -67,5 +69,13 @@ describe("main", () => {
     await main(["preview", "site", "--port", "0"]);
 
     expect(preview).toHaveBeenCalledWith(["site", "--port", "0"]);
+  });
+
+  it("routes serve to the serve command with its remaining args", async () => {
+    serve.mockResolvedValue(undefined);
+
+    await main(["serve", "site", "--port", "0"]);
+
+    expect(serve).toHaveBeenCalledWith(["site", "--port", "0"]);
   });
 });
