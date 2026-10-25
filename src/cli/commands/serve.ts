@@ -10,6 +10,7 @@ import {
   type BasicAuthEnv,
 } from "../basic-auth.js";
 import { serveHeadersMiddleware } from "../serve-headers.js";
+import { serveRoutesPlugin } from "../serve-routes.js";
 import { staticHostPlugins } from "./static-plugins.js";
 import {
   closeOnExitSignals,
@@ -156,6 +157,7 @@ export async function serve(
     plugins: [
       ...servePolicyPlugins(base, env),
       ...staticHostPlugins(base, outDir, embed),
+      serveRoutesPlugin(outDir),
     ],
     preview: {
       cors: false,

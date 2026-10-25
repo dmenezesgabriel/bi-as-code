@@ -184,7 +184,7 @@ describe("serve", () => {
     });
   });
 
-  it("mounts the headers, then auth, then the four static plugins", async () => {
+  it("mounts the headers, then auth, then the four static plugins and the route post-hook", async () => {
     quietServe();
 
     await serve([builtProject()], FULL_PAIR);
@@ -199,6 +199,7 @@ describe("serve", () => {
       "biac:preview-data-cors",
       "biac:preview-module-cors",
       "biac:preview-data-media-types",
+      "biac:serve-routes",
     ]);
   });
 
