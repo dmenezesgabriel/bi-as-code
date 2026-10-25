@@ -79,7 +79,9 @@ export function startDevServer(
  * Spawns `bin/biac <command> <projectRoot> --port 0` and resolves once vite
  * prints its `➜ Local:` block. Port 0 binds an OS-assigned ephemeral port, so
  * the advertised URL is the only reliable way to learn it — and proves the
- * user-facing output is truthful.
+ * user-facing output is truthful. `biac serve` advertises its loopback
+ * address, not `localhost`; `extraArguments` follow `--port 0`, e.g.
+ * `["--host", "0.0.0.0"]`.
  *
  * @example
  * const server = await startBiacServer("preview", projectRoot);
@@ -87,13 +89,21 @@ export function startDevServer(
  * await server.stop();
  */
 export function startBiacServer(
-  command: "dev" | "preview",
+  command: "dev" | "preview" | "serve",
   projectRoot: string,
   extraEnvironment: NodeJS.ProcessEnv = {},
+  extraArguments: readonly string[] = [],
 ): Promise<DevServer> {
   const child = spawn(
     process.execPath,
-    [join(repoRoot, "bin/biac"), command, projectRoot, "--port", "0"],
+    [
+      join(repoRoot, "bin/biac"),
+      command,
+      projectRoot,
+      "--port",
+      "0",
+      ...extraArguments,
+    ],
     { env: { ...environmentWithoutNodeEnv(), ...extraEnvironment } },
   );
   const log = recordLog(child);
@@ -101,7 +111,9 @@ export function startBiacServer(
     let output = "";
     const onData = (chunk: Buffer) => {
       output += chunk.toString();
-      const match = /http:\/\/localhost:\d+\//.exec(stripAnsi(output));
+      const match = /http:\/\/(?:localhost|127\.0\.0\.1):\d+\//.exec(
+        stripAnsi(output),
+      );
       if (match) resolve(devServer(match[0], child, log));
     };
     child.stdout.on("data", onData);
