@@ -60,6 +60,7 @@ Three categories only: development tooling, the frameworks the application runs 
 author → pages/*.md ──> biac dev ──> vite (dev) ──> browser SPA
                         biac build ──> <project>/build/ (SPA shell copied per route + 404.html + data/ + widgets/)
                         biac preview ──> static server
+                        biac serve ──> production server (basic auth, security headers)
 
 browser SPA: page module (compiled MDX) ──> widget registry
              ```sql blocks ──> named query registry ──> duckdb-wasm ──> data/ files

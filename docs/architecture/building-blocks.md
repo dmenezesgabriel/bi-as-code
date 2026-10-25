@@ -6,7 +6,7 @@ Grows as slices land. Each block is named for its component in `src/`; a block i
 
 | Block         | Where   | Responsibility                                                                       |
 | ------------- | ------- | ------------------------------------------------------------------------------------ |
-| `src/cli/`    | node    | `biac dev\|build\|preview` command surface; composition root (`main.ts`)             |
+| `src/cli/`    | node    | `biac dev\|build\|preview\|serve` command surface; composition root (`main.ts`)      |
 | `src/engine/` | node    | Page discovery, MDX/remark pipeline, front-matter schema, page manifest, vite plugin |
 | `src/web/`    | browser | The SPA: page renderer, widget registry, filters, cross-filter, duckdb-wasm data     |
 
