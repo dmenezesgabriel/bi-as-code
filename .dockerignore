@@ -1,0 +1,15 @@
+# The builder installs and builds inside the image; host artifacts and
+# foreign checkouts never enter the build context.
+.git/
+research_repos/
+**/node_modules/
+build/
+dist/
+.biac/
+coverage/
+test-results/
+playwright-report/
+.playwright-cli/
+storybook-static/
+.stryker-tmp/
+*.log
