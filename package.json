@@ -25,6 +25,7 @@
     "test:e2e-browser": "bash scripts/run-capped.sh e2e-browser playwright test --pass-with-no-tests",
     "test:cucumber": "cucumber-js",
     "test:deploy": "bash scripts/run-capped.sh deploy vitest run --config vitest.deploy.config.ts",
+    "example:s3-sso:smoke": "nice -n 10 timeout 15m bash examples/s3-sso/smoke.sh",
     "test:coverage": "vitest run --coverage",
     "test:mutation": "stryker run",
     "gate": "bash scripts/run-capped.sh gate scripts/gate.sh",

@@ -6,6 +6,9 @@
     "config": ["vitest.config.ts", "vitest.deploy.config.ts"]
   },
   "ignore": [
+    // Run as a program by examples/s3-sso/smoke.sh — never imported, so
+    // knip can't see it.
+    "examples/s3-sso/smoke.ts",
     // Loaded at runtime by the engine's loadBiacConfig via vite's
     // loadConfigFromFile — never statically imported, so knip can't see it.
     "biac.config.ts",

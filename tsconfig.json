@@ -27,6 +27,6 @@
     },
     "types": ["node"]
   },
-  "include": ["src/**/*", "test/**/*"],
+  "include": ["src/**/*", "test/**/*", "examples/**/*"],
   "exclude": ["node_modules", "dist", "src/web/**/*"]
 }
