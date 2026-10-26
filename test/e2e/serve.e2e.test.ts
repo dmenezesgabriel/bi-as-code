@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  chmodSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -266,5 +273,33 @@ describe("biac serve boot guard", () => {
     expect(server.log().join("\n")).toContain(
       "BIAC_BASIC_PASSWORD is missing, so basic auth is not enforced",
     );
+  }, 60_000);
+});
+
+describe("biac serve on a read-only project", () => {
+  // `chmod` stands in for a container's read-only root filesystem. The
+  // package.json makes the project an ES module like the image's `/app`,
+  // which is the case where a bundling config loader writes a temp file.
+  function setProjectWritable(writable: boolean): void {
+    const entries = readdirSync(root, { recursive: true, encoding: "utf8" });
+    for (const path of [root, ...entries.map((entry) => join(root, entry))]) {
+      const { mode } = statSync(path);
+      chmodSync(path, writable ? mode | 0o200 : mode & ~0o222);
+    }
+  }
+
+  it("boots and serves a page when nothing in the project can be written", async () => {
+    writeFileSync(join(root, "package.json"), '{ "type": "module" }\n');
+    setProjectWritable(false);
+    try {
+      server = await startServe(CREDENTIALS);
+
+      const response = await getAuthorized(`${server.url}weekly-review/`);
+
+      expect(response.status).toBe(200);
+    } finally {
+      setProjectWritable(true);
+      rmSync(join(root, "package.json"));
+    }
   }, 60_000);
 });

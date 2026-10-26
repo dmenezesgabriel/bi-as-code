@@ -102,8 +102,8 @@ export function pagesPlugin(projectRoot: string): Plugin {
   const getTranslations = () =>
     (translationsPromise ??= loadProjectTranslations(root));
   // Page transforms consult the config's `sql:` map; `loadBiacConfig`
-  // re-bundles the file through esbuild on every call, so the resolved
-  // config is memoized and dropped when the watcher reports an edit.
+  // re-evaluates the file through vite's module runner on every call, so the
+  // resolved config is memoized and dropped when the watcher reports an edit.
   let configPromise: Promise<BiacConfig> | undefined;
   const getConfig = () => (configPromise ??= loadBiacConfig(root));
   // A config edit changes index.html and every route, so the page reloads

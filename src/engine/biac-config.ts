@@ -78,8 +78,9 @@ const CONFIG_SHAPE = `an object with optional fields { ${CONFIG_KEYS.join(", ")}
 /**
  * Loads the project's `biac.config.ts`, filling omitted fields with
  * defaults. The file is user code executed through vite's own config
- * pipeline (`loadConfigFromFile` bundles it with esbuild, then imports it —
- * the same trust model as `vite.config.ts`). A missing file resolves to
+ * pipeline (`loadConfigFromFile` with its module-runner loader, which
+ * evaluates it in memory and writes nothing to disk — the same trust model
+ * as `vite.config.ts`). A missing file resolves to
  * defaults; a malformed one throws naming the field, its expected shape and
  * the offending value, at the field's `biac.config.ts:<line>:<column>`. The
  * Error carries vite's `id` and `loc`, so the dev overlay and terminal link
@@ -115,11 +116,20 @@ async function loadConfigFile(
   projectRoot: string,
 ): ReturnType<typeof loadConfigFromFile> {
   try {
-    return await loadConfigFromFile(
-      { command: "serve", mode: "development" },
-      file,
-      projectRoot,
-      "silent",
+    return await keepingNodeEnv(() =>
+      loadConfigFromFile(
+        { command: "serve", mode: "development" },
+        file,
+        projectRoot,
+        "silent",
+        undefined,
+        // The default "bundle" loader writes its output to
+        // node_modules/.vite-temp or beside the config, which fails on a
+        // read-only root (EROFS). The module runner transforms in memory and
+        // still resolves a `./x.js` specifier to its `x.ts` sibling, which the
+        // "native" loader cannot.
+        "runner",
+      ),
     );
   } catch (error) {
     if (
@@ -129,6 +139,22 @@ async function loadConfigFile(
       throw invalid("default export", [], CONFIG_SHAPE, "<non-object>");
     }
     throw error;
+  }
+}
+
+/**
+ * The runner loader goes through vite's `resolveConfig`, which sets
+ * `process.env.NODE_ENV` to "development" when it is unset (vite 8.2.2).
+ * Left in place, a `biac build` that loads the config first bundles React's
+ * development JSX runtime, so the value found is put back.
+ */
+async function keepingNodeEnv<T>(load: () => Promise<T>): Promise<T> {
+  const found = process.env.NODE_ENV;
+  try {
+    return await load();
+  } finally {
+    if (found === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = found;
   }
 }
 

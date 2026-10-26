@@ -172,7 +172,7 @@ describe("serve", () => {
     await serve([root, "--port", "0"], {});
 
     const config = vitePreview.mock.calls[0]![0];
-    expect(config.configFile).toMatch(/src[/\\]web[/\\]vite\.config\.ts$/);
+    expect(config.configFile).toBe(false);
     expect(config.appType).toBe("mpa");
     expect(config.build).toEqual({ outDir: join(root, "build") });
     expect(config.preview).toEqual({

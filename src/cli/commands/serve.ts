@@ -16,7 +16,6 @@ import {
   closeOnExitSignals,
   parsePort,
   resolveProjectRoot,
-  WEB_CONFIG,
 } from "./web-project.js";
 
 export interface ServeOptions {
@@ -149,7 +148,9 @@ export async function serve(
   authWarnings(host, env).forEach((warning) => console.warn(warning));
   const { embed, base } = await loadBiacConfig(projectRoot);
   const server = await vitePreview({
-    configFile: WEB_CONFIG,
+    // Serving a finished build needs none of the SPA's vite config, whose
+    // plugins are devDependencies: a production install carries only vite.
+    configFile: false,
     base,
     // mpa: an unmatched path is a miss, not the SPA shell with a 200.
     appType: "mpa",

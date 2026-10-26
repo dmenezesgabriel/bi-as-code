@@ -95,11 +95,11 @@
     "unist-util-visit": "5.1.0",
     "vfile": "6.0.3",
     "vfile-matter": "5.0.1",
-    "vite": "8.2.2",
     "vitest": "4.1.11"
   },
   "dependencies": {
     "i18next": "26.5.2",
+    "vite": "8.2.2",
     "yaml": "2.9.1"
   }
 }

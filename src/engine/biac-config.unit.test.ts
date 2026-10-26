@@ -1,3 +1,4 @@
+import { chmodSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -674,5 +675,70 @@ describe("unknown keys", () => {
 
     expect(Object.keys(config.sqlTables)).toEqual(["anything"]);
     expect(config.interpreters[".pl"]).toEqual(["perl"]);
+  });
+});
+
+describe("read-only project", () => {
+  // An ES-module project (the nearest package.json says `"type": "module"`)
+  // is the case where vite's default config loader writes a temp bundle into
+  // `node_modules/.vite-temp`, or beside the config when that is refused.
+  function makeReadOnlyProject(files: Record<string, string>): string {
+    const root = makeProject();
+    writeProjectFile(root, "package.json", '{ "type": "module" }\n');
+    for (const [path, source] of Object.entries(files)) {
+      writeProjectFile(root, path, source);
+    }
+    mkdirSync(join(root, "node_modules"));
+    chmodSync(join(root, "node_modules"), 0o555);
+    chmodSync(root, 0o555);
+    return root;
+  }
+
+  afterEach(() => {
+    if (projectRoot === undefined) return;
+    chmodSync(projectRoot, 0o755);
+    chmodSync(join(projectRoot, "node_modules"), 0o755);
+  });
+
+  it("loads the config without writing into the project or node_modules", async () => {
+    const root = makeReadOnlyProject({
+      "biac.config.ts": 'export default { title: "ACME" };\n',
+    });
+    const before = readdirSync(root, { recursive: true });
+
+    const config = await loadBiacConfig(root);
+
+    expect(config.title).toBe("ACME");
+    expect(readdirSync(root, { recursive: true })).toEqual(before);
+  });
+
+  it("resolves a sibling .ts module imported by its .js specifier", async () => {
+    const root = makeReadOnlyProject({
+      "biac.config.ts":
+        'import { title } from "./titles.js";\nexport default { title };\n',
+      "titles.ts": 'export const title: string = "From sibling";\n',
+    });
+
+    const config = await loadBiacConfig(root);
+
+    expect(config.title).toBe("From sibling");
+  });
+});
+
+describe("process environment", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  it("leaves an unset NODE_ENV unset, so a later build stays in production", async () => {
+    const root = makeProject();
+    writeConfig(root, 'export default { title: "ACME" };\n');
+    delete process.env.NODE_ENV;
+
+    await loadBiacConfig(root);
+
+    expect(process.env.NODE_ENV).toBeUndefined();
   });
 });
