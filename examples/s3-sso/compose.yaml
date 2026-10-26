@@ -1,0 +1,77 @@
+# A biac `build/` in a private, authenticated S3 bucket (moto), provisioned by
+# Terraform and readable only through a SigV4 signing proxy. Nothing here
+# publishes a port: the bucket and the signer live on the compose network.
+name: s3-sso
+
+services:
+  moto:
+    image: motoserver/moto:5.2.4@sha256:120b1589c6df7e35d2092935f6ff724486bb2c4189d0e36ce795baba1400ffd2
+    labels:
+      org.biac.note: "local demonstration — not a production store"
+    environment:
+      # Three unauthenticated calls let bootstrap.sh create the deployer;
+      # unset, moto would never authenticate anything.
+      INITIAL_NO_AUTH_ACTION_COUNT: "3"
+    healthcheck:
+      # /moto-api/ does not count against INITIAL_NO_AUTH_ACTION_COUNT; an
+      # S3 or IAM call here would spend the bootstrap's free calls.
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:5000/moto-api/')
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  bootstrap:
+    image: amazon/aws-cli:2.38.5@sha256:c8156a0e74e13929a42d7e60f0d4e14e7d28d980cd21822505d4bff80e5460c1
+    entrypoint: ["sh", "/bootstrap.sh"]
+    volumes:
+      - ./bootstrap.sh:/bootstrap.sh:ro
+      - credentials:/credentials
+    depends_on:
+      moto:
+        condition: service_healthy
+
+  terraform:
+    image: hashicorp/terraform:1.17.0@sha256:4d1b496a256f2989bccdb04b9104a4ede97234b10fba90259e173e905ec4fb58
+    entrypoint: ["sh", "/src/apply.sh"]
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: /credentials/deployer
+    volumes:
+      - ./terraform:/src:ro
+      # The repo's own `biac build` output; the deploy test swaps in a fixture.
+      - ${BIAC_SITE_DIR:-../../build}:/site:ro
+      - credentials:/credentials
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+
+  # A scratch image with no shell or client, so it carries no healthcheck;
+  # the probe reads through it to prove it answers.
+  signer:
+    image: public.ecr.aws/aws-observability/aws-sigv4-proxy:1.13.1@sha256:d9e62d98e8a1fc8ba8859f491a5792f9134c453a38cc4f529145149eb255bfb9
+    command:
+      - --name=s3
+      - --region=us-east-1
+      - --host=moto:5000
+      - --upstream-url-scheme=http
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: /credentials/reader
+    volumes:
+      - credentials:/credentials:ro
+    depends_on:
+      terraform:
+        condition: service_completed_successfully
+
+  # A curl inside the network, started only with `--profile probe`; it idles
+  # so `docker compose exec probe curl …` can read moto and the signer.
+  probe:
+    image: curlimages/curl:8.23.0@sha256:11e64e28c5f58c8d93ee95fcf22ac055f48b0bc440e0ce7d8013bbb5ad6aa8ac
+    profiles: [probe]
+    command: ["sleep", "infinity"]
+
+volumes:
+  # Deployer and reader keys; never bound to the host.
+  credentials:

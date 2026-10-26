@@ -1,6 +1,10 @@
 {
   "$schema": "./node_modules/knip/schema.json",
   "ignoreExportsUsedInFile": true,
+  // Both vitest configs, so the deploy suite's config and specs are entries.
+  "vitest": {
+    "config": ["vitest.config.ts", "vitest.deploy.config.ts"]
+  },
   "ignore": [
     // Loaded at runtime by the engine's loadBiacConfig via vite's
     // loadConfigFromFile — never statically imported, so knip can't see it.
