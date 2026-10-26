@@ -1,0 +1,148 @@
+# A biac build in a private S3 bucket behind single sign-on
+
+**Local demonstration — not a production store.** One compose file runs the AWS shape of a static biac deployment on your machine: the `build/` folder in a private bucket that refuses unsigned reads, a TLS load balancer in front of it that asks a sign-in gate before every request, and an identity provider shaped like a Microsoft Entra ID tenant. biac itself runs no server and reads no identity; everything here is configuration around the static output ([ADR-0031](../../docs/adr/0031-sso-is-a-proxy-in-front-of-a-private-bucket.md)).
+
+## The request path
+
+```
+browser ──HTTPS──▶ caddy :8443 ──forward_auth──▶ oauth2-proxy ◀──OIDC──▶ keycloak
+                     │  (any non-2xx goes back to the browser:
+                     │   401 → /oauth2/sign_in → Keycloak's form)
+                     │
+                     ├─ /realms/*, /resources/*  ─▶ keycloak   (the sign-in pages, same origin)
+                     ├─ /oauth2/*                ─▶ oauth2-proxy
+                     └─ everything else: rewrite <route>/ → <route>/index.html
+                                         ─▶ signer (SigV4, read-only key) ─▶ moto bucket biac-site
+```
+
+Only Caddy publishes ports, and only on loopback: `127.0.0.1:8443` (HTTPS) and `127.0.0.1:8080` (redirects to HTTPS). moto, the signer, Keycloak and oauth2-proxy are reachable only on the compose network.
+
+| Service        | Role                                                                                                                                                                                                |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `moto`         | The S3 and IAM API. `INITIAL_NO_AUTH_ACTION_COUNT=3`: the first three calls are free, every later one needs valid credentials                                                                       |
+| `bootstrap`    | One-shot: spends the three free calls creating the `deployer` IAM user, its key and an admin policy ([`bootstrap.sh`](bootstrap.sh))                                                                |
+| `terraform`    | One-shot: `terraform apply` of [`terraform/main.tf`](terraform/main.tf) as `deployer` — the bucket, Block Public Access, the reader user with `s3:GetObject` only, and one object per `build/` file |
+| `signer`       | `aws-sigv4-proxy` signing every read with the reader key; Caddy never holds a key                                                                                                                   |
+| `keycloak`     | The identity provider; [`keycloak/realm.json`](keycloak/realm.json) is imported on every start                                                                                                      |
+| `oauth2-proxy` | The sign-in gate ([`oauth2-proxy.cfg`](oauth2-proxy.cfg)): answers `/oauth2/auth` with `202` for a valid session, `401` without one, and lets in only holders of the `Dashboard.Viewer` app role    |
+| `caddy`        | TLS edge ([`Caddyfile`](Caddyfile)): internal CA, HTTP→HTTPS, `forward_auth`, the directory rewrite, bucket `403`/`404` → the build's `404.html` with a `404` status                                |
+| `probe`        | Optional (`--profile probe`): a curl inside the network, for reading the bucket the way an attacker on the network would                                                                            |
+
+Nothing is durable. The bucket, the keys, the realm and the Terraform state live in containers and the `credentials` volume, and `down -v` removes them; every `up` uploads `build/` again.
+
+## Run it
+
+Needs Docker with compose v2 and about 1.5 GB of free memory (Keycloak is a JVM at about 800 MiB; the whole stack measured about 1.2 GiB after a signed-in session).
+
+```sh
+# From the repository root: build biac, then the project's static output
+pnpm build:cli && bin/biac build
+
+docker compose -f examples/s3-sso/compose.yaml up -d --wait
+```
+
+`up --wait` returns once every service is healthy, about a minute on a warm image cache. To serve another project's output, set `BIAC_SITE_DIR` to its `build/` folder (relative to `examples/s3-sso/`, or absolute) before `up`.
+
+Open <https://localhost:8443/weekly-review/>. Your browser warns about the certificate until you trust the CA (below). You are sent to the Keycloak sign-in page. Two demo users exist, both with password `biac-demo`:
+
+| User    | Holds `Dashboard.Viewer` | Result                                                |
+| ------- | ------------------------ | ----------------------------------------------------- |
+| `ada`   | yes                      | back on the page you asked for, query string intact   |
+| `grace` | no                       | signs in at Keycloak, then oauth2-proxy answers `403` |
+
+Check the gate and the bucket from a shell:
+
+```sh
+curl -k -i https://localhost:8443/weekly-review/   # 302, location: /oauth2/sign_in?rd=%2Fweekly-review%2F
+curl -i http://localhost:8080/weekly-review/       # 308 to https://localhost:8443/weekly-review/
+
+# An unsigned read from inside the network is refused
+docker compose -f examples/s3-sso/compose.yaml --profile probe up -d probe
+docker compose -f examples/s3-sso/compose.yaml exec probe curl -i http://moto:5000/biac-site/index.html   # 403
+```
+
+`pnpm -s example:s3-sso:smoke` does all of the above unattended. It brings the stack up, signs in as `ada` in headless Chromium, loads a deep link, picks a filter, reloads, opens a nested route directly, checks the console, and takes the stack down on every exit path. It needs an existing `build/`.
+
+Stop and remove everything:
+
+```sh
+docker compose -f examples/s3-sso/compose.yaml --profile probe down -v
+```
+
+## Trust the local CA
+
+Caddy issues `localhost` a certificate from its own CA, which lives inside the container. To trust it, copy the root out and add it to your OS or browser trust store:
+
+```sh
+docker compose -f examples/s3-sso/compose.yaml cp \
+  caddy:/data/caddy/pki/authorities/local/root.crt "${TMPDIR:-/tmp}/s3-sso-caddy-root.crt"
+curl --cacert "${TMPDIR:-/tmp}/s3-sso-caddy-root.crt" -i https://localhost:8443/   # verifies
+```
+
+The CA keeps no volume, so `down` followed by `up` creates a new root. Trust it again, or remove the old one from your store. Headless tools can skip the copy and ignore certificate errors instead (Playwright's `ignoreHTTPSErrors`, `curl -k`).
+
+## How this maps to AWS
+
+Every piece stands in for a managed AWS one. Terraform is the same file in both places.
+
+| Here                                                                             | In AWS                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Caddy, TLS on `:8443`, HTTP → HTTPS                                              | An Application Load Balancer HTTPS listener with an ACM certificate, and a `redirect` action on the HTTP listener                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Caddy `forward_auth` + oauth2-proxy                                              | An `authenticate-oidc` action ahead of `forward` on the listener rule. The ALB is the OIDC client itself and keeps its own session cookie; `authenticate-oidc` needs an HTTPS listener ([ALB user authentication](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html))                                                                                                                                                                                                                                                                             |
+| Caddy's `<route>/` → `<route>/index.html` rewrite                                | A `url-rewrite` transform on the rule, for example `Regex: ^(.*)/$`, `Replace: $1/index.html` ([rule transforms](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/rule-transforms.html)). A `redirect` to `index.html` would put `index.html` in the address bar, which is not a route biac knows                                                                                                                                                                                                                                                                                 |
+| The signer between the edge and the bucket                                       | An S3 interface VPC endpoint registered as an IP target group, and a bucket policy that allows `s3:GetObject` only when `aws:SourceVpce` is that endpoint ([internal static websites with ALB, S3 and PrivateLink](https://aws.amazon.com/blogs/networking-and-content-delivery/hosting-internal-https-static-websites-with-alb-s3-and-privatelink/)). moto ignores bucket-policy conditions ([moto S3 docs](https://docs.getmoto.org/en/latest/docs/services/s3.html)), so a policy like that would make moto's bucket public. The example signs every read with an `s3:GetObject`-only key instead |
+| moto, path-style bucket `biac-site`                                              | A private S3 bucket behind Block Public Access, read over the REST API, which serves no index document. On the endpoint pattern the bucket is named after the site's domain, because the ALB forwards the `Host` header                                                                                                                                                                                                                                                                                                                                                                              |
+| `terraform/main.tf`                                                              | The same file. Remove the `endpoints` block, `s3_use_path_style` and the `skip_*` flags from the `provider "aws"` block, then apply with real credentials. Nothing here has been applied to AWS                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Keycloak realm `biac` / client `biac-dashboard` / client role `Dashboard.Viewer` | An Entra ID tenant / app registration / app role. The realm's mappers emit Entra's `oid`, `tid`, `preferred_username` and `roles` claims, and an audience mapper sets `aud` to the client id                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+### The sign-in gate, locally and against Entra ID
+
+oauth2-proxy has a provider for each. The local file needs extra keys only because the issuer is `https://localhost:8443`, which oauth2-proxy cannot reach from inside its own container. Against Entra ID, discovery works and those keys go away.
+
+```ini
+# Local — oauth2-proxy.cfg
+provider = "keycloak-oidc"
+oidc_issuer_url = "https://localhost:8443/realms/biac"
+client_id = "biac-dashboard"
+client_secret = "biac-dashboard-demo-secret"
+code_challenge_method = "S256"
+allowed_roles = ["biac-dashboard:Dashboard.Viewer"]
+# Only because the issuer is localhost:
+skip_oidc_discovery = true
+login_url = "https://localhost:8443/realms/biac/protocol/openid-connect/auth"
+redeem_url = "http://keycloak:8080/realms/biac/protocol/openid-connect/token"
+oidc_jwks_url = "http://keycloak:8080/realms/biac/protocol/openid-connect/certs"
+```
+
+```ini
+# Production — Entra ID
+provider = "entra-id"
+oidc_issuer_url = "https://login.microsoftonline.com/<tenant-id>/v2.0"
+client_id = "<application (client) id>"
+client_secret = "<client secret>"   # or entra_id_federated_token_auth = true with workload identity
+code_challenge_method = "S256"
+allowed_groups = ["<security group object id>"]
+```
+
+The `entra-id` provider restricts access by group (`allowed_groups`, read from the token's `groups` claim, up to 200 groups) and documents no `allowed_roles` ([oauth2-proxy Entra ID provider](https://oauth2-proxy.github.io/oauth2-proxy/configuration/providers/ms_entra_id)). To gate on the app role instead, as `allowed_roles` does here, set **Assignment required** on the enterprise application and assign the app role to users or groups: Entra then refuses sign-in and tokens to anyone unassigned ([restrict an app to a set of users](https://learn.microsoft.com/en-us/entra/identity-platform/howto-restrict-your-app-to-a-set-of-users)). On an ALB the equivalent is the IdP's own assignment rule, since `authenticate-oidc` checks no claims.
+
+The rest of `oauth2-proxy.cfg` carries over unchanged: `redirect_url` on your domain, a fresh 32-byte `cookie_secret`, `reverse_proxy = true`, `skip_provider_button = true`.
+
+## What sign-in protects, and what it does not
+
+**Access is all or nothing.** biac runs every query in the viewer's browser ([ADR-0005](../../docs/adr/0005-queries-run-client-side-in-duckdb-wasm.md)), so every file under `data/` is downloaded by, and readable to, every viewer who passes the gate. Do not put a row in `build/` that some signed-in viewer must not see: split the project into one build per audience, each behind its own rule. biac reads no identity header, so per-viewer filtering is not available, and the `X-Forwarded-*` or `x-amzn-oidc-*` headers your proxy adds are ignored.
+
+**One read leaves the edge.** To read parquet, duckdb-wasm loads its extension from `https://extensions.duckdb.org/` in the viewer's browser. That request goes to DuckDB's host and never passes the gate. It carries no project data, but on a network that blocks that host, parquet reads fail.
+
+## When a session expires
+
+The page is already loaded and its data is in browser memory, so the viewer only notices the next request that crosses the edge:
+
+- **The proxy session expired but the identity provider's did not** (the common case: Keycloak's and Entra's sessions outlive the proxy cookie). The next request redirects through sign-in and back with no form, and the viewer notices nothing. Filters on loaded data keep working throughout, because they issue no request.
+- **Both sessions expired.** Filters still work. An in-app navigation to a page not visited yet fails with "This page failed to render", because the page's script request lands on the sign-in HTML. Reloading shows the sign-in form, then returns to the same page.
+
+An ALB behaves the same way: even with `OnUnauthenticatedRequest: deny`, which answers `401` only to requests that carry no session at all, a request with an expired session cookie is redirected to the identity provider.
+
+## Demo values
+
+The client secret, the cookie secret, the `biac-demo` passwords and Keycloak's `admin`/`admin` are published in this directory. They protect nothing outside your compose network. Caddy routes no `/admin/*` path, so Keycloak's admin console answers the bucket's `404` at the edge.

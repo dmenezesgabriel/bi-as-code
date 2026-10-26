@@ -192,7 +192,7 @@ One commit each. Each task that brings containers up ends with `down -v` and an 
 - [x] T4 — Keycloak with an imported realm shaped like Entra (client = app registration, client role = app role, mappers for `oid`/`tid`/`preferred_username`/`roles`, audience mapper), one demo user; settle O5.
 - [x] T5 — oauth2-proxy (`keycloak-oidc`, PKCE, `--reverse-proxy`, `--allowed-role`) + Caddy `forward_auth` per the upstream example; `curl` without a session → `302` to sign-in.
 - [x] T6 — `smoke.ts`: headless sign-in, deep link, reload, a filter re-query after the data reads answered `200` through the edge; settle O4; `example:s3-sso:smoke` script with `timeout` and teardown.
-- [ ] T7 — `README.md` (run, trust the CA, the AWS mapping: Caddy ≈ ALB HTTPS listener + `authenticate-oidc`, moto ≈ private S3 REST endpoint, the signer ≈ the AWS path that signs; local `keycloak-oidc` vs production `entra-id` side by side; the all-or-nothing data warning, D8) + the ADR; close GAP-063.
+- [x] T7 — `README.md` (run, trust the CA, the AWS mapping: Caddy ≈ ALB HTTPS listener + `authenticate-oidc`, moto ≈ private S3 REST endpoint, the signer ≈ the AWS path that signs; local `keycloak-oidc` vs production `entra-id` side by side; the all-or-nothing data warning, D8) + the ADR; close GAP-063.
 
 ## Out of scope
 
