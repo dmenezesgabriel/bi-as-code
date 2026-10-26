@@ -48,6 +48,24 @@ function statusOf(url: string, ...extra: string[]): Promise<string> {
   ]);
 }
 
+/**
+ * `curl` from the probe to Caddy as a browser would reach it — SNI and Host
+ * `localhost` — resolving to `<body>\n<status>`.
+ */
+function atEdge(url: string, ...extra: string[]): Promise<string> {
+  return stack.curlFrom("probe", [
+    "-sk",
+    "--connect-to",
+    "localhost:8443:caddy:8443",
+    "--connect-to",
+    "localhost:8080:caddy:8080",
+    "-w",
+    "\n%{http_code}",
+    ...extra,
+    url,
+  ]);
+}
+
 beforeAll(async () => {
   const site = makeTempProject("biac-s3-sso-");
   for (const [path, file] of Object.entries(SITE_FILES)) {
@@ -106,6 +124,57 @@ describe("the s3-sso bucket", () => {
   });
 });
 
+describe("the s3-sso edge", () => {
+  const EDGE = "https://localhost:8443";
+
+  it.each([
+    ["/", "<p>home</p>\n200"],
+    ["/weekly-review/", "<p>weekly</p>\n200"],
+    ["/weekly-review/?region=West", "<p>weekly</p>\n200"],
+  ])("serves the route directory %s its index.html", async (path, answer) => {
+    expect(await atEdge(`${EDGE}${path}`)).toBe(answer);
+  });
+
+  it.each(["/nope/", "/nope.html"])(
+    "answers the miss %s with 404.html and status 404",
+    async (path) => {
+      expect(await atEdge(`${EDGE}${path}`)).toBe("<p>missing</p>\n404");
+    },
+  );
+
+  it("answers a ranged data read with 206 and the object's length", async () => {
+    const headers = await atEdge(
+      `${EDGE}/data/orders.parquet`,
+      "-D",
+      "-",
+      "-o",
+      "/dev/null",
+      "-H",
+      "Range: bytes=0-3",
+    );
+
+    expect(headers).toMatch(/^HTTP\/2 206/);
+    expect(headers).toMatch(
+      new RegExp(`content-range: bytes 0-3/${PARQUET_BYTES.length}`, "i"),
+    );
+  });
+
+  it("redirects plain HTTP to the HTTPS port", async () => {
+    const headers = await atEdge(
+      "http://localhost:8080/weekly-review/",
+      "-D",
+      "-",
+      "-o",
+      "/dev/null",
+    );
+
+    expect(headers).toMatch(/^HTTP\/1\.1 30[18]/);
+    expect(headers).toMatch(
+      /location: https:\/\/localhost:8443\/weekly-review\/\r?\n/i,
+    );
+  });
+});
+
 describe("the s3-sso network", () => {
   it.each(["moto", "signer"])(
     "publishes no host port for %s",
@@ -113,4 +182,11 @@ describe("the s3-sso network", () => {
       expect(await stack.publishedPorts(service)).toEqual([]);
     },
   );
+
+  it("publishes Caddy's two ports on loopback only", async () => {
+    expect((await stack.publishedPorts("caddy")).sort()).toEqual([
+      "127.0.0.1:8080->8080/tcp",
+      "127.0.0.1:8443->8443/tcp",
+    ]);
+  });
 });

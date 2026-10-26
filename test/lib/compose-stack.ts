@@ -8,7 +8,7 @@ import {
 export interface ComposeStack {
   /** Runs `curl <args>` inside `service`; resolves to its stdout. */
   curlFrom(service: string, args: readonly string[]): Promise<string>;
-  /** Host ports `service` publishes, as `"<container port>/<proto>"`. */
+  /** Host bindings `service` publishes, as `"<host ip>:<host port>-><container port>/<proto>"`. */
   publishedPorts(service: string): Promise<string[]>;
   down(): Promise<void>;
 }
@@ -73,7 +73,9 @@ async function hostBoundPorts(containerId: string): Promise<string[]> {
     client.container.getById(containerId),
   );
   const ports = inspect.NetworkSettings.Ports ?? {};
-  return Object.entries(ports)
-    .filter(([, bindings]) => (bindings ?? []).length > 0)
-    .map(([port]) => port);
+  return Object.entries(ports).flatMap(([port, bindings]) =>
+    (bindings ?? []).map(
+      (binding) => `${binding.HostIp}:${binding.HostPort}->${port}`,
+    ),
+  );
 }

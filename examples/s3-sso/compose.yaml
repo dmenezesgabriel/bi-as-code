@@ -1,6 +1,7 @@
 # A biac `build/` in a private, authenticated S3 bucket (moto), provisioned by
-# Terraform and readable only through a SigV4 signing proxy. Nothing here
-# publishes a port: the bucket and the signer live on the compose network.
+# Terraform and readable only through a SigV4 signing proxy, served over TLS
+# by Caddy. Only Caddy publishes ports, and only on loopback: the bucket and
+# the signer live on the compose network.
 name: s3-sso
 
 services:
@@ -64,6 +65,30 @@ services:
     depends_on:
       terraform:
         condition: service_completed_successfully
+
+  caddy:
+    image: caddy:2.11.7@sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489
+    labels:
+      org.biac.note: "local demonstration — not a production store"
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    healthcheck:
+      # Through the edge, the signer and the bucket: healthy means the whole
+      # read path answers. BusyBox wget verifies through OpenSSL, which reads
+      # SSL_CERT_FILE; set for this command only, since Caddy's own Go TLS
+      # client would honour it too.
+      test:
+        - CMD-SHELL
+        - SSL_CERT_FILE=/data/caddy/pki/authorities/local/root.crt wget -q -O /dev/null https://localhost:8443/index.html
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    depends_on:
+      signer:
+        condition: service_started
 
   # A curl inside the network, started only with `--profile probe`; it idles
   # so `docker compose exec probe curl …` can read moto and the signer.

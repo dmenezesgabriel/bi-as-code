@@ -1,0 +1,49 @@
+# The TLS edge in front of the private bucket, in the place an ALB HTTPS
+# listener takes in AWS. Every read goes through the SigV4 signer; Caddy
+# never holds a key.
+{
+	# The container listens on the ports it publishes. The HTTPS port is in
+	# the site address, not `https_port`: Caddy's automatic HTTP→HTTPS
+	# redirect leaves out a port equal to `https_port`, so setting that to
+	# 8443 would redirect to https://localhost/.
+	http_port 8080
+	# The local CA lives in the container; trusting it is the host's choice.
+	skip_install_trust
+}
+
+localhost:8443 {
+	tls internal
+
+	# S3's REST API serves no index document, so a route directory is
+	# rewritten to the per-route copy `biac build` emits (ADR-0029).
+	@directory path */
+	rewrite @directory {path}index.html
+
+	# Sibling rewrites are mutually exclusive in Caddy, so the bucket prefix
+	# is added in a route, which runs after the site-level rewrite.
+	route {
+		rewrite * /biac-site{uri}
+		reverse_proxy signer:8080 {
+			# A reader without s3:ListBucket gets 403 for a missing key on
+			# real S3 and 404 on moto; both are a miss to the viewer.
+			@missing status 403 404
+			handle_response @missing {
+				error 404
+			}
+		}
+	}
+
+	# The build's 404.html is the not-found document, answered with a real
+	# 404 as `biac serve` does (ADR-0030).
+	# Proxied as-is it would carry the bucket's 200, so the body and headers
+	# are copied under the error's status.
+	handle_errors 404 {
+		rewrite * /biac-site/404.html
+		reverse_proxy signer:8080 {
+			handle_response {
+				copy_response_headers
+				copy_response 404
+			}
+		}
+	}
+}
