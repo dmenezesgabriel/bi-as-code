@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { type ComposeStack, startComposeStack } from "../lib/compose-stack.js";
+import { type SignInLanding, signInAtEdge } from "../lib/edge-sign-in.js";
 import { type ExampleTokens, exampleTokens } from "../lib/keycloak-admin.js";
 import {
   cleanupProjects,
@@ -15,6 +16,13 @@ const SIGNED = `http://signer:8080/${BUCKET}`;
 // Plain HTTP on the compose network, as oauth2-proxy reaches Keycloak.
 const KEYCLOAK_HOST = "keycloak:8080";
 const PARQUET_BYTES = Buffer.from("PAR1-fixture-bytes-PAR1");
+const EDGE = "https://localhost:8443";
+// Opened before signing in: the viewer must land back on it, query intact.
+const DEEP_LINK = `${EDGE}/weekly-review/?region=West&x=1`;
+// eslint-disable-next-line sonarjs/no-hardcoded-passwords -- the published demo credential every user in examples/s3-sso/keycloak/realm.json carries; it guards nothing outside a local compose network
+const DEMO_PASSWORD = "biac-demo";
+// The demo user holding the app role; every edge read carries that session.
+const ADA_JAR = "/tmp/ada.cookies";
 
 // One file per extension `biac build` emits, so every content-type mapping
 // in the Terraform is read back from the bucket.
@@ -37,6 +45,7 @@ const SITE_FILES: Record<string, { body: string | Buffer; type: string }> = {
 };
 
 let stack: ComposeStack;
+let adaLanding: SignInLanding;
 
 /** `curl` from the probe, printing only `<status> <content-type>`. */
 function statusOf(url: string, ...extra: string[]): Promise<string> {
@@ -61,8 +70,8 @@ const AS_BROWSER = [
   "localhost:8080:caddy:8080",
 ];
 
-/** `curl` from the probe to the edge, resolving to `<body>\n<status>`. */
-function atEdge(url: string, ...extra: string[]): Promise<string> {
+/** `curl` from the probe to the edge with no session, resolving to `<body>\n<status>`. */
+function anonymouslyAtEdge(url: string, ...extra: string[]): Promise<string> {
   return stack.curlFrom("probe", [
     ...AS_BROWSER,
     "-w",
@@ -70,6 +79,34 @@ function atEdge(url: string, ...extra: string[]): Promise<string> {
     ...extra,
     url,
   ]);
+}
+
+/** `curl` from the probe to the edge with no session, resolving to `<status> <Location>`. */
+function redirectFrom(url: string): Promise<string> {
+  return stack.curlFrom("probe", [
+    ...AS_BROWSER,
+    "-o",
+    "/dev/null",
+    "-w",
+    "%{http_code} %{redirect_url}",
+    url,
+  ]);
+}
+
+/** As {@link anonymouslyAtEdge}, signed in as ada. */
+function atEdge(url: string, ...extra: string[]): Promise<string> {
+  return anonymouslyAtEdge(url, "-b", ADA_JAR, ...extra);
+}
+
+function signIn(username: string, jar: string): Promise<SignInLanding> {
+  return signInAtEdge(stack, {
+    from: "probe",
+    asBrowser: AS_BROWSER,
+    url: DEEP_LINK,
+    jar,
+    username,
+    password: DEMO_PASSWORD,
+  });
 }
 
 beforeAll(async () => {
@@ -82,6 +119,7 @@ beforeAll(async () => {
     environment: { BIAC_SITE_DIR: site },
     profiles: ["probe"],
   });
+  adaLanding = await signIn("ada", ADA_JAR);
 });
 
 afterAll(async () => {
@@ -130,9 +168,37 @@ describe("the s3-sso bucket", () => {
   });
 });
 
-describe("the s3-sso edge", () => {
-  const EDGE = "https://localhost:8443";
+describe("the s3-sso sign-in gate", () => {
+  it.each(["/weekly-review/?region=West&x=1", "/data/orders.parquet"])(
+    "sends %s without a session to sign in, remembering where it was going",
+    async (path) => {
+      expect(await redirectFrom(`${EDGE}${path}`)).toBe(
+        `302 ${EDGE}/oauth2/sign_in?rd=${encodeURIComponent(path)}`,
+      );
+    },
+  );
 
+  it("starts sign-in at the edge issuer with a PKCE challenge", async () => {
+    const location = await redirectFrom(`${EDGE}/oauth2/sign_in?rd=%2F`);
+
+    expect(location).toMatch(
+      /^302 https:\/\/localhost:8443\/realms\/biac\/protocol\/openid-connect\/auth\?/,
+    );
+    expect(location).toContain("code_challenge_method=S256");
+  });
+
+  it("lands a viewer holding the app role back on the deep link", () => {
+    expect(adaLanding).toEqual({ status: "200", url: DEEP_LINK });
+  });
+
+  it("refuses a signed-in user without the app role", async () => {
+    expect(await signIn("grace", "/tmp/grace.cookies")).toMatchObject({
+      status: "403",
+    });
+  });
+});
+
+describe("the s3-sso edge", () => {
   it.each([
     ["/", "<p>home</p>\n200"],
     ["/weekly-review/", "<p>weekly</p>\n200"],
@@ -166,7 +232,7 @@ describe("the s3-sso edge", () => {
   });
 
   it("redirects plain HTTP to the HTTPS port", async () => {
-    const headers = await atEdge(
+    const headers = await anonymouslyAtEdge(
       "http://localhost:8080/weekly-review/",
       "-D",
       "-",
@@ -230,18 +296,16 @@ describe("the s3-sso identity provider", () => {
     );
   });
 
-  it("shows the sign-in form and its assets through the edge", async () => {
-    const page = await atEdge(`${AUTHORIZE}${PKCE}`);
+  it("shows the sign-in form and its assets through the edge before any session", async () => {
+    const page = await anonymouslyAtEdge(`${AUTHORIZE}${PKCE}`);
     const stylesheet = page.match(/href="(\/resources\/[^"]+\.css)"/)?.[1];
 
     expect(page).toMatch(/id="kc-form-login"[\s\S]*\n200$/);
-    expect(await atEdge(`https://localhost:8443${stylesheet}`)).toMatch(
-      /\n200$/,
-    );
+    expect(await anonymouslyAtEdge(`${EDGE}${stylesheet}`)).toMatch(/\n200$/);
   });
 
   it("keeps the admin console off the edge", async () => {
-    expect(await atEdge("https://localhost:8443/admin/master/console/")).toBe(
+    expect(await atEdge(`${EDGE}/admin/master/console/`)).toBe(
       "<p>missing</p>\n404",
     );
   });
@@ -293,7 +357,7 @@ describe("the s3-sso identity provider", () => {
 });
 
 describe("the s3-sso network", () => {
-  it.each(["moto", "signer", "keycloak"])(
+  it.each(["moto", "signer", "keycloak", "oauth2-proxy"])(
     "publishes no host port for %s",
     async (service) => {
       expect(await stack.publishedPorts(service)).toEqual([]);

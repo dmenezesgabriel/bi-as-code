@@ -1,6 +1,8 @@
 # The TLS edge in front of the private bucket, in the place an ALB HTTPS
-# listener takes in AWS. Every read goes through the SigV4 signer; Caddy
-# never holds a key.
+# listener takes in AWS. oauth2-proxy grants every read before it reaches
+# the bucket, and every read goes through the SigV4 signer; Caddy never
+# holds a key. The gate follows oauth2-proxy's Caddy integration:
+# https://oauth2-proxy.github.io/oauth2-proxy/configuration/integrations/caddy
 {
 	# The container listens on the ports it publishes. The HTTPS port is in
 	# the site address, not `https_port`: Caddy's automatic HTTP→HTTPS
@@ -22,22 +24,46 @@ localhost:8443 {
 		reverse_proxy keycloak:8080
 	}
 
-	handle {
-		# S3's REST API serves no index document, so a route directory is
-		# rewritten to the per-route copy `biac build` emits (ADR-0029).
-		@directory path */
-		rewrite @directory {path}index.html
+	# Sign-in, callback and sign-out answer before any session exists.
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy:4180 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Uri {uri}
+		}
+	}
 
-		# Sibling rewrites are mutually exclusive in Caddy, so the bucket
-		# prefix is added in a route, which runs after the rewrite above.
+	handle {
+		# forward_auth sorts ahead of `route`, so `{uri}` is still the URL
+		# the viewer asked for. It goes back to them escaped and relative,
+		# so its query survives and no redirect domain has to be allowed.
+		forward_auth oauth2-proxy:4180 {
+			uri /oauth2/auth
+			header_up X-Real-IP {remote_host}
+			@unauthenticated status 401
+			handle_response @unauthenticated {
+				redir * /oauth2/sign_in?rd={http.request.uri_escaped}
+			}
+		}
+
+		# A route runs its directives in the order written; outside one,
+		# Caddy would sort the rewrites ahead of forward_auth.
 		route {
-			rewrite * /biac-site{uri}
-			reverse_proxy signer:8080 {
-				# A reader without s3:ListBucket gets 403 for a missing key on
-				# real S3 and 404 on moto; both are a miss to the viewer.
-				@missing status 403 404
-				handle_response @missing {
-					error 404
+			# S3's REST API serves no index document, so a route directory is
+			# rewritten to the per-route copy `biac build` emits (ADR-0029).
+			@directory path */
+			rewrite @directory {path}index.html
+
+			# Sibling rewrites are mutually exclusive in Caddy, even inside a
+			# route, so the bucket prefix is added in a nested one.
+			route {
+				rewrite * /biac-site{uri}
+				reverse_proxy signer:8080 {
+					# A reader without s3:ListBucket gets 403 for a missing key on
+					# real S3 and 404 on moto; both are a miss to the viewer.
+					@missing status 403 404
+					handle_response @missing {
+						error 404
+					}
 				}
 			}
 		}

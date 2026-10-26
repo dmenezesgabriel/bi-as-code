@@ -99,6 +99,18 @@
       ],
       "realmRoles": ["default-roles-biac"],
       "clientRoles": { "biac-dashboard": ["Dashboard.Viewer"] }
+    },
+    {
+      "username": "grace",
+      "enabled": true,
+      "email": "grace@example.com",
+      "emailVerified": true,
+      "firstName": "Grace",
+      "lastName": "Hopper",
+      "credentials": [
+        { "type": "password", "value": "biac-demo", "temporary": false }
+      ],
+      "realmRoles": ["default-roles-biac"]
     }
   ]
 }
