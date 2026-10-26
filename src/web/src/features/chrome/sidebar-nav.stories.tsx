@@ -179,7 +179,7 @@ export const WithSearch: Story = {
 
     await expect(
       await canvas.findByRole("option", { name: "Weekly review" }),
-    ).toHaveAttribute("href", "/weekly-review");
+    ).toHaveAttribute("href", "/weekly-review/");
     await expect(
       canvas.queryByRole("link", { name: "Home" }),
     ).not.toBeInTheDocument();

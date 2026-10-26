@@ -22,7 +22,7 @@ async function pickRegion(
   biacDev: BiacDev,
   name: string,
 ): Promise<Locator> {
-  await page.goto(`${biacDev.url}weekly-review`);
+  await page.goto(`${biacDev.url}weekly-review/`);
   const region = page.getByRole("combobox", { name: "Region" });
   await expect(region).toHaveText("Select Region");
   // Disabled until its options load. A click that has to wait retries with

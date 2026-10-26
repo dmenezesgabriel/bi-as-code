@@ -13,7 +13,7 @@ describe("EditPageLink on a page", () => {
     // Assert
     expect(screen.getByRole("link", { name: "Edit" })).toHaveAttribute(
       "href",
-      "/nested/page?edit=true",
+      "/nested/page/?edit=true",
     );
   });
 

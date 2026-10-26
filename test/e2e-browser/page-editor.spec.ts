@@ -474,7 +474,7 @@ test("leaving an editor with unsaved changes asks first; a filter change does no
 
   await sidebarLink(page, "Orders overview").click();
   await expect.poll(() => dialogs.seen).toEqual([LEAVE_ASK]);
-  expect(new URL(page.url()).pathname).toBe("/weekly-review");
+  expect(new URL(page.url()).pathname).toBe("/weekly-review/");
   expect(new URL(page.url()).searchParams.get("edit")).toBe("true");
   await expect(sourceEditor(page)).toContainText(
     "# {$translations.weekly_review} zz",

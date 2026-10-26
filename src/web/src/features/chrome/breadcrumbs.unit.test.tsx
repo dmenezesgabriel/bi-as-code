@@ -61,25 +61,28 @@ describe("Breadcrumbs", () => {
     );
   });
 
-  it("shows home, the directory as plain text, and the page on a nested page", async () => {
-    await renderWithRouter(<Breadcrumbs tree={tree} />, paths, "/nested/page");
+  it.each(["/nested/page/", "/nested/page"])(
+    "shows home, the directory as plain text, and the page at %s",
+    async (path) => {
+      await renderWithRouter(<Breadcrumbs tree={tree} />, paths, path);
 
-    const nav = breadcrumbNav();
-    expect(within(nav).getAllByRole("listitem")).toHaveLength(3);
-    expect(
-      within(nav).getByRole("link", { name: "Orders overview" }),
-    ).toHaveAttribute("href", "/");
-    const dir = within(nav).getByText("Nested");
-    expect(dir.tagName).toBe("SPAN");
-    expect(dir).not.toHaveAttribute("aria-current");
-    expect(within(nav).getByText("Region detail")).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(
-      within(nav).queryByRole("link", { name: "Nested" }),
-    ).not.toBeInTheDocument();
-  });
+      const nav = breadcrumbNav();
+      expect(within(nav).getAllByRole("listitem")).toHaveLength(3);
+      expect(
+        within(nav).getByRole("link", { name: "Orders overview" }),
+      ).toHaveAttribute("href", "/");
+      const dir = within(nav).getByText("Nested");
+      expect(dir.tagName).toBe("SPAN");
+      expect(dir).not.toHaveAttribute("aria-current");
+      expect(within(nav).getByText("Region detail")).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      expect(
+        within(nav).queryByRole("link", { name: "Nested" }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("renders nothing on a route absent from the nav tree", async () => {
     await renderWithRouter(<Breadcrumbs tree={tree} />, paths, "/missing");

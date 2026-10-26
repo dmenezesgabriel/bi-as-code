@@ -3,6 +3,7 @@ import { useState, type MouseEvent } from "react";
 import type { NavDirectory, NavPage, NavTree } from "virtual:biac-pages";
 import { PageIcon } from "../../components/page-icon";
 import { cn } from "../../lib/cn";
+import { routeOfPathname } from "../pages/route-of-pathname";
 import { SiteSearch } from "../search/site-search";
 import type { LoadPageSearchDocuments } from "../search/types";
 import { readDirOpenMap, writeDirOpen } from "./sidebar-storage";
@@ -32,7 +33,9 @@ export function SidebarNav({
   onNavigate: () => void;
   onRevealSearch: () => void;
 }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useRouterState({
+    select: (s) => routeOfPathname(s.location.pathname),
+  });
   const [dirOpen, setDirOpen] =
     useState<Record<string, boolean>>(readDirOpenMap);
   const [searching, setSearching] = useState(false);

@@ -30,7 +30,7 @@ test("the sidebar search box finds pages by body word, ranks titles first, and o
 
   await box.fill("fulfilment");
   await expect(results).toHaveText(["Allocation"]);
-  await expect(results.first()).toHaveAttribute("href", "/nested/allocation");
+  await expect(results.first()).toHaveAttribute("href", "/nested/allocation/");
 
   await box.fill("");
   await expect(results).toHaveCount(0);
@@ -42,7 +42,7 @@ test("the sidebar search box finds pages by body word, ranks titles first, and o
   await expect(results.nth(1)).toHaveAttribute("data-highlighted", "");
   await box.press("Enter");
 
-  await expect(page).toHaveURL(/\/weekly-review$/);
+  await expect(page).toHaveURL(/\/weekly-review\/$/);
   await expect(box).toHaveValue("");
   expect(errors).toEqual([]);
 });

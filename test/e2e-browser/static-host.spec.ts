@@ -67,6 +67,34 @@ test.describe("the build on a host with no rewrite rules", () => {
     expect(errors).toEqual([]);
   });
 
+  test("the URLs the app writes answer 200 when reloaded or opened", async ({
+    page,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    const heading = page.getByRole("heading", { level: 1 });
+
+    // A filtered page keeps its directory URL: a slash-less rewrite of it
+    // would reload into this host's 404.
+    const filtered = `${staticHost.url}/weekly-review/?region=West`;
+    expect((await page.goto(filtered))?.status()).toBe(200);
+    await expect(heading).toHaveText("Weekly review");
+    await expect(page).toHaveURL(filtered);
+    expect((await page.reload())?.status()).toBe(200);
+    await expect(page).toHaveURL(filtered);
+
+    // A nav link copied out of the sidebar opens straight off the host.
+    const nav = page.getByRole("navigation", { name: "Site navigation" });
+    await nav.getByText("Breakdowns").click();
+    const href = await nav
+      .getByRole("link", { name: "Allocation" })
+      .getAttribute("href");
+    expect(href).toBe("/nested/allocation/");
+    expect((await page.goto(`${staticHost.url}${href}`))?.status()).toBe(200);
+    await expect(heading).toHaveText("Allocation");
+
+    expect(errors).toEqual([]);
+  });
+
   test("a Regional split bar click cross-filters weekly-review off a rewrite-less host", async ({
     page,
   }) => {

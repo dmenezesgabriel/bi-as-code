@@ -181,7 +181,7 @@ describe("buildPageRouter", () => {
     fireEvent.click(await screen.findByRole("link", { name: "go nested" }));
 
     expect(await screen.findByText("nested body")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/nested");
+    expect(router.state.location.pathname).toBe("/nested/");
   });
 
   it("renders the not-found page for a path no manifest entry matches", async () => {
@@ -607,8 +607,44 @@ describe("buildPageRouter under a configured base path", () => {
 
     expect(screen.getByRole("link", { name: "go nested" })).toHaveAttribute(
       "href",
-      "/bi-as-code/nested",
+      "/bi-as-code/nested/",
     );
+  });
+});
+
+describe("buildPageRouter page URLs", () => {
+  it("links a page at its route's directory URL", async () => {
+    // Arrange / Act
+    renderRouter(pages, "/");
+    await screen.findByText(/home body/);
+
+    // Assert
+    expect(screen.getByRole("link", { name: "go nested" })).toHaveAttribute(
+      "href",
+      "/nested/",
+    );
+  });
+
+  it("keeps the trailing slash of a filtered page URL it was loaded at", async () => {
+    // Arrange / Act
+    const router = renderRouter(pages, "/nested/?region=West");
+    await screen.findByText("nested body");
+
+    // Assert
+    expect(router.state.location.href).toBe("/nested/?region=West");
+  });
+
+  it("shows the chrome a page's manifest entry sets at its directory URL", async () => {
+    // Arrange
+    const embed = pageEntry("/embed", async () => textPage("e", "E"));
+    const entries = [...pages, { ...embed, sidebar: false, header: false }];
+
+    // Act
+    renderRouter(entries, "/embed/");
+    await screen.findByText("e");
+
+    // Assert
+    expect(document.querySelectorAll("aside, header")).toHaveLength(0);
   });
 });
 

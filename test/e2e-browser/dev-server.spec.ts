@@ -50,7 +50,7 @@ test("navigates to a linked page client-side, with no reload", async ({
 
   await page.getByRole("link", { name: "region detail page" }).click();
 
-  await expect(page).toHaveURL(/\/nested\/page$/);
+  await expect(page).toHaveURL(/\/nested\/page\/$/);
   await expect(
     page.getByRole("heading", { name: "Region detail" }),
   ).toBeVisible();

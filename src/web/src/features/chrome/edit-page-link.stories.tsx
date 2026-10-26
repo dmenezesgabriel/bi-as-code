@@ -16,24 +16,26 @@ type Story = StoryObj<typeof EditPageLink>;
 
 /** On a page: `Edit` points at the same URL plus the edit flag. */
 export const OnPage: Story = {
-  decorators: [withMemoryRouter(PATHS, "/weekly-review?region=West")],
+  decorators: [withMemoryRouter(PATHS, "/weekly-review/?region=West")],
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("link", { name: "Edit" })).toHaveAttribute(
       "href",
-      "/weekly-review?region=West&edit=true",
+      "/weekly-review/?region=West&edit=true",
     );
   },
 };
 
 /** While editing: `Done` drops only the flag, and the link flips back. */
 export const Editing: Story = {
-  decorators: [withMemoryRouter(PATHS, "/weekly-review?region=West&edit=true")],
+  decorators: [
+    withMemoryRouter(PATHS, "/weekly-review/?region=West&edit=true"),
+  ],
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole("link", { name: "Done" }));
     await waitFor(() =>
       expect(canvas.getByRole("link", { name: "Edit" })).toHaveAttribute(
         "href",
-        "/weekly-review?region=West&edit=true",
+        "/weekly-review/?region=West&edit=true",
       ),
     );
   },

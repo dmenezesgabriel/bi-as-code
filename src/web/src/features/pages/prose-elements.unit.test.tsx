@@ -99,7 +99,37 @@ describe("prose link", () => {
     // Assert
     expect(screen.getByRole("link", { name: "region detail" })).toHaveAttribute(
       "href",
-      "/nested/page",
+      "/nested/page/",
+    );
+  });
+
+  it("keeps a heading anchor after the page's directory URL", async () => {
+    // Arrange / Act
+    await renderWithRouter(
+      <ProseLink href="/nested/page#takeaways">takeaways</ProseLink>,
+      ["/", "/nested/page"],
+      "/",
+    );
+
+    // Assert
+    expect(screen.getByRole("link", { name: "takeaways" })).toHaveAttribute(
+      "href",
+      "/nested/page/#takeaways",
+    );
+  });
+
+  it("keeps a filter query after the page's directory URL", async () => {
+    // Arrange / Act
+    await renderWithRouter(
+      <ProseLink href="/nested/page?region=West">west</ProseLink>,
+      ["/", "/nested/page"],
+      "/",
+    );
+
+    // Assert
+    expect(screen.getByRole("link", { name: "west" })).toHaveAttribute(
+      "href",
+      "/nested/page/?region=West",
     );
   });
 

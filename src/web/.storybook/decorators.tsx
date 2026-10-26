@@ -16,6 +16,7 @@ import { FakeFilterUrlPort } from "../src/features/filters/fake-url-port";
 import type { FilterUrlPort } from "../src/features/filters/filter-url-port";
 import { FiltersProvider } from "../src/features/filters/page-filters-context";
 import { QueryRegistryProvider } from "../src/features/pages/query-registry";
+import { PAGE_URL_TRAILING_SLASH } from "../src/features/pages/route-of-pathname";
 import type { SqlBlock } from "../src/features/pages/types";
 import { PageLanguageProvider } from "../src/features/chrome/page-language";
 import { ThemeModeProvider } from "../src/features/chrome/theme-mode";
@@ -56,6 +57,7 @@ function buildStubRouter(
   return createRouter({
     routeTree: rootRoute.addChildren(routes),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
+    trailingSlash: PAGE_URL_TRAILING_SLASH,
   });
 }
 

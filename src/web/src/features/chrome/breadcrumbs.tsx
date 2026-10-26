@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { NavTree } from "virtual:biac-pages";
+import { routeOfPathname } from "../pages/route-of-pathname";
 
 interface Crumb {
   /** Stable list key: the crumb's route, or `dir:<id>` for directory text. */
@@ -21,7 +22,9 @@ interface Crumb {
  * <Breadcrumbs tree={navTree} />
  */
 export function Breadcrumbs({ tree }: { tree: NavTree }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useRouterState({
+    select: (s) => routeOfPathname(s.location.pathname),
+  });
   const crumbs = deriveCrumbs(tree, pathname);
   if (!crumbs) return null;
   return (

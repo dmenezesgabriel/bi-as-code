@@ -179,7 +179,7 @@ describe("PageEditor leaving", () => {
 
     // Assert
     await waitFor(() => expect(leave.asked).toHaveLength(1));
-    expect(router.state.location.pathname).toBe("/weekly-review");
+    expect(router.state.location.pathname).toBe("/weekly-review/");
     expect(mountedView(SOURCE_LABEL).state.doc.toString()).toBe("x# Weekly\n");
   });
 });

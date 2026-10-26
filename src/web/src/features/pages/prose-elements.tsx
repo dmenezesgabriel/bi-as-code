@@ -102,7 +102,22 @@ export function ProseLink({
 }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   const classes = cn(LINK, className);
   if (href.startsWith("/")) {
-    return <Link to={href} className={classes} {...rest} />;
+    return <Link {...routerTarget(href)} className={classes} {...rest} />;
   }
   return <a href={href} className={classes} {...rest} />;
+}
+
+// The router appends the page URL's trailing slash to the end of `to`, so a
+// query or anchor left inside it would carry the slash; it gets them apart.
+function routerTarget(href: string): {
+  to: string;
+  search: Record<string, string>;
+  hash: string | undefined;
+} {
+  const url = new URL(href, "https://prose.invalid");
+  return {
+    to: url.pathname,
+    search: Object.fromEntries(url.searchParams),
+    hash: url.hash.slice(1) || undefined,
+  };
 }

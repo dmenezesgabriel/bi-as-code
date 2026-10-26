@@ -7,6 +7,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { PAGE_URL_TRAILING_SLASH } from "../pages/route-of-pathname";
 
 /**
  * Mounts `root` under an in-memory router with one stub route per entry of
@@ -35,6 +36,7 @@ export async function renderWithRouter(
   const router = createRouter({
     routeTree: rootRoute.addChildren(routes),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
+    trailingSlash: PAGE_URL_TRAILING_SLASH,
   });
   render(<RouterProvider router={router} />);
   await router.load();

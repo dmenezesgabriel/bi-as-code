@@ -470,7 +470,7 @@ test("?region=Atlantis is pruned by the Region dropdown so every chart stays liv
   // Atlantis is not a region option: the dropdown validates the URL value
   // against its loaded options, drops the stale param, and every chart
   // render their unfiltered read — no empty faces.
-  await expect(page).toHaveURL(/weekly-review$/);
+  await expect(page).toHaveURL(/weekly-review\/$/);
   await expect(page.locator("[data-chart-empty]")).toHaveCount(0);
   await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
   expect(errors).toEqual([]);

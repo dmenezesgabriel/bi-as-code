@@ -8,7 +8,7 @@ import type { EditorStatus } from "./types";
 import { useUnsavedChangesGuard } from "./use-unsaved-changes-guard";
 
 const PATHS = ["/weekly-review", "/orders"];
-const EDITING = "/weekly-review?region=West&edit=true";
+const EDITING = "/weekly-review/?region=West&edit=true";
 const DIRTY: EditorStatus = { kind: "dirty" };
 
 /** The editor's guard next to the links that leave it, or stay in it. */
@@ -38,7 +38,7 @@ async function followOrdersLink(
   router: Awaited<ReturnType<typeof renderGuard>>,
 ) {
   fireEvent.click(screen.getByRole("link", { name: "Orders overview" }));
-  await waitFor(() => expect(router.state.location.pathname).toBe("/orders"));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/orders/"));
 }
 
 describe("useUnsavedChangesGuard with unsaved changes", () => {

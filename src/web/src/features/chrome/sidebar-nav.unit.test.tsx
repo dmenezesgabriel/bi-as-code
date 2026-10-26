@@ -95,22 +95,36 @@ describe("SidebarNav", () => {
     expect(title).toHaveClass("font-heading");
   });
 
-  it("opens the directory containing the active route and closes the rest", async () => {
-    await renderNav("/nested/page");
+  it.each(["/nested/page/", "/nested/page"])(
+    "opens the directory containing the active route at %s and closes the rest",
+    async (path) => {
+      await renderNav(path);
 
-    expect(dirElement("Nested")).toHaveAttribute("open");
-    expect(dirElement("Guides")).not.toHaveAttribute("open");
-  });
+      expect(dirElement("Nested")).toHaveAttribute("open");
+      expect(dirElement("Guides")).not.toHaveAttribute("open");
+    },
+  );
 
-  it("marks the active page link with aria-current", async () => {
-    await renderNav("/nested/page");
+  it.each(["/nested/page/", "/nested/page"])(
+    "marks the active page link at %s with aria-current",
+    async (path) => {
+      await renderNav(path);
 
-    expect(screen.getByRole("link", { name: "Region detail" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getByRole("link", { name: "About" })).not.toHaveAttribute(
-      "aria-current",
+      expect(
+        screen.getByRole("link", { name: "Region detail" }),
+      ).toHaveAttribute("aria-current", "page");
+      expect(screen.getByRole("link", { name: "About" })).not.toHaveAttribute(
+        "aria-current",
+      );
+    },
+  );
+
+  it("links each page at its route's directory URL", async () => {
+    await renderNav("/");
+
+    expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
+      "href",
+      "/about/",
     );
   });
 

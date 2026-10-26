@@ -166,7 +166,7 @@ test("?region=Atlantis is pruned by the Region dropdown so the KPI renders unfil
   // its delta and sparkline — not the empty face.
   const widget = kpi(page);
   await expect(widget.locator("span.text-xl")).toHaveText("$15k");
-  await expect(page).toHaveURL(/weekly-review$/);
+  await expect(page).toHaveURL(/weekly-review\/$/);
   await expect(widget.getByText("Quarter revenue")).toBeVisible();
   await expect(widget.locator('[data-status="positive"]')).toContainText("+");
   await expect(page.locator('svg[aria-label="weekly_revenue"]')).toHaveCount(3);

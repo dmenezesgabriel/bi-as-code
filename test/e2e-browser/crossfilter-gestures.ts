@@ -76,7 +76,7 @@ async function abandonSliderDrag(
   const from = { x: maximum.x + maximum.width / 2, y };
   const to = { x: track.start + (track.end - track.start) * fraction, y };
   await drag(page, from, to, 12, 0);
-  await page.locator('nav a[href="/weekly-review"]').click();
+  await page.locator('nav a[href="/weekly-review/"]').click();
   await page.goBack();
   await expect(chartHosts(page).locator("canvas")).toHaveCount(CHARTS.length);
 }

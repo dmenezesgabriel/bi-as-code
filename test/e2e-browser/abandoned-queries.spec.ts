@@ -54,7 +54,7 @@ test("leaving a page while its plain query is still polled posts nothing late an
   await page.goto(`${dev.url}slow-aggregate`);
 
   await waitForWorkerRequest(page, "POLL_PENDING_QUERY");
-  await page.locator('nav a[href="/weekly-review"]').click();
+  await page.locator('nav a[href="/weekly-review/"]').click();
   await expect(readyCharts(page)).toHaveCount(WEEKLY_REVIEW_CHART_COUNT);
   await waitForSettled(page);
 

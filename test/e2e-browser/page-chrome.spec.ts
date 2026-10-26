@@ -45,7 +45,7 @@ test("sidebar lists the nav tree in config order and highlights the active route
   ]);
 
   await nav.getByRole("link", { name: "Region detail" }).click();
-  await expect(page).toHaveURL(/\/nested\/page$/);
+  await expect(page).toHaveURL(/\/nested\/page\/$/);
   await expect(
     nav.getByRole("link", { name: "Region detail" }),
   ).toHaveAttribute("aria-current", "page");

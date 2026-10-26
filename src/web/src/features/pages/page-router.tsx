@@ -17,6 +17,7 @@ import { MarkdownPage } from "./markdown-page";
 import { NotFoundPage } from "./not-found-page";
 import { PageBrandStyle } from "./page-brand-style";
 import { PageError } from "./page-error";
+import { PAGE_URL_TRAILING_SLASH } from "./route-of-pathname";
 import type {
   CompiledPageModule,
   DataUpdateSubscription,
@@ -89,6 +90,7 @@ export function buildPageRouter(
     // build; the router strips it when matching the URL and prepends it to
     // every href it builds, so a prefixed deploy routes and links beneath it.
     basepath: import.meta.env.BASE_URL,
+    trailingSlash: PAGE_URL_TRAILING_SLASH,
     defaultErrorComponent: PageError,
     scrollRestoration: ({ location }) => {
       const moved =

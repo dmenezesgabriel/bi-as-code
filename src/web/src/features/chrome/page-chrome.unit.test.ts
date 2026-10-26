@@ -22,6 +22,13 @@ describe("resolvePageChrome", () => {
     });
   });
 
+  it("matches a page at its route's directory URL", () => {
+    expect(resolvePageChrome(pages, "/embed/", true)).toEqual({
+      sidebar: false,
+      header: false,
+    });
+  });
+
   it("lets a page bring chrome back over nav.sidebar: false", () => {
     const restoring = [{ route: "/full", sidebar: true }];
 

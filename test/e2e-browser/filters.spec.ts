@@ -99,7 +99,7 @@ test("?region=Atlantis is pruned by the Region dropdown and the page renders unf
   // value away and the param drops from the URL. The settled page is the
   // unfiltered read — region_share, west_orders and the <Table> widgets at
   // their full counts (the mounted-but-hidden Order-mix table included).
-  await expect(page).toHaveURL(/weekly-review$/);
+  await expect(page).toHaveURL(/weekly-review\/$/);
   await expect(page.getByText("Page 1 of 4 · 39 rows")).toHaveCount(2);
   await expect(page.getByText("Page 1 of 36 · 355 rows")).toHaveCount(1);
   await expect(page.locator("[data-chart-empty]")).toHaveCount(0);

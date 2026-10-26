@@ -117,7 +117,7 @@ describe("SiteSearch — results", () => {
     ]);
     expect(screen.getByRole("option", { name: "Allocation" })).toHaveAttribute(
       "href",
-      "/nested/allocation",
+      "/nested/allocation/",
     );
   });
 
@@ -227,7 +227,7 @@ describe("SiteSearch — choosing", () => {
 
     await act(async () => fireEvent.keyDown(box, { key: "Enter" }));
 
-    expect(router.state.location.pathname).toBe("/weekly-orders");
+    expect(router.state.location.pathname).toBe("/weekly-orders/");
     expect(onNavigate).toHaveBeenCalledOnce();
   });
 
@@ -244,7 +244,7 @@ describe("SiteSearch — choosing", () => {
     );
     await act(async () => fireEvent.keyDown(box, { key: "Enter" }));
 
-    expect(router.state.location.pathname).toBe("/weekly-review");
+    expect(router.state.location.pathname).toBe("/weekly-review/");
   });
 
   it("clears the box once a result is opened", async () => {

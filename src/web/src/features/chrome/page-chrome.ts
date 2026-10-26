@@ -1,5 +1,6 @@
 import { useRouterState } from "@tanstack/react-router";
 import type { PageChromeEntry } from "../pages/types";
+import { routeOfPathname } from "../pages/route-of-pathname";
 
 /** Which pieces of app chrome the current page shows. */
 export interface ShownChrome {
@@ -22,7 +23,8 @@ export function resolvePageChrome(
   pathname: string,
   projectChrome: boolean,
 ): ShownChrome {
-  const page = pages.find((entry) => entry.route === pathname);
+  const route = routeOfPathname(pathname);
+  const page = pages.find((entry) => entry.route === route);
   return {
     sidebar: page?.sidebar ?? projectChrome,
     header: page?.header ?? projectChrome,
