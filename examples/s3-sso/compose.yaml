@@ -1,7 +1,8 @@
 # A biac `build/` in a private, authenticated S3 bucket (moto), provisioned by
 # Terraform and readable only through a SigV4 signing proxy, served over TLS
-# by Caddy. Only Caddy publishes ports, and only on loopback: the bucket and
-# the signer live on the compose network.
+# by Caddy, with Keycloak as the identity provider. Only Caddy publishes
+# ports, and only on loopback: the bucket, the signer and Keycloak live on
+# the compose network.
 name: s3-sso
 
 services:
@@ -66,6 +67,43 @@ services:
       terraform:
         condition: service_completed_successfully
 
+  # The identity provider, a realm shaped like an Entra ID tenant. Browsers
+  # reach it through Caddy on the app's own origin, so its issuer is the
+  # edge URL; oauth2-proxy reaches the token and key endpoints directly.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
+    command: ["start", "--import-realm"]
+    labels:
+      org.biac.note: "local demonstration — not a production identity provider"
+    environment:
+      # Every token's `iss` names the edge, however Keycloak is reached;
+      # requests on the compose network get back-channel endpoints on the
+      # host they used.
+      KC_HOSTNAME: https://localhost:8443
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      # The file-backed store, named so the realm visibly lives and dies
+      # with the container.
+      KC_DB: dev-file
+      # Reachable only on the compose network: Caddy routes no /admin path.
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+    healthcheck:
+      # The image has bash but no HTTP client. Readiness is the status line:
+      # while the realm imports, the 503 body still lists sub-checks "UP".
+      test:
+        - CMD
+        - bash
+        - -c
+        - exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 && head -1 <&3 | grep -q ' 200 '
+      interval: 3s
+      timeout: 2s
+      retries: 60
+
   caddy:
     image: caddy:2.11.7@sha256:504a44d7d74bd2bc28a66afc4774912fc21223ca8a67734af1c54ab2f999b489
     labels:
@@ -89,6 +127,8 @@ services:
     depends_on:
       signer:
         condition: service_started
+      keycloak:
+        condition: service_healthy
 
   # A curl inside the network, started only with `--profile probe`; it idles
   # so `docker compose exec probe curl …` can read moto and the signer.

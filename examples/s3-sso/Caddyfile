@@ -14,21 +14,31 @@
 localhost:8443 {
 	tls internal
 
-	# S3's REST API serves no index document, so a route directory is
-	# rewritten to the per-route copy `biac build` emits (ADR-0029).
-	@directory path */
-	rewrite @directory {path}index.html
+	# Keycloak shares the app's origin, so the issuer the browser signs in
+	# at is the one every token names. Only the realm endpoints and the
+	# login page's assets pass; the admin console stays on the network.
+	@keycloak path /realms/* /resources/*
+	handle @keycloak {
+		reverse_proxy keycloak:8080
+	}
 
-	# Sibling rewrites are mutually exclusive in Caddy, so the bucket prefix
-	# is added in a route, which runs after the site-level rewrite.
-	route {
-		rewrite * /biac-site{uri}
-		reverse_proxy signer:8080 {
-			# A reader without s3:ListBucket gets 403 for a missing key on
-			# real S3 and 404 on moto; both are a miss to the viewer.
-			@missing status 403 404
-			handle_response @missing {
-				error 404
+	handle {
+		# S3's REST API serves no index document, so a route directory is
+		# rewritten to the per-route copy `biac build` emits (ADR-0029).
+		@directory path */
+		rewrite @directory {path}index.html
+
+		# Sibling rewrites are mutually exclusive in Caddy, so the bucket
+		# prefix is added in a route, which runs after the rewrite above.
+		route {
+			rewrite * /biac-site{uri}
+			reverse_proxy signer:8080 {
+				# A reader without s3:ListBucket gets 403 for a missing key on
+				# real S3 and 404 on moto; both are a miss to the viewer.
+				@missing status 403 404
+				handle_response @missing {
+					error 404
+				}
 			}
 		}
 	}

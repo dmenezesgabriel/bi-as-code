@@ -1,0 +1,104 @@
+{
+  "realm": "biac",
+  "displayName": "biac demo tenant — local demonstration",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "biac-dashboard",
+      "name": "biac dashboard",
+      "description": "Stands in for an Entra ID app registration; the client secret is a demo value.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "biac-dashboard-demo-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["https://localhost:8443/oauth2/callback"],
+      "webOrigins": ["https://localhost:8443"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://localhost:8443/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "oid",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "id",
+            "claim.name": "oid",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "tid",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "tid",
+            "claim.value": "6d1f0c1e-3a5b-4c7d-9e2f-0a1b2c3d4e5f",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "biac-dashboard",
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "biac-dashboard",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "client": {
+      "biac-dashboard": [
+        {
+          "name": "Dashboard.Viewer",
+          "description": "Stands in for an Entra ID app role: may open the dashboard."
+        }
+      ]
+    }
+  },
+  "users": [
+    {
+      "username": "ada",
+      "enabled": true,
+      "email": "ada@example.com",
+      "emailVerified": true,
+      "firstName": "Ada",
+      "lastName": "Lovelace",
+      "credentials": [
+        { "type": "password", "value": "biac-demo", "temporary": false }
+      ],
+      "realmRoles": ["default-roles-biac"],
+      "clientRoles": { "biac-dashboard": ["Dashboard.Viewer"] }
+    }
+  ]
+}
