@@ -8,7 +8,7 @@ A person new to biac opens the docs project, follows Getting started from instal
 
 ## Demo
 
-1. Cold start: `bin/biac dev docs`, open `/` — "What is biac" with the sidebar grouped Start · Pages · Data · Widgets · Filters · Cross-filter · Ship.
+1. Cold start: `bin/biac dev docs`, open `/` — "What is biac"; the sidebar lists What is biac and Getting started, then the sections Pages · Data · Widgets · Layout · Filters · Cross-filter · Ship.
 2. Open `/getting-started` and follow it in a fresh directory: `biac dev` → first page → first chart → `biac build` → `biac preview` — every command and file in the tutorial works as written.
 3. Open `/widgets/bar-chart`: a live bar chart on the docs data, then the `mdx echo` markup that produced it; every other widget and filter page renders the same way (one per `mdxComponents` tag group).
 4. Open `/filters/dropdown`, pick a value — the widgets on the page re-query and the URL carries it; reload — the pick persists.
@@ -131,13 +131,13 @@ Verdict: the engine, client and UI capabilities the docs need are complete; what
 
 ## Open decisions
 
-| Id  | Decision                                                                                                    | Evidence to gather before deciding                                                               |
-| --- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| O1  | `pnpm docs:dev` / `docs:build` scripts, or `bin/biac dev docs` only                                         | `grep -n '"dev"\|"build"' package.json`; framework's `package.json` `docs:*` scripts             |
-| O2  | Browser coverage for `docs/`: its own spec, or join the route list of `page-typography.spec.ts`             | the spec's route list and fixture (`biacDev`) — whether it can point at another project root     |
-| O3  | Section folder names and URL scheme (`/widgets/bar-chart` vs `/bar-chart`)                                  | `directories` handling in `src/engine/biac-config.ts`, breadcrumbs, framework's `/inputs/search` |
-| O4  | Whether `docs/` pages are prettier-formatted (today `format` covers `maintainer/`, not `pages/` or `docs/`) | run `prettier --check` on a page with JSX tags and an `mdx echo` fence and read the diff         |
-| O5  | Where the docs' dataset comes from (a public-domain set vs a generated one)                                 | licence of candidate sets; `du -sh` budget per file                                              |
+| Id  | Decision                                                                                                    | Evidence to gather before deciding                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| O1  | `pnpm docs:dev` / `docs:build` scripts, or `bin/biac dev docs` only                                         | **Settled:** `bin/biac dev\|build\|preview docs` only, no scripts — `resolveProjectRoot` (`src/cli/commands/web-project.ts`) takes the directory; framework's `docs:build` exists because its CLI runs from source                                                                                                                                                                                                                         |
+| O2  | Browser coverage for `docs/`: its own spec, or join the route list of `page-typography.spec.ts`             | the spec's route list and fixture (`biacDev`) — whether it can point at another project root                                                                                                                                                                                                                                                                                                                                               |
+| O3  | Section folder names and URL scheme (`/widgets/bar-chart` vs `/bar-chart`)                                  | **Settled:** one folder per section under `docs/pages/` (`/widgets/bar-chart`), titled by `directories` in `docs/biac.config.ts`, sections ordered by `sidebar_position` bands (100s Pages, 200s Data, 300s Widgets, 400s Layout, 500s Filters, 600s Cross-filter, 700s Ship); `index.md` and `getting-started.md` are root pages, listed above the sections — `buildNavTree` (`src/engine/nav-tree.ts`) gives root pages no group heading |
+| O4  | Whether `docs/` pages are prettier-formatted (today `format` covers `maintainer/`, not `pages/` or `docs/`) | **Settled:** yes — `'docs/**/*.md'` is in `format`/`format:check`; `prettier --check` passes on every `pages/` page including the `mdx echo` one, and it reflows JSX inside an `mdx echo` fence to one attribute per line                                                                                                                                                                                                                  |
+| O5  | Where the docs' dataset comes from (a public-domain set vs a generated one)                                 | **Settled (owner, public-domain):** `docs/data/penguins.csv` (15 KB, palmerpenguins, CC0 1.0, `NA` written as empty cells so DuckDB's sniffer types the measures as numbers) and `docs/data/seattle-weather.csv` (48 KB, vega-datasets, NOAA, U.S. Government work); both fetched from upstream, credited on `docs/pages/index.md`                                                                                                         |
 
 ## Surface
 
@@ -152,7 +152,7 @@ Verdict: the engine, client and UI capabilities the docs need are complete; what
 
 One TDD unit each, one conventional commit each. Each closes with a `playwright-cli` pass over `bin/biac dev docs` on the pages it added, at 1280 and 375 px, light and dark.
 
-- [ ] T1 — The `docs/` project: `biac.config.ts`, `data/`, What is biac, Getting started (each step run in a fresh temp project), an integration test that `biac build docs` exits 0; settle O1, O3, O4, O5
+- [x] T1 — The `docs/` project: `biac.config.ts`, `data/`, What is biac, Getting started (each step run in a fresh temp project), an integration test that `biac build docs` exits 0; settle O1, O3, O4, O5
 - [ ] T2 — Widget reference pages: `Table`, `BigValue`, `Value`, the six charts, each with `mdx echo` examples on the docs data; settle O2
 - [ ] T3 — Layout reference pages: `Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Accordion`, `Row`, `Stack`
 - [ ] T4 — Filter reference pages, `filters=[...]` and URL persistence, cross-filter how-to and explanation

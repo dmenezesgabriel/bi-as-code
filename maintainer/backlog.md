@@ -191,13 +191,14 @@ biac's user documentation is a biac project: every shipped capability on a live 
 
 Not started. Phase 4 is open.
 
-| Phase                      | Contents                                                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Connectors**             | remote DuckDB/MotherDuck/PostgreSQL sources (evidence `core/src/connectors/`, `mosaic-duckdb` data-server)                     |
-| **Chart parity remainder** | pie, funnel, sankey, treemap, candlestick, radar, polar, map, calendar heatmap, combo, waterfall, reference lines/areas/points |
-| **Table extras**           | download, column filters, column config, pivot                                                                                 |
-| **Templating**             | `<If>`/`<Repeat>` blocks, `<Partial>` includes                                                                                 |
-| **Platform**               | print/PDF, dimension grid, query console, custom components                                                                    |
+| Phase                      | Contents                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Connectors**             | remote DuckDB/MotherDuck/PostgreSQL sources (evidence `core/src/connectors/`, `mosaic-duckdb` data-server)                                                                                                                                                                                                                                 |
+| **Chart parity remainder** | pie, funnel, sankey, treemap, candlestick, radar, polar, map, calendar heatmap, combo, waterfall, reference lines/areas/points                                                                                                                                                                                                             |
+| **Table extras**           | download, column filters, column config, pivot                                                                                                                                                                                                                                                                                             |
+| **Templating**             | `<If>`/`<Repeat>` blocks, `<Partial>` includes                                                                                                                                                                                                                                                                                             |
+| **Platform**               | print/PDF, dimension grid, query console, custom components                                                                                                                                                                                                                                                                                |
+| **Release to npm**         | owner (2026-10-27): publish biac to npm safely — GitHub Actions running the gate, static checks and build; supply-chain hardening (trusted publishing, provenance); scrub private data and planning codes from comments before the repo goes public; then `docs/pages/getting-started.md` switches from cloning the repo to an npm install |
 
 ## Known debt
 
