@@ -26,6 +26,8 @@ interface WidgetPage {
 }
 
 const sparklines = (page: Page) => page.locator("main svg[role=img]");
+// echarts marks its host once the applied option has finished painting.
+const charts = (page: Page) => page.locator("main [data-echarts-ready]");
 
 const WIDGET_PAGES: readonly WidgetPage[] = [
   {
@@ -51,6 +53,21 @@ const WIDGET_PAGES: readonly WidgetPage[] = [
       { tag: /<Delta\b/g, live: (page) => page.locator("main [data-status]") },
       { tag: /<Sparkline\b/g, live: sparklines },
     ],
+  },
+  {
+    route: "/components/bar-chart",
+    file: "pages/components/bar-chart.md",
+    drawn: [{ tag: /<BarChart\b/g, live: charts }],
+  },
+  {
+    route: "/components/line-chart",
+    file: "pages/components/line-chart.md",
+    drawn: [{ tag: /<LineChart\b/g, live: charts }],
+  },
+  {
+    route: "/components/area-chart",
+    file: "pages/components/area-chart.md",
+    drawn: [{ tag: /<AreaChart\b/g, live: charts }],
   },
 ];
 
