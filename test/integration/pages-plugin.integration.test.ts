@@ -181,6 +181,38 @@ describe("page transform", () => {
     );
   });
 
+  it("serves an mdx echo snippet that fails to parse as a compile error at its page line", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "# Hi\n\n```mdx echo\n<Chart x= />\n```\n");
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Unexpected character[^\n]*"line":4,"column":11\};\n$/,
+    );
+  });
+
+  it("serves an mdx echo snippet naming a missing query file as a compile error at its page line", async () => {
+    const root = makeProject();
+    writeFile("queries/totals.sql", "select 1\n");
+    writeFile(
+      "pages/index.md",
+      '# Hi\n\n```mdx echo\n<Table data="/queries/total" />\n```\n',
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Query file queries\/total\.sql not found[^\n]*"line":4,"column":8\};\n$/,
+    );
+  });
+
   it("inlines the query files a fence builds on, and the files they read", async () => {
     const root = makeProject();
     writeFile("queries/totals.sql", "select * from {{/queries/base}}\n");

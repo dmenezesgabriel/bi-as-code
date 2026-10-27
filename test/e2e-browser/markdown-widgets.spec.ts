@@ -1,3 +1,5 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 import { expectMinTargetSize } from "./target-size.js";
@@ -36,6 +38,9 @@ async function childBoxes(row: Locator): Promise<[Box, Box, Box]> {
 const SHARE_SNIPPET =
   '<BarChart data="region_share" x="region" y="pct_of_total" />';
 
+/** The snippet with `x=`'s value dropped — `y` is where the parse fails. */
+const BROKEN_SNIPPET = '<BarChart data="region_share" x= y="pct_of_total" />';
+
 test("an mdx echo snippet draws its chart, then shows the markup that drew it", async ({
   page,
   biacDev,
@@ -59,6 +64,22 @@ test("an mdx echo snippet draws its chart, then shows the markup that drew it", 
   );
   expect(chartBeforeFence).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test("an mdx echo snippet that fails to parse fails the page at its line in the page file", async ({
+  page,
+  biacDev,
+}) => {
+  const pageFile = join(biacDev.projectDir, "pages/weekly-review.md");
+  writeFileSync(
+    pageFile,
+    readFileSync(pageFile, "utf8").replace(SHARE_SNIPPET, BROKEN_SNIPPET),
+  );
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("This page failed to compile");
+  await expect(alert).toContainText("pages/weekly-review.md:313:34");
 });
 
 test("the page renders the three callout variants with their type tints", async ({

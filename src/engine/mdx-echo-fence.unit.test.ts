@@ -1,5 +1,6 @@
 import { compile } from "@mdx-js/mdx";
 import type { Code, Root } from "mdast";
+import type { MdxJsxFlowElement } from "mdast-util-mdx-jsx";
 import remarkGfm from "remark-gfm";
 import { describe, expect, it } from "vitest";
 import { remarkSpliceMdxEcho } from "./mdx-echo-fence.js";
@@ -60,6 +61,52 @@ describe("fences the splice leaves alone", () => {
     const children = await splicedChildren("```js echo\nlet a = 1;\n```\n");
 
     expect(children.map((node) => node.type)).toEqual(["code"]);
+  });
+});
+
+describe("a snippet's place in its page file", () => {
+  it("is where its spliced markup says it starts", async () => {
+    const markdown = '# T\n\n```mdx echo\n<Table data="orders" />\n```\n';
+
+    const children = await splicedChildren(markdown);
+
+    expect(children[1]?.position?.start).toMatchObject({ line: 4, column: 1 });
+  });
+
+  it("is where its spliced markup's attributes say they start", async () => {
+    const markdown = '# T\n\n```mdx echo\n<Table data="orders" />\n```\n';
+
+    const children = await splicedChildren(markdown);
+
+    const table = children[1] as MdxJsxFlowElement;
+    expect(table.attributes[0]?.position?.start).toMatchObject({
+      line: 4,
+      column: 8,
+    });
+  });
+
+  it("names a syntax error by its page line and column", async () => {
+    const markdown = "# T\n\n```mdx echo\n<Table />\n<Chart x= />\n```\n";
+
+    const failure = await splicedChildren(markdown).catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toMatchObject({
+      line: 5,
+      column: 11,
+      source: "micromark-extension-mdx-jsx",
+    });
+  });
+
+  it("counts a list item's indent into a syntax error's column", async () => {
+    const markdown = "- item\n\n  ```mdx echo\n  <Chart x= />\n  ```\n";
+
+    const failure = await splicedChildren(markdown).catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toMatchObject({ line: 4, column: 13 });
   });
 });
 
