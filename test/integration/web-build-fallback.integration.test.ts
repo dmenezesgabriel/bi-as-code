@@ -17,6 +17,11 @@ const cacheParent = fileURLToPath(
   new URL("../../node_modules/.cache/", import.meta.url),
 );
 
+// Loading the SPA config bundles it and starts its plugins: ~0.3 s alone,
+// past vitest's 10 s hook default while parallel `vite build` workers hold
+// every core.
+const SERVER_START_MS = 60_000;
+
 let cacheDir: string;
 let web: ViteDevServer;
 
@@ -43,7 +48,7 @@ beforeAll(async () => {
     server: { middlewareMode: true },
     optimizeDeps: { noDiscovery: true, include: [] },
   });
-});
+}, SERVER_START_MS);
 
 afterAll(async () => {
   await web?.close();

@@ -1,5 +1,5 @@
 import { act, fireEvent, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { PageLanguageProvider } from "../chrome/page-language";
 import { renderWithRouter } from "../chrome/router-harness";
 import {
@@ -9,6 +9,12 @@ import {
 import { SiteSearch } from "./site-search";
 
 const PATHS = ["/", "/weekly-orders", "/weekly-review", "/nested/allocation"];
+
+// The index waits on its own code-split chunk as well as the documents. A
+// first, uncached import of that chunk can outlast `act()` on a loaded host,
+// so the results would render after the assertion; loading it up front
+// leaves only the documents' timing, which the fake controls.
+beforeAll(() => import("./page-index"));
 
 async function renderSearch(
   documents: FakeSearchDocuments,
