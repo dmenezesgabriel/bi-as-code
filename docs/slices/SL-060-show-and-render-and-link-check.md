@@ -141,7 +141,7 @@ State: both capabilities **absent**. Nothing in the ledger claims either.
 ## Tasks
 
 - [x] T1 — ` ```mdx echo ` renders its markup and shows it from one copy, end to end: settle O1/O2; engine splice plugin first in the chain; `pre` override shows the code; a snippet on an example page; unit, integration, browser e2e, story; `playwright-cli` on that page (widget count, code block present, console clean)
-- [ ] T2 — a snippet that fails to compile names its line in the page file, not in the fence; the page-compile-error page shows it; `playwright-cli` on the broken page
+- [x] T2 — a snippet that fails to compile names its line in the page file, not in the fence; the page-compile-error page shows it; `playwright-cli` on the broken page
 - [ ] T3 — `biac build` fails on a broken internal link naming `pages/<file>:<line>` and the target: settle O3–O6; `pages/` builds clean; e2e on the static build
 - [ ] T4 — ADR(s) for the snippet fence and the link check; close GAP-065 and GAP-066 in `docs/research/docs-site.md`; demo run
 
