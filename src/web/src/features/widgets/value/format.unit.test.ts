@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatValue } from "./format";
+import { formatValue, unformattedText } from "./format";
 import { FormatError, type FormatRange } from "./types";
 
-// Local-time fixture: 2025-03-01 15:04:05 — the date presets read its parts.
-const DATE = new Date(2025, 2, 1, 15, 4, 5);
+// 2025-03-01 15:04:05 UTC — a DuckDB cell's wall-clock arrives encoded as
+// UTC, so the date presets read its UTC parts on every host's clock.
+const DATE = new Date(Date.UTC(2025, 2, 1, 15, 4, 5));
 
 describe("formatValue — number presets", () => {
   it.each<[string, number, string]>([
@@ -67,6 +68,16 @@ describe("formatValue — pct and bytes presets", () => {
   });
 });
 
+describe("unformattedText", () => {
+  it("reads a Date as its UTC calendar day and anything else as its string", () => {
+    const cells = [DATE, 2014, "North"];
+
+    const texts = cells.map(unformattedText);
+
+    expect(texts).toEqual(["2025-03-01", "2014", "North"]);
+  });
+});
+
 describe("formatValue — date presets", () => {
   it.each<[string, string]>([
     ["date", "2025-03-01"],
@@ -80,7 +91,7 @@ describe("formatValue — date presets", () => {
   });
 
   it("hms renders the 12-hour clock with AM", () => {
-    expect(formatValue(new Date(2025, 2, 1, 3, 4, 5), "hms")).toBe(
+    expect(formatValue(new Date(Date.UTC(2025, 2, 1, 3, 4, 5)), "hms")).toBe(
       "3:04:05 AM",
     );
   });

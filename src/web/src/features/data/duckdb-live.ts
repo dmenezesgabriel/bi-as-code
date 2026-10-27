@@ -2,14 +2,15 @@ import { AsyncDuckDB, selectBundle, VoidLogger } from "@duckdb/duckdb-wasm";
 import { Effect, Layer, Semaphore } from "effect";
 import { duckDbBundles } from "./bundles";
 import { DuckDb, type DuckDbService } from "./data-service";
+import { DUCKDB_QUERY_CASTS } from "./duckdb-query-casts";
 import { registerSource } from "./register-source";
 import { runQuery } from "./run-query";
 import { toRows } from "./to-rows";
 import { DataError } from "./types";
 
 /**
- * selectBundle → worker → instantiate → open. `castTimestampToDate` and
- * `castBigIntToDouble` keep timestamps/ints in JS-native types for widgets.
+ * selectBundle → worker → instantiate → open. `DUCKDB_QUERY_CASTS` keeps
+ * timestamps/ints/decimals in JS-native types for widgets.
  * Not unit-tested: jsdom has no Worker/wasm — the e2e-browser spec owns it.
  */
 const acquireDuckDb = Effect.acquireRelease(
@@ -24,16 +25,7 @@ const acquireDuckDb = Effect.acquireRelease(
         await startWorker(bundle.mainWorker),
       );
       await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-      await db.open({
-        query: {
-          castTimestampToDate: true,
-          castBigIntToDouble: true,
-          // sum() and decimal literals land as Arrow Decimal128 bignums;
-          // without this every aggregated KPI column is an object to the
-          // widgets — the same JS-native contract the two casts above set.
-          castDecimalToDouble: true,
-        },
-      });
+      await db.open({ query: DUCKDB_QUERY_CASTS });
       await disableExternalFileCache(db);
       return db;
     },

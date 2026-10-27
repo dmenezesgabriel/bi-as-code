@@ -1,5 +1,5 @@
 import type { Row } from "../../data/types";
-import { formatValue } from "../value/format";
+import { formatValue, unformattedText } from "../value/format";
 import { numericRange } from "../value/numeric-range";
 import { ColumnError } from "../value/types";
 import { formatTitle } from "./format-title";
@@ -52,12 +52,12 @@ export function resolveTableColumns(
 /**
  * The unformatted cell: numbers render `num0` — grouped, no decimals, and
  * never unit-scaled (an unset code would auto-scale `6100` to `6k`);
- * anything else its string; null and undefined render empty.
+ * anything else its unformatted text; null and undefined render empty.
  */
 function defaultCellText(value: unknown): string {
   if (value == null) return "";
   if (isNumeric(value)) return formatValue(value, "num0");
-  return String(value);
+  return unformattedText(value);
 }
 
 function isNumeric(value: unknown): value is number | bigint {

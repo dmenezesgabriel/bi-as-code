@@ -154,7 +154,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 
 - [x] T1 — The `docs/` project: `biac.config.ts`, `data/`, What is biac, Getting started (each step run in a fresh temp project), an integration test that `biac build docs` exits 0; settle O1, O3, O4, O5
 - [x] T2a — Widget reference pages `Table` (+`Column`), `BigValue`, `Value` (+`Delta`, `Sparkline`), one `mdx echo` example per prop on the docs data, and the docs browser spec; settle O2
-- [ ] T2b — DuckDB `DATE` and `TIMESTAMP` cells reach every widget as `Date`s, so date `fmt` codes and time axes work on real query results; then add the date-format examples to `docs/pages/components/table.md` and the date rows to the format-code table in `docs/pages/components/value.md` — closes GAP-070 (found writing T2a; a product gap gets its own task)
+- [x] T2b — DuckDB `DATE` and `TIMESTAMP` cells reach every widget as `Date`s, so date `fmt` codes and time axes work on real query results; then add the date-format examples to `docs/pages/components/table.md` and the date rows to the format-code table in `docs/pages/components/value.md` — closes GAP-070 (found writing T2a; a product gap gets its own task)
 - [ ] T2c — Widget reference pages `BarChart`, `LineChart`, `AreaChart` (the shared `SeriesChartProps`), one `mdx echo` example per prop
 - [ ] T2d — Widget reference pages `ScatterChart`, `Histogram`, `Heatmap`, one `mdx echo` example per prop
 - [ ] T3 — Layout reference pages: `Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Accordion`, `Row`, `Stack`

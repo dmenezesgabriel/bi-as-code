@@ -37,6 +37,39 @@ export const MultiSeries: Story = {
   },
 };
 
+/** A DATE x arrives as UTC-midnight `Date`s: the axis turns `time` and
+ * ticks on the UTC clock, so a week starts on its own day for every
+ * viewer. */
+export const DateAxis: Story = {
+  decorators: [
+    withQueryData(
+      [WEEKLY_TREND],
+      dbWith(
+        [5, 12, 19].flatMap((day, i) => [
+          {
+            week: new Date(Date.UTC(2026, 0, day)),
+            region: "North",
+            orders: 40 + i,
+          },
+          {
+            week: new Date(Date.UTC(2026, 0, day)),
+            region: "South",
+            orders: 30 + i,
+          },
+        ]),
+      ),
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      useUTC?: boolean;
+      xAxis?: { type?: string }[];
+    }>(canvasElement);
+    expect(option.xAxis?.[0]?.type).toBe("time");
+    expect(option.useUTC).toBe(true);
+  },
+};
+
 /** `filters="region"` wraps the fence's sql with the page filter's bound
  * predicate — `?region=North` seeds the filter; a single series also means
  * the legend drops. */

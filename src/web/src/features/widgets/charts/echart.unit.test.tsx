@@ -44,6 +44,16 @@ describe("<EChart>", () => {
     expect(el.querySelector("svg")).not.toBeNull();
   });
 
+  it("reads time axes on the UTC clock, as the date formats do", async () => {
+    const { container } = render(<EChart option={OPTION} renderer="svg" />);
+    const el = host(container);
+    await waitFor(() => instanceOf(el));
+
+    const applied = instanceOf(el).getOption() as { useUTC?: boolean };
+
+    expect(applied.useUTC).toBe(true);
+  });
+
   it("applies option updates to the live instance", async () => {
     const { container, rerender } = render(
       <EChart option={OPTION} renderer="svg" />,

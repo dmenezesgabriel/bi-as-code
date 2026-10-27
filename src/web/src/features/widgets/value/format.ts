@@ -268,7 +268,12 @@ function formatBytes(value: number): string {
   return formatNumber(value, { kind: "number", decimals: 0, suffix: " B" });
 }
 
+// DuckDB DATE and TIMESTAMP cells are wall-clock values Arrow encodes as UTC
+// epoch-ms, so reading them on the viewer's clock would move a date to the
+// day before west of Greenwich. Every date part is read on the UTC clock.
+const UTC = "UTC";
 const DATE_PARTS = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: UTC,
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -277,8 +282,14 @@ const DATE_PARTS = new Intl.DateTimeFormat(LOCALE, {
   second: "2-digit",
   hour12: true,
 });
-const MONTH_SHORT = new Intl.DateTimeFormat(LOCALE, { month: "short" });
-const MONTH_LONG = new Intl.DateTimeFormat(LOCALE, { month: "long" });
+const MONTH_SHORT = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: UTC,
+  month: "short",
+});
+const MONTH_LONG = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: UTC,
+  month: "long",
+});
 // Longest-first alternation so `mmmm`/`mmm`/`mm`/`m` can't shadow each other.
 const DATE_TOKENS = /mmmm|mmm|mm|m|yyyy|yy|dd|d|MM|SS|TT|h/g;
 
@@ -302,6 +313,21 @@ function formatDate(date: Date, pattern: string): string {
     TT: parts.get("dayPeriod") ?? "",
   };
   return pattern.replace(DATE_TOKENS, (token) => tokens[token] ?? token);
+}
+
+/**
+ * A cell as text when its author set no `fmt` and the site must not
+ * auto-scale numbers: a `Date` reads as its UTC calendar day (`String(date)`
+ * would print the viewer's clock and zone), anything else as its string.
+ *
+ * @example
+ * unformattedText(new Date(Date.UTC(2015, 2, 15))); // "2015-03-15"
+ * unformattedText(2014);                            // "2014"
+ */
+export function unformattedText(value: unknown): string {
+  return value instanceof Date
+    ? formatDateValue(value, undefined)
+    : String(value);
 }
 
 function formatDateValue(date: Date, code: string | undefined): string {

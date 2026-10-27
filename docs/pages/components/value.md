@@ -339,7 +339,7 @@ Monthly rain and snow <Sparkline data="monthly_weather" filters="trend_year" /> 
 
 ## Format codes
 
-Every `fmt` prop in biac takes one of these codes. Formats use US conventions (`$` prefix, `,` thousands, `.` decimals) for every reader. An empty cell shows `–`.
+Every `fmt` prop in biac takes one of these codes. Formats use US conventions (`$` prefix, `,` thousands, `.` decimals) for every reader. An empty cell shows `–`. A date code takes a `DATE` or `TIMESTAMP` cell and shows it as the query returns it, on the UTC clock, so every reader sees the same day; a number code takes a number.
 
 | Code                                                        | Example                                  | Notes                                                                    |
 | ----------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
@@ -357,6 +357,12 @@ Every `fmt` prop in biac takes one of these codes. Formats use US conventions (`
 | `mult0`, `mult1`, `mult2`                                   | `1234567.891` → `1,234,567.9x` (`mult1`) | A multiple                                                               |
 | `sci`                                                       | `1234567.891` → `1.23E6`                 | Scientific notation                                                      |
 | `bytes`                                                     | `1234567.891` → `1.2 MB`                 | A byte count in its unit                                                 |
+| `date`                                                      | `2015-03-15 13:45` → `2015-03-15`        | The default for a date cell                                              |
+| `shortdate`                                                 | `2015-03-15 13:45` → `Mar 15/15`         | Short month, two-digit year                                              |
+| `longdate`                                                  | `2015-03-15 13:45` → `March 15, 2015`    | Month spelled out                                                        |
+| `mdy`                                                       | `2015-03-15 13:45` → `3/15/2015`         | Month first                                                              |
+| `dmy`                                                       | `2015-03-15 13:45` → `15/3/2015`         | Day first                                                                |
+| `hms`                                                       | `2015-03-15 13:45` → `1:45:00 PM`        | The time of day, on a 12-hour clock                                      |
 
 A code that does not exist, or a value the code cannot take, shows as a message naming the code and the value instead of the widget.
 

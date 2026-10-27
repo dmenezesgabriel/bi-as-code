@@ -1,3 +1,4 @@
+import { unformattedText } from "../value/format";
 import type { FormatRange } from "../value/types";
 import {
   describeChart,
@@ -112,7 +113,7 @@ function categoryAxis(
   return {
     type: "category",
     data: domain.map((v) =>
-      fmt === undefined ? String(v) : safeFormat(v, fmt, domainSpan),
+      fmt === undefined ? unformattedText(v) : safeFormat(v, fmt, domainSpan),
     ),
     ...(position !== undefined ? { position } : {}),
     ...(inverse ? { inverse: true } : {}),
@@ -207,10 +208,10 @@ function cellValue(value: unknown): unknown {
 }
 
 /**
- * A domain cell formatted by its fmt prop — falls back to the raw string
- * form when no fmt is set (a bare `num`-auto would paint `95` as `95.0`).
+ * A domain cell formatted by its fmt prop — falls back to the unformatted
+ * text when no fmt is set (a bare `num`-auto would paint `95` as `95.0`).
  */
 function formatCell(value: unknown, fmt: string | undefined): string {
   if (value === null || value === undefined) return "";
-  return fmt === undefined ? String(value) : safeFormat(value, fmt);
+  return fmt === undefined ? unformattedText(value) : safeFormat(value, fmt);
 }

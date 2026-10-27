@@ -177,6 +177,18 @@ describe("toHeatmapOption", () => {
     expect(html).toContain("orders: 100");
   });
 
+  it("labels a Date category as its UTC calendar day, on the axis and in the tooltip", () => {
+    const rows = [
+      { week: new Date(Date.UTC(2026, 2, 2)), region: "North", orders: 5 },
+    ];
+
+    const opt = option(PROPS, rows);
+    const html = tooltipFormatter(opt)({ value: [0, 0, 5] });
+
+    expect((opt.xAxis as { data?: unknown[] }).data).toEqual(["2026-03-02"]);
+    expect(html).toContain("2026-03-02");
+  });
+
   it("escapes html in tooltip category labels", () => {
     const rows = [{ week: 1, region: "<b>x</b>", orders: 5 }];
     const html = tooltipFormatter(option(PROPS, rows))({

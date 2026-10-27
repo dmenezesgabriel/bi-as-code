@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { tableFromJSON } from "apache-arrow";
+import {
+  DateDay,
+  DateMillisecond,
+  Table,
+  tableFromJSON,
+  vectorFromArray,
+} from "apache-arrow";
 import { toRows } from "./to-rows";
 
 describe("toRows", () => {
@@ -40,5 +46,26 @@ describe("toRows", () => {
       { region: "East", total: null },
     ]);
     expect(toRows(tableFromJSON([]))).toEqual([]);
+  });
+
+  it("hands date and timestamp cells out as Dates at their UTC instant", () => {
+    // DuckDB's DATE lands as Date32<DAY> and TIMESTAMP (cast by
+    // castTimestampToDate) as Date64<MILLISECOND>; Arrow reads both as
+    // epoch-ms numbers.
+    const day = Date.UTC(2024, 2, 5);
+    const instant = Date.UTC(2024, 2, 5, 13, 45);
+    const table = new Table({
+      day: vectorFromArray([new Date(day), null], new DateDay()),
+      at: vectorFromArray([new Date(instant), null], new DateMillisecond()),
+      region: vectorFromArray(["West", "East"]),
+    });
+
+    const rows = toRows(table);
+
+    expect(rows).toEqual([
+      { day: new Date(day), at: new Date(instant), region: "West" },
+      { day: null, at: null, region: "East" },
+    ]);
+    expect(rows[0]?.["day"]).toBeInstanceOf(Date);
   });
 });

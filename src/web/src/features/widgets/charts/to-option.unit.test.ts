@@ -166,20 +166,23 @@ describe("toChartOption axes", () => {
 
   it("formats time-axis ticks from epoch milliseconds as dates", () => {
     const model: SeriesModel = {
-      xDomain: [new Date(2026, 0, 5), new Date(2026, 0, 12)],
+      xDomain: [
+        new Date(Date.UTC(2026, 0, 5)),
+        new Date(Date.UTC(2026, 0, 12)),
+      ],
       xType: "time",
       series: [
         {
           name: "orders",
           data: [
-            [new Date(2026, 0, 5), 40],
-            [new Date(2026, 0, 12), 44],
+            [new Date(Date.UTC(2026, 0, 5)), 40],
+            [new Date(Date.UTC(2026, 0, 12)), 44],
           ],
         },
       ],
     };
     const option = probe(model, { xFmt: "shortdate" });
-    const epochMs = new Date(2026, 0, 5).getTime();
+    const epochMs = new Date(Date.UTC(2026, 0, 5)).getTime();
     expect(option.xAxis?.axisLabel?.formatter?.(epochMs as never, 0)).toBe(
       "Jan 5/26",
     );

@@ -8,6 +8,7 @@ import {
   type EngineRequestObserver,
   type EngineRequests,
 } from "./engine-connections.fixture";
+import { DUCKDB_QUERY_CASTS } from "./duckdb-query-casts";
 import type { ConnectionFactory } from "./run-query";
 import { toRows } from "./to-rows";
 import type { Row } from "./types";
@@ -36,7 +37,12 @@ interface BlockingBindings {
     bundles: Record<string, { mainModule: string }>,
     logger: unknown,
     runtime: unknown,
-  ): Promise<BlockingEngine & { instantiate(): Promise<void> }>;
+  ): Promise<
+    BlockingEngine & {
+      instantiate(): Promise<void>;
+      open(config: { query: typeof DUCKDB_QUERY_CASTS }): void;
+    }
+  >;
   VoidLogger: new () => unknown;
   NODE_RUNTIME: unknown;
 }
@@ -45,7 +51,8 @@ const webRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
 /**
  * A real duckdb engine for integration tests — the same duckdb-wasm build
- * the browser runs, through its node blocking bindings — answering SQL as
+ * the browser runs, through its node blocking bindings, opened with the
+ * browser's `DUCKDB_QUERY_CASTS` — answering SQL as
  * the app's `Row[]` (via the app's own `toRows`).
  *
  * @example
@@ -76,6 +83,7 @@ export class NodeDuckDb {
       duckdb.NODE_RUNTIME,
     );
     await db.instantiate();
+    db.open({ query: DUCKDB_QUERY_CASTS });
     return new NodeDuckDb(db);
   }
 

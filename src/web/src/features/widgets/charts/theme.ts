@@ -75,6 +75,11 @@ export function chartTheme(t: ChartTokens): Record<string, unknown> {
   // its labels sit on the ramp's cells, not on the page.
   const outsideLabel = { label: { color: t.mutedForeground } };
   return {
+    // A date cell is its wall-clock encoded as UTC (the same reason
+    // `formatValue` reads dates on the UTC clock); echarts' time axis
+    // otherwise ticks on the viewer's clock and puts a date on the day before
+    // west of Greenwich. A scalar theme key is merged into every option.
+    useUTC: true,
     color: [...t.series],
     textStyle: { color: t.foreground, fontFamily: t.fontFamily },
     title: {

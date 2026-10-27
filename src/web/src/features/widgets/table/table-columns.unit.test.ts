@@ -40,6 +40,13 @@ describe("defaultTableColumns", () => {
     ]);
   });
 
+  it("renders a Date as its UTC calendar day", () => {
+    const day = new Date(Date.UTC(2015, 2, 15));
+    const [column] = defaultTableColumns([{ day }]);
+
+    expect(column!.format(day)).toBe("2015-03-15");
+  });
+
   it("renders a null cell empty", () => {
     const columns = defaultTableColumns(ROWS);
 

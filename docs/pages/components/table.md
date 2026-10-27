@@ -32,6 +32,15 @@ group by island
 order by penguins desc
 ```
 
+`wettest_days`:
+
+```sql wettest_days echo
+select date, weather, precipitation as precipitation_mm
+from weather
+order by precipitation desc, date
+limit 5
+```
+
 ## Examples
 
 ### Every column
@@ -83,6 +92,18 @@ Each `<Column id>` picks one result column. Only the listed columns show, in the
   <Column id="island" />
   <Column id="penguins" fmt="num0" />
   <Column id="share" fmt="pct1" title="Share of penguins" />
+</Table>
+```
+
+### Date formats
+
+A `DATE` or `TIMESTAMP` column takes a date code: `longdate` spells the month out. With no `fmt`, a date shows as `2015-03-15`. Dates show as the query returns them, on the UTC clock, so every reader sees the same day.
+
+```mdx echo
+<Table data="wettest_days">
+  <Column id="date" fmt="longdate" title="Day" />
+  <Column id="weather" />
+  <Column id="precipitation_mm" fmt="num1" title="Rain (mm)" />
 </Table>
 ```
 

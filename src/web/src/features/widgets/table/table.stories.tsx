@@ -50,6 +50,34 @@ export const Success: Story = {
   },
 };
 
+/** A DATE column arrives as UTC-midnight `Date`s: unformatted it reads
+ * `yyyy-mm-dd`, under `fmt="longdate"` with the month spelled out — the same
+ * day on every viewer's clock. */
+export const Dates: Story = {
+  args: {
+    children: [
+      <Column key="ordered" id="ordered" />,
+      <Column key="shipped" id="shipped" fmt="longdate" />,
+    ],
+  },
+  decorators: [
+    withQueryData(
+      [ORDERS],
+      fakeDb([
+        {
+          ordered: new Date(Date.UTC(2015, 2, 15)),
+          shipped: new Date(Date.UTC(2015, 2, 18)),
+        },
+      ]),
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const table = await canvas.findByRole("table");
+    await expect(table).toHaveTextContent("2015-03-15");
+    await expect(table).toHaveTextContent("March 18, 2015");
+  },
+};
+
 /** A `data` value no ```sql fence declares renders the named alert —
  * the page around it is untouched. */
 export const UnknownName: Story = {

@@ -110,6 +110,29 @@ for (const colorScheme of ["light", "dark"] as const) {
       });
     }
 
+    test.describe("west of Greenwich", () => {
+      // A DATE cell is midnight UTC; read on this clock it would be the
+      // evening of the day before.
+      test.use({ timezoneId: "America/Los_Angeles" });
+
+      test("a date column shows the day the query returned", async ({
+        page,
+        biacDev,
+      }) => {
+        const errors = collectConsoleErrors(page);
+        await page.goto(`${biacDev.url}/components/table`);
+
+        const wettest = page.getByRole("table").filter({
+          has: page.getByRole("columnheader", { name: "Day" }),
+        });
+
+        await expect(wettest.getByRole("row").nth(1)).toContainText(
+          "March 15, 2015",
+        );
+        expect(errors).toEqual([]);
+      });
+    });
+
     test("a sparkline paints in the theme's sparkline colour", async ({
       page,
       biacDev,
