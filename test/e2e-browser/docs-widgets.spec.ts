@@ -69,6 +69,23 @@ const WIDGET_PAGES: readonly WidgetPage[] = [
     file: "pages/components/area-chart.md",
     drawn: [{ tag: /<AreaChart\b/g, live: charts }],
   },
+  {
+    route: "/components/scatter-chart",
+    file: "pages/components/scatter-chart.md",
+    drawn: [{ tag: /<ScatterChart\b/g, live: charts }],
+  },
+  {
+    route: "/components/histogram",
+    file: "pages/components/histogram.md",
+    // The cross-filter example pairs the histograms with a bar chart, and
+    // both draw the same echarts host.
+    drawn: [{ tag: /<(?:Histogram|BarChart)\b/g, live: charts }],
+  },
+  {
+    route: "/components/heatmap",
+    file: "pages/components/heatmap.md",
+    drawn: [{ tag: /<Heatmap\b/g, live: charts }],
+  },
 ];
 
 /** How many times `tag` appears inside the page file's `mdx echo` fences. */
