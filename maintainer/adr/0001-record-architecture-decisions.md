@@ -24,12 +24,12 @@ Two kinds of knowledge compete for the same documents. Durable knowledge — why
 
 ## Decision
 
-Architecture decisions are recorded as MADR files under `docs/adr/`, numbered `ADR-NNNN`. An ADR is written when a decision is made, marked `accepted`, and amended only via a new ADR that supersedes it.
+Architecture decisions are recorded as MADR files under `maintainer/adr/`, numbered `ADR-NNNN`. An ADR is written when a decision is made, marked `accepted`, and amended only via a new ADR that supersedes it.
 
-**Durable documents never cite `research_repos/`.** An ADR cites real sources of truth — a published spec, an API contract, an upstream issue, a file in `src/` — so it stands alone if every reference checkout vanished. Cross-repo evidence lives in the slice PRD (`docs/slices/`) that consumed it, and the PRD is deleted when the slice ships.
+**Durable documents never cite `research_repos/`.** An ADR cites real sources of truth — a published spec, an API contract, an upstream issue, a file in `src/` — so it stands alone if every reference checkout vanished. Cross-repo evidence lives in the slice PRD (`maintainer/slices/`) that consumed it, and the PRD is deleted when the slice ships.
 
 Code comments follow the same rule: they state a fact that stands alone, may cite an ADR or a real source of truth, and never cite a slice or task id or planning document.
 
 ## Consequences
 
-Decisions stay discoverable via `grep -rn "ADR-NNNN" docs/ src/`. The cost is duplicated writing — once in the PRD where evidence belongs, once in the ADR where the decision lives — paid knowingly to keep durable docs durable.
+Decisions stay discoverable via `grep -rn "ADR-NNNN" maintainer/ src/`. The cost is duplicated writing — once in the PRD where evidence belongs, once in the ADR where the decision lives — paid knowingly to keep durable docs durable.

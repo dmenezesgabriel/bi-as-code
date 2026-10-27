@@ -5,11 +5,11 @@ You are starting a clean session with no memory of earlier ones. The repo's docs
 ## 1. Orient — grep first, read only what you need
 
 - Run `git log --oneline -15` and `git status --short`. Uncommitted or untracked work from an earlier session means that session stopped partway through. Understand it before starting anything new.
-- Open `docs/backlog.md`. Its "Finding things" table lists the greps. Find the next slice with `grep -n "\*\*open ← next" docs/backlog.md`.
-- If the next row is a research session (a docs-only `R<n>` milestone row), there is no PRD: its scope is its row in that milestone's ledger doc, and its output goes into `docs/research/`. It changes no `src/` file. Every number carries its command, every `research_repos/` path is checked with `test -e`, and every external claim carries a URL fetched in that session. The gate for a research session is `pnpm exec prettier --check` on the touched docs, and `git status --short -- src/` must be empty.
-- Read that slice's PRD in `docs/slices/SL-NNN-*.md`. Find its first unchecked task with `grep -n "\[ \]" docs/slices/SL-NNN-*.md`.
-- For the gaps the slice closes, grep them in the audit: `grep -n "GAP-001" docs/research/usability-audit.md`.
-- For a decision, grep the ADR id (`grep -rn "ADR-0001" docs/`) and read only that ADR.
+- Open `maintainer/backlog.md`. Its "Finding things" table lists the greps. Find the next slice with `grep -n "\*\*open ← next" maintainer/backlog.md`.
+- If the next row is a research session (a docs-only `R<n>` milestone row), there is no PRD: its scope is its row in that milestone's ledger doc, and its output goes into `maintainer/research/`. It changes no `src/` file. Every number carries its command, every `research_repos/` path is checked with `test -e`, and every external claim carries a URL fetched in that session. The gate for a research session is `pnpm exec prettier --check` on the touched docs, and `git status --short -- src/` must be empty.
+- Read that slice's PRD in `maintainer/slices/SL-NNN-*.md`. Find its first unchecked task with `grep -n "\[ \]" maintainer/slices/SL-NNN-*.md`.
+- For the gaps the slice closes, grep them in the research ledgers: `grep -rn "GAP-001" maintainer/research/`.
+- For a decision, grep the ADR id (`grep -rn "ADR-0001" maintainer/`) and read only that ADR.
 - Follow `AGENTS.md`, token-efficiency section included. Do the searches yourself; spawn agents or workflows only if I ask.
 
 ## 2. Scope — one task per session
@@ -20,9 +20,9 @@ You are starting a clean session with no memory of earlier ones. The repo's docs
 
 ## 3. If the slice has no PRD, write it first
 
-Copy `docs/slices/_TEMPLATE.md`. A PRD exists so whoever builds the slice never guesses and never assumes. It is not ready without these three sections:
+Copy `maintainer/slices/_TEMPLATE.md`. A PRD exists so whoever builds the slice never guesses and never assumes. It is not ready without these three sections:
 
-- **Who else implements this:** a row for each of the 4 feature references in `research_repos/` — `evidence`, `framework`, `mosaic`, `streamlit` — including those that lack the feature. Start from `docs/research/feature-census.md`, then verify by reading code. A capability most of them have is probably worth building. One none of them have is an invention and must be justified.
+- **Who else implements this:** a row for each of the 4 feature references in `research_repos/` — `evidence`, `framework`, `mosaic`, `streamlit` — including those that lack the feature. Start from `maintainer/research/feature-census.md`, then verify by reading code. A capability most of them have is probably worth building. One none of them have is an invention and must be justified.
 - **Implementation inventory:** for every repo that has the feature, the actual files to open, grouped by concern (data model, pipeline, client, UI entry point, state persistence, empty/error/loading states, accessibility, edge cases). List paths, not summaries, so the builder reads every candidate implementation and chooses what suits us. Where two repos disagree, name the disagreement: it is the decision the slice must make.
 - **Gap analysis:** our code against those references for the same feature, file against file. Say plainly whether ours is absent, unreachable, partial or complete.
 
@@ -39,7 +39,7 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 - Code must be easy to read. Favour clarity and discoverability, use idiomatic names, and use the domain's ubiquitous language correctly.
 - Use web search and `curl` when the references and official docs are not enough to settle a fact.
 - Install only safe, official, well-maintained packages; guard against supply-chain attacks (`save-exact`, `minimumReleaseAge`, `trustPolicy`; install scripts stay blocked except an allowlist documented in `pnpm-workspace.yaml`). Reference repos are read-only: never install, import, link or vendor them.
-- A new or changed UI component gets a colocated `<name>.stories.tsx` beside its `<name>.tsx` — every meaningful state, `storybook/test` play functions for interactions, provider needs via `src/web/.storybook/decorators.tsx`, never a real backend (`FakeDuckDb`). Details: [ADR-0006](docs/adr/0006-component-stories-are-the-ui-validation-surface.md).
+- A new or changed UI component gets a colocated `<name>.stories.tsx` beside its `<name>.tsx` — every meaningful state, `storybook/test` play functions for interactions, provider needs via `src/web/.storybook/decorators.tsx`, never a real backend (`FakeDuckDb`). Details: [ADR-0006](maintainer/adr/0006-component-stories-are-the-ui-validation-surface.md).
 
 ## 5. Validate like a human would — `playwright-cli`, every session, no exceptions
 
@@ -61,7 +61,7 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 - Run the full gate (`pnpm gate`) and put the results in the **commit body**, never in a doc: typecheck, lint, lint:style, format:check, knip, dep:cruise, jscpd, unit, web-unit, integration, e2e, cucumber, e2e-browser, plus the `playwright-cli` pass from §5.
 - Commit each step or subtask with a conventional commit.
 - Update the PRD's checkbox and the backlog ledger by **editing** them: one line per slice, no appended corrections, no dated blocks.
-- When a `GAP-NNN` is closed and re-measured, mark it closed in `docs/research/usability-audit.md`.
+- When a `GAP-NNN` is closed and re-measured, mark it closed in the research ledger that holds it (`grep -rln "GAP-NNN" maintainer/research/`).
 - When the slice ships (its demo run by a human), delete its PRD. Anything worth keeping becomes an ADR or a code comment first. Code comments state their fact so it stands alone. They may cite an ADR or a real source of truth, never `research_repos/`, a slice or task id, or a planning doc.
 - Stop, and tell me what shipped, what you measured, and what the next task is.
 

@@ -1,16 +1,19 @@
 ## Docs map
 
-Start at **`docs/backlog.md`** — it routes everywhere else and names the next slice to execute.
+Start at **`maintainer/backlog.md`** — it routes everywhere else and names the next slice to execute.
 
-| Kind                              | Where                                                                         | Lifetime                                                                   |
-| --------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| What to build next                | `docs/backlog.md` — the milestone → slice ledger                              | Edited in place, never appended to                                         |
-| How to build one capability       | `docs/slices/SL-NNN-*.md` (start from `docs/slices/_TEMPLATE.md`)             | **Ephemeral** — written when the slice is picked up, deleted when it ships |
-| Which reference repos have what   | `docs/research/feature-census.md` — all 4, by feature area                    | **Ephemeral** — phase-scoped                                               |
-| What is shipped but not usable    | `docs/research/usability-audit.md` — measured `GAP-NNN` rows                  | **Ephemeral** — deleted when every gap is closed                           |
-| Why the system is shaped this way | `docs/adr/` (MADR) and `docs/architecture.md` (+ `docs/architecture/`, arc42) | Durable                                                                    |
+| Kind                              | Where                                                                                                                            | Lifetime                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| What to build next                | `maintainer/backlog.md` — the milestone → slice ledger                                                                           | Edited in place, never appended to                                         |
+| How to build one capability       | `maintainer/slices/SL-NNN-*.md` (start from `maintainer/slices/_TEMPLATE.md`)                                                    | **Ephemeral** — written when the slice is picked up, deleted when it ships |
+| Which reference repos have what   | `maintainer/research/feature-census.md` — all 4, by feature area                                                                 | **Ephemeral** — phase-scoped                                               |
+| What is shipped but not usable    | `maintainer/research/*.md` — measured `GAP-NNN` rows in each phase's research ledger (`grep -rn "GAP-001" maintainer/research/`) | **Ephemeral** — deleted when its phase closes                              |
+| Why the system is shaped this way | `maintainer/adr/` (MADR) and `maintainer/architecture.md` (+ `maintainer/architecture/`, arc42)                                  | Durable                                                                    |
+| How a user uses biac              | `docs/` — the user documentation, itself a biac project (`bin/biac dev docs`)                                                    | Durable                                                                    |
 
-Rules this repo is strict about — the first two are `docs/adr/0001-record-architecture-decisions.md`:
+`maintainer/` is for people who build biac; `docs/` is for people who use it.
+
+Rules this repo is strict about — the first two are `maintainer/adr/0001-record-architecture-decisions.md`:
 
 - **Durable docs never cite `research_repos/`.** Reference implementations are construction scaffolding; scaffolding comes down. A durable doc must still be true and useful if every reference repo vanished. Cite real sources of truth instead — a published spec, an upstream issue, an API contract, a file in `src/`.
 - **Slice PRDs are where the evidence lives**, densely: cross-repo comparisons, `research_repos/` paths, trade-offs. They die with the slice.
@@ -20,11 +23,11 @@ A PRD exists so the session that executes it **never guesses and never assumes**
 
 **Code comments follow the durable rule.** A comment states its fact so it stands alone. It may cite an ADR or a real source of truth; it must never cite a slice code (`SL-003`, `T4`) or a planning document — those do not outlive the work. Gate results go in the commit body, never in a doc.
 
-A slice is one user-visible capability crossing engine → client → UI, closed by a demo a human runs (`docs/adr/0002-vertical-slices.md`). Never cut a slice horizontally.
+A slice is one user-visible capability crossing engine → client → UI, closed by a demo a human runs (`maintainer/adr/0002-vertical-slices.md`). Never cut a slice horizontally.
 
 ## Token efficiency
 
-- **Grep first, then read only the lines you need.** Never read a whole doc or source file to find one fact; `docs/backlog.md` lists the greps for ids, files and open work.
+- **Grep first, then read only the lines you need.** Never read a whole doc or source file to find one fact; `maintainer/backlog.md` lists the greps for ids, files and open work.
 - **Search yourself; don't delegate lookups.** Spawn agents or workflows only when the user asks. A handful of greps is cheaper, and returns paths you can verify.
 - **Measure instead of speculating.** One command that prints the number beats a paragraph reasoning about it. Keep output small: `-l`, `head`, `--include`, and exclude `node_modules`/`dist`/`research_repos`.
 - **Let the gates be quiet.** They print their summary on a pass and everything on a failure; don't pipe them through `head`, which truncates failures too. `pnpm jscpd:report` locates the clones a failed `pnpm jscpd` only counted, and `--coverage.reporter=text` names the file behind a coverage total. `pnpm -s <script>` drops pnpm's two-line banner; `pnpm gate` runs the whole gate fail-fast, cheapest step first.
@@ -113,7 +116,7 @@ Every session ends with a `playwright-cli` pass over the real running app (`bin/
 - `pages/` — the example project served to users (`.md` pages + `data/` files).
 - `test/` — `integration/` (+ `features/` cucumber), `e2e/`, `e2e-browser/`, `lib/` shared helpers.
 - Prefer small focused modules over god files; package by component, flat.
-- Every UI component ships a colocated `<name>.stories.tsx` — the browser-true validation surface ([ADR-0006](docs/adr/0006-component-stories-are-the-ui-validation-surface.md)). Provider needs go through `src/web/.storybook/decorators.tsx`; Storybook binds port 6175 (never 6006) and its MCP server (`biac-storybook`, `.devin/mcp_config.json`) is the planning/validation entry point. `test/e2e-browser/storybook-stories.spec.ts` sweeps every story for console errors.
+- Every UI component ships a colocated `<name>.stories.tsx` — the browser-true validation surface ([ADR-0006](maintainer/adr/0006-component-stories-are-the-ui-validation-surface.md)). Provider needs go through `src/web/.storybook/decorators.tsx`; Storybook binds port 6175 (never 6006) and its MCP server (`biac-storybook`, `.devin/mcp_config.json`) is the planning/validation entry point. `test/e2e-browser/storybook-stories.spec.ts` sweeps every story for console errors.
 - Ports are interfaces in the component's `types.ts` (a `Context.Tag` under
   Effect) and exist only where a real boundary is crossed — an interface with
   no implementation and no consumer is deleted, not kept as scaffolding.

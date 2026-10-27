@@ -1,8 +1,8 @@
 # biac — Architecture
 
-An [arc42](https://arc42.org) description of the system. Sections 5, 6 and 8 are large enough to live in their own files under `docs/architecture/` once the corresponding components land.
+An [arc42](https://arc42.org) description of the system. Sections 5, 6 and 8 are large enough to live in their own files under `maintainer/architecture/` once the corresponding components land.
 
-This document and everything under `docs/adr/` are **durable**: they describe decisions and non-trivial knowledge, and they never link to the reference implementations the project was built by studying. Build evidence lives in `docs/slices/` and is deleted when its slice ships — see [ADR-0001](adr/0001-record-architecture-decisions.md).
+This document and everything under `maintainer/adr/` are **durable**: they describe decisions and non-trivial knowledge, and they never link to the reference implementations the project was built by studying. Build evidence lives in `maintainer/slices/` and is deleted when its slice ships — see [ADR-0001](adr/0001-record-architecture-decisions.md).
 
 | Section                               | Where                                                              |
 | ------------------------------------- | ------------------------------------------------------------------ |

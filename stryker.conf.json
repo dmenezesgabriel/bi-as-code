@@ -27,7 +27,8 @@
     "coverage",
     "test",
     "bin",
-    "docs"
+    "docs",
+    "maintainer"
   ],
   "coverageAnalysis": "perTest",
   "concurrency": "50%",

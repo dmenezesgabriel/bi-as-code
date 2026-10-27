@@ -1,6 +1,6 @@
 # A biac build in a private S3 bucket behind single sign-on
 
-**Local demonstration — not a production store.** One compose file runs the AWS shape of a static biac deployment on your machine: the `build/` folder in a private bucket that refuses unsigned reads, a TLS load balancer in front of it that asks a sign-in gate before every request, and an identity provider shaped like a Microsoft Entra ID tenant. biac itself runs no server and reads no identity; everything here is configuration around the static output ([ADR-0031](../../docs/adr/0031-sso-is-a-proxy-in-front-of-a-private-bucket.md)).
+**Local demonstration — not a production store.** One compose file runs the AWS shape of a static biac deployment on your machine: the `build/` folder in a private bucket that refuses unsigned reads, a TLS load balancer in front of it that asks a sign-in gate before every request, and an identity provider shaped like a Microsoft Entra ID tenant. biac itself runs no server and reads no identity; everything here is configuration around the static output ([ADR-0031](../../maintainer/adr/0031-sso-is-a-proxy-in-front-of-a-private-bucket.md)).
 
 ## The request path
 
@@ -130,7 +130,7 @@ The rest of `oauth2-proxy.cfg` carries over unchanged: `redirect_url` on your do
 
 ## What sign-in protects, and what it does not
 
-**Access is all or nothing.** biac runs every query in the viewer's browser ([ADR-0005](../../docs/adr/0005-queries-run-client-side-in-duckdb-wasm.md)), so every file under `data/` is downloaded by, and readable to, every viewer who passes the gate. Do not put a row in `build/` that some signed-in viewer must not see: split the project into one build per audience, each behind its own rule. biac reads no identity header, so per-viewer filtering is not available, and the `X-Forwarded-*` or `x-amzn-oidc-*` headers your proxy adds are ignored.
+**Access is all or nothing.** biac runs every query in the viewer's browser ([ADR-0005](../../maintainer/adr/0005-queries-run-client-side-in-duckdb-wasm.md)), so every file under `data/` is downloaded by, and readable to, every viewer who passes the gate. Do not put a row in `build/` that some signed-in viewer must not see: split the project into one build per audience, each behind its own rule. biac reads no identity header, so per-viewer filtering is not available, and the `X-Forwarded-*` or `x-amzn-oidc-*` headers your proxy adds are ignored.
 
 **One read leaves the edge.** To read parquet, duckdb-wasm loads its extension from `https://extensions.duckdb.org/` in the viewer's browser. That request goes to DuckDB's host and never passes the gate. It carries no project data, but on a network that blocks that host, parquet reads fail.
 

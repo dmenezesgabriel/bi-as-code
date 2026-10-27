@@ -52,7 +52,7 @@ interface PageMetadata {
  *
  * Front-matter is pre-split from the source (invalid YAML throws — a broken
  * page fails loudly for its author); the body compiles with `format: "mdx"`
- * regardless of extension because pages carry JSX widgets (docs/architecture.md
+ * regardless of extension because pages carry JSX widgets (maintainer/architecture.md
  * §4). Named ` ```sql ` fences are collected into `sqlBlocks` but left in the
  * AST — they still render as code.
  *

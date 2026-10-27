@@ -22,7 +22,7 @@ Write this PRD to be grepped: do not hard-wrap paragraphs, keep one fact per tab
 
 ## Who else implements this
 
-**Every reference repo gets a row, including the ones that do not have it** — an absence across many products is evidence too, and a feature present in most of them is probably worth having. Start from `docs/research/feature-census.md`, then verify.
+**Every reference repo gets a row, including the ones that do not have it** — an absence across many products is evidence too, and a feature present in most of them is probably worth having. Start from `maintainer/research/feature-census.md`, then verify.
 
 | Repo      | Has it              | Entry points   | Approach in one line |
 | --------- | ------------------- | -------------- | -------------------- |
