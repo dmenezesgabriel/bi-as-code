@@ -306,3 +306,9 @@ group by label
     [orders overview](/).
   </AccordionItem>
 </Accordion>
+
+Each region's share of orders as a chart, above the markup that draws it:
+
+```mdx echo
+<BarChart data="region_share" x="region" y="pct_of_total" />
+```

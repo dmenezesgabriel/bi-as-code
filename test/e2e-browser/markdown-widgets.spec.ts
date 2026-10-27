@@ -32,6 +32,35 @@ async function childBoxes(row: Locator): Promise<[Box, Box, Box]> {
   return boxes as [Box, Box, Box];
 }
 
+/** The `mdx echo` snippet `pages/weekly-review.md` ends with. */
+const SHARE_SNIPPET =
+  '<BarChart data="region_share" x="region" y="pct_of_total" />';
+
+test("an mdx echo snippet draws its chart, then shows the markup that drew it", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+
+  const chart = page.getByRole("img", {
+    name: "bar chart of pct_of_total by region",
+  });
+  const fence = page.locator("main pre.shiki", { hasText: SHARE_SNIPPET });
+  await expect(chart).toHaveAttribute("data-echarts-ready");
+  await expect(fence).toHaveCount(1);
+  expect((await fence.innerText()).trim()).toBe(SHARE_SNIPPET);
+  const chartBeforeFence = await chart.evaluate(
+    (host, pre) =>
+      Boolean(
+        host.compareDocumentPosition(pre!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    await fence.elementHandle(),
+  );
+  expect(chartBeforeFence).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test("the page renders the three callout variants with their type tints", async ({
   page,
   biacDev,

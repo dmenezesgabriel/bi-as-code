@@ -36,8 +36,8 @@ test("front-matter cards: true cards each chart, table and big value in place, a
     attemptMs: 3_000,
     timeoutMs: 20_000,
   });
-  // 3 big values, 7 charts and 3 tables — one in each of the two tabs.
-  await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(13);
+  // 3 big values, 8 charts and 3 tables — one in each of the two tabs.
+  await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(14);
   expect(await readCards(page)).toMatchObject({
     nested: 0,
     perTabPanel: [1, 1],
@@ -79,7 +79,7 @@ test("the card-mode background keeps faded text at 4.5:1 and sits under the card
   ] as const) {
     await page.emulateMedia({ colorScheme: scheme });
     await page.goto(`${biacDev.url}/weekly-review`);
-    await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(13);
+    await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(14);
     expect((await readCards(page)).tint).toBe(tint);
     const faded = await readRootToken(page, "--muted-foreground-faded");
     const card = await readRootToken(page, "--card");
@@ -111,7 +111,7 @@ test("biac.config.ts layout.cards cards every page, and a page's cards: false op
   );
 
   await page.goto(`${biacDev.url}/weekly-review`);
-  await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(13);
+  await expect.poll(() => cardCount(page), { timeout: 20_000 }).toBe(14);
   await page
     .getByRole("navigation", { name: "Site navigation" })
     .getByRole("link", { name: "Orders overview" })

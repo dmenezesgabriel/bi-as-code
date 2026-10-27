@@ -109,6 +109,29 @@ export const WideFence: Story = {
   },
 };
 
+/** An mdx fence — the markup an `mdx echo` snippet shows under its
+ * output — lazy-loads shiki's mdx grammar on first use and comes out
+ * tokenized, so the tag and its attributes read in different colours. */
+export const MdxFence: Story = {
+  args: {
+    children: (
+      <code className="language-mdx">
+        {'<BarChart data="region_share" x="region" y="pct_of_total" />'}
+      </code>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const { pre } = await fenceLook(canvasElement);
+    const tokenColours = new Set(
+      [...pre.querySelectorAll<HTMLElement>(".line span")].map(
+        (token) => token.style.color,
+      ),
+    );
+    await expect(pre).toHaveTextContent('<BarChart data="region_share"');
+    await expect(tokenColours.size).toBeGreaterThan(1);
+  },
+};
+
 /** An inline `code` with no language class never reaches shiki — the
  * original `pre` renders through unchanged. */
 export const NoLanguage: Story = {

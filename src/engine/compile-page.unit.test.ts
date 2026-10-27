@@ -209,6 +209,51 @@ describe("sql blocks", () => {
   });
 });
 
+describe("mdx echo fences", () => {
+  it("renders a snippet's widget and shows its markup from one copy", async () => {
+    const page = await compile('```mdx echo\n<Table data="orders" />\n```\n');
+
+    expect(page.code).toContain("_jsx(Table, {");
+    expect(page.code).toContain('children: "<Table data=\\"orders\\" />\\n"');
+  });
+
+  it("registers a named sql fence written inside a snippet", async () => {
+    const markdown = "````mdx echo\n```sql orders\nselect 1\n```\n````\n";
+
+    const page = await compile(markdown);
+
+    expect(page.sqlBlocks).toEqual([{ name: "orders", sql: "select 1" }]);
+  });
+
+  it("resolves a query file a snippet's widget names", async () => {
+    const queryFiles: QueryFiles = {
+      read: async (name) => (name === "totals.sql" ? "select 2" : undefined),
+      list: async () => ["totals.sql"],
+    };
+    const markdown = '```mdx echo\n<Table data="/queries/totals" />\n```\n';
+
+    const page = await compilePage(
+      markdown,
+      "pages/a.md",
+      {},
+      NO_BRAND,
+      queryFiles,
+    );
+
+    expect(page.sqlBlocks).toEqual([
+      { name: "/queries/totals", sql: "select 2" },
+    ]);
+  });
+
+  it("rejects a reserved filter id inside a snippet", async () => {
+    const markdown = '```mdx echo\n<TextInput id="edit" />\n```\n';
+
+    await expect(compile(markdown)).rejects.toThrow(
+      'Reserved filter id "edit"',
+    );
+  });
+});
+
 describe("query files", () => {
   const queryFiles: QueryFiles = {
     read: async (name) => (name === "totals.sql" ? "select 2" : undefined),

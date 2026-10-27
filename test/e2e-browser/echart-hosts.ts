@@ -239,7 +239,7 @@ export function pointLabelTexts(
 }
 
 /** How many charts `pages/weekly-review.md` draws. */
-export const WEEKLY_REVIEW_CHART_COUNT = 7;
+export const WEEKLY_REVIEW_CHART_COUNT = 8;
 
 /**
  * Opens weekly-review on the dev server at `url` and waits for all its

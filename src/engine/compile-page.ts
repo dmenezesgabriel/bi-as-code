@@ -19,6 +19,7 @@ import {
   sqlReadsTranslations,
   translationsForExport,
 } from "./page-translations.js";
+import { remarkSpliceMdxEcho } from "./mdx-echo-fence.js";
 import { NO_QUERY_FILES, remarkQueryFiles } from "./query-files.js";
 import { remarkRejectReservedFilterIds } from "./reserved-filter-id.js";
 import { remarkRejectUnknownSearchMethod } from "./search-method.js";
@@ -98,6 +99,7 @@ export async function compilePage(
     format: "mdx",
     remarkPlugins: [
       remarkGfm,
+      remarkSpliceMdxEcho,
       [remarkPageMetadata, metadata],
       [remarkQueryFiles, queryFiles, metadata.sqlBlocks],
       [remarkWidgetExports, metadata],

@@ -147,6 +147,40 @@ describe("page transform", () => {
     );
   });
 
+  it("renders an mdx echo snippet's widget on its query file and keeps its markup", async () => {
+    const root = makeProject();
+    writeFile("queries/totals.sql", "select 1 as x\n");
+    writeFile(
+      "pages/index.md",
+      '# Hi\n\n```mdx echo\n<Table data="/queries/totals" />\n```\n',
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain("_jsx(Table, {");
+    expect(result?.code).toContain('"<Table data=\\"/queries/totals\\" />\\n"');
+    expect(result?.code).toContain(
+      'export const sqlBlocks = [{"name":"/queries/totals","sql":"select 1 as x\\n"}];',
+    );
+  });
+
+  it("serves an mdx fence with an unknown attribute as a compile error at the fence", async () => {
+    const root = makeProject();
+    writeFile("pages/index.md", "# Hi\n\n```mdx show\n<Table />\n```\n");
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toMatch(
+      /^export const compileError = \{"file":"pages\/index\.md","message":"Unknown mdx fence attribute \\"show\\"[^\n]*"line":3,"column":1\};\n$/,
+    );
+  });
+
   it("inlines the query files a fence builds on, and the files they read", async () => {
     const root = makeProject();
     writeFile("queries/totals.sql", "select * from {{/queries/base}}\n");

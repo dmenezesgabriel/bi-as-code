@@ -17,6 +17,13 @@ const TOKEN_THEME = createCssVariablesTheme({
   variablePrefix: "--shiki-",
 });
 
+// shiki lists a grammar's embedded languages as `embeddedLangsLazy`: they
+// tokenize only when already loaded, so loading a language alone leaves
+// its embedded code as one plain token. mdx's JSX and `{…}` expressions
+// are tsx, and the markup an `mdx echo` snippet shows is mostly JSX.
+const EMBEDDED_LANGUAGES: Partial<Record<BundledLanguage, BundledLanguage[]>> =
+  { mdx: ["tsx"] };
+
 let highlighterPromise: ReturnType<typeof createHighlighter> | null = null;
 const failedLanguages = new Set<string>();
 
@@ -58,7 +65,10 @@ export async function highlightFence(
     const highlighter = await getHighlighter();
     const bundled = lang as BundledLanguage;
     if (!highlighter.getLoadedLanguages().includes(bundled)) {
-      await highlighter.loadLanguage(bundled);
+      await highlighter.loadLanguage(
+        ...(EMBEDDED_LANGUAGES[bundled] ?? []),
+        bundled,
+      );
     }
     return highlighter.codeToHtml(code, { lang: bundled, theme: TOKEN_THEME });
   } catch {
