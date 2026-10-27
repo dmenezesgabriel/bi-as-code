@@ -1,3 +1,6 @@
+/** How long `eventually` keeps retrying when the caller names no deadline. */
+export const EVENTUALLY_TIMEOUT_MS = 15_000;
+
 /**
  * Retries `check` until it passes or the deadline lapses — file-watch
  * events and server startup are timing-sensitive, and sleeping a fixed
@@ -8,7 +11,7 @@
  */
 export async function eventually(
   check: () => Promise<boolean>,
-  timeoutMs = 15_000,
+  timeoutMs = EVENTUALLY_TIMEOUT_MS,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;

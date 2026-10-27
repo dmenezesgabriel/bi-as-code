@@ -832,3 +832,50 @@ describe("virtual:biac-config", () => {
     expect(html).toContain('__BIAC_THEME__="system"');
   });
 });
+
+/**
+ * Records the client's full-reload sends and runs `act` inside the first —
+ * the moment the plugin has handled a reported config write.
+ */
+function recordFullReloads(dev: ViteDevServer, act: () => void): string[] {
+  const reloads: string[] = [];
+  const send = vi.spyOn(dev.environments.client.hot, "send");
+  // `send` is overloaded (a payload object, or an event name and data);
+  // only the object form carries a `type`.
+  send.mockImplementation((...args: unknown[]) => {
+    const [payload] = args as [{ type?: string } | string];
+    if (typeof payload !== "object" || payload.type !== "full-reload") return;
+    reloads.push(payload.type);
+    if (reloads.length === 1) act();
+  });
+  return reloads;
+}
+
+describe("config writes the watcher drops", () => {
+  it("reloads for a biac.config.ts write inside the watcher's throttle window", async () => {
+    // Arrange
+    const root = makeProject();
+    const configFile = join(root, "biac.config.ts");
+    writeFile("biac.config.ts", 'export default { title: "First" };\n');
+    const dev = await makeServer(root);
+    await waitForWatch(dev, root, "biac.config.ts");
+    await loadConfigModule(dev);
+    // chokidar drops a second change for one path within 50 ms of the first;
+    // unwatching before the write stands in for that drop without racing it.
+    const reloads = recordFullReloads(dev, () => {
+      dev.watcher.unwatch(configFile);
+      writeFileSync(configFile, 'export default { title: "Third" };\n');
+    });
+
+    // Act
+    await expectInvalidated(configModule(dev), () =>
+      writeFileSync(configFile, 'export default { title: "Second" };\n'),
+    );
+
+    // Assert
+    await vi.waitFor(() => expect(reloads).toHaveLength(2), {
+      timeout: WATCH_WAIT_MS,
+    });
+    expect(await loadConfigModule(dev)).toContain('"Third"');
+  });
+});

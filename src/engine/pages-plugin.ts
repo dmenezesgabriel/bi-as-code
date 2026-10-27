@@ -9,6 +9,10 @@ import type {
   Plugin,
 } from "vite";
 import { loadBiacConfig } from "./biac-config.js";
+import {
+  fileText,
+  recheckAfterWatcherThrottle,
+} from "./missed-write-recheck.js";
 import { brandCss } from "./brand-css.js";
 import { compilePage } from "./compile-page.js";
 import { configModuleSource, VIRTUAL_CONFIG_ID } from "./config-module.js";
@@ -144,6 +148,13 @@ export function pagesPlugin(projectRoot: string): Plugin {
       if (mod) graph.invalidateModule(mod);
     }
     if (environment.name !== "client") return;
+    // A second write inside the watcher's throttle window (a save, then a
+    // formatter) never reaches `hotUpdate`; without this the memo above
+    // would keep serving the first write until the file was saved again.
+    recheckAfterWatcherThrottle(
+      () => fileText(file),
+      () => reloadAfterProjectFileEdit(environment, file),
+    );
     environment.logger.info(`page reload ${file}`, { timestamp: true });
     environment.hot.send({ type: "full-reload" });
   };
