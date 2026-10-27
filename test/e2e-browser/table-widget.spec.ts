@@ -18,9 +18,7 @@ import { textBounds } from "./text-bounds.js";
  * stable while the pager caption changes between "Page 1/2/4 of 4".
  */
 function tableRegions(page: Page) {
-  return page
-    .locator("div.py-2")
-    .filter({ has: page.locator("div.overflow-x-auto table") });
+  return page.locator("div.py-2").filter({ has: resultTables(page) });
 }
 
 /**

@@ -195,6 +195,21 @@ describe("prose table", () => {
     expect(screen.getByRole("cell", { name: "Direct" })).toBeVisible();
   });
 
+  it("scrolls sideways inside a keyboard-focusable scroller that carries the block gap", () => {
+    // Arrange / Act
+    render(<ProseTable />);
+
+    // Assert
+    const scroller = screen.getByRole("table").parentElement!;
+    expect(scroller).toHaveAttribute("tabindex", "0");
+    expect(scroller.className.split(" ")).toEqual(
+      expect.arrayContaining(["overflow-x-auto", "mb-block-gap"]),
+    );
+    expect(screen.getByRole("table").className.split(" ")).not.toContain(
+      "mb-block-gap",
+    );
+  });
+
   it("sets its figures in tabular numerals, as a widget table does", () => {
     render(<ProseTable />);
 
@@ -231,6 +246,45 @@ describe("prose table", () => {
     const classes = screen.getByRole("columnheader").className.split(" ");
     expect(classes).toContain("pr-8");
     expect(classes).not.toContain("pr-4");
+  });
+});
+
+describe("prose lists", () => {
+  it.each([
+    ["ul", ProseUnorderedList, "list-disc"],
+    ["ol", ProseOrderedList, "list-decimal"],
+  ] as const)(
+    "marks each %s item and indents the markers",
+    (tag, List, marker) => {
+      // Arrange / Act
+      const { container } = render(<List />);
+
+      // Assert
+      const classes = container.querySelector(tag)!.className.split(" ");
+      expect(classes).toEqual(expect.arrayContaining([marker, "pl-6"]));
+    },
+  );
+});
+
+describe("prose table code", () => {
+  it("keeps a code span in a cell on one line", () => {
+    // Arrange / Act
+    render(
+      <table>
+        <tbody>
+          <tr>
+            <ProseTd>
+              <code>--cap-drop ALL</code>
+            </ProseTd>
+          </tr>
+        </tbody>
+      </table>,
+    );
+
+    // Assert
+    expect(screen.getByRole("cell").className.split(" ")).toContain(
+      "[&_code]:whitespace-nowrap",
+    );
   });
 });
 

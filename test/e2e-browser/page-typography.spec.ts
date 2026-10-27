@@ -25,6 +25,7 @@ for (const route of [
   "/weekly-review",
   "/nested/allocation",
   "/nested/page",
+  "/deploy-on-aws",
 ]) {
   test(`${route} renders its title above body text and spaces its paragraphs`, async ({
     page,
@@ -257,7 +258,7 @@ test("a markdown table pads its header cells and rules its rows", async ({
 }) => {
   const errors = collectConsoleErrors(page);
   await page.goto(`${biacDev.url}/nested/allocation`);
-  const table = page.locator("main > table");
+  const table = page.locator("main > div > table");
   await expect(table).toBeVisible();
 
   const share = table.getByRole("columnheader", { name: "Share" });
@@ -319,7 +320,7 @@ function fenceScroll(scroller: Locator): Promise<FenceScroll> {
   }));
 }
 
-for (const route of ["/", "/weekly-review"]) {
+for (const route of ["/", "/weekly-review", "/deploy-on-aws"]) {
   test(`${route} scrolls a wide code fence inside itself on a phone`, async ({
     page,
     biacDev,
@@ -350,3 +351,32 @@ for (const route of ["/", "/weekly-review"]) {
     expect(errors).toEqual([]);
   });
 }
+
+test("a markdown table too wide for a phone scrolls inside itself", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(`${biacDev.url}/deploy-on-aws`);
+  const scroller = page
+    .locator("main > div:has(> table)")
+    .filter({ hasText: "readonlyRootFilesystem" });
+  await expect(scroller).toBeVisible();
+
+  const scroll = await scroller.evaluate((node) => ({
+    pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
+    scrollWidth: node.scrollWidth,
+    clientWidth: node.clientWidth,
+  }));
+  await scroller.focus();
+  await page.keyboard.press("ArrowRight");
+
+  expect(scroll.pageOverflow).toBe(0);
+  expect(scroll.scrollWidth).toBeGreaterThan(scroll.clientWidth);
+  await expect(scroller).toBeFocused();
+  await expect
+    .poll(() => scroller.evaluate((node) => node.scrollLeft))
+    .toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});

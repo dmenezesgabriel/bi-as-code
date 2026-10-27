@@ -43,9 +43,13 @@ export async function sliderThumbBox(page: Page, name: string) {
   return box;
 }
 
-/** Live result tables render inside `div.overflow-x-auto`; static gfm tables don't. */
+/**
+ * Live result tables sort from a button in each header cell; a static GFM
+ * table has none. Both scroll inside an `overflow-x-auto` div, so that class
+ * no longer tells them apart.
+ */
 export function resultTables(page: Page) {
-  return page.locator("div.overflow-x-auto table");
+  return page.locator("table:has(th button)");
 }
 
 /** The first data row's cells of a live result table. */

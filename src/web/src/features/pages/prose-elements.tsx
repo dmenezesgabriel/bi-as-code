@@ -13,7 +13,6 @@ type ProseTag =
   | "ul"
   | "ol"
   | "blockquote"
-  | "table"
   | "th"
   | "td";
 
@@ -61,25 +60,58 @@ export const ProseParagraph = proseElement(
   "mb-block-gap max-w-measure last:mb-0",
 );
 // Lists and quotes are running text too, so they stop at the same measure.
-export const ProseUnorderedList = proseElement("ul", "max-w-measure");
-export const ProseOrderedList = proseElement("ol", "max-w-measure");
+// Preflight strips list markers and their indent, which runs a list's items
+// together into one paragraph; these restore both.
+export const ProseUnorderedList = proseElement(
+  "ul",
+  "max-w-measure list-disc pl-6",
+);
+export const ProseOrderedList = proseElement(
+  "ol",
+  "max-w-measure list-decimal pl-6",
+);
 export const ProseBlockquote = proseElement("blockquote", "max-w-measure");
 
 // Preflight leaves a GFM table unpadded and unruled, so its header cells
 // run together. The rules, padding and size match the `<Table>` widget so
 // both read as one table style on a page. A GFM column alignment arrives
 // as an inline `text-align`, which wins over the header's `text-left`.
-export const ProseTable = proseElement(
-  "table",
-  "mb-block-gap w-full border-collapse text-sm tabular-nums last:mb-0",
-);
+const TABLE = "w-full border-collapse text-sm tabular-nums";
+
+// A table wider than the page scrolls inside itself, never the page (WCAG
+// 1.4.10 Reflow), and a scrolling region must be reachable by keyboard
+// (axe `scrollable-region-focusable`), so its scroller takes `tabIndex={0}`
+// as a code fence's does. The scroller is the page block, so it carries the
+// block gap.
+const TABLE_SCROLLER = "mb-block-gap overflow-x-auto last:mb-0";
+
+/**
+ * The markdown `table` override: a GFM table inside its own horizontal
+ * scroller, so long cells such as code spans never widen the page.
+ *
+ * @example
+ * <ProseTable><tbody><tr><ProseTd>Direct</ProseTd></tr></tbody></ProseTable>;
+ */
+export function ProseTable({
+  className,
+  ...rest
+}: HTMLAttributes<HTMLTableElement>) {
+  return (
+    <div className={TABLE_SCROLLER} tabIndex={0}>
+      <table className={cn(TABLE, className)} {...rest} />
+    </div>
+  );
+}
 export const ProseTh = proseElement(
   "th",
   "border-b border-border-strong py-1 pr-4 text-left font-medium last:pr-0",
 );
+// A code span in a cell is an identifier or a flag; broken at its hyphen,
+// `--cap-drop` reads as two tokens. The table scrolls inside itself, so
+// keeping it whole never widens the page.
 export const ProseTd = proseElement(
   "td",
-  "border-b border-border py-1 pr-4 last:pr-0",
+  "border-b border-border py-1 pr-4 last:pr-0 [&_code]:whitespace-nowrap",
 );
 
 // Underlined as well as colored: WCAG 1.4.1 rejects color as the only cue,

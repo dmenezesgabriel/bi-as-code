@@ -1,0 +1,105 @@
+---
+title: Deploy on AWS
+icon: cloud
+table_of_contents: true
+---
+
+# Deploy on AWS
+
+This page runs a biac project as a container on Amazon ECS with Fargate, behind an Application Load Balancer (ALB). The image serves the project's static build with `biac serve`. It runs as uid 10001, needs no writable path and no Linux capabilities, and listens on the port `PORT` names.
+
+Pick one of two topologies. In the first, `biac serve` checks a shared username and password itself. In the second, the ALB signs viewers in against your identity provider, and `biac serve` runs with its own check turned off.
+
+## Build and run the image
+
+The `Dockerfile` at the project root bakes the project into the image. Its build stage runs `biac build` and every data loader, so the image holds only the result. Build it, then run it locally with the same restrictions the task definition below applies:
+
+```sh
+docker build -t biac-serve .
+docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges:true -p 8080:8080 -e PORT=8080 -e BIAC_BASIC_USER=viewer -e BIAC_BASIC_PASSWORD=s3cret biac-serve
+```
+
+It prints `auth: basic (user viewer)`. `http://localhost:8080/` answers `401` without credentials, and the pages render once you sign in.
+
+## Environment
+
+The container binds every interface, so `biac serve` refuses to start unless you either set credentials or turn auth off. With neither, it exits `1` with a message that names all three auth variables.
+
+| Variable              | Effect                                                                                                                                                               |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                | The port to listen on. Defaults to `3000`, the port the image exposes                                                                                                |
+| `BIAC_BASIC_USER`     | Basic-auth username. Every path, data files included, asks for it                                                                                                    |
+| `BIAC_BASIC_PASSWORD` | Basic-auth password. Setting only one of the two counts as setting neither                                                                                           |
+| `BIAC_AUTH_DISABLED`  | `true` or `1` turns auth off and wins over credentials. Any other value, `TRUE` and `yes` included, leaves auth on. Use it only behind a proxy that signs viewers in |
+
+Basic auth sends the password with every request, so serve it only over HTTPS. `biac serve` speaks plain HTTP and expects the load balancer to terminate TLS.
+
+## Basic auth behind an ALB
+
+Viewers share one username and password, which `biac serve` checks on every request.
+
+1. Put the task in private subnets with a security group that admits the container port only from the ALB's security group.
+2. Give the ALB an HTTPS listener with an ACM certificate, and make its default action `forward` to the target group.
+3. Give it an HTTP listener whose only action is a `redirect` to HTTPS (`301`).
+4. Create the target group with target type `ip` (Fargate tasks use `awsvpc`), protocol HTTP, and the container port.
+5. Keep the credentials in Secrets Manager and pass them through the task definition's `secrets`, not as plain `environment` values. The task execution role needs permission to read the secret, and picking one JSON key out of it needs Fargate platform version `1.4.0` or later. A task reads the secret only when it starts, so a rotated password takes effect at the next deployment.
+6. Set the health check to path `/` and matcher `401`. Every path asks for credentials, so a healthy task answers the ALB's unauthenticated probe with `401`. The default matcher `200` would mark every task unhealthy.
+
+There is no logout. To revoke access, rotate the password and redeploy.
+
+## Single sign-on at the ALB
+
+The ALB signs viewers in against an OpenID Connect provider such as Entra ID, Okta or Keycloak, so `biac serve` checks nothing itself.
+
+1. On the HTTPS listener, make the rule's actions `authenticate-oidc` followed by `forward`. The ALB supports `authenticate-oidc` only on HTTPS listeners.
+2. Set `BIAC_AUTH_DISABLED=true` in the task definition. The server logs a warning at boot, because any request that reaches it is served.
+3. Put the task in private subnets, and give it a security group whose only ingress rule admits the container port from the ALB's security group. That rule is what keeps viewers from going around the sign-in.
+4. Set the health check to path `/` and matcher `200`. The ALB's probe skips the sign-in, and with auth off the page answers `200`.
+
+The ALB forwards the viewer's identity in `x-amzn-oidc-*` headers. biac reads none of them. If you build on them elsewhere, trust only `x-amzn-oidc-data`, which the ALB signs, and verify its signature.
+
+## Task definition
+
+These container-definition fields hold the image to the restrictions that `docker run` applied above:
+
+```json
+{
+  "name": "biac",
+  "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/biac-serve:latest",
+  "user": "10001",
+  "readonlyRootFilesystem": true,
+  "linuxParameters": { "capabilities": { "drop": ["ALL"] } },
+  "portMappings": [{ "containerPort": 3000, "protocol": "tcp" }],
+  "secrets": [
+    {
+      "name": "BIAC_BASIC_USER",
+      "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:biac-basic-AbCdEf:user::"
+    },
+    {
+      "name": "BIAC_BASIC_PASSWORD",
+      "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:biac-basic-AbCdEf:password::"
+    }
+  ],
+  "stopTimeout": 10
+}
+```
+
+Each field is the task-definition form of a `docker run` flag:
+
+| Field                               | `docker run` flag |
+| ----------------------------------- | ----------------- |
+| `user: "10001"`                     | `--user 10001`    |
+| `readonlyRootFilesystem: true`      | `--read-only`     |
+| `linuxParameters.capabilities.drop` | `--cap-drop ALL`  |
+| `stopTimeout`                       | `--stop-timeout`  |
+
+- `user`: the image already runs as uid 10001. Setting it again keeps a task from ever running as root.
+- `readonlyRootFilesystem`: the server writes nothing, so it needs no volume and no `tmpfs`.
+- `capabilities.drop`: binding a port of 1024 or above needs no capability. Fargate supports `drop` on every platform version.
+- `stopTimeout`: `node` is PID 1 and stops on SIGTERM within a second. Fargate's default is 30 s and its maximum 120 s.
+
+Fargate has no field for `--security-opt no-new-privileges`. ECS's `dockerSecurityOptions` is not valid for Fargate tasks, so that restriction holds only for `docker run` and for ECS on EC2.
+
+When a task stops, its container exits with code `143`, 128 plus the SIGTERM signal number. That code is a clean shutdown, not a crash. A `137` would mean the task ignored SIGTERM and was killed at the `stopTimeout`.
+
+For the second topology, replace the two `secrets` with `"environment": [{ "name": "BIAC_AUTH_DISABLED", "value": "true" }]`.

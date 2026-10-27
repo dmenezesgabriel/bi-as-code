@@ -152,6 +152,47 @@ export const Tables: Story = {
   },
 };
 
+/** A table whose code-span cells cannot wrap, in a phone-width column:
+ * it scrolls sideways inside its own scroller, which takes keyboard focus,
+ * and the column stays as wide as it was. */
+export const WideTable: Story = {
+  render: () => (
+    <div data-testid="column" className="w-[20rem]">
+      <ProseTable>
+        <thead>
+          <tr>
+            <ProseTh>Field</ProseTh>
+            <ProseTh>Flag</ProseTh>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <ProseTd>
+              <code>linuxParameters.capabilities.drop</code>
+            </ProseTd>
+            <ProseTd>
+              <code>--cap-drop ALL</code>
+            </ProseTd>
+          </tr>
+        </tbody>
+      </ProseTable>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const column = canvas.getByTestId("column");
+    const scroller = canvas.getByRole("table").parentElement!;
+
+    await expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
+    await expect(column.scrollWidth).toBe(column.clientWidth);
+    // An inline element that wraps returns one client rect per line.
+    for (const cell of canvas.getAllByRole("cell")) {
+      await expect(cell.firstElementChild!.getClientRects()).toHaveLength(1);
+    }
+    await userEvent.tab();
+    await expect(scroller).toHaveFocus();
+  },
+};
+
 /** In a column wider than the measure, a long paragraph, a heading and a
  * list stop at 640px (70ch at the body size) while a chart beside them keeps
  * the full column. */
@@ -183,6 +224,9 @@ export const ProseMeasure: Story = {
     await expect(width(canvas.getByRole("heading"))).toBe(640);
     await expect(width(canvas.getByText(/^Order volume rose/))).toBe(640);
     await expect(width(canvas.getByRole("list"))).toBe(640);
+    await expect(getComputedStyle(canvas.getByRole("list")).listStyleType).toBe(
+      "disc",
+    );
     await expect(width(canvas.getByRole("figure", { name: "Chart" }))).toBe(
       width(column),
     );
