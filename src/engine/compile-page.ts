@@ -4,12 +4,11 @@ import { toString as toPlainText } from "mdast-util-to-string";
 import remarkGfm from "remark-gfm";
 import type { Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import { VFile } from "vfile";
 import { NO_BRAND } from "./brand-config.js";
 import { brandCss } from "./brand-css.js";
 import { pageBrand } from "./page-brand-frontmatter.js";
 import { assertPageChrome } from "./page-chrome-frontmatter.js";
-import { pageFrontmatter, parseFrontmatterBlock } from "./page-frontmatter.js";
+import { pageFrontmatter, positionedPageFile } from "./page-frontmatter.js";
 import { assertPageIcon } from "./page-icon-frontmatter.js";
 import { pageLayout } from "./page-layout-frontmatter.js";
 import { assertPageSearchFields } from "./page-search-frontmatter.js";
@@ -79,13 +78,7 @@ export async function compilePage(
   loadTranslations: () => Promise<ResolvedTranslations> = async () =>
     NO_TRANSLATIONS,
 ): Promise<CompiledPage> {
-  const file = new VFile({ path: filePath, value: markdown });
-  parseFrontmatterBlock(file, { strip: true });
-  // Stripping the front-matter block would shift every position the compiler
-  // reports up by the block's height. Blank lines put the body back on its
-  // own lines of the file, so an error names the line its author sees.
-  const body = String(file.value);
-  file.value = "\n".repeat(lineBreaks(markdown) - lineBreaks(body)) + body;
+  const file = positionedPageFile(markdown, filePath);
   const frontmatter = pageFrontmatter(file);
 
   const metadata: PageMetadata = {
@@ -135,10 +128,6 @@ export async function compilePage(
     readsTranslations,
     ...page,
   };
-}
-
-function lineBreaks(text: string): number {
-  return text.split("\n").length - 1;
 }
 
 const remarkPageMetadata: Plugin<[PageMetadata], Root> =

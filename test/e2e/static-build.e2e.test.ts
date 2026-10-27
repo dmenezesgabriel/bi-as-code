@@ -82,6 +82,32 @@ describe("biac build", () => {
     );
   }, 120_000);
 
+  it("exits 1 naming a broken internal link's page line and target, then builds once it is removed", () => {
+    const root = makeTempProject("biac-e2e-build-broken-link-");
+    copyShippedProject(root);
+    const indexFile = join(root, "pages", "index.md");
+    const shipped = readFileSync(indexFile, "utf8");
+    const brokenLine = shipped.split("\n").length;
+    writeProjectFile(
+      root,
+      "pages/index.md",
+      `${shipped}[gone](/no-such-page)\n`,
+    );
+
+    const run = spawnSync(process.execPath, [biac, "build", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(
+      `pages/index.md:${brokenLine} → /no-such-page (no page serves this route)`,
+    );
+    expect(existsSync(join(root, "build"))).toBe(false);
+    writeProjectFile(root, "pages/index.md", shipped);
+    execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
+    expect(existsSync(join(root, "build", "index.html"))).toBe(true);
+  }, 240_000);
+
   it("writes the brand colours, palette, scale and fonts into build/index.html", () => {
     const root = makeTempProject("biac-e2e-build-brand-");
     writeProjectFile(root, "pages/index.md", "# Branded\n");

@@ -74,6 +74,28 @@ export function parseFrontmatterBlock(
   }
 }
 
+/**
+ * A page as a VFile with its front-matter parsed into `data.matter` and
+ * stripped from the body. Stripping would shift every position a parse of
+ * the body reports up by the block's height; blank lines put the body back
+ * on its own lines of the file, so an error names the line its author sees.
+ *
+ * @example
+ * String(positionedPageFile("---\ntitle: T\n---\n# Hi\n", "pages/a.md").value);
+ * // → "\n\n\n# Hi\n"
+ */
+export function positionedPageFile(markdown: string, filePath: string): VFile {
+  const file = new VFile({ path: filePath, value: markdown });
+  parseFrontmatterBlock(file, { strip: true });
+  const body = String(file.value);
+  file.value = "\n".repeat(lineBreaks(markdown) - lineBreaks(body)) + body;
+  return file;
+}
+
+function lineBreaks(text: string): number {
+  return text.split("\n").length - 1;
+}
+
 // yaml's YAMLParseError (vfile-matter's parser) carries `linePos`, 1-based
 // and counted from the start of the YAML block. vfile-matter matches the
 // opening fence with `^---(?:\r?\n|\r)`, so the block starts on file line 2.

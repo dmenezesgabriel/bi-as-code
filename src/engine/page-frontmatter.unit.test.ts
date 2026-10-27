@@ -1,6 +1,9 @@
 import { VFile } from "vfile";
 import { describe, expect, it } from "vitest";
-import { parseFrontmatterBlock } from "./page-frontmatter.js";
+import {
+  parseFrontmatterBlock,
+  positionedPageFile,
+} from "./page-frontmatter.js";
 
 function parseFailure(markdown: string): unknown {
   try {
@@ -41,6 +44,27 @@ describe("parseFrontmatterBlock", () => {
     parseFrontmatterBlock(file, { strip: true });
 
     expect(file.data.matter).toEqual({ title: "T" });
+    expect(String(file.value)).toBe("# Hi\n");
+  });
+});
+
+describe("positionedPageFile", () => {
+  it("keeps the body on its own lines of the file after stripping the block", () => {
+    const file = positionedPageFile("---\ntitle: T\n---\n# Hi\n", "pages/a.md");
+
+    expect(String(file.value)).toBe("\n\n\n# Hi\n");
+  });
+
+  it("parses the front-matter into the file's data", () => {
+    const file = positionedPageFile("---\ntitle: T\n---\n# Hi\n", "pages/a.md");
+
+    expect(file.data.matter).toEqual({ title: "T" });
+    expect(file.path).toBe("pages/a.md");
+  });
+
+  it("leaves a page without front-matter as written", () => {
+    const file = positionedPageFile("# Hi\n", "pages/a.md");
+
     expect(String(file.value)).toBe("# Hi\n");
   });
 });

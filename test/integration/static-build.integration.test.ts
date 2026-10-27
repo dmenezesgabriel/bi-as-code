@@ -174,6 +174,21 @@ describe("biac build", () => {
     expect(existsSync(join(root, "build", "index.html"))).toBe(false);
   }, 120_000);
 
+  it("fails on a link to a route no page serves, naming the page line and the target", async () => {
+    const root = makeTempProject();
+    writeProjectFile(
+      root,
+      "pages/index.md",
+      "# Home\n\n[gone](/no-such-page)\n",
+    );
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    const failure = await build([root]).catch((error: unknown) => error);
+
+    expect(String(failure)).toMatch(/pages\/index\.md:3 → \/no-such-page/);
+    expect(existsSync(join(root, "build"))).toBe(false);
+  }, 120_000);
+
   it("keeps the copies' asset refs root-absolute under the configured base", async () => {
     const root = makeTempProject();
     writeProjectFile(root, "pages/index.md", "# Home\n");

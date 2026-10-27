@@ -20,6 +20,7 @@ import { diskQueryFiles } from "./disk-query-files.js";
 import { DATA_UPDATE_EVENT, dataUpdateFor } from "./data-update.js";
 import { dataCorsMiddleware } from "./data-cors.js";
 import { frameAncestorsMiddleware } from "./frame-ancestors.js";
+import { assertInternalLinksResolve } from "./internal-links.js";
 import {
   copyDataDir,
   copyLoaderOutputs,
@@ -234,6 +235,7 @@ export function pagesPlugin(projectRoot: string): Plugin {
     async buildStart() {
       if (isDevServer) return;
       assertRoutesBuildable(root);
+      await assertInternalLinksResolve(root);
       loaderOutputs = await runDataLoaders(
         root,
         viteLoaderLog(this.environment.logger),
