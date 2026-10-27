@@ -24,3 +24,19 @@ export function copyShippedProject(projectRoot: string): void {
     cpSync(join(repoRoot, file), join(projectRoot, file));
   }
 }
+
+/**
+ * Copies the docs project (`docs/`) into a temp project dir, leaving out a
+ * local `docs/build/`, so a test server or build never writes into the repo.
+ *
+ * @example
+ * const root = mkdtempSync(join(tmpdir(), "biac-docs-"));
+ * copyDocsProject(root);
+ */
+export function copyDocsProject(projectRoot: string): void {
+  const docsRoot = join(repoRoot, "docs");
+  cpSync(docsRoot, projectRoot, {
+    recursive: true,
+    filter: (source) => !source.startsWith(join(docsRoot, "build")),
+  });
+}

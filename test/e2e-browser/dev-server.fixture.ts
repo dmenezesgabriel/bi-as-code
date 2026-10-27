@@ -8,7 +8,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startDevServer } from "../lib/dev-server.js";
-import { copyShippedProject } from "../lib/shipped-project.js";
+import { copyDocsProject, copyShippedProject } from "../lib/shipped-project.js";
 import {
   describeBlankPage,
   rootIsEmpty,
@@ -144,16 +144,29 @@ export function workerPosts(page: Page): Promise<number> {
  */
 const VITE_REQUEST_DEBUG = "vite:time,vite:send,vite:transform,vite:load";
 
+/** The repo's projects a test server can serve a copy of. */
+export type BiacProject = "shipped" | "docs";
+
+const PROJECT_COPIES: Record<BiacProject, (projectDir: string) => void> = {
+  shipped: copyShippedProject,
+  docs: copyDocsProject,
+};
+
 /**
  * Test-scoped server: each test gets its own `biac dev` over a fresh copy of
- * the shipped `pages/` example, so the suite exercises what users clone and
+ * the shipped `pages/` example — or, under `test.use({ biacProject: "docs" })`,
+ * of the docs project — so the suite exercises what users clone and
  * hot-reload mutations never touch the repo (or leak between tests). A test
  * that fails on a page whose app never mounted gets `blank-page.txt`.
  */
-export const test = base.extend<{ biacDev: BiacDev }>({
-  biacDev: async ({ page }, use, testInfo) => {
+export const test = base.extend<{
+  biacProject: BiacProject;
+  biacDev: BiacDev;
+}>({
+  biacProject: ["shipped", { option: true }],
+  biacDev: async ({ page, biacProject }, use, testInfo) => {
     const projectDir = mkdtempSync(join(tmpdir(), "biac-browser-"));
-    copyShippedProject(projectDir);
+    PROJECT_COPIES[biacProject](projectDir);
     const server = await startDevServer(projectDir, {
       DEBUG: VITE_REQUEST_DEBUG,
     });
