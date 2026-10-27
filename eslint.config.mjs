@@ -12,7 +12,8 @@ export default tseslint.config(
   {
     ignores: [
       "artifacts/**",
-      "build/**",
+      // Any project's static build, e.g. `bin/biac build docs` → docs/build.
+      "**/build/**",
       "dist/**",
       "coverage/**",
       "node_modules/**",

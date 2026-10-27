@@ -12,6 +12,7 @@
     // Loaded at runtime by the engine's loadBiacConfig via vite's
     // loadConfigFromFile — never statically imported, so knip can't see it.
     "biac.config.ts",
+    "docs/biac.config.ts",
     // Data loaders and the helper modules they import: the engine spawns
     // each `data/<target>.js` as a program — never imported, so knip can't
     // see it (src/engine/data-loader.ts).
