@@ -1,6 +1,6 @@
 # SL-061 — Every shipped capability has a live page in biac's own docs project
 
-Milestone: Phase 8 — Documentation site · State: open · Depends on: SL-060 (shipped) · Closes: GAP-064, GAP-070
+Milestone: Phase 8 — Documentation site · State: open · Depends on: SL-060 (shipped) · Closes: GAP-064, GAP-070, GAP-071
 
 ## Outcome
 
@@ -157,7 +157,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T2b — DuckDB `DATE` and `TIMESTAMP` cells reach every widget as `Date`s, so date `fmt` codes and time axes work on real query results; then add the date-format examples to `docs/pages/components/table.md` and the date rows to the format-code table in `docs/pages/components/value.md` — closes GAP-070 (found writing T2a; a product gap gets its own task)
 - [x] T2c — Widget reference pages `BarChart`, `LineChart`, `AreaChart` (the shared `SeriesChartProps`), one `mdx echo` example per prop
 - [x] T2d — Widget reference pages `ScatterChart`, `Histogram`, `Heatmap`, one `mdx echo` example per prop
-- [ ] T2e — A time axis with an `xFmt` places ticks its formatted labels fit, then give the `BarChart` page's X format example a `DATE` x — closes GAP-071 (found writing T2c; a product gap gets its own task)
+- [x] T2e — A time axis with an `xFmt` places ticks its formatted labels fit, then give the `BarChart` page's X format example a `DATE` x — closes GAP-071 (found writing T2c; a product gap gets its own task)
 - [ ] T2f — A stacked series chart draws a missing x × series point as 0, then drop the zero-filling `cross join` from `monthly_weather_days` in `docs/pages/components/line-chart.md` and `area-chart.md` and its sentence under Stacked — closes GAP-072 (found writing T2c; a product gap gets its own task)
 - [ ] T2g — A histogram's bin axis labels read distinct without a `valueFmt`, then check the unformatted `body_mass_g` examples in `docs/pages/components/histogram.md` read cleanly at 375 and 1280 px — closes GAP-073 (found writing T2d; a product gap gets its own task)
 - [ ] T2h — Clearing a histogram brush by a click restores every bin's colour — closes GAP-074 (found writing T2d; a product gap gets its own task)
