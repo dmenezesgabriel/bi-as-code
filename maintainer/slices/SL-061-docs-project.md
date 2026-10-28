@@ -162,7 +162,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T2g — A histogram's bin axis labels read distinct without a `valueFmt`, then check the unformatted `body_mass_g` examples in `docs/pages/components/histogram.md` read cleanly at 375 and 1280 px — closes GAP-073 (found writing T2d; a product gap gets its own task)
 - [x] T2h — Clearing a histogram brush by a click restores every bin's colour — closes GAP-074 (found writing T2d; a product gap gets its own task)
 - [x] T2i — `<Heatmap>` stops accepting `select` (evidence's heatmap has no selection), or wires it, decided in the task — closes GAP-075 (found writing T2d; a product gap gets its own task)
-- [ ] T2j — A histogram tooltip's bin range reads distinct above 4,000 without a `valueFmt` (`6k – 6k` today) — closes GAP-076 (found doing T2g; a product gap gets its own task)
+- [x] T2j — A histogram tooltip's bin range reads distinct above 4,000 without a `valueFmt` (`6k – 6k` today) — closes GAP-076 (found doing T2g; a product gap gets its own task)
 - [ ] T3 — Layout reference pages: `Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Accordion`, `Row`, `Stack`
 - [ ] T4 — Filter reference pages, `filters=[...]` and URL persistence, cross-filter how-to and explanation
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages
