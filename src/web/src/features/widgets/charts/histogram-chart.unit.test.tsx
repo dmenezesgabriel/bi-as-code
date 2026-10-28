@@ -26,7 +26,7 @@ interface AppliedOption {
     barCategoryGap?: number;
     data?: unknown[];
   }[];
-  xAxis: { type?: string; data?: unknown[] }[];
+  xAxis: { type?: string; min?: number; max?: number }[];
 }
 
 function noChart(): void {
@@ -56,8 +56,7 @@ describe("<Histogram>", () => {
       ),
     );
     const option = await appliedOption<AppliedOption>(document);
-    expect(option.xAxis[0]?.type).toBe("category");
-    expect(option.xAxis[0]?.data?.length).toBeGreaterThan(0);
+    expect(option.xAxis[0]?.type).toBe("value");
     expect(option.series.every((s) => s.type === "bar")).toBe(true);
     expect(option.series.every((s) => s.stack === "total")).toBe(true);
     expect(option.series.every((s) => s.barCategoryGap === 0)).toBe(true);
@@ -95,8 +94,12 @@ describe("<Histogram>", () => {
     const option = await appliedOption<AppliedOption>(document, 15000);
 
     expect(option.series.map((s) => s.name)).toEqual(["North"]);
-    expect(option.series[0]?.data).toEqual([0, 12, 0]);
-    expect(option.xAxis[0]?.data).toHaveLength(3);
+    expect(option.series[0]?.data).toEqual([
+      [5, 0],
+      [15, 12],
+      [25, 0],
+    ]);
+    expect(option.xAxis[0]).toMatchObject({ min: 0, max: 30 });
     const block = {
       sql: "select amount, region from orders",
       params: [],

@@ -7,7 +7,7 @@ import {
   sliderThumbBox,
   test,
 } from "./dev-server.fixture.js";
-import { chartHosts, chartPoint, optionAt } from "./echart-hosts.js";
+import { binCounts, binPoint, chartHosts, optionAt } from "./echart-hosts.js";
 import {
   countPaints,
   installCrossfilterProbe,
@@ -42,8 +42,9 @@ test.beforeEach(async ({ page }) => {
 async function barTotals(page: Page): Promise<number[]> {
   const totals: number[] = [];
   for (const index of CHARTS.keys()) {
-    const counts = (await optionAt(page, index)).series[0]?.data ?? [];
-    totals.push(counts.reduce<number>((sum, c) => sum + Number(c), 0));
+    const series = (await optionAt(page, index)).series[0];
+    const counts = series ? binCounts(series) : [];
+    totals.push(counts.reduce((sum, c) => sum + c, 0));
   }
   return totals;
 }
@@ -157,8 +158,8 @@ test("a brush drag over 200k rows re-queries only the other histograms", async (
 
   // Brush the delay histogram from its first bin rightwards in steps, the
   // echarts brush's own 150 ms throttle pacing the publishes.
-  const from = await chartPoint(page, 0, [0, 100]);
-  const to = await chartPoint(page, 0, [12, 100]);
+  const from = await binPoint(page, 0, 0, 100);
+  const to = await binPoint(page, 0, 12, 100);
   const marks = await drag(page, from, to, 30, 2);
   const report = await recordGesture(page, testInfo, "brush", marks);
 

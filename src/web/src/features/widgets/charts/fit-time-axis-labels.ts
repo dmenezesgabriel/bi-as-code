@@ -25,6 +25,7 @@ interface ChartInternals {
 }
 
 interface PinnedXAxisOption {
+  readonly type?: string;
   readonly axisTick?: { readonly customValues?: readonly number[] };
   readonly axisLabel?: { readonly customValues?: readonly number[] };
 }
@@ -33,8 +34,8 @@ interface PinnedXAxisOption {
  * Thins a laid-out time axis' pinned labels until none touch, at the width
  * the chart has now: every label is restored first, so a chart that grew
  * gets back the labels a narrower layout dropped. The pinned ticks stay.
- * Run it after every `setOption` and `resize` — an axis with no pinned
- * ticks (a category, value or dense time axis) is left alone.
+ * Run it after every `setOption` and `resize` — any other axis (a category
+ * or dense time axis, or a value axis whatever it pins) is left alone.
  *
  * @example
  * chart.setOption(option, { notMerge: true });
@@ -55,9 +56,14 @@ function xAxisOption(chart: EChartsType): PinnedXAxisOption | undefined {
   return option.xAxis?.[0];
 }
 
-/** The axis' full pinned set — its ticks, which thinning never touches. */
+/**
+ * A time axis' full pinned set — its ticks, which thinning never touches.
+ * A value axis pins ticks too (a histogram's round ticks), but it has no
+ * time labels to thin, so it pins none here.
+ */
 function pinnedTicks(chart: EChartsType): readonly number[] | undefined {
-  return xAxisOption(chart)?.axisTick?.customValues;
+  const axis = xAxisOption(chart);
+  return axis?.type === "time" ? axis.axisTick?.customValues : undefined;
 }
 
 function shownTicks(chart: EChartsType): readonly number[] | undefined {

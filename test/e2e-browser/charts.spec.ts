@@ -170,10 +170,11 @@ test("the scatter, histogram and heatmap apply their own option shapes", async (
   }
 
   // Histogram: 355 amounts binned client-side at the rice-rule default —
-  // ceil(2·∛355) = 15 dense bins on a category axis, one stacked gapless
-  // bar series labelled Frequency on the y axis.
+  // ceil(2·∛355) = 15 bins on a value axis, one stacked gapless bar series
+  // labelled Frequency on the y axis.
   const histogram = await optionAt(page, 2);
-  expect(histogram.xAxis[0]?.data).toHaveLength(15);
+  expect(histogram.xAxis[0]?.type).toBe("value");
+  expect(histogram.series[0]?.data).toHaveLength(15);
   expect(histogram.series[0]?.type).toBe("bar");
   expect(histogram.series[0]?.stack).toBe("total");
   expect(histogram.series[0]?.barCategoryGap).toBe(0);

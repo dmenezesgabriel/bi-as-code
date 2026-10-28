@@ -7,6 +7,8 @@ import {
   workerPosts,
 } from "./dev-server.fixture.js";
 import {
+  binCounts,
+  binPoint,
   chartHosts,
   chartPoint,
   openWeeklyReviewCharts,
@@ -157,7 +159,7 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
 
   // Baseline: 15 bins over amounts 38..44; the order_detail <Table> pages
   // all 355 orders.
-  expect((await optionAt(page, 2)).xAxis[0]?.data).toHaveLength(15);
+  expect((await optionAt(page, 2)).series[0]?.data).toHaveLength(15);
   const table = orderDetailTable(page);
   await expect(table).toHaveCount(1);
   await expect(table).toContainText("· 355 rows");
@@ -165,8 +167,8 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   // Drag center-of-bin-0 → center-of-bin-3: the clause spans the covered
   // edges [38, 39.6], narrowing order_detail to the 95 orders under $40.
   await chartHosts(page).nth(2).scrollIntoViewIfNeeded();
-  const from = await chartPoint(page, 2, [0, 60]);
-  const to = await chartPoint(page, 2, [3, 60]);
+  const from = await binPoint(page, 2, 0, 60);
+  const to = await binPoint(page, 2, 3, 60);
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 8 });
@@ -176,7 +178,7 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   // amount-filtered order_detail re-queries to the covered rows; the
   // region-filtered scatter is untouched.
   await expect(table).toContainText("· 95 rows");
-  expect((await optionAt(page, 2)).xAxis[0]?.data).toHaveLength(15);
+  expect((await optionAt(page, 2)).series[0]?.data).toHaveLength(15);
   expect((await optionAt(page, 1)).series.map((s) => s.name)).toEqual([
     "North",
     "South",
@@ -190,7 +192,7 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
 
   // A plain click on the panel clears the brush: order_detail re-queries
   // unfiltered.
-  const clear = await chartPoint(page, 2, [10, 60]);
+  const clear = await binPoint(page, 2, 10, 60);
   await page.mouse.click(clear.x, clear.y);
   await expect(table).toContainText("· 355 rows");
 
@@ -228,8 +230,8 @@ test("a held histogram brush survives the histogram's own re-query when a region
   // Bins 12–13 hold 60 of West's 140 orders and nothing else — the
   // brushed amount clause is what tells the West counts apart.
   await chartHosts(page).nth(2).scrollIntoViewIfNeeded();
-  const from = await chartPoint(page, 2, [12, 60]);
-  const to = await chartPoint(page, 2, [13, 60]);
+  const from = await binPoint(page, 2, 12, 60);
+  const to = await binPoint(page, 2, 13, 60);
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x, to.y, { steps: 8 });
@@ -252,8 +254,8 @@ test("a held histogram brush survives the histogram's own re-query when a region
   await expect
     .poll(async () =>
       (await optionAt(page, 2)).series
-        .flatMap((s) => s.data ?? [])
-        .reduce<number>((sum, n) => sum + Number(n), 0),
+        .flatMap(binCounts)
+        .reduce((sum, n) => sum + n, 0),
     )
     .toBe(140);
   await expect(chartHosts(page).nth(2)).toHaveAttribute("data-kept", "");

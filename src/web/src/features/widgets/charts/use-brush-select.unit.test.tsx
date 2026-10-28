@@ -109,14 +109,22 @@ describe("brushClause", () => {
     });
   });
 
-  it("maps covered bin indexes to the bin-edge window", () => {
-    const clause = brushClause(BINS_AXIS, [1, 2], OPTIONS);
-    expect(clause.meta?.type).toBe("interval");
-    expect(clause.predicate).toEqual({
-      sql: "amount BETWEEN ? AND ?",
-      params: [10, 30],
-    });
-  });
+  it.each([
+    { range: [12, 25], edges: [10, 30] },
+    { range: [25, 12], edges: [10, 30] },
+    { range: [10, 20], edges: [10, 20] },
+    { range: [0, 4], edges: [0, 10] },
+  ] as const)(
+    "snaps a $range value extent out to the bin edges $edges it touches",
+    ({ range, edges }) => {
+      const clause = brushClause(BINS_AXIS, range, OPTIONS);
+      expect(clause.meta?.type).toBe("interval");
+      expect(clause.predicate).toEqual({
+        sql: "amount BETWEEN ? AND ?",
+        params: edges,
+      });
+    },
+  );
 
   it("emits a predicate-less clause carrying the field when the brush cleared", () => {
     const clause = brushClause(VALUE_AXIS, undefined, OPTIONS);

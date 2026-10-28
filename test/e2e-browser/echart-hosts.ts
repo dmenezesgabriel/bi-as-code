@@ -74,6 +74,31 @@ export async function chartPoint(
 }
 
 /**
+ * A histogram series' count per bin, in bin order — each bar is drawn as
+ * an `[x, count]` point on the value axis.
+ */
+export function binCounts(series: AppliedOption["series"][number]): number[] {
+  return (series.data ?? []).map((point) => Number((point as unknown[])[1]));
+}
+
+/**
+ * The page-space point at bin `bin`'s centre on histogram host `hostIndex`,
+ * `count` up the frequency axis — what a pointer aims at to grab a bin.
+ */
+export async function binPoint(
+  page: Page,
+  hostIndex: number,
+  bin: number,
+  count: number,
+): Promise<PagePoint> {
+  const point = (await optionAt(page, hostIndex)).series[0]?.data?.[bin];
+  const centre = Number((point as unknown[] | undefined)?.[0]);
+  if (!Number.isFinite(centre))
+    throw new Error(`histogram host ${hostIndex} has no bin ${bin}`);
+  return chartPoint(page, hostIndex, [centre, count]);
+}
+
+/**
  * Chart hosts in document order — on weekly-review that's the Regional
  * split's <BarChart>, the Order mix <ScatterChart>, the Order size
  * <Histogram>, then the Trend lines' <LineChart>/<AreaChart>/<Heatmap>.

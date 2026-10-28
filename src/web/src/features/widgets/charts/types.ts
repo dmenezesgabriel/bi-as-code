@@ -424,8 +424,8 @@ export interface BinRule {
  * The `<Histogram>` prop surface — the shared chart props minus `x`/`y`
  * (the binned `value` column stands in for both) and `stacked` (histogram
  * series always stack), plus `binCount`/`binWidth` steering the binning
- * (`binWidth` wins when both are set) and `valueFmt` formatting the bin
- * edges. `yFmt`/`labelsFmt` format the counts; `xTitle`/`yTitle` name the
+ * (`binWidth` wins when both are set) and `valueFmt` formatting the value
+ * axis and the tooltip's bin range. `yFmt`/`labelsFmt` format the counts; `xTitle`/`yTitle` name the
  * axes (`yTitle` defaults to `"Frequency"`).
  */
 export interface HistogramChartProps extends Omit<

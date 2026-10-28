@@ -11,6 +11,7 @@ import type {
   ChartBrushArea,
   ChartBrushEndParams,
   ChartBrushSelectedParams,
+  HistogramBin,
   XAxisKind,
 } from "./types";
 import { useChartPublish } from "./use-chart-publish";
@@ -69,15 +70,29 @@ export function brushClause(
     return clauseList(axis.field, axis.domain.slice(start, end + 1), options);
   }
   if (axis.kind === "bins") {
-    const first = axis.bins[Math.max(0, Math.round(lo))];
-    const last = axis.bins[Math.min(axis.bins.length - 1, Math.round(hi))];
     return clauseInterval(
       axis.field,
-      first && last ? [first.start, last.end] : undefined,
+      touchedBinEdges(axis.bins, lo, hi),
       options,
     );
   }
   return clauseInterval(axis.field, [lo, hi], options);
+}
+
+/**
+ * The outer edges of the bins a `[lo, hi]` value extent touches — a brush
+ * snaps out to whole bins, since a row is counted by its bin, not its
+ * position inside it. A bin that only shares an edge with the extent is
+ * left out.
+ */
+function touchedBinEdges(
+  bins: readonly HistogramBin[],
+  lo: number,
+  hi: number,
+): [number, number] | undefined {
+  const first = bins.find((bin) => bin.end > lo);
+  const last = bins.filter((bin) => bin.start < hi).at(-1);
+  return first && last ? [first.start, last.end] : undefined;
 }
 
 /**

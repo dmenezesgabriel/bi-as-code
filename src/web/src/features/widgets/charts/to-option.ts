@@ -413,7 +413,14 @@ function labelPosition(
   return "top";
 }
 
-function yOf(value: unknown): unknown {
+/**
+ * The y of a point echarts hands a formatter — `[x, y]` pairs on a value,
+ * time or histogram x, the bare value on a category x.
+ *
+ * @example
+ * yOf([20.5, 3]) // 3
+ */
+export function yOf(value: unknown): unknown {
   return Array.isArray(value) ? value[1] : value;
 }
 

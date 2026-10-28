@@ -130,7 +130,7 @@ order by island
 
 ### Value format
 
-`valueFmt` formats the bin edges on the axis and the bin range in the tooltip.
+`valueFmt` formats the values on the axis and the bin range in the tooltip. The axis marks round values, not the bin edges, so its labels stay apart whatever the bin width.
 
 ```mdx echo
 <Histogram data="penguin_measures" value="body_mass_g" valueFmt="num1k" />
@@ -248,7 +248,7 @@ Give each chart both `select` and `filters` and the selections run both ways; a 
 | `series`       | string                 | none                                             | A column whose values split each bar, one colour each                 |
 | `binCount`     | number                 | twice the cube root of the row count, rounded up | How many bins the range is cut into                                   |
 | `binWidth`     | number                 | none                                             | Each bin's width; wins over `binCount`                                |
-| `valueFmt`     | string                 | auto-scaled number                               | A [format code](/components/value#format-codes) for the bin edges     |
+| `valueFmt`     | string                 | auto-scaled number                               | A [format code](/components/value#format-codes) for the value axis    |
 | `labels`       | boolean                | `false`                                          | Print each bar's count on it                                          |
 | `labelsFmt`    | string                 | `yFmt`                                           | A format code for the labels                                          |
 | `color`        | string                 | the theme's palette                              | One CSS colour for every bar                                          |

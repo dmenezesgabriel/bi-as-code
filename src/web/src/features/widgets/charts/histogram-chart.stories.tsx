@@ -40,14 +40,16 @@ export const RiceRuleDefault: Story = {
     expect(host).toHaveAttribute("aria-label", "histogram chart of amount");
     const option = await appliedOption<{
       series?: { type?: string; stack?: string; data?: unknown[] }[];
-      xAxis?: { type?: string; data?: unknown[]; boundaryGap?: boolean }[];
+      xAxis?: { type?: string; min?: number; max?: number }[];
     }>(canvasElement);
     expect(option.series?.[0]?.type).toBe("bar");
     expect(option.series?.[0]?.stack).toBe("total");
     expect(option.series?.[0]?.data).toHaveLength(6);
-    expect(option.xAxis?.[0]?.type).toBe("category");
-    expect(option.xAxis?.[0]?.data).toHaveLength(6);
-    expect(option.xAxis?.[0]?.boundaryGap).toBe(false);
+    expect(option.xAxis?.[0]).toMatchObject({
+      type: "value",
+      min: 12,
+      max: 98,
+    });
   },
 };
 
@@ -66,18 +68,20 @@ export const StackedByRegion: Story = {
   },
 };
 
-/** `binCount` pins the bin count — the category axis carries that many labels. */
+/** `binCount` pins the bin count — that many bars, ticks still round. */
 export const ExplicitBinCount: Story = {
   args: { binCount: 10, valueFmt: "usd0" },
   decorators: [withQueryData([ORDER_AMOUNTS], dbWith(AMOUNT_ROWS))],
   play: async ({ canvasElement }) => {
     const option = await appliedOption<{
-      xAxis?: { data?: unknown[] }[];
-      series?: { data?: unknown[] }[];
+      xAxis?: { axisLabel?: { customValues?: number[] } }[];
+      series?: { data?: [number, number][] }[];
     }>(canvasElement);
-    expect(option.xAxis?.[0]?.data).toHaveLength(10);
-    expect(option.xAxis?.[0]?.data?.[0]).toBe("$12");
-    const counts = option.series?.[0]?.data as number[];
+    expect(option.series?.[0]?.data).toHaveLength(10);
+    expect(option.xAxis?.[0]?.axisLabel?.customValues).toEqual([
+      20, 40, 60, 80,
+    ]);
+    const counts = option.series?.[0]?.data?.map(([, count]) => count) ?? [];
     expect(counts.reduce((a, b) => a + b, 0)).toBe(AMOUNT_ROWS.length);
   },
 };
@@ -116,18 +120,21 @@ export const Filtered: Story = {
     await readyHost(canvasElement);
     const option = await appliedOption<{
       series?: { name?: string; data?: unknown[] }[];
-      xAxis?: { data?: unknown[] }[];
+      xAxis?: { min?: number; max?: number }[];
     }>(canvasElement);
     expect(option.series?.map((s) => s.name)).toEqual(["North"]);
-    expect(option.series?.[0]?.data).toEqual([2, 2, 2, 2, 2, 2]);
-    expect(option.xAxis?.[0]?.data).toHaveLength(6);
+    const counts = (option.series?.[0]?.data as [number, number][]).map(
+      ([, count]) => count,
+    );
+    expect(counts).toEqual([2, 2, 2, 2, 2, 2]);
+    expect(option.xAxis?.[0]).toMatchObject({ min: 12, max: 98 });
   },
 };
 
 /**
  * `select="crossfilter"`: a brush over the bins publishes the covered
- * bin-edge window as an interval clause on `amount` — bins 1–2 of the
- * rice-rule six, the ~26–55 window — so the consumer table narrows to the
+ * bin-edge window as an interval clause on `amount` — a 30–50 brush
+ * touches bins 1–2 of the rice-rule six, the ~26–55 window — so the consumer table narrows to the
  * amounts inside it while the histogram keeps its full shape (its own
  * clause skips it); a brush with no areas clears.
  */
@@ -146,13 +153,13 @@ export const SelectCrossfilterBrush: Story = {
   play: async ({ canvasElement }) => {
     const { host, bodyRows } = await crossfilterScene(canvasElement, 3);
 
-    brushMarks(host, [1, 2]);
+    brushMarks(host, [30, 50]);
     await waitFor(() => expect(bodyRows()).toBe(2));
     expect(canvasElement.querySelector("tbody")?.textContent).toContain("48");
-    const option = await appliedOption<{ xAxis?: { data?: unknown[] }[] }>(
+    const option = await appliedOption<{ series?: { data?: unknown[] }[] }>(
       canvasElement,
     );
-    expect(option.xAxis?.[0]?.data).toHaveLength(6);
+    expect(option.series?.[0]?.data).toHaveLength(6);
 
     brushMarks(host, undefined);
     await waitFor(() => expect(bodyRows()).toBe(3));
@@ -191,7 +198,7 @@ export const ConsumerKeepsChartWhilePending: Story = {
     const [publisher, consumer] = [...hosts()];
     if (!publisher || !consumer) throw new Error("expected two chart hosts");
 
-    brushMarks(publisher, [1, 2]);
+    brushMarks(publisher, [30, 50]);
 
     await waitFor(() =>
       expect(consumer.parentElement).toHaveAttribute("aria-busy", "true"),

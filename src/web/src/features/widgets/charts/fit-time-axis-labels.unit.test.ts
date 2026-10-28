@@ -132,4 +132,31 @@ describe("fitTimeAxisLabels", () => {
 
     expect(xAxisOf(chart)?.axisLabel?.customValues).toBeUndefined();
   });
+
+  it("leaves a value axis' pinned ticks alone", () => {
+    // A histogram pins round ticks inside its bin edges.
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 375,
+      height: 300,
+    });
+    charts.push(chart);
+    const ticks = [3000, 4000, 5000, 6000];
+    chart.setOption({
+      xAxis: {
+        type: "value",
+        min: 2700,
+        max: 6300,
+        axisTick: { customValues: ticks },
+        axisLabel: { customValues: ticks },
+      },
+      yAxis: { type: "value" },
+      series: [{ type: "bar", data: [[4500, 1]] }],
+    });
+
+    fitTimeAxisLabels(chart);
+
+    expect(shownTicks(chart)).toEqual(ticks);
+  });
 });

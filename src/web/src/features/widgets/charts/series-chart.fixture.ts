@@ -245,8 +245,8 @@ export async function expectEmptyFace(element: ReactElement): Promise<void> {
 
 /**
  * Dispatches the `brushEnd` action with a `lineX` area over `coordRange`
- * (bin/category indexes on a category axis, data values on a continuous
- * one); `undefined` dispatches empty areas — the cleared brush. jsdom's
+ * (category indexes on a category axis, data values on a continuous one,
+ * a histogram's bin axis included); `undefined` dispatches empty areas — the cleared brush. jsdom's
  * svg surface has no layout for the brush controller's hit test, so this
  * drives the same action a real drag ends by dispatching; the event still
  * flows through the real subscription.

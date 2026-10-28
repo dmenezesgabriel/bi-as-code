@@ -131,6 +131,13 @@ function timeAxisHosts(page: Page): Promise<number[]> {
   return chartHostsWhere(page, (option) => option.xAxis[0]?.type === "time");
 }
 
+/** Indexes of the ready chart hosts that draw a histogram's gapless bins. */
+function histogramHosts(page: Page): Promise<number[]> {
+  return chartHostsWhere(page, (option) =>
+    option.series.some((s) => s.type === "bar" && s.barCategoryGap === 0),
+  );
+}
+
 /** The y of every point a stacked chart's series draw, gaps as `null`. */
 function stackedYs(option: AppliedOption): unknown[] {
   return option.series
@@ -291,6 +298,29 @@ for (const colorScheme of ["light", "dark"] as const) {
             expect(labels.length, `${route} chart ${host}`).toBeGreaterThan(1);
             expect(overlaps(labels), `${route} chart ${host}`).toEqual([]);
           }
+        }
+        expect(errors).toEqual([]);
+      });
+    }
+
+    for (const width of [375, 1280]) {
+      test(`every histogram on its page paints distinct x labels apart at ${width} px`, async ({
+        page,
+        biacDev,
+      }) => {
+        const errors = collectConsoleErrors(page);
+        await page.setViewportSize({ width, height: 812 });
+
+        await page.goto(`${biacDev.url}/components/histogram`);
+        await expect(page.locator("main [role=status]")).toHaveCount(0);
+        const hosts = await histogramHosts(page);
+        expect(hosts.length).toBeGreaterThan(0);
+        for (const host of hosts) {
+          const labels = await xAxisLabelBoxes(page, host);
+          const texts = labels.map((label) => label.text);
+          expect(texts.length, `histogram ${host}`).toBeGreaterThan(1);
+          expect(texts, `histogram ${host}`).toEqual([...new Set(texts)]);
+          expect(overlaps(labels), `histogram ${host}`).toEqual([]);
         }
         expect(errors).toEqual([]);
       });
