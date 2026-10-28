@@ -95,6 +95,80 @@ const WIDGET_PAGES: readonly WidgetPage[] = [
     file: "pages/components/heatmap.md",
     drawn: [{ tag: /<Heatmap\b/g, live: charts }],
   },
+  {
+    route: "/layout/callout",
+    file: "pages/layout/callout.md",
+    drawn: [
+      { tag: /<Callout\b/g, live: (page) => page.locator("main [role=note]") },
+    ],
+  },
+  {
+    route: "/layout/note",
+    file: "pages/layout/note.md",
+    // Other widgets share the muted text-xs tone; only a Note pads below it.
+    drawn: [
+      {
+        tag: /<Note\b/g,
+        live: (page) =>
+          page.locator("main div.pb-3.text-xs.text-muted-foreground-faded"),
+      },
+    ],
+  },
+  {
+    route: "/layout/line-break",
+    file: "pages/layout/line-break.md",
+    // A LineBreak draws one <br> per line, not one mark per tag, so the
+    // page is held to the shared no-alert, no-scroll checks only.
+    drawn: [],
+  },
+  {
+    route: "/layout/details",
+    file: "pages/layout/details.md",
+    // The disclosure trigger is the one expandable control a Details draws.
+    drawn: [
+      {
+        tag: /<Details\b/g,
+        live: (page) => page.locator("main button[aria-expanded]"),
+      },
+    ],
+  },
+  {
+    route: "/layout/tabs",
+    file: "pages/layout/tabs.md",
+    drawn: [
+      { tag: /<Tabs\b/g, live: (page) => page.locator("main [role=tablist]") },
+    ],
+  },
+  {
+    route: "/layout/accordion",
+    file: "pages/layout/accordion.md",
+    drawn: [
+      {
+        tag: /<Accordion(?![A-Za-z])/g,
+        live: (page) => page.locator("main [data-slot=accordion-root]"),
+      },
+    ],
+  },
+  {
+    route: "/layout/row",
+    file: "pages/layout/row.md",
+    drawn: [
+      {
+        tag: /<Row\b/g,
+        live: (page) => page.locator("main div.flex-wrap.gap-4"),
+      },
+    ],
+  },
+  {
+    route: "/layout/stack",
+    file: "pages/layout/stack.md",
+    drawn: [
+      {
+        tag: /<Stack\b/g,
+        live: (page) => page.locator("main div.flex-col.gap-4"),
+      },
+    ],
+  },
 ];
 
 /** How many times `tag` appears inside the page file's `mdx echo` fences. */
