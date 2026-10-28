@@ -38,6 +38,11 @@ export const TREND_ROWS: Row[] = [
   { week: 3, region: "South", orders: 100 },
 ];
 
+/** `TREND_ROWS` with no South row in week 2 — a stack's missing point. */
+export const SPARSE_TREND_ROWS: Row[] = TREND_ROWS.filter(
+  (row) => !(row.week === 2 && row.region === "South"),
+);
+
 /**
  * A second fence a `filters="region"` consumer binds to — the chart-click
  * tests and stories narrow it through the chart's published point clauses.

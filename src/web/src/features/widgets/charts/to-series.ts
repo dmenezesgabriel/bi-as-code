@@ -20,9 +20,10 @@ type PointGroups = Map<string, Map<string, Map<unknown, number | null>>>;
  * column and listing the available ones). The x domain keeps first-
  * appearance order — the fence's `order by` is the sort — and every series
  * emits one `[x, y]` tuple per domain entry so stacked series line up, with
- * `null` where a series has no value at that x (ECharts draws the gap).
- * Rows with a null x are dropped — a null has no axis position; a null or
- * non-numeric y becomes an explicit gap instead.
+ * `null` where a series has no row at that x (ECharts draws the gap) — or
+ * `0` on a `stacked` spec, so the layers above keep their base. Rows with a
+ * null x are dropped — a null has no axis position; a null or non-numeric
+ * y becomes an explicit gap instead, stacked or not.
  *
  * @example
  * toSeries(rows, { x: "week", y: "orders", series: "region" }, "line")
@@ -211,13 +212,15 @@ function buildSeries(
   domain: Map<unknown, unknown>,
   groups: PointGroups,
 ): ChartSeries[] {
+  const absent = spec.stacked ? 0 : null;
   const series: ChartSeries[] = [];
   for (const y of ys) {
     for (const [sKey, byX] of groups.get(y) ?? []) {
       series.push({
         name: seriesName(sKey, y, spec.series, ys.length),
         data: [...domain.entries()].map(
-          ([key, x]) => [x, byX.get(key) ?? null] as const,
+          ([key, x]) =>
+            [x, byX.has(key) ? (byX.get(key) ?? null) : absent] as const,
         ),
       });
     }

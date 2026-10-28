@@ -6,6 +6,7 @@ import {
 } from "../../../../.storybook/decorators";
 import { AreaChart } from "./area-chart";
 import {
+  SPARSE_TREND_ROWS,
   TREND_ROWS,
   WEEKLY_TREND,
   appliedOption,
@@ -36,6 +37,20 @@ export const PercentStack: Story = {
     expect(option.series?.every((s) => s.areaStyle !== undefined)).toBe(true);
     expect(option.series?.every((s) => s.stack === "total")).toBe(true);
     expect(option.yAxis?.[0]?.max).toBe(1);
+  },
+};
+
+/** A stack where South has no week-2 row: South draws 0 there, so North
+ * keeps its base instead of a hole opening through the layer above. */
+export const StackedMissingPoint: Story = {
+  args: { stacked: true },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(SPARSE_TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { name?: string; data?: unknown[] }[];
+    }>(canvasElement);
+    const south = option.series?.find((s) => s.name === "South");
+    expect(south?.data?.[1]).toEqual([2, 0]);
   },
 };
 

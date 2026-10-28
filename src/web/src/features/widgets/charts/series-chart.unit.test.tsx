@@ -13,6 +13,7 @@ import {
   OPTS,
   ORDERS_REGIONAL,
   REGIONAL_ROWS,
+  SPARSE_TREND_ROWS,
   TREND_ROWS,
   WEEKLY_TREND,
   brushMarks,
@@ -250,6 +251,24 @@ describe("series chart tags", () => {
     const option = appliedOption(await chartHost());
     expect(option.series.every((s) => s.stack === "total")).toBe(true);
     expect(option.yAxis[0]?.max).toBe(1);
+  });
+
+  it("stacks a series with no row at an x on 0, not a gap", async () => {
+    renderWithRegistry(
+      <AreaChart
+        data="weekly_trend"
+        x="week"
+        y="orders"
+        series="region"
+        stacked
+        renderer="svg"
+      />,
+      { db: dbWith(SPARSE_TREND_ROWS), blocks: [WEEKLY_TREND] },
+    );
+
+    const option = appliedOption(await chartHost());
+    const south = option.series.find((s) => s.name === "South");
+    expect(south?.data?.[1]).toEqual([2, 0]);
   });
 
   it("draws point labels when labels is set", async () => {

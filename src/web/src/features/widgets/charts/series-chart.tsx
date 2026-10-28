@@ -33,7 +33,16 @@ export function SeriesChart({
       pointField={props.x}
       renderer={renderer}
       model={(rows) =>
-        toSeries(rows, { x: props.x, y: props.y, series: props.series }, type)
+        toSeries(
+          rows,
+          {
+            x: props.x,
+            y: props.y,
+            series: props.series,
+            stacked: props.stacked,
+          },
+          type,
+        )
       }
       option={(model) => toChartOption(model, type, props, tokens)}
       brushAxis={(model) =>

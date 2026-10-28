@@ -234,11 +234,17 @@ export interface ChartSeries {
   readonly data: readonly SeriesPoint[];
 }
 
-/** The column bindings a series chart resolves against result rows. */
+/**
+ * The column bindings a series chart resolves against result rows. A
+ * `stacked` spec draws a series with no row at an x as 0 instead of a gap:
+ * ECharts stacks a null as no base, which punches a hole through every
+ * layer above it.
+ */
 export interface SeriesSpec {
   readonly x: string;
   readonly y: string | readonly string[];
   readonly series?: string;
+  readonly stacked?: StackedMode;
 }
 
 /**

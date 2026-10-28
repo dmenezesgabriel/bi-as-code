@@ -34,14 +34,10 @@ order by month
 `monthly_weather_days`:
 
 ```sql monthly_weather_days echo
-select months.month, types.weather, count(day.date) as days
-from (select distinct date_trunc('month', date) as month from weather) as months
-cross join (select distinct weather from weather) as types
-left join weather as day
-  on date_trunc('month', day.date) = months.month
-  and day.weather = types.weather
+select date_trunc('month', date) as month, weather, count(*) as days
+from weather
 group by all
-order by months.month, types.weather
+order by month, weather
 ```
 
 `rain_2015`:
@@ -99,7 +95,7 @@ order by weather
 
 ### Stacked
 
-`stacked` piles each area on the ones below it, so the top edge reads the total. Every month here stacks up to its number of days. A stack needs a row for every `x` and series, so `monthly_weather_days` pairs every month with every weather type and counts 0 days where none fell; a missing row leaves a hole through the layers above it.
+`stacked` piles each area on the ones below it, so the top edge reads the total. Every month here stacks up to its number of days. A weather type with no row in a month stacks as 0 there, so the layers above it keep their base.
 
 ```mdx echo
 <AreaChart

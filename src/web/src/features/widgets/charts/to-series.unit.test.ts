@@ -263,6 +263,58 @@ describe("toSeries", () => {
   });
 });
 
+describe("toSeries on a stack", () => {
+  it("draws a series with no row at an x as 0, so the layers above keep their base", () => {
+    const model = toSeries(
+      TREND,
+      { x: "week", y: "orders", series: "region", stacked: true },
+      "area",
+    );
+    expect(model.series.map((s) => s.data)).toEqual([
+      [
+        [1, 40],
+        [2, 44],
+        [3, 0],
+      ],
+      [
+        [1, 25],
+        [2, 0],
+        [3, 27],
+      ],
+      [
+        [1, 0],
+        [2, 30],
+        [3, 33],
+      ],
+    ]);
+  });
+
+  it("zero-fills a 100% stack the same way", () => {
+    const model = toSeries(
+      TREND,
+      { x: "week", y: "orders", series: "region", stacked: "100%" },
+      "bar",
+    );
+    expect(model.series[0]?.data[2]).toEqual(["3", 0]);
+  });
+
+  it("keeps a row's null y a gap — only an absent row is filled", () => {
+    const rows = [
+      { week: 1, region: "North", orders: null },
+      { week: 1, region: "South", orders: 25 },
+    ];
+    const model = toSeries(
+      rows,
+      { x: "week", y: "orders", series: "region", stacked: true },
+      "line",
+    );
+    expect(model.series.map((s) => s.data[0])).toEqual([
+      [1, null],
+      [1, 25],
+    ]);
+  });
+});
+
 describe("seriesValuesOf", () => {
   it("spreads nothing with the series column unbound", () => {
     expect(seriesValuesOf(TREND, undefined, ["orders"])).toEqual({});

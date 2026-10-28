@@ -12,6 +12,7 @@ import {
   optionAt,
   paintedTexts,
   readyCharts,
+  type AppliedOption,
   type PaintedText,
 } from "./echart-hosts.js";
 import { expectProbes, TOKENS } from "./theme-probes.js";
@@ -110,16 +111,31 @@ const SERIES_CHART_ROUTES = [
   "/components/area-chart",
 ];
 
-/** Indexes of the ready chart hosts whose x axis is a time axis. */
-async function timeAxisHosts(page: Page): Promise<number[]> {
+/** Indexes of the ready chart hosts whose applied option passes `keep`. */
+async function chartHostsWhere(
+  page: Page,
+  keep: (option: AppliedOption) => boolean,
+): Promise<number[]> {
   await expect(charts(page).first()).toBeVisible();
   const count = await chartHosts(page).count();
   await expect(readyCharts(page)).toHaveCount(count);
   const indexes = Array.from({ length: count }, (_, i) => i);
-  const types = await Promise.all(
-    indexes.map(async (i) => (await optionAt(page, i)).xAxis[0]?.type),
+  const kept = await Promise.all(
+    indexes.map(async (i) => keep(await optionAt(page, i))),
   );
-  return indexes.filter((i) => types[i] === "time");
+  return indexes.filter((i) => kept[i]);
+}
+
+/** Indexes of the ready chart hosts whose x axis is a time axis. */
+function timeAxisHosts(page: Page): Promise<number[]> {
+  return chartHostsWhere(page, (option) => option.xAxis[0]?.type === "time");
+}
+
+/** The y of every point a stacked chart's series draw, gaps as `null`. */
+function stackedYs(option: AppliedOption): unknown[] {
+  return option.series
+    .filter((s) => s.stack !== undefined)
+    .flatMap((s) => (s.data ?? []).map((point) => (point as unknown[])[1]));
 }
 
 /**
@@ -279,6 +295,30 @@ for (const colorScheme of ["light", "dark"] as const) {
         expect(errors).toEqual([]);
       });
     }
+
+    test("a stacked line or area draws a month with no row for a weather type as 0", async ({
+      page,
+      biacDev,
+    }) => {
+      const errors = collectConsoleErrors(page);
+
+      for (const route of [
+        "/components/line-chart",
+        "/components/area-chart",
+      ]) {
+        await page.goto(`${biacDev.url}${route}`);
+        const hosts = await chartHostsWhere(
+          page,
+          (o) => stackedYs(o).length > 0,
+        );
+        expect(hosts.length, `stacked charts on ${route}`).toBeGreaterThan(0);
+        for (const host of hosts) {
+          const ys = stackedYs(await optionAt(page, host));
+          expect(ys, `${route} chart ${host}`).not.toContain(null);
+        }
+      }
+      expect(errors).toEqual([]);
+    });
 
     test("a sparkline paints in the theme's sparkline colour", async ({
       page,
