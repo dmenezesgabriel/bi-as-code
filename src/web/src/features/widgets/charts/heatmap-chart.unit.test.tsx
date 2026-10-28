@@ -1,5 +1,5 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import { renderWithRegistry } from "../value/registry-harness";
 import { Heatmap } from "./heatmap-chart";
@@ -11,6 +11,7 @@ import {
   expectPendingPulse,
   readyHost,
 } from "./series-chart.fixture";
+import type { HeatmapChartProps } from "./types";
 
 interface AppliedOption {
   series: { type?: string; data?: unknown[] }[];
@@ -169,5 +170,9 @@ describe("<Heatmap>", () => {
       { db: dbWith(TREND_ROWS), blocks: [WEEKLY_TREND] },
     );
     expect(await screen.findByRole("alert")).toHaveTextContent('fmt="bogus"');
+  });
+
+  it("takes no select prop — a heatmap publishes no selection gesture", () => {
+    expectTypeOf<HeatmapChartProps>().not.toHaveProperty("select");
   });
 });

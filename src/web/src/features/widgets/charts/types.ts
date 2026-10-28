@@ -480,11 +480,13 @@ export interface HeatmapSpec {
  * single category column, `value` naming the measured column, `valueFmt`
  * formatting cells/`visualMap` ends and `colorScale` the `inRange` ramp —
  * one color expands to `[surface, color]` per theme mode, two or more pass
- * through verbatim. `xFmt`/`yFmt` format the category labels.
+ * through verbatim. `xFmt`/`yFmt` format the category labels. No `select`:
+ * a cell would predicate two fields (x and y) while a chart's crossfilter
+ * clause predicates one, so the heatmap publishes no selection gesture.
  */
 export interface HeatmapChartProps extends Omit<
   SeriesChartProps,
-  "y" | "series" | "stacked" | "color" | "seriesColors"
+  "y" | "series" | "stacked" | "color" | "seriesColors" | "select"
 > {
   readonly y: string;
   readonly value: string;
