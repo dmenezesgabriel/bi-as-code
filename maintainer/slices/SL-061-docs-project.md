@@ -97,16 +97,16 @@ All paths relative to `research_repos/`, each checked with `test -e` on 2026-10-
 
 Refreshed 2026-10-27 against `mdxComponents` in `src/web/src/features/pages/markdown-page.tsx` (26 tags past the prose elements) and the shipped rows of `maintainer/backlog.md`. Kind: T tutorial, H how-to, R reference, E explanation.
 
-| Section      | Pages                                                                                                                                                                                                                              | Kind | Task |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ---- |
-| Start        | What is biac (`index.md`); Getting started                                                                                                                                                                                         | E, T | T1   |
-| Widgets      | `Table` (+`Column`); `BigValue`; `Value` (+`Delta`, `Sparkline`); `BarChart`; `LineChart`; `AreaChart`; `ScatterChart`; `Histogram`; `Heatmap`                                                                                     | R    | T2   |
-| Layout       | `Callout`; `Note`; `LineBreak`; `Details`; `Tabs` (+`Tab`); `Accordion` (+`AccordionItem`); `Row`; `Stack`                                                                                                                         | R    | T3   |
-| Filters      | `Dropdown`; `MultiSelect`; `Slider`; `DateRange`; `TextInput`; `ButtonGroup`; `Toggle`; `Search`; `FilterBar`; `filters=[...]` and URL persistence                                                                                 | R    | T4   |
-| Cross-filter | Chart-driven selections (brush, click, legend); how cross-filtering works                                                                                                                                                          | H, E | T4   |
-| Pages        | Markdown pages and routing; front-matter (`title`, `icon`, `sidebar_position`, `table_of_contents`, `index`, `keywords`, layout); `biac.config.ts` (every key in `CONFIG_KEYS`); sidebar/ToC/breadcrumbs; themes and brand         | R    | T5   |
-| Data         | `sql:` front-matter and config tables; ` ```sql name ` fences with `echo`/`display`; `{{param}}`; query files under `queries/`; data loaders (one live loader); translations; site search                                          | R, H | T5   |
-| Ship         | `biac build` / `biac preview` / `biac serve`; base path; Deploy on AWS (moved from `pages/deploy-on-aws.md`); the SSO example (`examples/s3-sso/`); embeds (iframe, exported files, widget modules); the page editor (screenshots) | H    | T6   |
+| Section      | Pages                                                                                                                                                                                                                              | Kind | Task  |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | ----- |
+| Start        | What is biac (`index.md`); Getting started                                                                                                                                                                                         | E, T | T1    |
+| Widgets      | `Table` (+`Column`); `BigValue`; `Value` (+`Delta`, `Sparkline`); `BarChart`; `LineChart`; `AreaChart`; `ScatterChart`; `Histogram`; `Heatmap`                                                                                     | R    | T2    |
+| Layout       | `Callout`; `Note`; `LineBreak`; `Details`; `Tabs` (+`Tab`); `Accordion` (+`AccordionItem`); `Row`; `Stack`                                                                                                                         | R    | T3    |
+| Filters      | `Dropdown`; `MultiSelect`; `Slider`; `DateRange`; `TextInput`; `ButtonGroup`; `Toggle`; `Search`; `FilterBar`; `filters=[...]` and URL persistence                                                                                 | R    | T4a–c |
+| Cross-filter | Chart-driven selections (brush, click, legend); how cross-filtering works                                                                                                                                                          | H, E | T4d   |
+| Pages        | Markdown pages and routing; front-matter (`title`, `icon`, `sidebar_position`, `table_of_contents`, `index`, `keywords`, layout); `biac.config.ts` (every key in `CONFIG_KEYS`); sidebar/ToC/breadcrumbs; themes and brand         | R    | T5    |
+| Data         | `sql:` front-matter and config tables; ` ```sql name ` fences with `echo`/`display`; `{{param}}`; query files under `queries/`; data loaders (one live loader); translations; site search                                          | R, H | T5    |
+| Ship         | `biac build` / `biac preview` / `biac serve`; base path; Deploy on AWS (moved from `pages/deploy-on-aws.md`); the SSO example (`examples/s3-sso/`); embeds (iframe, exported files, widget modules); the page editor (screenshots) | H    | T6    |
 
 ## Gap analysis — what we already have vs the references
 
@@ -165,7 +165,10 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T2j — A histogram tooltip's bin range reads distinct above 4,000 without a `valueFmt` (`6k – 6k` today) — closes GAP-076 (found doing T2g; a product gap gets its own task)
 - [x] T3 — Layout reference pages: `Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Accordion`, `Row`, `Stack`
 - [x] T3a — A one-line JSX element in an ` ```mdx echo ` fence renders as a block, as it does outside the fence, then let prettier collapse the blank-line-wrapped one-line bodies in `docs/pages/layout/callout.md`, `note.md`, `stack.md`, `tabs.md` and `accordion.md` — closes GAP-077 (found writing T3; a product gap gets its own task)
-- [ ] T4 — Filter reference pages, `filters=[...]` and URL persistence, cross-filter how-to and explanation
+- [ ] T4a — Filter reference pages `Dropdown`, `MultiSelect`, `ButtonGroup` (the option-list inputs sharing `SelectInputProps`), one `mdx echo` example per prop on the docs data; the Filters section in `docs/biac.config.ts`; a browser test for demo step 4 (pick on `/filters/dropdown` → the widget re-queries, the URL carries it, a reload keeps it)
+- [ ] T4b — Filter reference pages `Slider`, `DateRange`, `TextInput`, `Toggle`, `Search`
+- [ ] T4c — `FilterBar`, and the `filters=[...]` and URL persistence reference page
+- [ ] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation)
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor
 
