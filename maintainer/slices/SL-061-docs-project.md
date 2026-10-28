@@ -163,7 +163,8 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T2h — Clearing a histogram brush by a click restores every bin's colour — closes GAP-074 (found writing T2d; a product gap gets its own task)
 - [x] T2i — `<Heatmap>` stops accepting `select` (evidence's heatmap has no selection), or wires it, decided in the task — closes GAP-075 (found writing T2d; a product gap gets its own task)
 - [x] T2j — A histogram tooltip's bin range reads distinct above 4,000 without a `valueFmt` (`6k – 6k` today) — closes GAP-076 (found doing T2g; a product gap gets its own task)
-- [ ] T3 — Layout reference pages: `Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Accordion`, `Row`, `Stack`
+- [x] T3 — Layout reference pages: `Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Accordion`, `Row`, `Stack`
+- [ ] T3a — A one-line JSX element in an ` ```mdx echo ` fence renders as a block, as it does outside the fence, then let prettier collapse the blank-line-wrapped one-line bodies in `docs/pages/layout/callout.md`, `note.md`, `stack.md`, `tabs.md` and `accordion.md` — closes GAP-077 (found writing T3; a product gap gets its own task)
 - [ ] T4 — Filter reference pages, `filters=[...]` and URL persistence, cross-filter how-to and explanation
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor
