@@ -38,6 +38,12 @@ export interface FormatRange {
    * since no tick is there to correct the rounding.
    */
   readonly standalone?: boolean;
+  /**
+   * The value is read as an exact figure (a tooltip readout) — `num`/`usd`
+   * take no k/M/B/T unit (`6,043`, not `6k`), so neighbouring values the
+   * unit would round together stay distinct.
+   */
+  readonly unscaled?: boolean;
 }
 
 /**

@@ -130,7 +130,7 @@ order by island
 
 ### Value format
 
-`valueFmt` formats the values on the axis and the bin range in the tooltip. The axis marks round values, not the bin edges, so its labels stay apart whatever the bin width.
+`valueFmt` formats the values on the axis and the bin range in the tooltip. With no `valueFmt`, the axis shortens large values (`6k`) while the tooltip gives the bin's edges in full (`6,043 – 6,300`). The axis marks round values, not the bin edges, so its labels stay apart whatever the bin width.
 
 ```mdx echo
 <Histogram data="penguin_measures" value="body_mass_g" valueFmt="num1k" />

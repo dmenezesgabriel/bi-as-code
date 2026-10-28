@@ -12,6 +12,7 @@ import {
   optionAt,
   paintedTexts,
   readyCharts,
+  showTipAt,
   type AppliedOption,
   type PaintedText,
 } from "./echart-hosts.js";
@@ -325,6 +326,32 @@ for (const colorScheme of ["light", "dark"] as const) {
         expect(errors).toEqual([]);
       });
     }
+
+    test("every histogram's last-bin tooltip titles two distinct edges", async ({
+      page,
+      biacDev,
+    }) => {
+      const errors = collectConsoleErrors(page);
+
+      await page.goto(`${biacDev.url}/components/histogram`);
+      await expect(page.locator("main [role=status]")).toHaveCount(0);
+      const hosts = await histogramHosts(page);
+      expect(hosts.length).toBeGreaterThan(0);
+      // The last bin has the largest edges, so a unit that rounds them
+      // together (`6k – 6k`) shows up there first.
+      for (const host of hosts) {
+        const bins = (await optionAt(page, host)).series[0]?.data ?? [];
+        await showTipAt(page, host, bins.length - 1);
+        const tip = chartHosts(page)
+          .nth(host)
+          .locator("div", { hasText: " – " });
+        const title = (await tip.innerText()).split("\n")[0] ?? "";
+        const [start, end] = title.split(" – ");
+        expect(end, `histogram ${host}: ${title}`).toBeDefined();
+        expect(start, `histogram ${host}: ${title}`).not.toBe(end);
+      }
+      expect(errors).toEqual([]);
+    });
 
     test("a stacked line or area draws a month with no row for a weather type as 0", async ({
       page,

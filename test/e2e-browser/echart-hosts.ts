@@ -126,6 +126,39 @@ export function optionAt(page: Page, index: number): Promise<AppliedOption> {
   }, index);
 }
 
+/**
+ * Pops the tooltip on datum `dataIndex` (the first by default) of a chart without hunting for its pixels —
+ * `dispatchAction` runs the real formatter and renders the tooltip div,
+ * where a blind `hover()` on an item-trigger chart lands between points.
+ */
+export function showTipAt(
+  page: Page,
+  hostIndex: number,
+  dataIndex = 0,
+): Promise<void> {
+  return page.evaluate(
+    ([i, d]) => {
+      const host = document.querySelectorAll<HTMLElement>(
+        "[data-echarts-theme]",
+      )[i];
+      const chart = (
+        host as unknown as {
+          echartsInstance?: {
+            dispatchAction(action: {
+              type: string;
+              seriesIndex: number;
+              dataIndex: number;
+            }): void;
+          };
+        }
+      ).echartsInstance;
+      if (!chart) throw new Error(`chart host ${i} has no echartsInstance`);
+      chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex: d });
+    },
+    [hostIndex, dataIndex] as const,
+  );
+}
+
 /** The live-instance surface the label readers below reach through. */
 interface LabelledChart {
   getOption(): Record<

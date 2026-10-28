@@ -245,6 +245,24 @@ describe("formatValue — auto-scale for a value read with no axis beside it", (
   });
 });
 
+describe("formatValue — auto-scale for a value read as an exact figure", () => {
+  it.each<[string | undefined, number, FormatRange, string]>([
+    // No unit, so neighbouring values stay distinct: `6,043`, not `6k`.
+    [undefined, 6043, { min: 6043, max: 6300, unscaled: true }, "6,043"],
+    ["usd", 6043, { min: 6043, max: 6300, unscaled: true }, "$6,043"],
+    ["num", 1_234_567, { min: 0, max: 2e6, unscaled: true }, "1,234,567"],
+    // Decimals still follow the range's magnitude.
+    [undefined, 32.14, { min: 32.14, max: 34.9, unscaled: true }, "32.1"],
+    [undefined, 32, { min: 32, max: 35, whole: true, unscaled: true }, "32"],
+  ])("fmt=%s on %s within %o → %s", (code, value, range, expected) => {
+    // Act
+    const formatted = formatValue(value, code, range);
+
+    // Assert
+    expect(formatted).toBe(expected);
+  });
+});
+
 describe("formatValue — defaults when fmt is unset", () => {
   it.each<[unknown, string]>([
     [DATE, "2025-03-01"],

@@ -186,9 +186,9 @@ function binMidpoint(bin: HistogramBin | undefined): number | undefined {
 }
 
 /**
- * The axis tooltip: the bin's `valueFmt`-formatted range as the title (via
- * `dataIndex` into the dense domain — `axisValue` only carries the start
- * label), then one `marker name: count` row per series.
+ * The axis tooltip: the bin's range as the title (via `dataIndex` into the
+ * dense domain — `axisValue` only carries the start label), then one
+ * `marker name: count` row per series.
  */
 function tooltipHtml(
   params: TooltipParam | readonly TooltipParam[],
@@ -204,10 +204,26 @@ function tooltipHtml(
   const title =
     bin === undefined
       ? escapeHtml(safeFormat(first.axisValue, props.valueFmt))
-      : `${escapeHtml(safeFormat(bin.start, props.valueFmt))} – ${escapeHtml(safeFormat(bin.end, props.valueFmt))}`;
+      : escapeHtml(binRangeTitle(bin, props.valueFmt));
   const rows = list.map(
     (p) =>
       `${p.marker ?? ""} ${escapeHtml(p.seriesName)}: ${escapeHtml(safeFormat(yOf(p.value), countFmt))}`,
   );
   return `${title}<br/>${rows.join("<br/>")}`;
+}
+
+/**
+ * A bin's `start – end`, both edges against the bin's own span: a tooltip
+ * is an exact readout, so an unset `valueFmt` reads in full digits
+ * (`6,043 – 6,300`) where the axis reads `6k` — scaled to a unit, the two
+ * edges of a narrow bin round to the same text. An explicit `valueFmt`
+ * applies as written.
+ */
+function binRangeTitle(
+  bin: HistogramBin,
+  valueFmt: string | undefined,
+): string {
+  const range = axisValueRange([bin.start, bin.end]);
+  const exact = range && { ...range, unscaled: true };
+  return `${safeFormat(bin.start, valueFmt, exact)} – ${safeFormat(bin.end, valueFmt, exact)}`;
 }

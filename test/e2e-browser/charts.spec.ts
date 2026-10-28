@@ -16,6 +16,7 @@ import {
   optionAt,
   pointLabelTexts,
   readyCharts,
+  showTipAt,
   WEEKLY_REVIEW_CHART_COUNT,
 } from "./echart-hosts.js";
 
@@ -216,32 +217,6 @@ test("hovering the line chart shows an axis tooltip listing all regions", async 
   expect(await workerPosts(page)).toBe(posts);
   expect(errors).toEqual([]);
 });
-
-/**
- * Pops the tooltip on a chart's first datum without hunting for its pixels —
- * `dispatchAction` runs the real formatter and renders the tooltip div,
- * where a blind `hover()` on an item-trigger chart lands between points.
- */
-function showTipAt(page: Page, hostIndex: number): Promise<void> {
-  return page.evaluate((i) => {
-    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
-      i
-    ];
-    const chart = (
-      host as unknown as {
-        echartsInstance?: {
-          dispatchAction(action: {
-            type: string;
-            seriesIndex: number;
-            dataIndex: number;
-          }): void;
-        };
-      }
-    ).echartsInstance;
-    if (!chart) throw new Error(`chart host ${i} has no echartsInstance`);
-    chart.dispatchAction({ type: "showTip", seriesIndex: 0, dataIndex: 0 });
-  }, hostIndex);
-}
 
 test("the scatter, histogram and heatmap tooltips name their bound columns", async ({
   page,

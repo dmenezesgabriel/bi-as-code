@@ -129,6 +129,42 @@ describe("toHistogramOption", () => {
     expect(html).toBe("12 – 27<br/>● North: 2<br/>○ South: 0");
   });
 
+  it("titles the tooltip with a bin range in full digits when valueFmt is unset", () => {
+    // Arrange — binCount 2 over 6043–6300 → bins [6043, 6171.5) [6171.5, 6300]
+    const rows = [{ mass: 6043 }, { mass: 6300 }];
+    const option = toHistogramOption(
+      toHistogram(rows, { value: "mass", binCount: 2 }),
+      { data: "q", value: "mass" },
+      LIGHT_CHART_TOKENS,
+    );
+
+    // Act
+    const html = tooltipFormatter(option)([
+      { seriesName: "mass", marker: "", value: [6107, 1], dataIndex: 0 },
+    ]);
+
+    // Assert
+    expect(html.split("<br/>")[0]).toBe("6,043 – 6,172");
+  });
+
+  it("titles the tooltip with the author's valueFmt as written", () => {
+    // Arrange
+    const rows = [{ mass: 6043 }, { mass: 6300 }];
+    const option = toHistogramOption(
+      toHistogram(rows, { value: "mass", binCount: 2 }),
+      { data: "q", value: "mass", valueFmt: "num1k" },
+      LIGHT_CHART_TOKENS,
+    );
+
+    // Act
+    const html = tooltipFormatter(option)([
+      { seriesName: "mass", marker: "", value: [6107, 1], dataIndex: 0 },
+    ]);
+
+    // Assert
+    expect(html.split("<br/>")[0]).toBe("6.0k – 6.2k");
+  });
+
   it("escapes html in tooltip series names", () => {
     const rows = [
       { amount: 1, region: "<b>x</b>" },

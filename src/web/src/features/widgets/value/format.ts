@@ -155,8 +155,8 @@ function describeValue(value: unknown): string {
 /**
  * `num`/`usd` pick decimals by magnitude and a unit by threshold — the k
  * threshold is 4000 (not 1000) so `1,500` keeps full precision, and a
- * `whole` range below it takes no decimals; a `standalone` range keeps one
- * decimal in the k unit; `pct` picks decimals only, never a unit suffix.
+ * `whole` range below it takes no decimals; an `unscaled` range takes no
+ * unit at all; `pct` picks decimals only, never a unit suffix.
  */
 function resolveAuto(
   base: string,
@@ -169,14 +169,29 @@ function resolveAuto(
     if (abs < 1) return "pct1";
     return "pct0";
   }
-  if (abs >= 1e12) return `${base}1t`;
-  if (abs >= 1e9) return `${base}1b`;
-  if (abs >= 1e6) return `${base}1m`;
-  if (abs >= 4e3) return `${base}${range?.standalone === true ? 1 : 0}k`;
+  const scaled =
+    range?.unscaled === true ? undefined : unitCode(base, abs, range);
+  if (scaled !== undefined) return scaled;
   if (range?.whole === true) return `${base}0`;
   if (abs < 10) return `${base}2`;
   if (abs < 100) return `${base}1`;
   return `${base}0`;
+}
+
+/**
+ * The unit preset `abs` scales to, or `undefined` below the k threshold —
+ * a `standalone` range keeps one decimal in the k unit.
+ */
+function unitCode(
+  base: string,
+  abs: number,
+  range: FormatRange | undefined,
+): string | undefined {
+  if (abs >= 1e12) return `${base}1t`;
+  if (abs >= 1e9) return `${base}1b`;
+  if (abs >= 1e6) return `${base}1m`;
+  if (abs >= 4e3) return `${base}${range?.standalone === true ? 1 : 0}k`;
+  return undefined;
 }
 
 /**
