@@ -42,11 +42,7 @@ from penguins
 ```mdx echo
 <Stack align="center">
   <BigValue data="penguin_count" column="islands" title="Islands" />
-  <Note>
-
-    Biscoe, Dream and Torgersen
-
-  </Note>
+  <Note>Biscoe, Dream and Torgersen</Note>
 </Stack>
 ```
 

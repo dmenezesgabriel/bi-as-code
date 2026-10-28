@@ -1,7 +1,27 @@
-import type { Code, Nodes, Parents, Root } from "mdast";
+import type {
+  Code,
+  Nodes,
+  Paragraph,
+  Parents,
+  PhrasingContent,
+  Root,
+  RootContent,
+} from "mdast";
+import type { MdxJsxFlowElement, MdxJsxTextElement } from "mdast-util-mdx-jsx";
 import type { Plugin, Processor } from "unified";
 import { SKIP, visit } from "unist-util-visit";
 import type { VFile } from "vfile";
+
+// MDX reads this flag but registers its type in `@mdx-js/mdx/lib/types.d.ts`,
+// which no export of the package loads; this declares the same field.
+declare module "mdast-util-mdx-jsx" {
+  interface MdxJsxFlowElementData {
+    _mdxExplicitJsx?: boolean | null;
+  }
+  interface MdxJsxTextElementData {
+    _mdxExplicitJsx?: boolean | null;
+  }
+}
 
 /**
  * Remark plugin that renders a ` ```mdx echo ` fence's markup and keeps
@@ -25,7 +45,7 @@ export const remarkSpliceMdxEcho: Plugin<[], Root> = function (
     visit(tree, "code", (node: Code, index, parent) => {
       if (!isEchoFence(node, file) || parent === undefined) return;
       if (index === undefined) return;
-      const rendered = parseFenceBody(this, node, file);
+      const rendered = unravelJsxParagraphs(parseFenceBody(this, node, file));
       spliceBefore(parent, index, rendered);
       node.meta = null;
       return [SKIP, index + rendered.length + 1];
@@ -137,6 +157,58 @@ function failAtPageLine(
     source: error.source,
     cause: error,
   });
+}
+
+/**
+ * MDX turns a paragraph holding only JSX into block JSX, and marks JSX as
+ * hand-written so a component map never replaces it, in its
+ * `remarkMarkAndUnravel` — which runs before every `remarkPlugins` entry
+ * (`@mdx-js/mdx` `lib/core.js`) and so never sees spliced nodes. This
+ * applies the same rule to them; without it a one-line `<Note>x</Note>`
+ * renders inside a `<p>`.
+ */
+function unravelJsxParagraphs(nodes: Root["children"]): Root["children"] {
+  const root: Root = { type: "root", children: nodes };
+  visit(root, (node, index, parent) => {
+    if (isJsxElement(node)) node.data = { ...node.data, _mdxExplicitJsx: true };
+    if (node.type !== "paragraph" || !holdsOnlyJsx(node)) return;
+    if (parent === undefined || index === undefined) return;
+    parent.children.splice(
+      index,
+      1,
+      ...node.children.filter(isContent).map(asFlow),
+    );
+    return index;
+  });
+  return root.children;
+}
+
+function isJsxElement(
+  node: Nodes,
+): node is MdxJsxFlowElement | MdxJsxTextElement {
+  return node.type === "mdxJsxFlowElement" || node.type === "mdxJsxTextElement";
+}
+
+function holdsOnlyJsx(paragraph: Paragraph): boolean {
+  const content = paragraph.children.filter(isContent);
+  if (content.length === 0) return false;
+  return content.every(
+    (child) =>
+      child.type === "mdxJsxTextElement" || child.type === "mdxTextExpression",
+  );
+}
+
+/** HTML whitespace (https://infra.spec.whatwg.org/#ascii-whitespace) is no content. */
+function isContent(node: PhrasingContent): boolean {
+  return !(node.type === "text" && /^[\t\n\f\r ]*$/.test(node.value));
+}
+
+/** Only JSX and expressions reach here, so the block form holds the same fields. */
+function asFlow(node: PhrasingContent): RootContent {
+  if (node.type === "mdxJsxTextElement") {
+    return { ...node, type: "mdxJsxFlowElement" } as RootContent;
+  }
+  return { ...node, type: "mdxFlowExpression" } as RootContent;
 }
 
 function spliceBefore(

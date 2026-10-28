@@ -66,16 +66,8 @@ Each `<AccordionItem>` needs a `title`. Every section starts closed, and several
   <AccordionItem title="Adelie" open>
     Found on all three islands.
   </AccordionItem>
-  <AccordionItem title="Gentoo">
-
-    Found only on Biscoe.
-
-  </AccordionItem>
-  <AccordionItem title="Chinstrap">
-
-    Found only on Dream.
-
-  </AccordionItem>
+  <AccordionItem title="Gentoo">Found only on Biscoe.</AccordionItem>
+  <AccordionItem title="Chinstrap">Found only on Dream.</AccordionItem>
 </Accordion>
 ```
 

@@ -167,6 +167,24 @@ describe("page transform", () => {
     );
   });
 
+  it("renders a one-line element in an mdx echo snippet as a block, not inside a paragraph", async () => {
+    const root = makeProject();
+    writeFile(
+      "pages/index.md",
+      "# Hi\n\n```mdx echo\n<Note>one line</Note>\n```\n",
+    );
+    const dev = await makeServer(root);
+
+    const result = await dev.transformRequest(
+      `/@fs${join(root, "pages/index.md")}`,
+    );
+
+    expect(result?.code).toContain("_jsx(Note, {");
+    expect(result?.code).not.toMatch(
+      /_components\.p, \{\s*children: _jsx\(Note/,
+    );
+  });
+
   it("serves an mdx fence with an unknown attribute as a compile error at the fence", async () => {
     const root = makeProject();
     writeFile("pages/index.md", "# Hi\n\n```mdx show\n<Table />\n```\n");

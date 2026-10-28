@@ -29,11 +29,7 @@ Place a note right after the widget it describes.
 ```mdx echo
 <BarChart data="species_count" x="species" y="penguins" />
 
-<Note>
-
-Source: Gorman, Williams and Fraser (2014), Palmer Station LTER.
-
-</Note>
+<Note>Source: Gorman, Williams and Fraser (2014), Palmer Station LTER.</Note>
 ```
 
 ### A footnote with Markdown

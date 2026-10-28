@@ -25,11 +25,7 @@ from penguins
 With no props, a callout is an `info` box.
 
 ```mdx echo
-<Callout>
-
-Every chart on this page reads the penguins dataset.
-
-</Callout>
+<Callout>Every chart on this page reads the penguins dataset.</Callout>
 ```
 
 ### Title

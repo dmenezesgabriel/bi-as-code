@@ -60,21 +60,9 @@ Each `<Tab>` needs a `title`, its label in the tab row. The first tab starts sel
 
 ```mdx echo
 <Tabs variant="well">
-  <Tab title="Adelie">
-
-    Adelie penguins live on all three islands.
-
-  </Tab>
-  <Tab title="Gentoo">
-
-    Gentoo penguins live only on Biscoe.
-
-  </Tab>
-  <Tab title="Chinstrap">
-
-    Chinstrap penguins live only on Dream.
-
-  </Tab>
+  <Tab title="Adelie">Adelie penguins live on all three islands.</Tab>
+  <Tab title="Gentoo">Gentoo penguins live only on Biscoe.</Tab>
+  <Tab title="Chinstrap">Chinstrap penguins live only on Dream.</Tab>
 </Tabs>
 ```
 
@@ -84,16 +72,8 @@ Each `<Tab>` needs a `title`, its label in the tab row. The first tab starts sel
 
 ```mdx echo
 <Tabs fullWidth>
-  <Tab title="Adelie">
-
-    Adelie penguins live on all three islands.
-
-  </Tab>
-  <Tab title="Gentoo">
-
-    Gentoo penguins live only on Biscoe.
-
-  </Tab>
+  <Tab title="Adelie">Adelie penguins live on all three islands.</Tab>
+  <Tab title="Gentoo">Gentoo penguins live only on Biscoe.</Tab>
 </Tabs>
 ```
 

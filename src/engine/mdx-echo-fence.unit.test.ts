@@ -50,6 +50,48 @@ describe("an mdx echo fence", () => {
   });
 });
 
+describe("an mdx echo fence's one-line elements", () => {
+  it("render as blocks, as they do outside the fence", async () => {
+    const markdown = "```mdx echo\n<Note>one line</Note>\n```\n";
+
+    const children = await splicedChildren(markdown);
+
+    expect(children.map((node) => node.type)).toEqual([
+      "mdxJsxFlowElement",
+      "code",
+    ]);
+  });
+
+  it("render as blocks when nested in another element", async () => {
+    const markdown =
+      '```mdx echo\n<Tabs>\n<Tab title="a">x</Tab>\n<Tab title="b">y</Tab>\n</Tabs>\n```\n';
+
+    const children = await splicedChildren(markdown);
+
+    const tabs = children[0] as MdxJsxFlowElement;
+    expect(tabs.children.map((node) => node.type)).toEqual([
+      "mdxJsxFlowElement",
+      "mdxJsxFlowElement",
+    ]);
+  });
+
+  it("stay inline beside text", async () => {
+    const markdown = "```mdx echo\nRevenue: <Value />\n```\n";
+
+    const children = await splicedChildren(markdown);
+
+    expect(children[0]?.type).toBe("paragraph");
+  });
+
+  it("are marked as explicit JSX, so a component map never replaces them", async () => {
+    const markdown = "```mdx echo\n<p>literal</p>\n```\n";
+
+    const children = await splicedChildren(markdown);
+
+    expect(children[0]?.data).toMatchObject({ _mdxExplicitJsx: true });
+  });
+});
+
 describe("fences the splice leaves alone", () => {
   it("keeps a plain mdx fence code-only", async () => {
     const children = await splicedChildren("```mdx\n<Table />\n```\n");
