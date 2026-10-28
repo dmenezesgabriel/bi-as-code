@@ -11,6 +11,7 @@ import {
   binPoint,
   chartHosts,
   chartPoint,
+  drawnBars,
   openWeeklyReviewCharts,
   optionAt,
   type PagePoint,
@@ -163,6 +164,7 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   const table = orderDetailTable(page);
   await expect(table).toHaveCount(1);
   await expect(table).toContainText("· 355 rows");
+  const unbrushedFills = (await drawnBars(page, 2)).map((bar) => bar.fill);
 
   // Drag center-of-bin-0 → center-of-bin-3: the clause spans the covered
   // edges [38, 39.6], narrowing order_detail to the 95 orders under $40.
@@ -191,10 +193,20 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   expect(await workerPosts(page)).toBeGreaterThan(posts);
 
   // A plain click on the panel clears the brush: order_detail re-queries
-  // unfiltered.
+  // unfiltered. The pointer settles on bin 10 first, as a person's does, so
+  // the bin is hovered — out-of-brush grey — when the brush clears; once the
+  // pointer leaves, every bin is back to its unbrushed colour.
   const clear = await binPoint(page, 2, 10, 60);
+  await page.mouse.move(clear.x, clear.y, { steps: 8 });
+  await expect
+    .poll(async () => (await drawnBars(page, 2))[10]?.states)
+    .toEqual(["emphasis"]);
   await page.mouse.click(clear.x, clear.y);
   await expect(table).toContainText("· 355 rows");
+  await page.mouse.move(clear.x, 0, { steps: 8 });
+  await expect
+    .poll(async () => (await drawnBars(page, 2)).map((bar) => bar.fill))
+    .toEqual(unbrushedFills);
 
   expect(errors).toEqual([]);
 });

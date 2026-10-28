@@ -335,3 +335,56 @@ export function chartPaintAt(
     };
   }, hostIndex);
 }
+
+/** One bar as drawn: its fill and the hover states it holds right now. */
+export interface DrawnBar {
+  fill: string;
+  states: string[];
+}
+
+/**
+ * Every bar of series 0 on chart host `index`, in bin order, as drawn — a
+ * brush's out-of-brush visual and the hover states change what is on
+ * screen without touching the applied option.
+ */
+export function drawnBars(page: Page, index: number): Promise<DrawnBar[]> {
+  return page.evaluate((i) => {
+    const host = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
+      i
+    ];
+    const chart = (
+      host as unknown as {
+        echartsInstance?: {
+          getModel(): { getSeriesByIndex(index: number): unknown };
+          getViewOfSeriesModel(model: unknown): {
+            group: {
+              traverse(
+                visit: (el: {
+                  type: string;
+                  style: { fill: string };
+                  currentStates: string[];
+                }) => void,
+              ): void;
+            };
+          };
+        };
+      }
+    ).echartsInstance;
+    if (!chart) throw new Error(`chart host ${i} has no echartsInstance`);
+    // A state transition leaves `rgba(0,114,178,1)` where the visual wrote
+    // `#0072b2`; the canvas reads both back in one canonical spelling.
+    const canonical = document.createElement("canvas").getContext("2d");
+    if (!canonical) throw new Error("no 2d context to normalise bar fills");
+    const series = chart.getModel().getSeriesByIndex(0);
+    const bars: { fill: string; states: string[] }[] = [];
+    chart.getViewOfSeriesModel(series).group.traverse((el) => {
+      if (el.type !== "rect") return;
+      canonical.fillStyle = el.style.fill;
+      bars.push({
+        fill: String(canonical.fillStyle),
+        states: [...el.currentStates],
+      });
+    });
+    return bars;
+  }, index);
+}

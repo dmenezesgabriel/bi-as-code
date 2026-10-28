@@ -14,6 +14,9 @@ overrides:
   apache-arrow>@types/node: 24.0.10
 
 patchedDependencies:
+  echarts@6.1.0:
+    hash: 8d8727ec4f2514a26154720f92a624bd1752600f0876b925b3561987788aea68
+    path: patches/echarts@6.1.0.patch
   zrender@6.1.0:
     hash: 6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae
     path: patches/zrender@6.1.0.patch
@@ -229,7 +232,7 @@ importers:
         version: 6.0.2
       echarts:
         specifier: 6.1.0
-        version: 6.1.0
+        version: 6.1.0(patch_hash=8d8727ec4f2514a26154720f92a624bd1752600f0876b925b3561987788aea68)
       effect:
         specifier: 4.0.0
         version: 4.0.0
@@ -9958,7 +9961,7 @@ snapshots:
 
   eastasianwidth@0.2.0: {}
 
-  echarts@6.1.0:
+  echarts@6.1.0(patch_hash=8d8727ec4f2514a26154720f92a624bd1752600f0876b925b3561987788aea68):
     dependencies:
       tslib: 2.3.0
       zrender: 6.1.0(patch_hash=6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae)

@@ -1,13 +1,21 @@
 import { act } from "@testing-library/react";
+import * as echarts from "echarts/core";
 import type { EChartsType } from "echarts/core";
-import { describe, expect, it } from "vitest";
+import { BarChart } from "echarts/charts";
+import {
+  BrushComponent,
+  GridComponent,
+  ToolboxComponent,
+} from "echarts/components";
+import { SVGRenderer } from "echarts/renderers";
+import { afterEach, describe, expect, it } from "vitest";
 import type {
   BrushAxis,
   ChartBrushEndParams,
   ChartBrushSelectedParams,
   HistogramBin,
 } from "./types";
-import { brushClause, useBrushSelect } from "./use-brush-select";
+import { BRUSH_OPTION, brushClause, useBrushSelect } from "./use-brush-select";
 import {
   IdleQueryClient,
   renderInteractor,
@@ -256,5 +264,96 @@ describe("useBrushSelect", () => {
         brushOption: { brushType: "lineX", brushMode: "single" },
       },
     ]);
+  });
+});
+
+echarts.use([
+  BarChart,
+  BrushComponent,
+  GridComponent,
+  SVGRenderer,
+  ToolboxComponent,
+]);
+
+/** The private zrender surface a brushed bar's colour is read from. */
+interface RenderedElement {
+  type: string;
+  style: { fill: string };
+}
+interface BarChartInternals {
+  getViewOfSeriesModel(model: unknown): {
+    group: { traverse(visit: (el: RenderedElement) => void): void };
+  };
+  getModel(): { getSeriesByIndex(index: number): unknown };
+  /** echarts applies hover states on its next animation frame. */
+  _onframe(): void;
+}
+
+describe("BRUSH_OPTION driven by echarts", () => {
+  const charts: EChartsType[] = [];
+  afterEach(() => charts.splice(0).forEach((chart) => chart.dispose()));
+
+  /** Three value-axis bars at x 5, 15, 25 under the brush fragment. */
+  function brushedBars(): EChartsType {
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 300,
+    });
+    charts.push(chart);
+    chart.setOption({
+      animation: false,
+      xAxis: { type: "value", min: 0, max: 30 },
+      yAxis: {},
+      series: [
+        {
+          type: "bar",
+          color: "#0072b2",
+          barCategoryGap: 0,
+          data: [
+            [5, 4],
+            [15, 6],
+            [25, 3],
+          ],
+          emphasis: { focus: "series" },
+        },
+      ],
+      ...BRUSH_OPTION,
+    });
+    return chart;
+  }
+
+  function barFills(chart: EChartsType): string[] {
+    const internals = chart as unknown as BarChartInternals;
+    const series = internals.getModel().getSeriesByIndex(0);
+    const fills: string[] = [];
+    internals.getViewOfSeriesModel(series).group.traverse((el) => {
+      if (el.type === "rect") fills.push(el.style.fill);
+    });
+    return fills;
+  }
+
+  /** Dispatches `action`, then runs the frame that applies hover states. */
+  function dispatchFramed(
+    chart: EChartsType,
+    action: Parameters<EChartsType["dispatchAction"]>[0],
+  ): void {
+    chart.dispatchAction(action);
+    (chart as unknown as BarChartInternals)._onframe();
+  }
+
+  // The pointer rests on an out-of-brush bar, so it is hovered while grey
+  // when the click clears the brush, then leaves it.
+  it("restores a hovered bar's colour once a cleared brush lets it go", () => {
+    const chart = brushedBars();
+    const area = { brushType: "lineX", xAxisIndex: 0, coordRange: [20, 30] };
+    dispatchFramed(chart, { type: "brush", areas: [area] });
+    dispatchFramed(chart, { type: "highlight", seriesIndex: 0, dataIndex: 0 });
+
+    dispatchFramed(chart, { type: "brush", areas: [] });
+    dispatchFramed(chart, { type: "downplay", seriesIndex: 0, dataIndex: 0 });
+
+    expect(barFills(chart)).toEqual(["#0072b2", "#0072b2", "#0072b2"]);
   });
 });
