@@ -207,6 +207,16 @@ export type SeriesChartType = "bar" | "line" | "area";
 export type XAxisKind = "category" | "value" | "time";
 
 /**
+ * One time-axis label as the engine laid it out: the tick (epoch ms) it
+ * names, its centre's pixel x, and its painted width in px.
+ */
+export interface PlacedTimeLabel {
+  readonly tick: number;
+  readonly x: number;
+  readonly width: number;
+}
+
+/**
  * One plotted point: `[x, y]` where `y` is the value ECharts draws (null =
  * a gap — the series has no value at this x). `toPercentageStack` appends a
  * third slot, `[x, fraction, rawY]`, so a `"100%"` tooltip can read the

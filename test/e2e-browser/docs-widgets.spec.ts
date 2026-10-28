@@ -7,6 +7,13 @@ import {
   resultTables,
   test,
 } from "./dev-server.fixture.js";
+import {
+  chartHosts,
+  optionAt,
+  paintedTexts,
+  readyCharts,
+  type PaintedText,
+} from "./echart-hosts.js";
 import { expectProbes, TOKENS } from "./theme-probes.js";
 
 test.use({ biacProject: "docs", viewport: { width: 375, height: 812 } });
@@ -97,6 +104,89 @@ function echoedTagCount(source: string, tag: RegExp): number {
   );
 }
 
+const SERIES_CHART_ROUTES = [
+  "/components/bar-chart",
+  "/components/line-chart",
+  "/components/area-chart",
+];
+
+/** Indexes of the ready chart hosts whose x axis is a time axis. */
+async function timeAxisHosts(page: Page): Promise<number[]> {
+  await expect(charts(page).first()).toBeVisible();
+  const count = await chartHosts(page).count();
+  await expect(readyCharts(page)).toHaveCount(count);
+  const indexes = Array.from({ length: count }, (_, i) => i);
+  const types = await Promise.all(
+    indexes.map(async (i) => (await optionAt(page, i)).xAxis[0]?.type),
+  );
+  return indexes.filter((i) => types[i] === "time");
+}
+
+/**
+ * The painted x-axis labels of chart host `host`, left to right: the texts
+ * whose box starts under the plot's bottom edge, the x title left out. The
+ * value axis' `0` is centred on that edge, so it starts above it.
+ */
+async function xAxisLabelBoxes(
+  page: Page,
+  host: number,
+): Promise<PaintedText[]> {
+  const { texts } = await paintedTexts(page, host);
+  const { plotBottom, xTitle } = await xAxisFrame(page, host);
+  return texts
+    .filter((t) => t.y >= plotBottom && t.text !== xTitle)
+    .sort((a, b) => a.x - b.x);
+}
+
+/** Chart host `host`'s plot bottom edge (host px) and its x title, if any. */
+function xAxisFrame(
+  page: Page,
+  host: number,
+): Promise<{ plotBottom: number; xTitle?: string }> {
+  return page.evaluate((hi) => {
+    const el = document.querySelectorAll<HTMLElement>("[data-echarts-theme]")[
+      hi
+    ];
+    const chart = (el as unknown as { echartsInstance?: FramedChart })
+      .echartsInstance;
+    if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
+    const plot = chart.getModel().getComponent("grid", 0).coordinateSystem;
+    const { y, height } = plot.getRect();
+    return { plotBottom: y + height, xTitle: chart.getOption().xAxis[0]?.name };
+  }, host);
+}
+
+/** The live-instance surface `xAxisFrame` reads the plot rect through. */
+interface FramedChart {
+  getOption(): { xAxis: { name?: string }[] };
+  getModel(): {
+    getComponent(
+      type: "grid",
+      index: 0,
+    ): { coordinateSystem: { getRect(): { y: number; height: number } } };
+  };
+}
+
+/**
+ * Every pair of `labels` whose boxes share pixels — an x title painted in
+ * the same band sits on its own row, so only a box that meets another in
+ * both directions counts.
+ */
+function overlaps(labels: readonly PaintedText[]): string[] {
+  return labels.flatMap((a, i) =>
+    labels
+      .slice(i + 1)
+      .filter((b) => boxesMeet(a, b))
+      .map((b) => `${a.text} | ${b.text}`),
+  );
+}
+
+function boxesMeet(a: PaintedText, b: PaintedText): boolean {
+  const apartX = a.x + a.width <= b.x || b.x + b.width <= a.x;
+  const apartY = a.y + a.height <= b.y || b.y + b.height <= a.y;
+  return !apartX && !apartY;
+}
+
 function pageOverflow(page: Page): Promise<number> {
   return page.evaluate(
     () =>
@@ -166,6 +256,29 @@ for (const colorScheme of ["light", "dark"] as const) {
         expect(errors).toEqual([]);
       });
     });
+
+    for (const width of [375, 1280]) {
+      test(`every time axis on the series chart pages paints its x labels apart at ${width} px`, async ({
+        page,
+        biacDev,
+      }) => {
+        const errors = collectConsoleErrors(page);
+        await page.setViewportSize({ width, height: 812 });
+
+        for (const route of SERIES_CHART_ROUTES) {
+          await page.goto(`${biacDev.url}${route}`);
+          await expect(page.locator("main [role=status]")).toHaveCount(0);
+          const hosts = await timeAxisHosts(page);
+          expect(hosts.length, `time axes on ${route}`).toBeGreaterThan(0);
+          for (const host of hosts) {
+            const labels = await xAxisLabelBoxes(page, host);
+            expect(labels.length, `${route} chart ${host}`).toBeGreaterThan(1);
+            expect(overlaps(labels), `${route} chart ${host}`).toEqual([]);
+          }
+        }
+        expect(errors).toEqual([]);
+      });
+    }
 
     test("a sparkline paints in the theme's sparkline colour", async ({
       page,

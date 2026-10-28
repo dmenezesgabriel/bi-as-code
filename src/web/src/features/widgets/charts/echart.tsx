@@ -21,6 +21,7 @@ import { CanvasRenderer, SVGRenderer } from "echarts/renderers";
 import { useEffect, useRef, type ReactElement } from "react";
 import { cn } from "../../../lib/cn";
 import { useThemeMode } from "../../chrome/theme-mode";
+import { fitTimeAxisLabels } from "./fit-time-axis-labels";
 import { chartTheme } from "./theme";
 import { useChartTokens } from "./use-chart-tokens";
 import type {
@@ -94,9 +95,23 @@ function mountChart(
   instance.on("legendselectchanged", (params) =>
     eventsRef.current?.legendSelectChanged?.(params as ChartLegendSelectParams),
   );
-  instance.setOption(option, { notMerge: true });
-  eventsRef.current?.optionApplied?.(instance);
+  applyOption(instance, option, eventsRef);
   return instance;
+}
+
+/**
+ * Replaces the instance's option wholesale (`notMerge` — a removed series
+ * never lingers), fits the time-axis labels to the laid-out width, then
+ * tells the widget the option landed.
+ */
+function applyOption(
+  instance: EChartsType,
+  option: ChartOption,
+  eventsRef: { readonly current: EChartProps["events"] },
+): void {
+  instance.setOption(option, { notMerge: true });
+  fitTimeAxisLabels(instance);
+  eventsRef.current?.optionApplied?.(instance);
 }
 
 /**
@@ -172,7 +187,9 @@ export function EChart({
         if (el.clientWidth > 0 && el.clientHeight > 0) init();
         return;
       }
-      if (!chart.isDisposed()) chart.resize();
+      if (chart.isDisposed()) return;
+      chart.resize();
+      fitTimeAxisLabels(chart);
     });
     observer.observe(el);
     return () => {
@@ -190,8 +207,7 @@ export function EChart({
     const instance = hostRef.current?.echartsInstance;
     if (!instance || appliedOption.current === option) return;
     appliedOption.current = option;
-    instance.setOption(option, { notMerge: true });
-    eventsRef.current?.optionApplied?.(instance);
+    applyOption(instance, option, eventsRef);
   }, [option]);
 
   // echarts@6.1.0 `TooltipHTMLContent.hide` sets only `visibility` and

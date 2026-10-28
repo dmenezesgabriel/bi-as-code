@@ -2,7 +2,10 @@ import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EChartsType } from "echarts/core";
 import { ThemeModeProvider } from "../../chrome/theme-mode";
+import { LIGHT_CHART_TOKENS } from "./chart-tokens.fixture";
 import { EChart } from "./echart";
+import { toChartOption } from "./to-option";
+import type { SeriesModel } from "./types";
 
 afterEach(() => {
   delete (window.HTMLElement.prototype as { checkVisibility?: unknown })
@@ -20,6 +23,65 @@ const OPTION = {
   yAxis: {},
   series: [{ type: "bar", data: [4800, 3700, 6100] }],
 };
+
+/** Twelve monthly bars, every month a pinned tick labelled `m/d/yyyy`. */
+const MONTHLY_OPTION = (() => {
+  const months = Array.from(
+    { length: 12 },
+    (_, month) => new Date(Date.UTC(2015, month, 1)),
+  );
+  const model: SeriesModel = {
+    xDomain: months,
+    xType: "time",
+    series: [{ name: "mm", data: months.map((d, i) => [d, i]) }],
+  };
+  const props = { data: "rain", x: "month", y: "mm", xFmt: "mdy" };
+  return {
+    ...toChartOption(model, "bar", props, LIGHT_CHART_TOKENS),
+    animation: false,
+  };
+})();
+
+/**
+ * jsdom has no ResizeObserver reports: stub it, returning the callbacks so
+ * a test can announce a box the way a real layout would.
+ */
+function stubResizeObserver(): ResizeObserverCallback[] {
+  const roCallbacks: ResizeObserverCallback[] = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(cb: ResizeObserverCallback) {
+        roCallbacks.push(cb);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+  );
+  return roCallbacks;
+}
+
+/** Gives `el` a `width` × 260 box (jsdom has no layout) and reports it. */
+function reportBox(
+  el: HTMLElement,
+  roCallbacks: readonly ResizeObserverCallback[],
+  width: number,
+): void {
+  Object.defineProperty(el, "clientWidth", {
+    value: width,
+    configurable: true,
+  });
+  Object.defineProperty(el, "clientHeight", { value: 260, configurable: true });
+  roCallbacks.forEach((cb) => cb([], {} as ResizeObserver));
+}
+
+function shownXLabels(chart: EChartsType): readonly number[] {
+  const option = chart.getOption() as {
+    xAxis?: { axisLabel?: { customValues?: readonly number[] } }[];
+  };
+  return option.xAxis?.[0]?.axisLabel?.customValues ?? [];
+}
 
 function host(container: HTMLElement): HTMLElement {
   const el = container.querySelector<HTMLElement>("[data-echarts-theme]");
@@ -115,18 +177,7 @@ describe("<EChart>", () => {
     // jsdom has no layout or checkVisibility: stub both — the element
     // reports hidden at mount (like an inactive keepMounted tab panel),
     // then the ResizeObserver callback announces a real box on reveal.
-    const roCallbacks: ResizeObserverCallback[] = [];
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        constructor(cb: ResizeObserverCallback) {
-          roCallbacks.push(cb);
-        }
-        observe(): void {}
-        unobserve(): void {}
-        disconnect(): void {}
-      },
-    );
+    const roCallbacks = stubResizeObserver();
     (
       window.HTMLElement.prototype as { checkVisibility?: () => boolean }
     ).checkVisibility = () => false;
@@ -135,18 +186,29 @@ describe("<EChart>", () => {
     const el = host(container);
     expect(el.querySelector("svg")).toBeNull();
 
-    Object.defineProperty(el, "clientWidth", {
-      value: 640,
-      configurable: true,
-    });
-    Object.defineProperty(el, "clientHeight", {
-      value: 260,
-      configurable: true,
-    });
-    roCallbacks.forEach((cb) => cb([], {} as ResizeObserver));
+    reportBox(el, roCallbacks, 640);
 
     await waitFor(() => instanceOf(el));
     expect(el.querySelector("svg")).not.toBeNull();
+  });
+
+  it("fits pinned time-axis labels to the host's width on init and resize", async () => {
+    const roCallbacks = stubResizeObserver();
+    (
+      window.HTMLElement.prototype as { checkVisibility?: () => boolean }
+    ).checkVisibility = () => false;
+    const { container } = render(
+      <EChart option={MONTHLY_OPTION} renderer="svg" />,
+    );
+    const el = host(container);
+
+    reportBox(el, roCallbacks, 375);
+    const chart = await waitFor(() => instanceOf(el));
+    const narrow = shownXLabels(chart);
+    reportBox(el, roCallbacks, 1280);
+
+    expect(narrow.length).toBeLessThan(12);
+    expect(shownXLabels(chart)).toHaveLength(12);
   });
 
   it("forwards echarts aria label config onto the host", async () => {

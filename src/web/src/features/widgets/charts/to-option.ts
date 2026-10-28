@@ -1,6 +1,7 @@
 import { formatValue } from "../value/format";
 import type { FormatRange } from "../value/types";
 import { toPercentageStack } from "./stack";
+import { pinnedTimeTicks } from "./time-ticks";
 import type {
   ChartOption,
   ChartSeries,
@@ -181,19 +182,63 @@ export function xAxisOption(
   const xRange =
     model.xType === "value" ? axisValueRange(model.xDomain) : undefined;
   const formatter = xTickFormatter(model, props.xFmt, xRange);
+  const pinned =
+    model.xType === "time" ? pinnedTimeTicks(model.xDomain) : undefined;
   return {
     type: model.xType,
     ...(model.xType === "category" ? { data: [...model.xDomain] } : {}),
-    // Category bands pad by default; continuous axes pad 1%/2% so the first
-    // and last tick labels aren't clipped at the plot edge.
-    boundaryGap: model.xType === "category" ? true : ["1%", "2%"],
+    boundaryGap: xBoundaryGap(model.xType, pinned),
     ...(props.xTitle !== undefined
       ? { name: props.xTitle, nameLocation: "middle", nameGap: 30 }
       : {}),
-    ...(formatter !== undefined ? { axisLabel: { formatter } } : {}),
+    ...xLabelOption(model.xType, formatter, pinned),
     ...wholeTickOption(xRange),
     animation: false,
   };
+}
+
+/**
+ * Category bands pad by default; continuous axes pad 1%/2% so the first and
+ * last tick labels aren't clipped at the plot edge. Pinned ticks sit on the
+ * first and last data points, whose centred labels need the same room on
+ * both sides.
+ */
+function xBoundaryGap(
+  xType: XAxisKind,
+  pinned: readonly number[] | undefined,
+): unknown {
+  if (xType === "category") return true;
+  return pinned !== undefined ? ["2%", "2%"] : ["1%", "2%"];
+}
+
+/**
+ * The x labels (and, when pinned, ticks): a time axis with few dates pins a
+ * tick and label to each one, keeps both end labels and leaves overlap to
+ * `fitTimeAxisLabels`, which thins by an even stride where the engine's
+ * greedy `hideOverlap` would drop arbitrary labels; a dense time axis keeps
+ * the engine's own ticks, whose overlaps `hideOverlap` drops evenly.
+ */
+function xLabelOption(
+  xType: XAxisKind,
+  formatter: ((value: unknown, index: number) => string) | undefined,
+  pinned: readonly number[] | undefined,
+): Record<string, unknown> {
+  const label = formatter !== undefined ? { formatter } : {};
+  if (pinned !== undefined) {
+    const customValues = [...pinned];
+    return {
+      axisTick: { customValues },
+      axisLabel: {
+        ...label,
+        customValues,
+        showMinLabel: true,
+        showMaxLabel: true,
+        hideOverlap: false,
+      },
+    };
+  }
+  if (xType === "time") return { axisLabel: { ...label, hideOverlap: true } };
+  return formatter !== undefined ? { axisLabel: label } : {};
 }
 
 /**

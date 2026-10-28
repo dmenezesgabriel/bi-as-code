@@ -40,13 +40,14 @@ group by species
 order by species
 ```
 
-`yearly_rain`:
+`quarterly_rain_2015`:
 
-```sql yearly_rain echo
-select year(date) as year, sum(precipitation) as precipitation_mm
+```sql quarterly_rain_2015 echo
+select date_trunc('quarter', date) as quarter, sum(precipitation) as precipitation_mm
 from weather
+where year(date) = 2015
 group by all
-order by year
+order by quarter
 ```
 
 `islands`:
@@ -161,10 +162,15 @@ order by island
 
 ### X format
 
-`xFmt` formats the `x` labels and the tooltip's heading. A numeric `x` draws a number axis whose ticks are grouped like any number; `id` prints the years whole.
+`xFmt` formats the `x` labels and the tooltip's heading. A date `x` draws a time axis with a tick on each date when there are 15 or fewer; labels that would touch thin to every other one (or every third…), keeping the first and last.
 
 ```mdx echo
-<BarChart data="yearly_rain" x="year" y="precipitation_mm" xFmt="id" />
+<BarChart
+  data="quarterly_rain_2015"
+  x="quarter"
+  y="precipitation_mm"
+  xFmt="mdy"
+/>
 ```
 
 ### Y format

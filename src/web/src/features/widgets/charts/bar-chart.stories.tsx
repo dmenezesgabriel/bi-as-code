@@ -6,6 +6,8 @@ import {
   withQueryData,
   withThemeMode,
 } from "../../../../.storybook/decorators";
+import type { Row } from "../../data/types";
+import type { SqlBlock } from "../../pages/types";
 import { Table } from "../table/table";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import { BarChart } from "./bar-chart";
@@ -195,6 +197,71 @@ export const StackedLabeled: Story = {
     );
     expect(option.series?.every((s) => s.label?.color === "#ffffff")).toBe(
       true,
+    );
+  },
+};
+
+const MONTHLY_RAIN: SqlBlock = {
+  name: "monthly_rain",
+  sql: "select month, precipitation_mm from rain",
+};
+
+/** 2015's twelve months, each a `Date` as DuckDB hands a `DATE` cell over. */
+const MONTHLY_RAIN_ROWS: Row[] = Array.from({ length: 12 }, (_, month) => ({
+  month: new Date(Date.UTC(2015, month, 1)),
+  precipitation_mm: 40 + ((month * 37) % 90),
+}));
+
+/** The applied x axis' pinned ticks and the labels shown on them. */
+interface PinnedAxisProbe {
+  xAxis?: {
+    axisTick?: { customValues?: number[] };
+    axisLabel?: { customValues?: number[] };
+  }[];
+}
+
+/** A date `x` with few dates pins a tick to each: four quarters read as
+ * four labelled bars, not the engine's twelve month ticks. */
+export const QuarterlyTimeAxis: Story = {
+  args: {
+    data: "monthly_rain",
+    x: "month",
+    y: "precipitation_mm",
+    xFmt: "mdy",
+  },
+  decorators: [
+    withQueryData(
+      [MONTHLY_RAIN],
+      dbWith(MONTHLY_RAIN_ROWS.filter((_, i) => i % 3 === 0)),
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<PinnedAxisProbe>(canvasElement);
+    expect(option.xAxis?.[0]?.axisTick?.customValues).toHaveLength(4);
+    expect(option.xAxis?.[0]?.axisLabel?.customValues).toHaveLength(4);
+  },
+};
+
+/** At phone width twelve `m/d/yyyy` labels cannot all fit: they thin to an
+ * even stride, the first and last month kept, every bar still ticked. */
+export const MonthlyTimeAxisNarrow: Story = {
+  args: { ...QuarterlyTimeAxis.args },
+  decorators: [
+    withQueryData([MONTHLY_RAIN], dbWith(MONTHLY_RAIN_ROWS)),
+    (Story) => (
+      <div style={{ width: 320 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<PinnedAxisProbe>(canvasElement);
+    const shown = option.xAxis?.[0]?.axisLabel?.customValues ?? [];
+    const ends = [0, 11].map((i) => MONTHLY_RAIN_ROWS[i]?.month);
+    expect(option.xAxis?.[0]?.axisTick?.customValues).toHaveLength(12);
+    expect(shown.length).toBeLessThan(12);
+    expect(shown).toEqual(
+      expect.arrayContaining(ends.map((d) => (d as Date).getTime())),
     );
   },
 };
