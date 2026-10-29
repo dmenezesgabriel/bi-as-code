@@ -1,4 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 
 /* eslint-disable sonarjs/no-empty-collection -- KNOWN_NOISE and
  * INTENTIONAL_ERROR_STATE_STORIES are allowlists that start empty by
@@ -62,6 +67,16 @@ async function collectStoryConsoleErrors(
   page: Page,
   id: string,
 ): Promise<string[]> {
+  return collectConsoleErrorsDuring(page, (messages) =>
+    visitStory(page, id, messages),
+  );
+}
+
+/** Every unexpected console error or uncaught exception `visit` provokes. */
+async function collectConsoleErrorsDuring(
+  page: Page,
+  visit: (messages: string[]) => Promise<void>,
+): Promise<string[]> {
   const messages: string[] = [];
   const onConsole = (msg: { type(): string; text(): string }): void => {
     if (
@@ -76,7 +91,17 @@ async function collectStoryConsoleErrors(
   };
   page.on("console", onConsole);
   page.on("pageerror", onPageError);
+  await visit(messages);
+  page.off("console", onConsole);
+  page.off("pageerror", onPageError);
+  return messages;
+}
 
+async function visitStory(
+  page: Page,
+  id: string,
+  messages: string[],
+): Promise<void> {
   await page.goto(`${STORYBOOK_URL}/iframe.html?id=${id}&viewMode=story`);
   try {
     await page.waitForFunction(
@@ -100,10 +125,49 @@ async function collectStoryConsoleErrors(
     );
   }
   await page.waitForLoadState("networkidle");
+}
 
-  page.off("console", onConsole);
-  page.off("pageerror", onPageError);
-  return messages;
+/**
+ * Visit one MDX docs page's iframe until its content has rendered and its
+ * embedded stories have settled. Docs pages have no render phase to wait
+ * on: addon-docs mounts `.sbdocs-content` once the MDX module and every
+ * story it imports resolved, so a broken import never draws it. A canvas
+ * with `inline: false` is a nested story iframe, and its console reaches
+ * this page too, so its play runs here a second time — in a frame that is
+ * never the focused document, which a focus-asserting play cannot pass.
+ */
+async function visitDocsPage(
+  page: Page,
+  id: string,
+  messages: string[],
+): Promise<void> {
+  await page.goto(`${STORYBOOK_URL}/iframe.html?id=${id}&viewMode=docs`);
+  try {
+    await page
+      .locator(".sbdocs-content h1")
+      .first()
+      .waitFor({ timeout: PER_STORY_BUDGET_MS });
+  } catch {
+    messages.push(
+      `docs content never rendered within ${PER_STORY_BUDGET_MS}ms`,
+    );
+  }
+  await page.waitForLoadState("networkidle");
+}
+
+/** The index entries of one `type`, by id. */
+async function indexEntryIds(
+  request: APIRequestContext,
+  type: "story" | "docs",
+): Promise<string[]> {
+  const indexResponse = await request.get(`${STORYBOOK_URL}/index.json`);
+  expect(indexResponse.ok()).toBe(true);
+  const index = (await indexResponse.json()) as {
+    entries: Record<string, StoryIndexEntry>;
+  };
+  return Object.values(index.entries)
+    .filter((entry) => (entry.type ?? "story") === type)
+    .map((entry) => entry.id);
 }
 
 test.describe("storybook stories", () => {
@@ -111,14 +175,7 @@ test.describe("storybook stories", () => {
     page,
     request,
   }) => {
-    const indexResponse = await request.get(`${STORYBOOK_URL}/index.json`);
-    expect(indexResponse.ok()).toBe(true);
-    const index = (await indexResponse.json()) as {
-      entries: Record<string, StoryIndexEntry>;
-    };
-    const storyIds = Object.values(index.entries)
-      .filter((entry) => entry.type === undefined || entry.type === "story")
-      .map((entry) => entry.id);
+    const storyIds = await indexEntryIds(request, "story");
     expect(storyIds.length).toBeGreaterThan(0);
     // One test visits every story, so its budget grows with the story
     // count rather than the fixed per-test timeout.
@@ -146,5 +203,26 @@ test.describe("storybook stories", () => {
     }
 
     expect(failuresByStory).toEqual([]);
+  });
+
+  test("every MDX docs page renders without an unexpected console error or uncaught exception", async ({
+    page,
+    request,
+  }) => {
+    const docsIds = await indexEntryIds(request, "docs");
+    expect(docsIds.length).toBeGreaterThan(0);
+    test.setTimeout(30_000 + docsIds.length * PER_STORY_BUDGET_MS);
+
+    const failuresByPage: string[] = [];
+    for (const id of docsIds) {
+      const messages = await collectConsoleErrorsDuring(page, (sink) =>
+        visitDocsPage(page, id, sink),
+      );
+      if (messages.length > 0) {
+        failuresByPage.push(`${id}: ${messages.join(" | ")}`);
+      }
+    }
+
+    expect(failuresByPage).toEqual([]);
   });
 });

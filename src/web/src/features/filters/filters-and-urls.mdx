@@ -1,0 +1,58 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as DropdownStories from "../widgets/inputs/dropdown.stories";
+import * as TableStories from "../widgets/table/table.stories";
+
+<Meta title="Filters/Filters and the URL" />
+
+# Filters and the URL
+
+A filter is a value with a name. Each filter input holds one under its `id`, and a widget lists the names in `filters` to be narrowed by them. Every filter's value is also written to the page URL under its name, so a reload, a bookmark or a shared link opens the page with every filter where it was left.
+
+The reader-facing reference is `docs/pages/filters/filters-and-urls.md` (`/filters/filters-and-urls` in `bin/biac dev docs`); each example there has a story here.
+
+## Narrowing widgets
+
+### Narrow a widget
+
+`filters="region"` re-runs the widget's query as `select * from (<the query>) where region = ?`, the pick bound as a value. A pick narrows the table and rides the URL.
+
+<Canvas
+  of={DropdownStories.NarrowsATable}
+  story={{ inline: false, height: "280px" }}
+/>
+
+### Narrow by several filters
+
+A list in `filters` keeps only the rows that match every listed filter.
+
+<Canvas
+  of={TableStories.FilteredByTwo}
+  story={{ inline: false, height: "280px" }}
+/>
+
+### Narrow on a column named apart from the filter
+
+A filter narrows the column its input names in `valueColumn`, or the column named like its `id` without one.
+
+<Canvas of={TableStories.Filtered} story={{ inline: false, height: "280px" }} />
+
+## The URL
+
+### Share a filtered page
+
+A link that carries `?region=West` opens the page with the pick already made, before the option query resolves.
+
+<Canvas
+  of={DropdownStories.UrlHydrated}
+  story={{ inline: false, height: "280px" }}
+/>
+
+### A cleared filter
+
+Clear empties the pick and removes its name from the URL rather than leaving it empty; a cleared filter narrows nothing.
+
+<Canvas of={DropdownStories.Clear} story={{ inline: false, height: "280px" }} />
+
+### Names a filter cannot take
+
+`edit` and `lang` are URL keys biac owns (the page editor and the page language), so a filter named either fails the page with a message naming the clash.

@@ -3,8 +3,10 @@ import { expect, userEvent } from "storybook/test";
 import { Effect } from "effect";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
+import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import {
   withFilteredData,
+  withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { Column } from "./column";
@@ -146,6 +148,36 @@ export const Filtered: Story = {
     await expect(await canvas.findByRole("table")).toBeVisible();
     await expect(canvas.getAllByRole("cell", { name: "West" })).toHaveLength(1);
     await expect(canvas.queryByRole("cell", { name: "North" })).toBeNull();
+  },
+};
+
+const CHANNEL_ORDERS: Row[] = [
+  { region: "West", channel: "web", orders: 140 },
+  { region: "West", channel: "store", orders: 60 },
+  { region: "North", channel: "web", orders: 120 },
+];
+
+/** A list in `filters` narrows by every filter at once: `?region=West` and
+ * `?channel=web` keep only the row that matches both. */
+export const FilteredByTwo: Story = {
+  args: { data: "orders", filters: ["region", "channel"] },
+  decorators: [
+    withQueryData(
+      [ORDERS],
+      FakeDuckDb.withRowsWhen(CHANNEL_ORDERS, (sql) =>
+        sql.includes("region = ?") && sql.includes("channel = ?")
+          ? CHANNEL_ORDERS.slice(0, 1)
+          : null,
+      ),
+    ),
+    withPageFilters(new FakeFilterUrlPort("?region=West&channel=web")),
+  ],
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole("cell", { name: "140" }),
+    ).toBeVisible();
+    await expect(canvas.getAllByRole("row")).toHaveLength(2);
+    await expect(canvas.queryByRole("cell", { name: "store" })).toBeNull();
   },
 };
 

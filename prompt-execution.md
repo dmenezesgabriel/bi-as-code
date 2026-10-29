@@ -40,6 +40,7 @@ Verify every path on disk in the session that writes the PRD. Symbol greps only 
 - Use web search and `curl` when the references and official docs are not enough to settle a fact.
 - Install only safe, official, well-maintained packages; guard against supply-chain attacks (`save-exact`, `minimumReleaseAge`, `trustPolicy`; install scripts stay blocked except an allowlist documented in `pnpm-workspace.yaml`). Reference repos are read-only: never install, import, link or vendor them.
 - A new or changed UI component gets a colocated `<name>.stories.tsx` beside its `<name>.tsx` — every meaningful state, `storybook/test` play functions for interactions, provider needs via `src/web/.storybook/decorators.tsx`, never a real backend (`FakeDuckDb`). Details: [ADR-0006](maintainer/adr/0006-component-stories-are-the-ui-validation-surface.md).
+- A new or changed `docs/` reference page gets its Storybook MDX docs page in the same task: `<Meta of>` the component's stories, a `<Canvas of>` per documented example, section for section with the `docs/` page ([ADR-0006](maintainer/adr/0006-component-stories-are-the-ui-validation-surface.md)).
 
 ## 5. Validate like a human would — `playwright-cli`, every session, no exceptions
 

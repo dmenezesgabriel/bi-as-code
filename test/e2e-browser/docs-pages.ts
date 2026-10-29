@@ -223,6 +223,21 @@ export const WIDGET_PAGES: readonly WidgetPage[] = [
       },
     ],
   },
+  {
+    route: "/filters/filter-bar",
+    file: "pages/filters/filter-bar.md",
+    drawn: [
+      {
+        tag: /<FilterBar\b/g,
+        live: (page) => page.locator("main [data-filter-bar]"),
+      },
+    ],
+  },
+  {
+    route: "/filters/filters-and-urls",
+    file: "pages/filters/filters-and-urls.md",
+    drawn: [{ tag: /<(?:Dropdown|MultiSelect)\b/g, live: comboboxes }],
+  },
 ];
 
 /** How many times `tag` appears inside the page file's `mdx echo` fences. */

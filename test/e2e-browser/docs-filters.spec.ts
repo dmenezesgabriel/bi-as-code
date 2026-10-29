@@ -142,3 +142,46 @@ test("an input's initialValue reaches the query that reads {{params.id}} on firs
   expect(new URL(page.url()).search).toBe("");
   expect(errors).toEqual([]);
 });
+
+test("a FilterBar on its reference page docks to a Filters row on scroll and counts the pick made in it", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}/filters/filter-bar`);
+  const bar = page.locator("main [data-filter-bar]").first();
+  const trigger = bar.getByRole("button", { name: "Filters", exact: true });
+  const rows = resultTables(page).first().locator("tbody tr");
+  await expect(rows).toHaveCount(5);
+
+  await page.locator("main h2", { hasText: "Props" }).scrollIntoViewIfNeeded();
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await bar.getByRole("combobox", { name: "Island" }).click();
+  await page.getByRole("option", { name: "Biscoe" }).click();
+
+  await expect(trigger).toHaveAccessibleDescription("1 active");
+  expect(urlParam(page, "bar_island")).toBe("Biscoe");
+  await expect(rows).toHaveCount(2);
+  expect(errors).toEqual([]);
+});
+
+test("a shared link into the filters-and-URL page opens it narrowed, and clearing the pick drops the param", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}/filters/filters-and-urls?island=Dream`);
+  const island = page.getByRole("combobox", { name: "Island" }).first();
+  const rows = resultTables(page).first().locator("tbody tr");
+  // Dream holds two of the five island × species pairs.
+  await expect(island).toHaveText("Dream");
+  await expect(rows).toHaveCount(2);
+
+  await island.click();
+  await page.getByRole("button", { name: "Clear" }).click();
+
+  await expect(rows).toHaveCount(5);
+  expect(urlParam(page, "island")).toBeNull();
+  expect(errors).toEqual([]);
+});

@@ -1,0 +1,44 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as FilterBarStories from "./filter-bar.stories";
+
+<Meta of={FilterBarStories} />
+
+# FilterBar
+
+`<FilterBar>` lays the filters inside it out as one bar and keeps it in reach while the reader scrolls. At rest every filter shows side by side; once the reader scrolls past it, the bar sticks under the page header as one Filters button that opens the filters in a card. The bar holds no value: each filter inside it narrows its widgets and writes the page URL as it would outside the bar.
+
+The reader-facing reference is `docs/pages/filters/filter-bar.md` (`/filters/filter-bar` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Gather a page's filters
+
+At rest the bar is page content: every filter side by side, no card face and no Filters button. Any kind of filter lines up on the same row, labels on one line, even a slider with nothing to range over. Use one bar per page; a second would dock on the same line over the first.
+
+<Canvas of={FilterBarStories.Default} />
+
+<Canvas of={FilterBarStories.PinnedSliderOnLabelLine} />
+
+### Docked
+
+Scrolled past, the bar docks as one Filters row; the row counts the filters holding a pick, read out as "2 active", and follows a pick changed in the opened card.
+
+<Canvas
+  of={FilterBarStories.DockedActiveCount}
+  story={{ inline: false, height: "420px" }}
+/>
+
+Opened, the filters lay over the page in a card and keep writing their URL params. `Escape` closes the card and hands focus back to Filters, and a press on the page around it closes it too (the `DockedDismissal` story); a bar that docks while a filter inside it has focus docks open (the `DocksOpenedWhileFocused` story). Both assert focus, so they run on their own story canvases, not embedded here.
+
+<Canvas
+  of={FilterBarStories.DockedOpened}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Props
+
+`<FilterBar>` takes no props. Its children are the filters it lays out.
+
+## Errors
+
+A `<FilterBar>` has no error of its own; a filter inside it that fails shows its message in its place on the bar.

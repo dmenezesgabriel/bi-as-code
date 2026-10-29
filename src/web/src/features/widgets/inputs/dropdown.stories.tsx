@@ -10,6 +10,7 @@ import {
   withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
+import { Table } from "../table/table";
 import { Dropdown } from "./dropdown";
 import { expectAlert } from "./input-stories.fixture";
 import type { DropdownProps } from "./types";
@@ -99,6 +100,52 @@ export const Success: Story = {
 
     await expect(trigger).toHaveTextContent("West");
     await expect(successPort.read()?.searchParams.get("region")).toBe("West");
+  },
+};
+
+const REGION_ORDERS: Row[] = [
+  { region: "West", orders: 140 },
+  { region: "North", orders: 120 },
+  { region: "East", orders: 90 },
+];
+
+const narrowsPort = new FakeFilterUrlPort("");
+
+/** A widget naming the dropdown in `filters` re-queries on each pick: the
+ * table keeps the picked region's rows, and the pick rides the URL. */
+export const NarrowsATable: Story = {
+  args: { title: "Region" },
+  decorators: [
+    withQueryData(
+      [ORDERS],
+      (() => {
+        const db = new FakeDuckDb();
+        db.rows = REGION_ORDERS;
+        db.rowsWhen = (sql, params) =>
+          sql.includes("where region = ?")
+            ? REGION_ORDERS.filter((row) => row.region === params[0])
+            : null;
+        return db;
+      })(),
+    ),
+    withPageFilters(narrowsPort),
+  ],
+  render: (args) => (
+    <>
+      <Dropdown {...args} />
+      <Table data="orders" filters="region" />
+    </>
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findAllByRole("row")).toHaveLength(4);
+    await openDropdown(canvas);
+    await userEvent.click(
+      await popup().findByRole("option", { name: "North" }),
+    );
+
+    await waitFor(() => expect(canvas.getAllByRole("row")).toHaveLength(2));
+    await expect(canvas.getByRole("cell", { name: "North" })).toBeVisible();
+    await expect(narrowsPort.read()?.searchParams.get("region")).toBe("North");
   },
 };
 

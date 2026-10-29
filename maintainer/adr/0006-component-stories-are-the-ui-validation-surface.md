@@ -32,6 +32,8 @@ Storybook runs on **port 6175**, not the 6006 default (`pnpm storybook` bakes it
 
 `@storybook/addon-mcp` is registered in `main.ts` with `features.componentsManifest`, serving MCP at `/mcp` — `.devin/mcp_config.json` points the agent at it, and `prompt-execution.md` §5 makes `get-storybook-story-instructions` → `stories-changed` → `stories-preview` part of the UI-change workflow.
 
+Every reference page of the docs project (`docs/pages/`) also ships as a Storybook MDX docs page (`@storybook/addon-docs`): a component's page is `<name>.mdx` beside its stories, attached with `<Meta of>`; a page that documents no single component is an unattached `<Meta title>` page in the feature folder it explains. Its sections follow the `docs/` page, each example is a `<Canvas of>` a story (a missing story is written, never inlined in the MDX), and the prose stays short — the `docs/` page is the reader's text, the MDX page is the catalog's, so the MCP's `docs-list`/`docs-show` return the same capability with its live states. A canvas whose story plays scroll or open a popup renders with `inline: false`, in its own iframe. The sweep spec also visits every docs entry and fails on a console error or a page whose content never renders.
+
 ## Consequences
 
 - A new component is not done until its story renders clean in the sweep; the sweep fails the suite on a single console error, so error-state stories must keep their noise in `INTENTIONAL_ERROR_STATE_STORIES`.
