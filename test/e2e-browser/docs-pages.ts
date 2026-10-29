@@ -174,6 +174,55 @@ export const WIDGET_PAGES: readonly WidgetPage[] = [
       },
     ],
   },
+  {
+    route: "/filters/slider",
+    file: "pages/filters/slider.md",
+    // One labelled group per slider root, whether it draws one thumb or two.
+    drawn: [
+      {
+        tag: /<Slider\b/g,
+        live: (page) => page.locator("main [role=group][aria-labelledby]"),
+      },
+    ],
+  },
+  {
+    route: "/filters/date-range",
+    file: "pages/filters/date-range.md",
+    // The popover trigger is the one control a DateRange draws.
+    drawn: [
+      {
+        tag: /<DateRange\b/g,
+        live: (page) => page.locator("main button[aria-haspopup]"),
+      },
+    ],
+  },
+  {
+    route: "/filters/text-input",
+    file: "pages/filters/text-input.md",
+    drawn: [
+      {
+        tag: /<TextInput\b/g,
+        live: (page) => page.locator("main input[type=text]"),
+      },
+    ],
+  },
+  {
+    route: "/filters/toggle",
+    file: "pages/filters/toggle.md",
+    drawn: [
+      { tag: /<Toggle\b/g, live: (page) => page.locator("main [role=switch]") },
+    ],
+  },
+  {
+    route: "/filters/search",
+    file: "pages/filters/search.md",
+    drawn: [
+      {
+        tag: /<Search\b/g,
+        live: (page) => page.locator("main input[type=search]"),
+      },
+    ],
+  },
 ];
 
 /** How many times `tag` appears inside the page file's `mdx echo` fences. */
