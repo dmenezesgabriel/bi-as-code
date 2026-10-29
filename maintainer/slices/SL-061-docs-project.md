@@ -165,7 +165,8 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T2j — A histogram tooltip's bin range reads distinct above 4,000 without a `valueFmt` (`6k – 6k` today) — closes GAP-076 (found doing T2g; a product gap gets its own task)
 - [x] T3 — Layout reference pages: `Callout`, `Note`, `LineBreak`, `Details`, `Tabs`, `Accordion`, `Row`, `Stack`
 - [x] T3a — A one-line JSX element in an ` ```mdx echo ` fence renders as a block, as it does outside the fence, then let prettier collapse the blank-line-wrapped one-line bodies in `docs/pages/layout/callout.md`, `note.md`, `stack.md`, `tabs.md` and `accordion.md` — closes GAP-077 (found writing T3; a product gap gets its own task)
-- [ ] T4a — Filter reference pages `Dropdown`, `MultiSelect`, `ButtonGroup` (the option-list inputs sharing `SelectInputProps`), one `mdx echo` example per prop on the docs data; the Filters section in `docs/biac.config.ts`; a browser test for demo step 4 (pick on `/filters/dropdown` → the widget re-queries, the URL carries it, a reload keeps it)
+- [x] T4a — Filter reference pages `Dropdown`, `MultiSelect`, `ButtonGroup` (the option-list inputs sharing `SelectInputProps`), one `mdx echo` example per prop on the docs data; the Filters section in `docs/biac.config.ts`; a browser test for demo step 4 (pick on `/filters/dropdown` → the widget re-queries, the URL carries it, a reload keeps it)
+- [ ] T4a1 — A `<ButtonGroup>` wider than its column scrolls sideways inside itself instead of clipping its last buttons (the `labelColumn` example on `docs/pages/filters/button-group.md` at 375 px) — closes GAP-078 (found writing T4a; a product gap gets its own task)
 - [ ] T4b — Filter reference pages `Slider`, `DateRange`, `TextInput`, `Toggle`, `Search`
 - [ ] T4c — `FilterBar`, and the `filters=[...]` and URL persistence reference page
 - [ ] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation)
