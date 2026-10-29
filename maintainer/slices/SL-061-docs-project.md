@@ -169,7 +169,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4a1 — A `<ButtonGroup>` wider than its column scrolls sideways inside itself instead of clipping its last buttons (the `labelColumn` example on `docs/pages/filters/button-group.md` at 375 px) — closes GAP-078 (found writing T4a; a product gap gets its own task)
 - [x] T4b — Filter reference pages `Slider`, `DateRange`, `TextInput`, `Toggle`, `Search`
 - [x] T4b1 — A `<Slider>` whose `step` exceeds Base UI's fixed `largeStep` of 10 moves by whole steps on Page Up/Page Down and Shift+Arrow instead of writing an off-step value and stalling (the `heavier_than` example on `docs/pages/filters/slider.md`) — closes GAP-079 (found writing T4b; a product gap gets its own task)
-- [ ] T4b2 — An input's `initialValue` reaches `{{params.id}}` before the reader acts, as it already narrows `filters` (the `initialValue` examples on `docs/pages/filters/toggle.md`, `text-input.md` and `date-range.md`) — closes GAP-080 (found writing T4b; a product gap gets its own task)
+- [x] T4b2 — An input's `initialValue` reaches `{{params.id}}` before the reader acts, as it already narrows `filters` (the `initialValue` examples on `docs/pages/filters/toggle.md`, `text-input.md` and `date-range.md`) — closes GAP-080 (found writing T4b; a product gap gets its own task)
 - [ ] T4c — `FilterBar`, and the `filters=[...]` and URL persistence reference page
 - [ ] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation)
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages
