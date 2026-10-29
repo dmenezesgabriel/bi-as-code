@@ -19,6 +19,7 @@ import {
   initialSliderValue,
   resolveSliderBounds,
   sliderClause,
+  sliderPageStep,
   sliderValueCodec,
 } from "./slider-value";
 import { sourceError } from "./source-error";
@@ -202,6 +203,7 @@ function SliderField({
         min={bounds.min}
         max={bounds.max}
         step={bounds.step}
+        largeStep={sliderPageStep(bounds)}
         thumbCollisionBehavior="swap"
         disabled={disabled}
       >

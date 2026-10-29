@@ -143,6 +143,26 @@ export function resolveSliderBounds(
 }
 
 /**
+ * The Page Up/Page Down and Shift+Arrow jump — a tenth of the range, rounded
+ * to a whole number of steps and never less than one (React Aria's
+ * `useSliderState` `pageSize`). Base UI adds its `largeStep` raw, defaulting
+ * to a fixed 10, so a step of 100 would land off-step and then stall; and it
+ * keeps only the increment's own decimals, so the product is cut back to 12
+ * significant digits to drop float residue (`3 * 0.1`).
+ *
+ * @example
+ * sliderPageStep({ min: 2500, max: 6500, step: 100 }) // 400
+ */
+export function sliderPageStep(bounds: {
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+}): number {
+  const steps = Math.round((bounds.max - bounds.min) / 10 / bounds.step);
+  return Number((Math.max(steps, 1) * bounds.step).toPrecision(12));
+}
+
+/**
  * Clamps a held value into `[min, max]` — a pair additionally reorders so a
  * crossed or inverted selection still serializes `lo - hi` (evidence sorts
  * after clamping).

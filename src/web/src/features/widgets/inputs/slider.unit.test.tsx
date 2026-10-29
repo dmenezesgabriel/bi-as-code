@@ -268,6 +268,39 @@ describe("Slider — value lifecycle", () => {
     );
   });
 
+  it("pages by a tenth of the range in whole steps on Page Up and Shift+Arrow", async () => {
+    const port = new FakeFilterUrlPort("?amount=2700");
+    renderSlider({ min: 2500, max: 6500, step: 100 }, { port });
+
+    const input = await waitFor(() => thumb());
+    fireEvent.keyDown(input, { key: "PageUp" });
+    await waitFor(() =>
+      expect(port.written.at(-1)?.searchParams.get("amount")).toBe("3100"),
+    );
+    fireEvent.keyDown(input, { key: "ArrowRight", shiftKey: true });
+
+    await waitFor(() =>
+      expect(port.written.at(-1)?.searchParams.get("amount")).toBe("3500"),
+    );
+    expect(input).toHaveAttribute("aria-valuenow", "3500");
+  });
+
+  it("pages a range thumb down on Page Down", async () => {
+    const port = new FakeFilterUrlPort("?amount=2500 - 6500");
+    renderSlider({ range: true, min: 2500, max: 6500, step: 100 }, { port });
+
+    const maxThumb = await waitFor(() =>
+      screen.getByRole("slider", { name: "Maximum" }),
+    );
+    fireEvent.keyDown(maxThumb, { key: "PageDown" });
+
+    await waitFor(() =>
+      expect(port.written.at(-1)?.searchParams.get("amount")).toBe(
+        "2500 - 6100",
+      ),
+    );
+  });
+
   it("restores a URL-seeded value on first render", async () => {
     renderSlider({}, { port: new FakeFilterUrlPort("?amount=33") });
     await waitFor(() => expect(thumb()).toHaveAttribute("aria-valuenow", "33"));

@@ -5,6 +5,7 @@ import {
   initialSliderValue,
   resolveSliderBounds,
   sliderClause,
+  sliderPageStep,
   sliderValueCodec,
 } from "./slider-value";
 
@@ -153,5 +154,26 @@ describe("resolveSliderBounds", () => {
     expect(resolveSliderBounds({}, { step: 0 }).step).toBe(1);
     expect(resolveSliderBounds({}, { step: -2 }).step).toBe(1);
     expect(resolveSliderBounds({}, { step: Number.NaN }).step).toBe(1);
+  });
+});
+
+describe("sliderPageStep", () => {
+  it("is a tenth of the range, rounded to a whole number of steps", () => {
+    expect(sliderPageStep({ min: 2500, max: 6500, step: 100 })).toBe(400);
+    expect(sliderPageStep({ min: 0, max: 100, step: 1 })).toBe(10);
+    expect(sliderPageStep({ min: 0, max: 1000, step: 1 })).toBe(100);
+    expect(sliderPageStep({ min: 0, max: 1000, step: 30 })).toBe(90);
+  });
+
+  it("is never less than one step", () => {
+    expect(sliderPageStep({ min: 0, max: 500, step: 100 })).toBe(100);
+    expect(sliderPageStep({ min: 0, max: 4, step: 1 })).toBe(1);
+  });
+
+  // Printed, because the page size is what Base UI adds and the URL shows:
+  // a residue would read `0.30000000000000004`.
+  it("carries no floating-point residue for a fractional step", () => {
+    expect(String(sliderPageStep({ min: 0, max: 1, step: 0.05 }))).toBe("0.1");
+    expect(String(sliderPageStep({ min: 0, max: 3, step: 0.1 }))).toBe("0.3");
   });
 });

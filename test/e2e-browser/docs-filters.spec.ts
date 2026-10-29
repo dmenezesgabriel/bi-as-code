@@ -77,3 +77,34 @@ test("a Toggle on its reference page re-runs the query that reads it and keeps i
   await expect(adelie).toContainText("73");
   expect(errors).toEqual([]);
 });
+
+test("a Slider on its reference page pages by whole steps, so the query that reads it re-runs on each Page Up", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}/filters/slider`);
+  const heavier = page.getByRole("slider", { name: "Heavier than (g)" });
+  const adelie = resultTables(page)
+    .filter({ hasText: "heavier" })
+    .locator("tbody tr")
+    .first();
+
+  await heavier.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(heavier).toHaveAttribute("aria-valuenow", "2700");
+
+  // 2500–6500 with a step of 100: a page is a tenth of the range, 400.
+  await page.keyboard.press("PageUp");
+  await expect(heavier).toHaveAttribute("aria-valuenow", "3100");
+  // 136 of the 152 Adelie penguins weigh more than 3100 g.
+  await expect(adelie).toContainText("136");
+  expect(urlParam(page, "heavier_than")).toBe("3100");
+
+  await page.keyboard.press("PageUp");
+  await expect(heavier).toHaveAttribute("aria-valuenow", "3500");
+  await expect(adelie).toContainText("92");
+  expect(urlParam(page, "heavier_than")).toBe("3500");
+  expect(errors).toEqual([]);
+});

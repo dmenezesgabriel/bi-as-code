@@ -82,6 +82,32 @@ export const KeyboardStep: Story = {
   },
 };
 
+const pagePort = new FakeFilterUrlPort("?amount=2700");
+
+/** Page Up and Shift+ArrowRight jump a tenth of the range in whole steps —
+ * 400 on a 2500–6500 slider with a step of 100. */
+export const KeyboardPage: Story = {
+  args: {
+    title: "Amount",
+    data: undefined,
+    valueColumn: undefined,
+    min: 2500,
+    max: 6500,
+    step: 100,
+  },
+  decorators: [withPageFilters(pagePort)],
+  play: async ({ canvas }) => {
+    const input = await canvas.findByRole("slider", { name: "Amount" });
+    await expect(input).toHaveAttribute("aria-valuenow", "2700");
+    input.focus();
+    await userEvent.keyboard("{PageUp}");
+    await expect(input).toHaveAttribute("aria-valuenow", "3100");
+    await userEvent.keyboard("{Shift>}{ArrowRight}{/Shift}");
+    await expect(input).toHaveAttribute("aria-valuenow", "3500");
+    await expect(pagePort.read()?.searchParams.get("amount")).toBe("3500");
+  },
+};
+
 const rangePort = new FakeFilterUrlPort("?amount=10 - 40");
 
 /** `range` mounts a two-thumb `lo - hi` selection; stepping the Maximum
