@@ -152,6 +152,37 @@ export const StaticOptions: Story = {
   },
 };
 
+/** Buttons wider than the column keep their full width and scroll sideways
+ * inside the group's wrapper, so the last one can still be reached. */
+export const Overflowing: Story = {
+  args: {
+    data: undefined,
+    valueColumn: undefined,
+    options: ["Adelie penguin", "Chinstrap penguin", "Gentoo penguin"],
+    title: "Species",
+    id: "species",
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 200 }}>
+        <Story />
+      </div>
+    ),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  play: async ({ canvas }) => {
+    const group = await canvas.findByRole("group", { name: "Species" });
+    const wrapper = group.parentElement!;
+    await expect(group.scrollWidth).toBe(group.clientWidth);
+    await expect(wrapper.scrollWidth).toBeGreaterThan(wrapper.clientWidth);
+    const last = canvas.getByRole("button", { name: "Gentoo penguin" });
+    last.scrollIntoView({ inline: "end" });
+    await expect(last.getBoundingClientRect().right).toBeLessThanOrEqual(
+      wrapper.getBoundingClientRect().right,
+    );
+  },
+};
+
 const stalePort = new FakeFilterUrlPort('?channel=["ghost","Direct"]');
 
 /** A URL value the loaded option set doesn't know is pruned — `ghost` drops,

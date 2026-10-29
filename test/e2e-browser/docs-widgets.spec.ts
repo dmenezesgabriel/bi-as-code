@@ -316,3 +316,29 @@ for (const colorScheme of ["light", "dark"] as const) {
     });
   });
 }
+
+test("a button group wider than its column scrolls to its last button instead of clipping it", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}/filters/button-group`);
+  const group = page.locator('[aria-labelledby="species_named-label"]');
+  const lastButton = group.getByRole("button").last();
+  await expect(lastButton).toBeEnabled();
+
+  const widths = await group.evaluate((node) => ({
+    group: node.scrollWidth - node.clientWidth,
+    wrapper: node.parentElement!.scrollWidth - node.parentElement!.clientWidth,
+  }));
+  expect(widths.group).toBe(0);
+  expect(widths.wrapper).toBeGreaterThan(0);
+
+  await lastButton.scrollIntoViewIfNeeded();
+  const edges = await lastButton.evaluate((node) => ({
+    button: node.getBoundingClientRect().right,
+    wrapper: node.closest(".overflow-x-auto")!.getBoundingClientRect().right,
+  }));
+  expect(edges.button).toBeLessThanOrEqual(edges.wrapper);
+  expect(errors).toEqual([]);
+});

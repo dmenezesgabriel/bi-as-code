@@ -57,7 +57,7 @@ export function ButtonGroup({
           aria-labelledby={labelId}
           className={cn(
             FIELD_CONTROL_HEIGHT,
-            "inline-flex w-fit items-stretch overflow-hidden rounded-md border border-input bg-field data-disabled:opacity-80",
+            "inline-flex w-max items-stretch overflow-hidden rounded-md border border-input bg-field data-disabled:opacity-80",
           )}
         >
           {items.length === 0 ? (
