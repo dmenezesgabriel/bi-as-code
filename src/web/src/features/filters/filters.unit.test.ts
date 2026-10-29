@@ -169,3 +169,55 @@ describe("Filters.remove", () => {
     expect(port.written).toHaveLength(0);
   });
 });
+
+describe("Filters.heldParams", () => {
+  it("binds an initialValue the URL does not hold, in its URL-param form", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    filters.ensure("females_only", {
+      column: false,
+      deserialize: (raw) => raw === "true",
+      initialValue: true,
+    });
+    filters.ensure("span", { column: false, initialValue: "last 7 days" });
+    expect(filters.heldParams()).toEqual({
+      females_only: true,
+      span: "last 7 days",
+    });
+  });
+
+  it("binds a setDefault seed and a list value as the URL would", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    filters.ensure("region").setDefault("West");
+    filters.ensure("channels", ARRAY_CODEC).setDefault(["web", "store"]);
+    expect(filters.heldParams()).toEqual({
+      region: "West",
+      channels: ["web", "store"],
+    });
+  });
+
+  it("leaves out a filter whose value is cleared", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    filters.ensure("q").value = "";
+    filters.ensure("region");
+    expect(filters.heldParams()).toEqual({});
+  });
+});
+
+describe("Filters.subscribe", () => {
+  it("fires for a value change on a filter created after subscribing", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    let calls = 0;
+    filters.subscribe(() => calls++);
+    filters.ensure("region").value = "West";
+    expect(calls).toBe(1);
+  });
+
+  it("stops firing once unsubscribed", () => {
+    const filters = new Filters(new FakeFilterUrlPort(""));
+    let calls = 0;
+    const unsubscribe = filters.subscribe(() => calls++);
+    unsubscribe();
+    filters.ensure("region").value = "West";
+    expect(calls).toBe(0);
+  });
+});

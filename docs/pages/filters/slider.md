@@ -153,7 +153,7 @@ When the other filters leave a single value, the slider shows that value as text
 
 ### Use the pick in a query
 
-A query can read the pick itself as `{{params.id}}`, which is `null` before the reader drags. A slider without `valueColumn` narrows no widget, and is read only this way.
+A query can read the pick itself as `{{params.id}}`, which holds the slider's lower end before the reader drags, or both ends for a range. A slider without `valueColumn` narrows no widget, and is read only this way.
 
 ```mdx echo
 <Slider

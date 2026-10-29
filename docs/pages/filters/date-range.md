@@ -81,7 +81,7 @@ The open field lists four presets: Last 7 Days, Last 30 Days, Month to Date and 
 
 ### Use the pick in a query
 
-A query can read the pick itself as `{{params.id}}`: the words, or `null` before a pick. A date range without `valueColumn` narrows no widget, and is read only this way.
+A query can read the pick itself as `{{params.id}}`: the words, which are the `initialValue` until the reader picks, or `null` with neither. A date range without `valueColumn` narrows no widget, and is read only this way.
 
 ```mdx echo
 <DateRange id="chosen_span" initialValue="last 7 days" title="Span" />

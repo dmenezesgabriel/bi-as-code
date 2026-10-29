@@ -239,6 +239,28 @@ function pageVersion(content: object): number {
   return lastPageVersion;
 }
 
+type PageParams = Readonly<Record<string, unknown>>;
+
+/**
+ * What `{{params.*}}` binds: the page filters' held values — an
+ * `initialValue` or a seeded default the URL does not hold yet, which the
+ * filter scope reports through the returned setter — under the URL's
+ * params, which win whenever one is present.
+ */
+function usePageParams(): [PageParams, (held: PageParams) => void] {
+  const search = useSearch({ strict: false });
+  const [held, setHeld] = useState<PageParams>({});
+  // The editor's flag is not a page parameter, so `{{params.*}}` never sees
+  // it. Memoized because the registry re-interpolates whenever `params` is
+  // a new object and does so during render: a fresh object per render
+  // would never settle.
+  const params = useMemo(
+    () => ({ ...held, ...searchWithoutEditorKey(search) }),
+    [held, search],
+  );
+  return [params, setHeld];
+}
+
 /**
  * The registry sits outside the filter scope so a page swap re-runs only
  * the fences whose SQL changed.
@@ -250,12 +272,7 @@ function PageBody({
   page: CompiledPageModule;
   dataUpdates: DataUpdateSubscription | undefined;
 }) {
-  const search = useSearch({ strict: false });
-  // The editor's flag is not a page parameter, so `{{params.*}}` never sees
-  // it. Memoized because the registry re-interpolates whenever `params` is
-  // a new object and does so during render: a fresh object per render
-  // would never settle.
-  const params = useMemo(() => searchWithoutEditorKey(search), [search]);
+  const [params, setHeldParams] = usePageParams();
   const language = usePageLanguage();
   // Memoized for the same reason; a hot-swapped page module brings the
   // edited translations.yaml with it, so a new page re-reads them.
@@ -265,7 +282,11 @@ function PageBody({
   );
   const Content = page.default;
   const scoped = (
-    <FiltersProvider key={pageVersion(Content)} port={browserFilterUrlPort}>
+    <FiltersProvider
+      key={pageVersion(Content)}
+      port={browserFilterUrlPort}
+      onHeldParamsChange={setHeldParams}
+    >
       <Content components={mdxComponents} language={language} />
     </FiltersProvider>
   );

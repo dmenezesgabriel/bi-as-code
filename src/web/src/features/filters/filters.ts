@@ -2,6 +2,7 @@ import { Coordinator } from "../crossfilter/coordinator";
 import type { Selection } from "../crossfilter/selection";
 import { Filter, type FilterOptions } from "./filter";
 import type { FilterUrlPort } from "./filter-url-port";
+import { decodeSearchParam } from "./search-param-value";
 
 /**
  * A page's named filters — the port of evidence's `Filters.svelte.ts` —
@@ -14,6 +15,7 @@ export class Filters {
   readonly #filters = new Map<string, Filter>();
   readonly #port: FilterUrlPort;
   readonly #coordinator: Coordinator;
+  readonly #listeners = new Set<() => void>();
 
   constructor(port: FilterUrlPort, coordinator = new Coordinator()) {
     this.#port = port;
@@ -49,7 +51,34 @@ export class Filters {
       this.#port,
     );
     this.#filters.set(id, filter);
+    filter.subscribe(() => this.#notify());
     return filter;
+  }
+
+  /**
+   * Every filter's held value as `{{params.*}}` binds it — the value
+   * decoded from its URL-param form, so a value the URL does not hold
+   * (an `initialValue`, a `setDefault` seed) binds exactly as it would
+   * once written there. A cleared filter binds nothing. Evidence's inline
+   * SQL reads each input's `.value` the same way.
+   *
+   * @example
+   * filters.ensure("span", { initialValue: "last 7 days" });
+   * filters.heldParams(); // → { span: "last 7 days" }
+   */
+  heldParams(): Readonly<Record<string, unknown>> {
+    const params: Record<string, unknown> = {};
+    for (const [id, filter] of this.#filters) {
+      const serialized = filter.serializedValue;
+      if (serialized) params[id] = decodeSearchParam(serialized);
+    }
+    return params;
+  }
+
+  /** Fires on any filter's value change, filters created later included. */
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
   }
 
   /**
@@ -74,5 +103,9 @@ export class Filters {
     const filter = this.#filters.get(id);
     if (filter) filter.value = undefined;
     this.#filters.delete(id);
+  }
+
+  #notify() {
+    for (const listener of this.#listeners) listener();
   }
 }

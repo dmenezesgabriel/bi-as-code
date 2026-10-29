@@ -204,7 +204,7 @@ describe("Toggle — params consumption", () => {
     await waitFor(() =>
       expect(db.queries).toContainEqual({
         sql: "select * from orders where amount > 500 = ?",
-        params: [null],
+        params: [false],
       }),
     );
 
@@ -216,6 +216,18 @@ describe("Toggle — params consumption", () => {
         params: [true],
       }),
     );
+  });
+
+  it("binds its initialValue to the fence before the reader flips it", async () => {
+    const port = new FakeFilterUrlPort("");
+    const db = renderToggle({ initialValue: true }, { port, bridge: true });
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select * from orders where amount > 500 = ?",
+        params: [true],
+      }),
+    );
+    expect(port.written).toHaveLength(0);
   });
 });
 

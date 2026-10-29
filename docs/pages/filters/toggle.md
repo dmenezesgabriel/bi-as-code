@@ -7,7 +7,7 @@ keywords: [toggle, switch, checkbox, boolean, on off, filter, Toggle]
 
 # Toggle
 
-`<Toggle>` is a switch a reader turns on or off, and hands its state to the page's queries as `{{params.id}}`: `true` or `false`, or `null` before the first flip. It narrows no widget by itself: a query decides what on means. The state is written to the page URL as `?id=true` or `?id=false`, so a reload or a shared link opens the page with the switch where it was left.
+`<Toggle>` is a switch a reader turns on or off, and hands its state to the page's queries as `{{params.id}}`: `true` or `false`, and `false` before the first flip unless `initialValue` says otherwise. It narrows no widget by itself: a query decides what on means. The state is written to the page URL as `?id=true` or `?id=false`, so a reload or a shared link opens the page with the switch where it was left.
 
 Every filter on a page shares its URL, so each example below gives its toggle its own `id`.
 
@@ -34,8 +34,6 @@ order by species
 ```mdx echo
 <Table data="species_males" />
 ```
-
-`is distinct from true` holds for both `false` and `null`, so the query reads the same before the first flip as with the switch off.
 
 ### Label
 

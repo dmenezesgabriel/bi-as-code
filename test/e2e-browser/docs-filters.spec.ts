@@ -5,6 +5,7 @@ import {
   test,
   urlParam,
 } from "./dev-server.fixture.js";
+import type { Page } from "@playwright/test";
 
 test.use({ biacProject: "docs" });
 
@@ -106,5 +107,38 @@ test("a Slider on its reference page pages by whole steps, so the query that rea
   await expect(heavier).toHaveAttribute("aria-valuenow", "3500");
   await expect(adelie).toContainText("92");
   expect(urlParam(page, "heavier_than")).toBe("3500");
+  expect(errors).toEqual([]);
+});
+
+/** The result table rendered under the `name:` caption that echoes a query's name. */
+function tableUnder(page: Page, name: string) {
+  return page
+    .locator("p", { hasText: new RegExp(`^${name}:$`) })
+    .locator("xpath=following::table[1]");
+}
+
+test("an input's initialValue reaches the query that reads {{params.id}} on first paint, with no URL param", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+
+  await page.goto(`${biacDev.url}/filters/toggle`);
+  // 73 of the 152 Adelie penguins are female.
+  await expect(
+    tableUnder(page, "species_females").locator("tbody tr").first(),
+  ).toContainText("73");
+
+  await page.goto(`${biacDev.url}/filters/date-range`);
+  await expect(tableUnder(page, "chosen_span_words")).toContainText(
+    "last 7 days",
+  );
+
+  await page.goto(`${biacDev.url}/filters/text-input`);
+  const islands = tableUnder(page, "islands_started").locator("tbody tr");
+  await expect(islands).toHaveCount(1);
+  await expect(islands).toContainText("Dream");
+
+  expect(new URL(page.url()).search).toBe("");
   expect(errors).toEqual([]);
 });

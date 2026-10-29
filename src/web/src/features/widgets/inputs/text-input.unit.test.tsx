@@ -254,6 +254,21 @@ describe("TextInput — params consumption", () => {
       }),
     );
   });
+
+  it("binds its initialValue to the fence before the reader types", async () => {
+    const port = new FakeFilterUrlPort("");
+    const db = renderTextInput(
+      { initialValue: "Dream" },
+      { port, bridge: true },
+    );
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select * from orders where name ilike ?",
+        params: ["Dream"],
+      }),
+    );
+    expect(port.written).toHaveLength(0);
+  });
 });
 
 describe("TextInput — degraded faces", () => {

@@ -1,23 +1,10 @@
 import type { ReactElement, ReactNode } from "react";
 import type { FilterUrlPort } from "../../filters/filter-url-port";
+import { usePageFilters } from "../../filters/page-filters-context";
+import { decodeSearchParam } from "../../filters/search-param-value";
 import { usePageFilter } from "../../filters/use-page-filter";
 import { QueryRegistryProvider } from "../../pages/query-registry";
 import type { SqlBlock } from "../../pages/types";
-
-/**
- * `useSearch`'s default parsing — TanStack `parseSearch` JSON-decodes each
- * param value (`"true"` → `true`, `"30"` → `30`, `["a","b"]` → an array)
- * and falls back to the raw string when it isn't JSON. An absent param
- * binds NULL downstream.
- */
-function parseParam(raw: string | null): unknown {
-  if (raw === null) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-}
 
 /**
  * Test/story scaffold bridging a page filter into `{{params.*}}`
@@ -26,7 +13,8 @@ function parseParam(raw: string | null): unknown {
  * nested `QueryRegistryProvider` whose params re-read the filter's URL
  * param through `port` on every committed write (the `usePageFilter`
  * subscription drives the re-render), so a `{{params.id}}` fence
- * re-interpolates and re-queries exactly as the page does.
+ * re-interpolates and re-queries exactly as the page does. Without a URL
+ * param the filter's held value binds, as on the page.
  *
  * @example
  * <TextInput id="q" />
@@ -50,11 +38,13 @@ export function ParamsBridge({
   // real page. A bare ensure is a configure-no-op, so `column: false` set
   // by the input widget survives.
   usePageFilter(id);
+  const held = usePageFilters()?.heldParams()[id] ?? null;
+  const raw = port.read()?.searchParams.get(id) ?? null;
   return (
     <QueryRegistryProvider
       sqlBlocks={blocks}
       sqlTables={{}}
-      params={{ [id]: parseParam(port.read()?.searchParams.get(id) ?? null) }}
+      params={{ [id]: raw === null ? held : decodeSearchParam(raw) }}
     >
       {children}
     </QueryRegistryProvider>

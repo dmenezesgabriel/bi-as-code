@@ -7,6 +7,7 @@ import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
 import { FIELD_CONTROL_HEIGHT, FIELD_LABEL_ROW } from "./field-line";
+import { ParamsBridge } from "./params-bridge";
 import { lastWrittenParam } from "./select-harness";
 import { DateRange } from "./date-range";
 import type { DateRangeProps } from "./types";
@@ -268,5 +269,29 @@ describe("DateRange — degraded faces", () => {
   it("degrades to a disabled trigger without a FiltersProvider", () => {
     renderDateRange({}, { provider: false });
     expect(trigger()).toBeDisabled();
+  });
+});
+
+describe("DateRange — params consumption", () => {
+  it("binds its initialValue expression to a {{params.ordered}} fence before the reader picks", async () => {
+    const port = new FakeFilterUrlPort("");
+    const spanFence: SqlBlock = {
+      name: "span",
+      sql: "select {{params.ordered}}",
+    };
+    const db = renderWithRegistry(
+      <>
+        <DateRange id="ordered" title="Ordered" initialValue="last 7 days" />
+        <ParamsBridge id="ordered" blocks={[spanFence]} port={port} />
+      </>,
+      { db: FakeDuckDb.withRows([]), blocks: [], port },
+    );
+    await waitFor(() =>
+      expect(db.queries).toContainEqual({
+        sql: "select ?",
+        params: ["last 7 days"],
+      }),
+    );
+    expect(port.written).toHaveLength(0);
   });
 });

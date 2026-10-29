@@ -139,3 +139,32 @@ export const ParamsConsumption: Story = {
     );
   },
 };
+
+const seededConsumptionPort = new FakeFilterUrlPort("");
+
+/** An `initialValue` binds the `{{params.q}}` fence before the reader
+ * types, with no URL param — the table opens on the matching row. */
+export const InitialValueConsumption: Story = {
+  args: { initialValue: "north" },
+  decorators: [
+    withDataRuntime(hitsDb()),
+    withPageFilters(seededConsumptionPort),
+  ],
+  render: (args) => (
+    <>
+      <TextInput {...args} />
+      <ParamsBridge id="q" blocks={[HITS]} port={seededConsumptionPort}>
+        <Table data="hits" />
+      </ParamsBridge>
+    </>
+  ),
+  play: async ({ canvas }) => {
+    await waitFor(() =>
+      expect(canvas.getByRole("table")).toHaveTextContent("north"),
+    );
+    await expect(canvas.getByRole("table")).not.toHaveTextContent("south");
+    await expect(seededConsumptionPort.read()?.searchParams.has("q")).toBe(
+      false,
+    );
+  },
+};

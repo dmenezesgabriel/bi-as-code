@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { useEffect } from "react";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { FakeFilterUrlPort } from "./fake-url-port";
 import { FiltersProvider, usePageFilters } from "./page-filters-context";
+import { usePageFilter } from "./use-page-filter";
 import type { Filters } from "./filters";
 
 function Probe({
@@ -56,5 +57,52 @@ describe("FiltersProvider", () => {
       </FiltersProvider>,
     );
     expect(value).toBe("West");
+  });
+});
+
+/** An input-like consumer: ensures its filter during render, as inputs do. */
+function SeededInput({
+  id,
+  initialValue,
+}: {
+  id: string;
+  initialValue: string;
+}) {
+  usePageFilter<string>(id, { column: false, initialValue });
+  return null;
+}
+
+describe("FiltersProvider onHeldParamsChange", () => {
+  it("reports a value seeded while its children render", () => {
+    const reports: Readonly<Record<string, unknown>>[] = [];
+    render(
+      <FiltersProvider
+        port={new FakeFilterUrlPort("")}
+        onHeldParamsChange={(params) => reports.push(params)}
+      >
+        <SeededInput id="span" initialValue="last 7 days" />
+      </FiltersProvider>,
+    );
+    expect(reports).toEqual([{ span: "last 7 days" }]);
+  });
+
+  it("reports a later change, and stays quiet on an equal one", () => {
+    const reports: Readonly<Record<string, unknown>>[] = [];
+    let filters: Filters | undefined;
+    render(
+      <FiltersProvider
+        port={new FakeFilterUrlPort("")}
+        onHeldParamsChange={(params) => reports.push(params)}
+      >
+        <Probe onFilters={(seen) => (filters = seen)} />
+      </FiltersProvider>,
+    );
+    act(() => {
+      filters!.ensure("region").value = "West";
+    });
+    act(() => {
+      filters!.ensure("other", { column: false }).value = undefined;
+    });
+    expect(reports).toEqual([{ region: "West" }]);
   });
 });

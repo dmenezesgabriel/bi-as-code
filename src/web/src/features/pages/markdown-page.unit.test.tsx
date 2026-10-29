@@ -13,6 +13,7 @@ import { DuckDb, type DuckDbService } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
 import { usePageFilters } from "../filters/page-filters-context";
+import { usePageFilter } from "../filters/use-page-filter";
 import { MarkdownPage } from "./markdown-page";
 import { useQueryResults } from "./query-registry";
 import type { CompiledPageModule } from "./types";
@@ -91,6 +92,22 @@ function page(partial: Partial<CompiledPageModule>): CompiledPageModule {
     brandCss: "",
     ...partial,
   };
+}
+
+/** A page whose toggle-like input seeds `initialValue` and whose fence reads it. */
+function seededTogglePage(): CompiledPageModule {
+  return page({
+    sqlBlocks: [{ name: "q", sql: "select {{params.females_only}}" }],
+    default: function Probe() {
+      usePageFilter<boolean>("females_only", {
+        column: false,
+        deserialize: (raw) => raw === "true",
+        initialValue: true,
+      });
+      const status = useQueryResults().q?.status ?? "none";
+      return <p data-testid="status">{status}</p>;
+    },
+  });
 }
 
 describe("MarkdownPage", () => {
@@ -311,6 +328,35 @@ describe("MarkdownPage", () => {
       expect(screen.getByTestId("status")).toHaveTextContent("fr success"),
     );
     expect(db.queries).toEqual([{ sql: "select ?", params: ["l'Ouest"] }]);
+  });
+
+  it("binds an input's initialValue to {{params.id}} before the reader acts", async () => {
+    // Arrange
+    const db = new FakeDuckDb();
+
+    // Act
+    const router = renderPage(seededTogglePage(), "biac", db);
+
+    // Assert
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("success"),
+    );
+    expect(db.queries).toEqual([{ sql: "select ?", params: [true] }]);
+    expect(router.state.location.search).toEqual({});
+  });
+
+  it("lets a URL param win over an input's held value", async () => {
+    // Arrange
+    const db = new FakeDuckDb();
+
+    // Act
+    renderPage(seededTogglePage(), "biac", db, "/?females_only=false");
+
+    // Assert
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("success"),
+    );
+    expect(db.queries).toEqual([{ sql: "select ?", params: [false] }]);
   });
 
   it("hides the editor's edit flag from a fence's params and does not re-run it when the flag goes", async () => {

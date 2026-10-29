@@ -177,3 +177,35 @@ export const ParamsConsumption: Story = {
     );
   },
 };
+
+const seededConsumptionPort = new FakeFilterUrlPort("");
+
+/** An `initialValue` binds the `{{params.large_orders}}` fence before any
+ * flip, with no URL param — the table opens narrowed. */
+export const InitialValueConsumption: Story = {
+  args: { initialValue: true },
+  decorators: [
+    withDataRuntime(largeDb()),
+    withPageFilters(seededConsumptionPort),
+  ],
+  render: (args) => (
+    <>
+      <Toggle {...args} />
+      <ParamsBridge
+        id="large_orders"
+        blocks={[LARGE]}
+        port={seededConsumptionPort}
+      >
+        <Table data="large" />
+      </ParamsBridge>
+    </>
+  ),
+  play: async ({ canvas }) => {
+    await waitFor(() =>
+      expect(canvas.getByRole("table")).not.toHaveTextContent("small"),
+    );
+    await expect(
+      seededConsumptionPort.read()?.searchParams.has("large_orders"),
+    ).toBe(false);
+  },
+};
