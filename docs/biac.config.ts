@@ -5,6 +5,7 @@ export default {
   directories: {
     "pages/components": { title: "Widgets" },
     "pages/layout": { title: "Layout" },
+    "pages/filters": { title: "Filters" },
   },
   sql: {
     penguins: "data/penguins.csv",
