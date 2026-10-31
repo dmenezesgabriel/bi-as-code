@@ -105,4 +105,21 @@ describe("FiltersProvider onHeldParamsChange", () => {
     });
     expect(reports).toEqual([{ region: "West" }]);
   });
+  it("re-reads the URL when navigationKey changes, not on first render", () => {
+    const port = new FakeFilterUrlPort("");
+    let filters: Filters | undefined;
+    const tree = (key: string) => (
+      <FiltersProvider port={port} navigationKey={key}>
+        <Probe onFilters={(f) => (filters = f)} />
+      </FiltersProvider>
+    );
+    const { rerender } = render(tree("a"));
+    filters?.ensure("island");
+    port.write(new URL("http://biac.test/?island=Dream"));
+    expect(filters?.get("island")?.value).toBeUndefined();
+
+    rerender(tree("b"));
+
+    expect(filters?.get("island")?.value).toBe("Dream");
+  });
 });

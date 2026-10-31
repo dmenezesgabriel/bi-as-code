@@ -1,4 +1,4 @@
-import { useSearch } from "@tanstack/react-router";
+import { useRouterState, useSearch } from "@tanstack/react-router";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
 import { searchWithoutEditorKey } from "../editor/edit-search";
@@ -273,6 +273,12 @@ function PageBody({
   dataUpdates: DataUpdateSubscription | undefined;
 }) {
   const [params, setHeldParams] = usePageParams();
+  // Filter writes use `replaceState`, which the router never sees, so its
+  // `search` can be stale: the history entry's key changes on every
+  // navigation, including one to a URL the router already believes it is on.
+  const navigationKey = useRouterState({
+    select: (state) => state.location.state.__TSR_key ?? state.location.href,
+  });
   const language = usePageLanguage();
   // Memoized for the same reason; a hot-swapped page module brings the
   // edited translations.yaml with it, so a new page re-reads them.
@@ -286,6 +292,7 @@ function PageBody({
       key={pageVersion(Content)}
       port={browserFilterUrlPort}
       onHeldParamsChange={setHeldParams}
+      navigationKey={navigationKey}
     >
       <Content components={mdxComponents} language={language} />
     </FiltersProvider>

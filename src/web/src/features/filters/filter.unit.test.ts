@@ -613,3 +613,60 @@ describe("Filter.registerClient — own-client cross-skip registration", () => {
     expect(filter.selection.clauses[0]?.clients?.has(stubClient)).toBe(false);
   });
 });
+
+/** Moves the fake port's URL as an in-app navigation would, then reports how many writes the port saw before. */
+function navigateTo(port: FakeFilterUrlPort, search: string): number {
+  const writesBefore = port.written.length;
+  port.write(new URL(`http://biac.test/${search}`));
+  return writesBefore + 1;
+}
+
+describe("Filter.syncFromUrl — in-app navigation to the open page", () => {
+  it("adopts a param the URL gained, without writing the URL", () => {
+    const port = new FakeFilterUrlPort("");
+    const filter = new Filter<string>("island", { column: "island" }, port);
+    const writes = navigateTo(port, "?island=Dream");
+
+    filter.syncFromUrl();
+
+    expect(filter.value).toBe("Dream");
+    expect(port.written).toHaveLength(writes);
+    expect(publishedPredicate(filter)?.params).toEqual(["Dream"]);
+  });
+
+  it("falls back to initialValue when the URL lost the param", () => {
+    const port = new FakeFilterUrlPort("?island=Dream");
+    const filter = new Filter<string>(
+      "island",
+      { initialValue: "Biscoe" },
+      port,
+    );
+    navigateTo(port, "");
+
+    filter.syncFromUrl();
+
+    expect(filter.value).toBe("Biscoe");
+  });
+
+  it("clears when the URL lost the param and there is no initialValue", () => {
+    const port = new FakeFilterUrlPort("?island=Dream");
+    const filter = new Filter<string>("island", { column: "island" }, port);
+    navigateTo(port, "");
+
+    filter.syncFromUrl();
+
+    expect(filter.value).toBeUndefined();
+    expect(publishedPredicate(filter)).toBeUndefined();
+  });
+
+  it("stays quiet when the URL already matches the held value", () => {
+    const port = new FakeFilterUrlPort("?island=Dream");
+    const filter = new Filter<string>("island", {}, port);
+    let notified = 0;
+    filter.subscribe(() => notified++);
+
+    filter.syncFromUrl();
+
+    expect(notified).toBe(0);
+  });
+});

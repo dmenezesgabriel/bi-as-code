@@ -213,6 +213,22 @@ export class Filter<Value = unknown> {
     if (this.#setHeld(newValue)) this.#notify();
   }
 
+  /**
+   * Re-reads the live URL after an in-app navigation that kept the page
+   * mounted: the URL is the source of truth, so a param it holds wins and a
+   * param it lacks falls back to `initialValue`, as a fresh load would.
+   * Never writes the URL — it already holds the value.
+   *
+   * @example
+   * filters.get("island")?.syncFromUrl(); // ?island=Dream → value "Dream"
+   */
+  syncFromUrl() {
+    const raw = this.#port.read()?.searchParams.get(this.id);
+    this.setDefault(
+      raw ? this.#opts.deserialize(raw) : this.#opts.initialValue,
+    );
+  }
+
   /** Apply a value in its URL-param form, as a user interaction. Empty/undefined clears. */
   applySerialized(raw: string | undefined) {
     this.value = raw ? this.#opts.deserialize(raw) : undefined;

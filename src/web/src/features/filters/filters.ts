@@ -75,6 +75,11 @@ export class Filters {
     return params;
   }
 
+  /** Re-reads every filter from the URL after an in-app navigation. */
+  syncFromUrl() {
+    for (const filter of this.#filters.values()) filter.syncFromUrl();
+  }
+
   /** Fires on any filter's value change, filters created later included. */
   subscribe(listener: () => void): () => void {
     this.#listeners.add(listener);

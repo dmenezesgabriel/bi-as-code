@@ -189,3 +189,28 @@ test("a shared link into the filters-and-URL page opens it narrowed, and clearin
   expect(urlParam(page, "island")).toBeNull();
   expect(errors).toEqual([]);
 });
+
+test("an in-app link to the open page applies its filter params, as a fresh load does", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}/filters/filters-and-urls`);
+  const island = page.getByRole("combobox", { name: "Island" }).first();
+  const rows = resultTables(page).first().locator("tbody tr");
+  await expect(rows).toHaveCount(5);
+  const link = page.getByRole("link", { name: "This link" });
+
+  await link.click();
+  await expect(island).toHaveText("Dream");
+  await expect(rows).toHaveCount(2);
+
+  // A pick rewrites the URL behind the router's back; the same link must still apply.
+  await island.click();
+  await page.getByRole("option", { name: "Biscoe" }).click();
+  await expect(island).toHaveText("Biscoe");
+  await link.click();
+  await expect(island).toHaveText("Dream");
+  expect(urlParam(page, "island")).toBe("Dream");
+  expect(errors).toEqual([]);
+});

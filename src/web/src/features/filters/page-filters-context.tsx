@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useEffectEvent,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -26,14 +27,18 @@ const PageFiltersContext = createContext<Filters | undefined>(undefined);
 export function FiltersProvider({
   port,
   onHeldParamsChange,
+  navigationKey,
   children,
 }: {
   port: FilterUrlPort;
   /** Called with `Filters.heldParams()` whenever it changes, for `{{params.*}}`. */
   onHeldParamsChange?: (params: Readonly<Record<string, unknown>>) => void;
+  /** Changes on every in-app navigation; each change re-reads the URL into the filters. */
+  navigationKey?: string;
   children: ReactNode;
 }) {
   const [filters] = useState(() => new Filters(port));
+  useSyncOnNavigation(filters, navigationKey);
   useHeldParamsReport(filters, onHeldParamsChange);
   return (
     <PageFiltersContext.Provider value={filters}>
@@ -74,4 +79,17 @@ function useHeldParamsReport(
     report();
     return filters.subscribe(report);
   }, [filters]);
+}
+
+/** The constructor already seeded from the URL, so the first run is skipped. */
+function useSyncOnNavigation(
+  filters: Filters,
+  navigationKey: string | undefined,
+) {
+  const previous = useRef(navigationKey);
+  useEffect(() => {
+    if (previous.current === navigationKey) return;
+    previous.current = navigationKey;
+    filters.syncFromUrl();
+  }, [filters, navigationKey]);
 }

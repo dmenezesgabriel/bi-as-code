@@ -221,3 +221,18 @@ describe("Filters.subscribe", () => {
     expect(calls).toBe(0);
   });
 });
+
+describe("Filters.syncFromUrl", () => {
+  it("re-reads every filter from the URL", () => {
+    const port = new FakeFilterUrlPort("");
+    const filters = new Filters(port);
+    filters.ensure("island");
+    filters.ensure("year");
+    port.write(new URL("http://biac.test/?island=Dream&year=2008"));
+
+    filters.syncFromUrl();
+
+    expect(filters.get("island")?.value).toBe("Dream");
+    expect(filters.get("year")?.value).toBe("2008");
+  });
+});
