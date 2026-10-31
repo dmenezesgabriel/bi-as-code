@@ -15,7 +15,7 @@ import { FilterRosterProvider } from "../../filters/filter-roster-context";
 import type { FilterBarProps } from "./types";
 import { useDockedDisclosure } from "./use-docked-disclosure";
 import { useDockedDismissal } from "./use-docked-dismissal";
-import { useIsIntersecting } from "./use-is-intersecting";
+import { useIsAtRest } from "./use-is-at-rest";
 import { useRestingHeight } from "./use-resting-height";
 
 // One row: a 24 px trigger (WCAG 2.5.8) with breathing room, well under the
@@ -34,7 +34,8 @@ const CARD_FACE = "border-border bg-background px-4 shadow";
  * horizontal bar, sticks it under the page header on scroll (`--dock-top`,
  * default 4rem, clears the `h-12` header; a pane that scrolls on its own
  * sets it lower), and gains a floating card style once its rest
- * position leaves the viewport. Docked, the bar is content laid over the
+ * position leaves the viewport above it (a bar still below the fold keeps its
+ * inputs shown). Docked, the bar is content laid over the
  * page, so it shrinks to a single `Filters` disclosure row (WCAG 2.2 SC
  * 2.4.11: a sticky band must not hide what the reader focuses) and shows
  * the inputs on demand in a card over the page; the inputs stay mounted
@@ -54,7 +55,7 @@ export function FilterBar({ children }: FilterBarProps): ReactElement {
   const sentinel = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const resting = useIsIntersecting(sentinel, true);
+  const resting = useIsAtRest(sentinel, true);
   const { opened, setOpened, panelFocusProps } = useDockedDisclosure(resting);
   const restingHeight = useRestingHeight(bar, resting);
   const collapse = useCallback(() => setOpened(false), [setOpened]);

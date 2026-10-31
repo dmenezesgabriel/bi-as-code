@@ -195,6 +195,14 @@ describe("FilterBar", () => {
       expect(screen.getByText("filter field")).toBeVisible();
     });
 
+    it("watches a region reaching below the viewport, so a bar below the fold stays at rest", () => {
+      const io = stubIntersectionObserver();
+
+      renderBar();
+
+      expect(io.rootMargins()).toEqual(["0px 0px 1000000px 0px"]);
+    });
+
     it("collapses to a Filters trigger when docked, keeping the inputs mounted but hidden", () => {
       const io = stubIntersectionObserver();
       renderBar();

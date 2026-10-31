@@ -173,6 +173,30 @@ export const FloatsOnScroll: Story = {
   },
 };
 
+/** A bar whose rest position is below the fold keeps its inputs shown: the
+ * `Filters` row replaces them only once the reader scrolls past the bar. */
+export const BelowTheFold: Story = {
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  render: () => (
+    <>
+      <div style={{ height: "200vh" }}>Lead-in taller than the viewport.</div>
+      <FilterBar>{TWO_INPUTS}</FilterBar>
+      <div style={{ height: "200vh" }}>Report content.</div>
+    </>
+  ),
+  play: async ({ canvas }) => {
+    const bar = stickyBar(canvas);
+    await firstIntersectionReading(bar.previousElementSibling!);
+
+    await expect(canvas.queryByRole("button", { name: "Filters" })).toBeNull();
+    await expect(bar.className).toContain("border-transparent");
+
+    bar.scrollIntoView({ block: "start" });
+    window.scrollBy(0, 400);
+    await canvas.findByRole("button", { name: "Filters" });
+  },
+};
+
 /** Docked, the bar is one `Filters` row: the inputs stay mounted but leave
  * the accessibility tree, and the page keeps the height the bar gave up —
  * its scroll height and scroll position do not move at the dock moment. */

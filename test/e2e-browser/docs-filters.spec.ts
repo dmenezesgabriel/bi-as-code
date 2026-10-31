@@ -154,6 +154,10 @@ test("a FilterBar on its reference page docks to a Filters row on scroll and cou
   const rows = resultTables(page).first().locator("tbody tr");
   await expect(rows).toHaveCount(5);
 
+  // Below the fold at rest, the bar still shows its inputs, not the row.
+  await expect(trigger).toHaveCount(0);
+  await expect(bar.getByRole("combobox", { name: "Island" })).toBeAttached();
+
   await page.locator("main h2", { hasText: "Props" }).scrollIntoViewIfNeeded();
   await expect(trigger).toBeVisible();
   await trigger.click();

@@ -3,6 +3,7 @@ import { vi } from "vitest";
 interface LiveObserver {
   callback: IntersectionObserverCallback;
   targets: Set<Element>;
+  options: IntersectionObserverInit | undefined;
   dead: boolean;
 }
 
@@ -21,8 +22,11 @@ export function stubIntersectionObserver() {
 
   class StubIntersectionObserver {
     private entry: LiveObserver;
-    constructor(callback: IntersectionObserverCallback) {
-      this.entry = { callback, targets: new Set(), dead: false };
+    constructor(
+      callback: IntersectionObserverCallback,
+      options?: IntersectionObserverInit,
+    ) {
+      this.entry = { callback, targets: new Set(), options, dead: false };
       live.push(this.entry);
     }
     observe(target: Element) {
@@ -59,6 +63,9 @@ export function stubIntersectionObserver() {
         observer.callback(entries, observer as unknown as IntersectionObserver);
       }
     },
+    /** The `rootMargin` each live observer was created with. */
+    rootMargins: () =>
+      live.filter((o) => !o.dead).map((o) => o.options?.rootMargin),
     liveCount: () => live.filter((o) => !o.dead).length,
     observedCount: () =>
       live.filter((o) => !o.dead).reduce((n, o) => n + o.targets.size, 0),
