@@ -176,7 +176,16 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [ ] T4c2 — Every reference page shipped before T4c (`docs/pages/components/*.md`, `docs/pages/layout/*.md`, `docs/pages/filters/*.md` but `filter-bar.md` and `filters-and-urls.md`) gets a Storybook MDX docs page beside its component, `<Meta of>` its stories, one story per documented example (add the missing ones), section for section with the `docs/` page — owner (2026-10-29): every documentation page is built into Storybook too; split by section if too big — split into T4c2a, T4c2b and T4c2c
 - [x] T4c2a — The 8 filter input pages (`button-group`, `date-range`, `dropdown`, `multi-select`, `search`, `slider`, `text-input`, `toggle`) get `src/web/src/features/widgets/inputs/<name>.mdx`
 - [x] T4c2b — The 8 layout pages (`accordion`, `callout`, `details`, `line-break`, `note`, `row`, `stack`, `tabs`) get their Storybook MDX docs pages
-- [ ] T4c2c — The 9 chart, table and value pages (`area-chart`, `bar-chart`, `big-value`, `heatmap`, `histogram`, `line-chart`, `scatter-chart`, `table`, `value`) get their Storybook MDX docs pages
+- [ ] T4c2c — The 9 chart, table and value pages (`area-chart`, `bar-chart`, `big-value`, `heatmap`, `histogram`, `line-chart`, `scatter-chart`, `table`, `value`) get their Storybook MDX docs pages — ~154 documented examples, so split per page into T4c2c1 to T4c2c9, smallest gap first
+- [x] T4c2c1 — `table` (`table/table.mdx`)
+- [ ] T4c2c2 — `value`
+- [ ] T4c2c3 — `big-value`
+- [ ] T4c2c4 — `heatmap`
+- [ ] T4c2c5 — `histogram`
+- [ ] T4c2c6 — `bar-chart`
+- [ ] T4c2c7 — `line-chart`
+- [ ] T4c2c8 — `area-chart`
+- [ ] T4c2c9 — `scatter-chart`
 - [ ] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation)
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor

@@ -1,0 +1,89 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as TableStories from "./table.stories";
+
+<Meta of={TableStories} />
+
+# Table
+
+`<Table>` shows a query's rows as a sortable, paged table. Name a ` ```sql ` fence with `data`, and the table lists every column the query returns. Add `<Column>` children to choose the columns, their order, their headers and their number formats.
+
+Sorting and paging run on the rows already loaded in the browser, so neither sends a new query.
+
+The reader-facing reference is `docs/pages/components/table.md` (`/components/table` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Every column
+
+With no children, the table shows every column in query order. Headers are the column names in title case (`avg_body_mass_g` reads "Avg Body Mass G"), numbers are grouped with no decimals and sit right-aligned, and text sits left. Select a header to sort by it; select it again to reverse the order.
+
+<Canvas of={TableStories.EveryColumn} />
+
+### Rows per page
+
+`pageSize` sets how many rows show before the pager splits the result. The default is 10.
+
+<Canvas of={TableStories.SmallPageSize} />
+
+### Choose and order columns
+
+Each `<Column id>` picks one result column. Only the listed columns show, in the order listed.
+
+<Canvas of={TableStories.ChooseColumns} />
+
+### Column headers
+
+`title` replaces a column's header text.
+
+<Canvas of={TableStories.ColumnHeaders} />
+
+### Number formats
+
+`fmt` formats a column with a format code. The bare codes `num`, `usd` and `pct` pick their decimals and unit from the whole column, so every cell reads in one unit. A code with a digit fixes the decimals: `pct1` shows one.
+
+<Canvas of={TableStories.NumberFormats} />
+
+### Date formats
+
+A `DATE` or `TIMESTAMP` column takes a date code: `longdate` spells the month out. With no `fmt`, a date shows as `2015-03-15`. Dates show as the query returns them, on the UTC clock, so every reader sees the same day.
+
+<Canvas of={TableStories.Dates} />
+
+### Narrow with a filter
+
+`filters` names the page filters whose selections narrow the table's query. A filter narrows on its `valueColumn`, so the query must return a column of that name.
+
+<Canvas of={TableStories.Filtered} />
+
+`filters` also takes a list, `filters={["island", "sex"]}`, and every listed filter narrows the query.
+
+<Canvas of={TableStories.FilteredByTwo} />
+
+## Props
+
+### Table
+
+| Prop       | Type                 | Default      | What it does                                                          |
+| ---------- | -------------------- | ------------ | --------------------------------------------------------------------- |
+| `data`     | string               | required     | The name of a ` ```sql ` fence on the page                            |
+| `pageSize` | number               | `10`         | Rows shown per page                                                   |
+| `filters`  | string or string\[\] | none         | Page filter ids whose selections narrow the query                     |
+| children   | `<Column>` elements  | every column | The columns to show, in order; with none, every column in query order |
+
+### Column
+
+| Prop    | Type   | Default                          | What it does                                                       |
+| ------- | ------ | -------------------------------- | ------------------------------------------------------------------ |
+| `id`    | string | required                         | The result column to show                                          |
+| `title` | string | the column name in title case    | The header text                                                    |
+| `fmt`   | string | numbers grouped with no decimals | A format code, as listed under Format codes on the Value docs page |
+
+## Errors
+
+A mistake in a table's markup shows as a message where the table would be, and the rest of the page still renders. The message names the query and what is wrong: a `data` that names no fence on the page, a `<Column id>` the query does not return (with the columns it does return), or a `fmt` the column's values cannot take.
+
+<Canvas of={TableStories.UnknownName} />
+
+<Canvas of={TableStories.UnknownColumn} />
+
+<Canvas of={TableStories.BadFormat} />

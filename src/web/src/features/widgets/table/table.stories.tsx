@@ -23,6 +23,15 @@ function fakeDb(rows: Row[]): FakeDuckDb {
   return db;
 }
 
+/** The rendered column headers, left to right, equal `expected`. */
+async function expectHeaders(
+  canvas: { getAllByRole: (role: string) => HTMLElement[] },
+  expected: string[],
+): Promise<void> {
+  const headers = canvas.getAllByRole("columnheader");
+  await expect(headers.map((th) => th.textContent)).toEqual(expected);
+}
+
 const meta = {
   title: "Widgets/Table",
   component: Table,
@@ -49,6 +58,96 @@ export const Success: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole("table")).toBeVisible();
     await expect(canvas.getByText("Page 1 of 2 · 20 rows")).toBeInTheDocument();
+  },
+};
+
+const SPECIES_BY_ISLAND: Row[] = [
+  {
+    species: "Adelie",
+    island: "Biscoe",
+    penguins: 1044,
+    avg_body_mass_g: 3709.7,
+  },
+  {
+    species: "Gentoo",
+    island: "Biscoe",
+    penguins: 1237,
+    avg_body_mass_g: 5076,
+  },
+];
+
+/** With no children every column shows in query order, headers in title case
+ * (`avg_body_mass_g` reads "Avg Body Mass G"), numbers grouped with no
+ * decimals. */
+export const EveryColumn: Story = {
+  decorators: [withQueryData([ORDERS], fakeDb(SPECIES_BY_ISLAND))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toBeVisible();
+    await expectHeaders(canvas, [
+      "Species",
+      "Island",
+      "Penguins",
+      "Avg Body Mass G",
+    ]);
+    await expect(canvas.getByRole("cell", { name: "1,044" })).toBeVisible();
+  },
+};
+
+/** Only the listed `<Column>`s show, in the order listed. */
+export const ChooseColumns: Story = {
+  args: {
+    children: [
+      <Column key="island" id="island" />,
+      <Column key="species" id="species" />,
+      <Column key="penguins" id="penguins" />,
+    ],
+  },
+  decorators: [withQueryData([ORDERS], fakeDb(SPECIES_BY_ISLAND))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toBeVisible();
+    await expectHeaders(canvas, ["Island", "Species", "Penguins"]);
+  },
+};
+
+/** `title` replaces a column's header text; a column without one keeps its
+ * title-cased name. */
+export const ColumnHeaders: Story = {
+  args: {
+    children: [
+      <Column key="species" id="species" />,
+      <Column key="avg" id="avg_body_mass_g" title="Average body mass (g)" />,
+    ],
+  },
+  decorators: [withQueryData([ORDERS], fakeDb(SPECIES_BY_ISLAND))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toBeVisible();
+    await expectHeaders(canvas, ["Species", "Average body mass (g)"]);
+  },
+};
+
+const ISLAND_SHARE: Row[] = [
+  { island: "Biscoe", penguins: 2281, share: 0.4912 },
+  { island: "Dream", penguins: 1837, share: 0.3956 },
+];
+
+/** `num0` fixes zero decimals and `pct1` one: 0.4912 reads `49.1%`. */
+export const NumberFormats: Story = {
+  args: {
+    children: [
+      <Column key="island" id="island" />,
+      <Column key="penguins" id="penguins" fmt="num0" />,
+      <Column key="share" id="share" fmt="pct1" title="Share of penguins" />,
+    ],
+  },
+  decorators: [withQueryData([ORDERS], fakeDb(ISLAND_SHARE))],
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole("cell", { name: "49.1%" }),
+    ).toBeVisible();
+    await expect(canvas.getByRole("cell", { name: "2,281" })).toBeVisible();
+    await expect(
+      canvas.getByRole("columnheader", { name: /Share of penguins/ }),
+    ).toBeVisible();
   },
 };
 
@@ -217,11 +316,7 @@ export const ColumnChildren: Story = {
   decorators: [withQueryData([ORDERS], fakeDb(REVENUE))],
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole("table")).toBeVisible();
-    const headers = canvas.getAllByRole("columnheader");
-    await expect(headers.map((th) => th.textContent)).toEqual([
-      "Share",
-      "Revenue",
-    ]);
+    await expectHeaders(canvas, ["Share", "Revenue"]);
     await expect(canvas.getByRole("cell", { name: "$6k" })).toBeVisible();
     await expect(canvas.queryByRole("cell", { name: "West" })).toBeNull();
   },
