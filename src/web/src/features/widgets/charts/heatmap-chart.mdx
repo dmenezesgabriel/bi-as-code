@@ -1,0 +1,135 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as HeatmapStories from "./heatmap-chart.stories";
+
+<Meta of={HeatmapStories} />
+
+# Heatmap
+
+`<Heatmap>` draws a grid of cells from a ` ```sql ` fence named by `data`: `x` names the column whose values run along the top, `y` the column whose values run down the side, and `value` the numeric column that colours each cell. A heatmap shows where a measure runs high or low across two categories at once; for one category, use a Bar chart.
+
+The chart issues no query of its own. The query returns one row per cell, so it groups by both `x` and `y`. The columns and rows appear in the order the query first returns their values, so the query's `order by` sets them, and a pair the query does not return leaves its cell blank.
+
+The reader-facing reference is `docs/pages/components/heatmap.md` (`/components/heatmap` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Cells from a query
+
+`data`, `x`, `y` and `value` are all a heatmap needs. The strip under the grid maps colour to value, from the lowest cell to the highest. Hover a cell to read its three columns.
+
+<Canvas of={HeatmapStories.WeeklyGrid} />
+
+### Missing cells
+
+A pair of `x` and `y` values the query does not return draws no cell. The labels, which [Value labels](#value-labels) describes, tell an empty cell from a low one.
+
+<Canvas of={HeatmapStories.SparseGrid} />
+
+### Value format
+
+`valueFmt` formats the values in the tooltip and at the ends of the colour strip with a format code from the Value page.
+
+<Canvas of={HeatmapStories.ValueFormat} />
+
+### Value labels
+
+`labels` prints each cell's value on it. Labels that would overlap are left out. Without `labelsFmt`, they follow `valueFmt`.
+
+<Canvas of={HeatmapStories.CellLabels} />
+
+### Label format
+
+`labelsFmt` formats the labels only, so the tooltip and the strip keep `valueFmt`.
+
+<Canvas of={HeatmapStories.LabelFormat} />
+
+### Colour scale
+
+`colorScale` sets the colours the cells run through. One CSS colour runs from the page background to that colour, so it reads in light and dark mode alike. A list of two or more colours runs from the first, at the lowest value, through the rest to the last, at the highest.
+
+<Canvas of={HeatmapStories.SingleColorScale} />
+
+<Canvas of={HeatmapStories.ColorScaleList} />
+
+### X format
+
+`xFmt` formats the column labels and the `x` row of the tooltip. A date column reads as an ISO day until you format it.
+
+<Canvas of={HeatmapStories.XFormat} />
+
+### Y format
+
+`yFmt` formats the row labels and the `y` row of the tooltip.
+
+<Canvas of={HeatmapStories.YFormat} />
+
+### Title and subtitle
+
+`title` heads the chart and `subtitle` sits under it, both above the grid.
+
+<Canvas of={HeatmapStories.TitleAndSubtitle} />
+
+### Axis titles
+
+`xTitle` and `yTitle` name the axes.
+
+<Canvas of={HeatmapStories.AxisTitles} />
+
+### Without the colour strip
+
+`legend={false}` hides the colour strip under the grid; the tooltip still reads each cell's value.
+
+<Canvas of={HeatmapStories.NoLegend} />
+
+### Height
+
+`height` sets the chart's height in pixels. The width always fills the column.
+
+<Canvas of={HeatmapStories.Height} />
+
+### SVG renderer
+
+`renderer="svg"` draws the chart as SVG instead of on a canvas, which keeps it sharp when zoomed or printed.
+
+<Canvas of={HeatmapStories.SvgRenderer} />
+
+### Narrow with a filter
+
+`filters` names the page filters whose selections narrow the chart's query. A filter narrows on its `valueColumn`, so the query must return a column of that name. `filters` also takes a list, `filters={["island", "species"]}`, and every listed filter narrows the query.
+
+<Canvas of={HeatmapStories.Filtered} />
+
+## Props
+
+| Prop         | Type                  | Default                  | What it does                                                                 |
+| ------------ | --------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `data`       | string                | required                 | The name of a ` ```sql ` fence on the page                                   |
+| `x`          | string                | required                 | The column whose values run along the top                                    |
+| `y`          | string                | required                 | The column whose values run down the side                                    |
+| `value`      | string                | required                 | The numeric column that colours each cell                                    |
+| `valueFmt`   | string                | auto-scaled number       | A [format code](/components/value#format-codes) for the values and the strip |
+| `colorScale` | string or string\[\]  | the theme's scale colour | One colour to run to from the background, or the colours to run through      |
+| `labels`     | boolean               | `false`                  | Print each cell's value on it                                                |
+| `labelsFmt`  | string                | `valueFmt`               | A format code for the labels                                                 |
+| `xFmt`       | string                | the value as returned    | A format code for the column labels and the tooltip                          |
+| `yFmt`       | string                | the value as returned    | A format code for the row labels and the tooltip                             |
+| `title`      | string                | none                     | The chart's heading                                                          |
+| `subtitle`   | string                | none                     | A line under the title                                                       |
+| `xTitle`     | string                | none                     | The `x` axis name                                                            |
+| `yTitle`     | string                | none                     | The `y` axis name                                                            |
+| `legend`     | boolean               | `true`                   | Show the colour strip                                                        |
+| `height`     | number                | `300`                    | The chart's height in pixels                                                 |
+| `renderer`   | `"canvas"` or `"svg"` | `"canvas"`               | How the chart is drawn                                                       |
+| `filters`    | string or string\[\]  | none                     | Page filter ids whose selections narrow the query                            |
+
+## Errors
+
+A mistake in a heatmap's markup shows as a message where the chart would be, and the rest of the page still renders. The message names the query and what is wrong: a `data` that names no fence on the page, an `x`, `y` or `value` the query does not return (with the columns it does return), or a format code the column cannot take. A query that returns no rows, or none with a number in `value`, shows "0 rows" in the chart's place, at the chart's height. When the query returns the same `x` and `y` pair twice, the cell shows the last row, so group by both.
+
+<Canvas of={HeatmapStories.UnknownName} />
+
+<Canvas of={HeatmapStories.UnknownColumn} />
+
+<Canvas of={HeatmapStories.UnknownFmt} />
+
+<Canvas of={HeatmapStories.NoRows} />

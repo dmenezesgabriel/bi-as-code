@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Row } from "../../data/types";
+import type { SqlBlock } from "../../pages/types";
 import { expect } from "storybook/test";
 import {
   injectBrandStyle,
@@ -15,6 +17,32 @@ import {
   readyHost,
 } from "./series-chart.fixture";
 import type { HeatmapChartProps } from "./types";
+
+type AxisOption = {
+  xAxis?: { data?: unknown[]; name?: string }[];
+  yAxis?: { data?: unknown[]; name?: string }[];
+};
+
+/** Two months × two weather kinds, the shape of the documented
+ * `weather_days_2015` query: `month` is a Date, as DuckDB returns it. */
+const WEATHER_DAYS: SqlBlock = {
+  name: "weather_days",
+  sql: "select month, weather, days from weather_days",
+};
+const WEATHER_ROWS: Row[] = [
+  { month: new Date(Date.UTC(2015, 0, 1)), weather: "rain", days: 18 },
+  { month: new Date(Date.UTC(2015, 0, 1)), weather: "sun", days: 4 },
+  { month: new Date(Date.UTC(2015, 1, 1)), weather: "rain", days: 12 },
+  { month: new Date(Date.UTC(2015, 1, 1)), weather: "sun", days: 9 },
+];
+
+/** Single-assertion play for the alert stories: the alert names the
+ * offending value; the unit tests pin the full message. */
+const alertPlay =
+  (want: string): Story["play"] =>
+  async ({ canvas }) => {
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(want);
+  };
 
 const meta = {
   title: "Widgets/Charts/Heatmap",
@@ -216,5 +244,169 @@ export const Filtered: Story = {
     }>(canvasElement);
     expect(option.yAxis?.[0]?.data).toEqual(["South"]);
     expect(option.series?.[0]?.data).toHaveLength(3);
+  },
+};
+
+/** `valueFmt` formats the tooltip and the ends of the colour strip. */
+export const ValueFormat: Story = {
+  args: { valueFmt: "usd0" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      visualMap?: { formatter?: (v: number) => string }[];
+    }>(canvasElement);
+    expect(option.visualMap?.[0]?.formatter?.(140)).toBe("$140");
+  },
+};
+
+/** `labelsFmt` formats the cell labels only; the strip keeps `valueFmt`. */
+export const LabelFormat: Story = {
+  args: { labels: true, valueFmt: "num1", labelsFmt: "num0" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: {
+        label?: { formatter?: (p: { value: number[] }) => string };
+      }[];
+      visualMap?: { formatter?: (v: number) => string }[];
+    }>(canvasElement);
+    expect(
+      option.series?.[0]?.label?.formatter?.({ value: [0, 0, 95.4] }),
+    ).toBe("95");
+    expect(option.visualMap?.[0]?.formatter?.(95.4)).toBe("95.4");
+  },
+};
+
+/** A list of colours runs from the first, at the lowest value, to the last. */
+export const ColorScaleList: Story = {
+  args: { colorScale: ["#2563eb", "#facc15", "#dc2626"] },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<RampOption>(canvasElement);
+    expect(option.visualMap?.[0]?.inRange?.color).toEqual([
+      "#2563eb",
+      "#facc15",
+      "#dc2626",
+    ]);
+  },
+};
+
+/** `xFmt` turns a Date column's labels into `Jan 1/15` instead of ISO days. */
+export const XFormat: Story = {
+  args: {
+    data: "weather_days",
+    x: "month",
+    y: "weather",
+    value: "days",
+    xFmt: "shortdate",
+  },
+  decorators: [withQueryData([WEATHER_DAYS], dbWith(WEATHER_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<AxisOption>(canvasElement);
+    expect(option.xAxis?.[0]?.data).toEqual(["Jan 1/15", "Feb 1/15"]);
+  },
+};
+
+/** `yFmt` formats the row labels the same way. */
+export const YFormat: Story = {
+  args: {
+    data: "weather_days",
+    x: "weather",
+    y: "month",
+    value: "days",
+    yFmt: "longdate",
+  },
+  decorators: [withQueryData([WEATHER_DAYS], dbWith(WEATHER_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<AxisOption>(canvasElement);
+    expect(option.yAxis?.[0]?.data).toEqual([
+      "January 1, 2015",
+      "February 1, 2015",
+    ]);
+  },
+};
+
+/** `title` heads the chart and `subtitle` sits under it, above the grid. */
+export const TitleAndSubtitle: Story = {
+  args: { title: "Orders per week", subtitle: "Units" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText("Orders per week"),
+    ).toBeInTheDocument();
+    await expect(canvas.getByText("Units")).toBeInTheDocument();
+  },
+};
+
+/** `xTitle` and `yTitle` name the two axes. */
+export const AxisTitles: Story = {
+  args: { xTitle: "Week", yTitle: "Region" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<AxisOption>(canvasElement);
+    expect(option.xAxis?.[0]?.name).toBe("Week");
+    expect(option.yAxis?.[0]?.name).toBe("Region");
+  },
+};
+
+/** `legend={false}` hides the colour strip; the tooltip still reads values. */
+export const NoLegend: Story = {
+  args: { legend: false },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{ visualMap?: { show?: boolean }[] }>(
+      canvasElement,
+    );
+    expect(option.visualMap?.[0]?.show).toBe(false);
+  },
+};
+
+/** `height` sets the chart's height in pixels. */
+export const Height: Story = {
+  args: { height: 180 },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const host = await readyHost(canvasElement);
+    expect(host.getBoundingClientRect().height).toBe(180);
+  },
+};
+
+/** `renderer="svg"` draws SVG instead of a canvas. */
+export const SvgRenderer: Story = {
+  args: { renderer: "svg" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: async ({ canvasElement }) => {
+    const host = await readyHost(canvasElement);
+    expect(host.querySelector("svg")).not.toBeNull();
+    expect(host.querySelector("canvas")).toBeNull();
+  },
+};
+
+/** A `data` naming no fence alerts in the chart's place. */
+export const UnknownName: Story = {
+  args: { data: "ghost" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: alertPlay("ghost"),
+};
+
+/** A column the query does not return is named, with the columns it does. */
+export const UnknownColumn: Story = {
+  args: { value: "nope" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: alertPlay('"nope"'),
+};
+
+/** A format code the column cannot take names itself in the alert. */
+export const UnknownFmt: Story = {
+  args: { valueFmt: "bogus" },
+  decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
+  play: alertPlay('fmt="bogus"'),
+};
+
+/** A query that returns no rows shows "0 rows" at the chart's height. */
+export const NoRows: Story = {
+  decorators: [withQueryData([WEEKLY_TREND], dbWith([]))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("0 rows")).toBeInTheDocument();
   },
 };

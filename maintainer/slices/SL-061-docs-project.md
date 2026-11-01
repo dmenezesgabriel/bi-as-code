@@ -180,7 +180,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4c2c1 — `table` (`table/table.mdx`)
 - [x] T4c2c2 — `value` (`value/value.mdx`)
 - [x] T4c2c3 — `big-value` (`value/big-value.mdx`)
-- [ ] T4c2c4 — `heatmap`
+- [x] T4c2c4 — `heatmap` (`charts/heatmap-chart.mdx`)
 - [ ] T4c2c5 — `histogram`
 - [ ] T4c2c6 — `bar-chart`
 - [ ] T4c2c7 — `line-chart`
