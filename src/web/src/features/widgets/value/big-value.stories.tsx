@@ -71,6 +71,141 @@ export const ValueOnly: Story = {
   },
 };
 
+/** With only `data`, the first column of the first row is shown and the
+ * column's name is the title. */
+export const Headline: Story = {
+  decorators: [withData()],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("revenue")).toBeInTheDocument();
+    await expect(canvas.getByText("1.2M")).toBeInTheDocument();
+  },
+};
+
+/** `column` picks the result column; the title follows it. */
+export const PickColumn: Story = {
+  args: { column: "orders" },
+  decorators: [withData()],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("orders")).toBeInTheDocument();
+    await expect(canvas.getByText("355")).toBeInTheDocument();
+  },
+};
+
+/** `row` counts from 0, so `row={1}` reads the second row. */
+export const PickRow: Story = {
+  args: { column: "revenue", fmt: "usd", row: 1 },
+  decorators: [
+    withData(
+      dbWith([
+        { revenue: 1234567, wow_pct: 0.052, orders: 355 },
+        { revenue: 500000, wow_pct: 0.01, orders: 120 },
+      ]),
+    ),
+  ],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("$500k")).toBeInTheDocument();
+    await expect(canvas.queryByText("$1.2M")).toBeNull();
+  },
+};
+
+/** `delta` names a column of the same row; `deltaFmt` formats it. */
+export const WithDelta: Story = {
+  args: {
+    column: "revenue",
+    fmt: "usd",
+    delta: "wow_pct",
+    deltaFmt: "pct1",
+  },
+  decorators: [withData()],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("+5.2%")).toBeInTheDocument();
+  },
+};
+
+/** `text` adds a caption after the change. */
+export const WithCaption: Story = {
+  args: { ...WithDelta.args, text: "vs. last week" },
+  decorators: [withData()],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("vs. last week")).toBeInTheDocument();
+  },
+};
+
+/** `showSymbol={false}` hides the arrow and keeps the signed number. */
+export const NoSymbol: Story = {
+  args: { ...WithDelta.args, showSymbol: false },
+  decorators: [withData()],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByText("+5.2%")).toBeInTheDocument();
+    await expect(canvasElement.querySelector("[data-status] svg")).toBeNull();
+  },
+};
+
+/** `symbolPosition="right"` moves the arrow after the number. */
+export const SymbolRight: Story = {
+  args: { ...WithDelta.args, symbolPosition: "right" },
+  decorators: [withData()],
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText("+5.2%");
+    const html = canvasElement.querySelector("[data-status]")!.innerHTML;
+    await expect(html.indexOf("+5.2%")).toBeLessThan(html.indexOf("<svg"));
+  },
+};
+
+/** A change inside `neutralRange` reads neutral: no good or bad colour. */
+export const NeutralRange: Story = {
+  args: { ...WithDelta.args, neutralRange: [-0.1, 0.1] },
+  decorators: [withData()],
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText("5.2%");
+    await expect(canvasElement.querySelector("[data-status]")).toHaveAttribute(
+      "data-status",
+      "neutral",
+    );
+  },
+};
+
+/** `sparkline` names a second fence drawn as a small line beside the value. */
+export const WithSparkline: Story = {
+  args: { column: "revenue", fmt: "usd", sparkline: "weekly_revenue" },
+  decorators: [withData()],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("img")).toBeInTheDocument();
+  },
+};
+
+/** `sparklineX`, `sparklineY` and `sparklineType` choose the columns and mark. */
+export const SparklineColumns: Story = {
+  args: {
+    column: "revenue",
+    fmt: "usd",
+    sparkline: "weekly_revenue",
+    sparklineX: "week",
+    sparklineY: "revenue",
+    sparklineType: "area",
+  },
+  decorators: [withData()],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("img")).toHaveAccessibleName(
+      "revenue by week",
+    );
+  },
+};
+
+/** `sparklineColor` takes any CSS colour, including the theme's chart colours. */
+export const SparklineColor: Story = {
+  args: {
+    column: "revenue",
+    fmt: "usd",
+    sparkline: "weekly_revenue",
+    sparklineColor: "var(--chart-1)",
+  },
+  decorators: [withData()],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("img")).toBeInTheDocument();
+  },
+};
+
 /** `downIsGood` flips the sign colors — a negative reads green. */
 export const DownIsGood: Story = {
   args: {

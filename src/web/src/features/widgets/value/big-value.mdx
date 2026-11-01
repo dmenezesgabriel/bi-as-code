@@ -1,0 +1,158 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as BigValueStories from "./big-value.stories";
+
+<Meta of={BigValueStories} />
+
+# Big value
+
+`<BigValue>` shows a headline number: a small title, the value, its change on a prior period and a sparkline of its trend. It reads one row of a ` ```sql ` fence named by `data`; the change is another column of the same row, and the sparkline is a second fence.
+
+The query does the arithmetic, so a year-on-year or week-on-week change is a column you compute in SQL. For a number inside a sentence, use Value.
+
+The reader-facing reference is `docs/pages/components/big-value.md` (`/components/big-value` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### A headline number
+
+With only `data`, a big value shows the first column of the first row, titled by the column's name.
+
+<Canvas of={BigValueStories.Headline} />
+
+### Pick the column
+
+`column` names the result column to show. The title follows it.
+
+<Canvas of={BigValueStories.PickColumn} />
+
+### Pick the row
+
+`row` is the row's position in the result, counting from 0.
+
+<Canvas of={BigValueStories.PickRow} />
+
+### Title
+
+`title` replaces the title line.
+
+<Canvas of={BigValueStories.ValueOnly} />
+
+### Format
+
+`fmt` formats the value with a format code from the Value page.
+
+<Canvas of={BigValueStories.ValueOnly} />
+
+### Change on a prior period
+
+`delta` names a column of the same row that holds the signed change. It shows under the value with an arrow and the good or bad colour. `deltaFmt` formats it; without one it takes `fmt`.
+
+<Canvas of={BigValueStories.WithDelta} />
+
+### Caption
+
+`text` adds a caption after the change.
+
+<Canvas of={BigValueStories.WithCaption} />
+
+### Chip
+
+`chip` draws the change on a tinted chip.
+
+<Canvas of={BigValueStories.ChipDelta} />
+
+### When down is good
+
+`downIsGood` swaps the colours, so a fall reads as good news.
+
+<Canvas of={BigValueStories.DownIsGood} />
+
+### Without the arrow
+
+`showSymbol={false}` hides the arrow and keeps the signed number.
+
+<Canvas of={BigValueStories.NoSymbol} />
+
+### Arrow position
+
+`symbolPosition` puts the arrow on the `left` of the change (the default for a big value) or on its `right`.
+
+<Canvas of={BigValueStories.SymbolRight} />
+
+### Neutral range
+
+`neutralRange` is a `[min, max]` band around zero where a change reads as neutral: no good or bad colour and a flat arrow. The default `[0, 0]` makes only an exact zero neutral, and `null` leaves an end open.
+
+<Canvas of={BigValueStories.NeutralRange} />
+
+### Sparkline
+
+`sparkline` names a second fence whose rows draw a small trend to the right of the value. By default it draws that result's second column against its first.
+
+<Canvas of={BigValueStories.WithSparkline} />
+
+### Sparkline type
+
+`sparklineType` is `line` (the default), `area` or `bar`.
+
+<Canvas of={BigValueStories.BarSparkline} />
+
+### Sparkline columns
+
+`sparklineX` and `sparklineY` name the columns the sparkline draws.
+
+<Canvas of={BigValueStories.SparklineColumns} />
+
+### Sparkline colour
+
+`sparklineColor` takes any CSS colour, including the theme's chart colours such as `var(--chart-1)`. The default is the theme's sparkline colour.
+
+<Canvas of={BigValueStories.SparklineColor} />
+
+### Narrow with a filter
+
+`filters` names the page filters whose selections narrow the query. A filter narrows on its `valueColumn`, so the query must return a column of that name. With nothing picked, the value reads row 0 of the whole result. When the big value has a sparkline, the same filters narrow the sparkline's query too, so its fence needs the same columns.
+
+<Canvas of={BigValueStories.Filtered} />
+
+### A missing value
+
+A cell that is empty, or a query that returns no rows, shows `–` and hides the change and the sparkline.
+
+<Canvas of={BigValueStories.Empty} />
+
+## Props
+
+| Prop             | Type                          | Default                                   | What it does                                               |
+| ---------------- | ----------------------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| `data`           | string                        | required                                  | The name of a ` ```sql ` fence on the page                 |
+| `column`         | string                        | the first column                          | The result column to show                                  |
+| `row`            | number                        | `0`                                       | The row to read, counting from 0                           |
+| `fmt`            | string                        | auto-scaled number                        | A format code for the value                                |
+| `title`          | string                        | `column`, or the first column             | The title line                                             |
+| `delta`          | string                        | none                                      | A column of the same row holding the signed change         |
+| `deltaFmt`       | string                        | `fmt`                                     | A format code for the change                               |
+| `text`           | string                        | none                                      | A caption after the change                                 |
+| `chip`           | boolean                       | `false`                                   | Draw the change on a tinted chip                           |
+| `downIsGood`     | boolean                       | `false`                                   | Colour a fall as good and a rise as bad                    |
+| `showSymbol`     | boolean                       | `true`                                    | Show the arrow                                             |
+| `symbolPosition` | `"left"` or `"right"`         | `"left"`                                  | Which side of the change the arrow sits                    |
+| `neutralRange`   | `[min, max]`                  | `[0, 0]`                                  | The band around zero that reads as neutral; `null` is open |
+| `sparkline`      | string                        | none                                      | The name of a second fence whose rows draw the trend       |
+| `sparklineType`  | `"line"`, `"area"` or `"bar"` | `"line"`                                  | The sparkline's mark                                       |
+| `sparklineX`     | string                        | the first column that is not `sparklineY` | The sparkline's x column                                   |
+| `sparklineY`     | string                        | the second column                         | The sparkline's numeric column                             |
+| `sparklineColor` | string                        | the theme's sparkline colour              | Any CSS colour                                             |
+| `filters`        | string or string\[\]          | none                                      | Page filter ids whose selections narrow both queries       |
+
+## Errors
+
+A mistake in a big value's markup shows as a message where it would be, and the rest of the page still renders. The message names the query and what is wrong: a `data` or `sparkline` that names no fence on the page, a `column` or `delta` the query does not return (with the columns it does return), or a `fmt` the cell cannot take.
+
+<Canvas of={BigValueStories.UnknownName} />
+
+<Canvas of={BigValueStories.UnknownColumn} />
+
+<Canvas of={BigValueStories.UnknownFmt} />
+
+<Canvas of={BigValueStories.UnknownSparkline} />
