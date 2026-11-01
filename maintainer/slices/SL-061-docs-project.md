@@ -178,7 +178,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4c2b — The 8 layout pages (`accordion`, `callout`, `details`, `line-break`, `note`, `row`, `stack`, `tabs`) get their Storybook MDX docs pages
 - [ ] T4c2c — The 9 chart, table and value pages (`area-chart`, `bar-chart`, `big-value`, `heatmap`, `histogram`, `line-chart`, `scatter-chart`, `table`, `value`) get their Storybook MDX docs pages — ~154 documented examples, so split per page into T4c2c1 to T4c2c9, smallest gap first
 - [x] T4c2c1 — `table` (`table/table.mdx`)
-- [ ] T4c2c2 — `value`
+- [x] T4c2c2 — `value` (`value/value.mdx`)
 - [ ] T4c2c3 — `big-value`
 - [ ] T4c2c4 — `heatmap`
 - [ ] T4c2c5 — `histogram`

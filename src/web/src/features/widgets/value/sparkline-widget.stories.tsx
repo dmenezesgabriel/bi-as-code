@@ -71,6 +71,16 @@ export const NamedAxes: Story = {
   },
 };
 
+/** `label` replaces the accessible name a screen reader announces. */
+export const CustomLabel: Story = {
+  args: { label: "Weekly revenue, 13 weeks" },
+  decorators: [withQueryData([TREND], FakeDuckDb.withRows(ROWS))],
+  play: async ({ canvas }) => {
+    const svg = await canvas.findByRole("img");
+    await expect(svg).toHaveAttribute("aria-label", "Weekly revenue, 13 weeks");
+  },
+};
+
 /** `color` overrides the muted default — any CSS color works. */
 export const CustomColor: Story = {
   args: { color: "#059669" },

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import {
@@ -94,6 +94,49 @@ export const WithCaption: Story = {
   decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
   play: async ({ canvas }) => {
     await expect(await canvas.findByText("WoW")).toBeInTheDocument();
+  },
+};
+
+/** `showValue={false}` keeps the arrow and drops the number. */
+export const ArrowOnly: Story = {
+  args: { showValue: false },
+  decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(canvasElement.querySelector("[data-status] svg")).not.toBeNull(),
+    );
+    await expect(root(canvasElement)).not.toHaveTextContent("+5.2%");
+  },
+};
+
+/** `showSymbol={false}` keeps the number and drops the arrow. */
+export const NumberOnly: Story = {
+  args: { showSymbol: false },
+  decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByText("+5.2%")).toBeInTheDocument();
+    await expect(root(canvasElement).querySelector("svg")).toBeNull();
+  },
+};
+
+/** `symbolPosition="left"` puts the arrow before the number. */
+export const SymbolLeft: Story = {
+  args: { symbolPosition: "left" },
+  decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText("+5.2%");
+    const html = root(canvasElement).innerHTML;
+    await expect(html.indexOf("<svg")).toBeLessThan(html.indexOf("+5.2%"));
+  },
+};
+
+/** A change inside `neutralRange` reads neutral: no good or bad colour. */
+export const NeutralRange: Story = {
+  args: { neutralRange: [-0.1, 0.1] },
+  decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText("5.2%");
+    await expect(root(canvasElement)).toHaveAttribute("data-status", "neutral");
   },
 };
 

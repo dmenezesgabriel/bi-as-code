@@ -1,0 +1,236 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as ValueStories from "./value.stories";
+import * as DeltaStories from "./delta.stories";
+import * as SparklineStories from "./sparkline-widget.stories";
+
+<Meta of={ValueStories} />
+
+# Value, Delta and Sparkline
+
+Three widgets put a query's result inside a sentence:
+
+- `<Value>` shows one cell, formatted.
+- `<Delta>` shows one signed change, coloured by whether it is good news, with an arrow.
+- `<Sparkline>` draws a whole result as a small line, area or bar chart.
+
+Each one reads a ` ```sql ` fence named by `data`. The query does the arithmetic: a widget only picks a cell, formats it and draws it. For a headline number with its change and trend in one block, use Big value.
+
+The reader-facing reference is `docs/pages/components/value.md` (`/components/value` in `bin/biac dev docs`); each example there has a story here.
+
+## Value
+
+### A cell in a sentence
+
+With only `data`, a value shows the first column of the first row.
+
+<Canvas of={ValueStories.DefaultColumnAndFmt} />
+
+### Pick the column
+
+`column` names the result column to read.
+
+<Canvas of={ValueStories.Success} />
+
+### Pick the row
+
+`row` is the row's position in the result, counting from 0.
+
+<Canvas of={ValueStories.RowSelection} />
+
+### Format
+
+`fmt` formats the cell with one of the [format codes](#format-codes).
+
+<Canvas of={ValueStories.Success} />
+
+### Colour
+
+`color` takes any CSS colour, including the theme's chart colours such as `var(--chart-1)`.
+
+<Canvas of={ValueStories.CustomColor} />
+
+### Negative numbers in red
+
+`redNegatives` shows a negative number in the theme's negative colour, and takes precedence over `color`.
+
+<Canvas of={ValueStories.RedNegatives} />
+
+### Narrow with a filter
+
+`filters` names the page filters whose selections narrow the query. A filter narrows on its `valueColumn`, so the query must return a column of that name.
+
+<Canvas of={ValueStories.Filtered} />
+
+## Delta
+
+### A change in a sentence
+
+A delta shows a signed number: an explicit `+` on a positive one, an arrow, and the good or bad colour. Like `<Value>`, it reads `column` from `row` and formats it with `fmt`.
+
+<Canvas of={DeltaStories.Positive} />
+
+### Caption
+
+`text` adds a caption after the number.
+
+<Canvas of={DeltaStories.WithCaption} />
+
+### Chip
+
+`chip` draws the delta on a tinted chip.
+
+<Canvas of={DeltaStories.Chip} />
+
+### When down is good
+
+`downIsGood` swaps the colours, so a fall reads as good news.
+
+<Canvas of={DeltaStories.DownIsGood} />
+
+### Only the arrow, or only the number
+
+`showValue={false}` hides the number and keeps the arrow; `showSymbol={false}` hides the arrow and keeps the number.
+
+<Canvas of={DeltaStories.ArrowOnly} />
+
+<Canvas of={DeltaStories.NumberOnly} />
+
+### Arrow position
+
+`symbolPosition` puts the arrow on the `right` of the number (the default) or on its `left`.
+
+<Canvas of={DeltaStories.SymbolLeft} />
+
+### Neutral range
+
+`neutralRange` is a `[min, max]` band around zero where a change reads as neutral: no good or bad colour and a flat arrow. The default `[0, 0]` makes only an exact zero neutral. Use `null` for an open end: `[null, 0]` makes every change at or below zero neutral.
+
+<Canvas of={DeltaStories.NeutralRange} />
+
+### Narrow with a filter
+
+`filters` narrows the delta's query, as it does for `<Value>`.
+
+<Canvas of={DeltaStories.Filtered} />
+
+## Sparkline
+
+### A trend in a sentence
+
+With only `data`, a sparkline draws the result's second column against its first. Its accessible name is the query's name.
+
+<Canvas of={SparklineStories.Line} />
+
+### Pick the columns
+
+`x` and `y` name the columns to draw. When both are set, the accessible name reads "`y` by `x`".
+
+<Canvas of={SparklineStories.NamedAxes} />
+
+### Chart type
+
+`type` is `line` (the default), `area` or `bar`.
+
+<Canvas of={SparklineStories.Area} />
+
+<Canvas of={SparklineStories.Bar} />
+
+### Colour
+
+`color` takes any CSS colour. The default is the theme's sparkline colour.
+
+<Canvas of={SparklineStories.CustomColor} />
+
+### Accessible name
+
+`label` replaces the accessible name a screen reader announces.
+
+<Canvas of={SparklineStories.CustomLabel} />
+
+### Narrow with a filter
+
+`filters` narrows the sparkline's query.
+
+<Canvas of={SparklineStories.Filtered} />
+
+## Props
+
+### Value
+
+| Prop           | Type                 | Default            | What it does                                                |
+| -------------- | -------------------- | ------------------ | ----------------------------------------------------------- |
+| `data`         | string               | required           | The name of a ` ```sql ` fence on the page                  |
+| `column`       | string               | the first column   | The result column to read                                   |
+| `row`          | number               | `0`                | The row to read, counting from 0                            |
+| `fmt`          | string               | auto-scaled number | A [format code](#format-codes)                              |
+| `color`        | string               | the text colour    | Any CSS colour                                              |
+| `redNegatives` | boolean              | `false`            | Show a negative number in the negative colour, over `color` |
+| `filters`      | string or string\[\] | none               | Page filter ids whose selections narrow the query           |
+
+### Delta
+
+| Prop             | Type                  | Default            | What it does                                               |
+| ---------------- | --------------------- | ------------------ | ---------------------------------------------------------- |
+| `data`           | string                | required           | The name of a ` ```sql ` fence on the page                 |
+| `column`         | string                | the first column   | The result column holding the signed change                |
+| `row`            | number                | `0`                | The row to read, counting from 0                           |
+| `fmt`            | string                | auto-scaled number | A [format code](#format-codes)                             |
+| `text`           | string                | none               | A caption after the number                                 |
+| `chip`           | boolean               | `false`            | Draw the delta on a tinted chip                            |
+| `downIsGood`     | boolean               | `false`            | Colour a fall as good and a rise as bad                    |
+| `showValue`      | boolean               | `true`             | Show the number                                            |
+| `showSymbol`     | boolean               | `true`             | Show the arrow                                             |
+| `symbolPosition` | `"left"` or `"right"` | `"right"`          | Which side of the number the arrow sits                    |
+| `neutralRange`   | `[min, max]`          | `[0, 0]`           | The band around zero that reads as neutral; `null` is open |
+| `filters`        | string or string\[\]  | none               | Page filter ids whose selections narrow the query          |
+
+### Sparkline
+
+| Prop      | Type                          | Default                                     | What it does                                      |
+| --------- | ----------------------------- | ------------------------------------------- | ------------------------------------------------- |
+| `data`    | string                        | required                                    | The name of a ` ```sql ` fence on the page        |
+| `x`       | string                        | the first column that is not `y`            | The column along the line                         |
+| `y`       | string                        | the second column, or the only one          | The numeric column drawn                          |
+| `type`    | `"line"`, `"area"` or `"bar"` | `"line"`                                    | The mark                                          |
+| `color`   | string                        | the theme's sparkline colour                | Any CSS colour                                    |
+| `label`   | string                        | "`y` by `x`" when both are set, else `data` | The accessible name                               |
+| `filters` | string or string\[\]          | none                                        | Page filter ids whose selections narrow the query |
+
+## Format codes
+
+Every `fmt` prop in biac takes one of these codes. Formats use US conventions (`$` prefix, `,` thousands, `.` decimals) for every reader. An empty cell shows `–`. A date code takes a `DATE` or `TIMESTAMP` cell and shows it as the query returns it, on the UTC clock, so every reader sees the same day; a number code takes a number.
+
+| Code                                                        | Example                                  | Notes                                                                    |
+| ----------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| `num`                                                       | `1234567.891` → `1.2M`                   | Picks decimals and unit from the value, or from the whole column or axis |
+| `num0`, `num1`, `num2`                                      | `1234567.891` → `1,234,567.9` (`num1`)   | Fixed decimals, grouped                                                  |
+| `num0k`, `num1k`, `num2k`                                   | `1234567.891` → `1,234.6k` (`num1k`)     | Thousands                                                                |
+| `num0m`, `num1m`, `num2m`                                   | `1234567.891` → `1.2M` (`num1m`)         | Millions                                                                 |
+| `num0b`, `num1b`, `num1t`                                   | `1234567.891` → `0.0B` (`num1b`)         | Billions and trillions                                                   |
+| `usd`                                                       | `1234567.891` → `$1.2M`                  | Like `num`, in dollars                                                   |
+| `usd0`, `usd1`, `usd2`                                      | `1234567.891` → `$1,234,567.89` (`usd2`) | Fixed decimals, in dollars                                               |
+| `usd0k`–`usd2k`, `usd0m`–`usd2m`, `usd0b`, `usd1b`, `usd1t` | `1234567.891` → `$1,235k` (`usd0k`)      | Dollars in thousands, millions, billions and trillions                   |
+| `pct`                                                       | `0.056` → `5.60%`                        | Like `num`, as a percentage of 1                                         |
+| `pct0`, `pct1`, `pct2`, `pct3`                              | `0.056` → `5.6%` (`pct1`)                | Fixed decimals, as a percentage of 1                                     |
+| `id`                                                        | `1234567.891` → `1234568`                | No thousands separator, for identifiers                                  |
+| `mult0`, `mult1`, `mult2`                                   | `1234567.891` → `1,234,567.9x` (`mult1`) | A multiple                                                               |
+| `sci`                                                       | `1234567.891` → `1.23E6`                 | Scientific notation                                                      |
+| `bytes`                                                     | `1234567.891` → `1.2 MB`                 | A byte count in its unit                                                 |
+| `date`                                                      | `2015-03-15 13:45` → `2015-03-15`        | The default for a date cell                                              |
+| `shortdate`                                                 | `2015-03-15 13:45` → `Mar 15/15`         | Short month, two-digit year                                              |
+| `longdate`                                                  | `2015-03-15 13:45` → `March 15, 2015`    | Month spelled out                                                        |
+| `mdy`                                                       | `2015-03-15 13:45` → `3/15/2015`         | Month first                                                              |
+| `dmy`                                                       | `2015-03-15 13:45` → `15/3/2015`         | Day first                                                                |
+| `hms`                                                       | `2015-03-15 13:45` → `1:45:00 PM`        | The time of day, on a 12-hour clock                                      |
+
+A code that does not exist, or a value the code cannot take, shows as a message naming the code and the value instead of the widget.
+
+## Errors
+
+A mistake in a widget's markup shows as a message where the widget would be, and the sentence around it still renders. The message names the query and what is wrong: a `data` that names no fence on the page, a `column` the query does not return (with the columns it does return), or a `fmt` the cell cannot take.
+
+<Canvas of={ValueStories.UnknownName} />
+
+<Canvas of={ValueStories.UnknownColumn} />
+
+<Canvas of={ValueStories.UnknownFmt} />
