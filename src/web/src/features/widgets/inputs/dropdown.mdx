@@ -1,0 +1,136 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as DropdownStories from "./dropdown.stories";
+
+<Meta of={DropdownStories} />
+
+# Dropdown
+
+`<Dropdown>` is a field that opens a searchable list of options and picks one, and hands the pick to the page's queries and to the widgets that list its `id` in `filters`. The pick is written to the page URL, so a reload or a shared link opens the page with it as it was left.
+
+The reader-facing reference is `docs/pages/filters/dropdown.md` (`/filters/dropdown` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Narrow a widget
+
+`data` names the query the options come from, and `valueColumn` the column whose distinct values they are. A widget that lists the `id` in `filters` keeps the rows of the pick.
+
+<Canvas
+  of={DropdownStories.Success}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={DropdownStories.NarrowsATable}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Show labels apart from values
+
+`labelColumn` names a column whose text the list shows in place of the value. The filter still narrows on `valueColumn`.
+
+<Canvas
+  of={DropdownStories.Labels}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### List fixed options
+
+`options` lists the choices in the markup instead of reading them from a query.
+
+<Canvas
+  of={DropdownStories.StaticOptions}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Start on a value
+
+`initialValue` is the pick the page opens with. A value in the URL wins over it.
+
+<Canvas
+  of={DropdownStories.InitialValue}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={DropdownStories.UrlHydrated}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Start on the first option
+
+`selectFirst` picks the first option once the options load.
+
+<Canvas
+  of={DropdownStories.SelectFirst}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Placeholder
+
+`placeholder` is the text the field shows before a pick.
+
+<Canvas
+  of={DropdownStories.CustomPlaceholder}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Without search or Clear
+
+The open list has a search box and a Clear entry. `search={false}` drops the box; `clear={false}` drops Clear.
+
+<Canvas
+  of={DropdownStories.Search}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={DropdownStories.SearchEmpty}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas of={DropdownStories.Clear} story={{ inline: false, height: "420px" }} />
+
+<Canvas
+  of={DropdownStories.WithoutSearchOrClear}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Cascade from another filter
+
+`filters` on a dropdown narrows its own options.
+
+<Canvas
+  of={DropdownStories.CascadedOptions}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Use the pick in a query
+
+A query can read the pick itself as `{{params.id}}`, which is `null` before a pick.
+
+<Canvas
+  of={DropdownStories.ParamsConsumption}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Props
+
+| Prop           | Type                                  | Default                | What it does                                                          |
+| -------------- | ------------------------------------- | ---------------------- | --------------------------------------------------------------------- |
+| `id`           | string                                | required               | The filter's name: in widgets' `filters`, the URL and `{{params.id}}` |
+| `data`         | string                                | —                      | The query the options come from                                       |
+| `valueColumn`  | string                                | `id`                   | The column holding the options' values; required with `data`          |
+| `labelColumn`  | string                                | `valueColumn`          | The column holding the text each option shows                         |
+| `options`      | list of strings or `{ value, label }` | —                      | Choices written in the markup, listed before the query's              |
+| `title`        | string                                | —                      | The label above the field                                             |
+| `placeholder`  | string                                | Select + `valueColumn` | The field's text before a pick                                        |
+| `initialValue` | string                                | —                      | The pick the page opens with when the URL holds none                  |
+| `selectFirst`  | boolean                               | `false`                | Pick the first option once the options load                           |
+| `search`       | boolean                               | `true`                 | Show a search box in the open list                                    |
+| `clear`        | boolean                               | `true`                 | Show a Clear entry in the open list                                   |
+| `filters`      | string or list of strings             | —                      | Other filters that narrow the options                                 |
+
+## Errors
+
+A `<Dropdown>` with `data` but no `valueColumn`, or whose `data` names no query on the page, or whose query fails, shows a message in place of the field; the rest of the page still renders. A value in the URL that the loaded options do not hold is cleared.

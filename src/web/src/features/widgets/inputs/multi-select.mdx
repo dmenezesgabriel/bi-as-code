@@ -1,0 +1,136 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as MultiSelectStories from "./multi-select.stories";
+
+<Meta of={MultiSelectStories} />
+
+# MultiSelect
+
+`<MultiSelect>` is a field that opens a searchable list of options and picks several, shown as chips, and hands the pick to the page's queries and to the widgets that list its `id` in `filters`. The pick is written to the page URL, so a reload or a shared link opens the page with it as it was left.
+
+The reader-facing reference is `docs/pages/filters/multi-select.md` (`/filters/multi-select` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Narrow a widget
+
+`data` names the query the options come from, and `valueColumn` the column whose distinct values they are. A widget that lists the `id` in `filters` keeps the rows of any pick. The open list has Select All and Clear.
+
+<Canvas
+  of={MultiSelectStories.Success}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={MultiSelectStories.Search}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={MultiSelectStories.SelectAll}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={MultiSelectStories.ChipRemoval}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={MultiSelectStories.Clear}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Show labels apart from values
+
+`labelColumn` names a column whose text the list and the chips show in place of the value.
+
+<Canvas
+  of={MultiSelectStories.Labels}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### List fixed options
+
+`options` lists the choices in the markup instead of reading them from a query.
+
+<Canvas
+  of={MultiSelectStories.StaticOptions}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Start on some values
+
+`initialValue` is the list of picks the page opens with. A value in the URL wins over it.
+
+<Canvas
+  of={MultiSelectStories.InitialValue}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={MultiSelectStories.UrlHydrated}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={MultiSelectStories.StalePruned}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Start on the first options
+
+`defaultTopN` picks the first N options once the options load; `selectFirst` is the same as `defaultTopN={1}`.
+
+<Canvas
+  of={MultiSelectStories.DefaultTopN}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Placeholder
+
+`placeholder` is the text the field shows with nothing picked.
+
+<Canvas
+  of={MultiSelectStories.CustomPlaceholder}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Without search or Clear
+
+`search={false}` stops typing in the field from narrowing the list. `clear={false}` drops Select All and Clear from the open list.
+
+<Canvas
+  of={MultiSelectStories.WithoutSearchOrClear}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Cascade from another filter
+
+`filters` on a multi-select narrows its own options, and a picked value drops out when the other filters leave it no row.
+
+<Canvas
+  of={MultiSelectStories.CascadedOptions}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Props
+
+| Prop           | Type                                  | Default                | What it does                                                          |
+| -------------- | ------------------------------------- | ---------------------- | --------------------------------------------------------------------- |
+| `id`           | string                                | required               | The filter's name: in widgets' `filters`, the URL and `{{params.id}}` |
+| `data`         | string                                | —                      | The query the options come from                                       |
+| `valueColumn`  | string                                | `id`                   | The column holding the options' values; required with `data`          |
+| `labelColumn`  | string                                | `valueColumn`          | The column holding the text each option and chip shows                |
+| `options`      | list of strings or `{ value, label }` | —                      | Choices written in the markup, listed before the query's              |
+| `title`        | string                                | —                      | The label above the field                                             |
+| `placeholder`  | string                                | Select + `valueColumn` | The field's text with nothing picked                                  |
+| `initialValue` | list of strings                       | —                      | The picks the page opens with when the URL holds none                 |
+| `defaultTopN`  | number                                | —                      | Pick the first N options once the options load                        |
+| `selectFirst`  | boolean                               | `false`                | Pick the first option once the options load                           |
+| `search`       | boolean                               | `true`                 | Narrow the list as the reader types in the field                      |
+| `clear`        | boolean                               | `true`                 | Show Select All and Clear in the open list                            |
+| `filters`      | string or list of strings             | —                      | Other filters that narrow the options                                 |
+
+## Errors
+
+A `<MultiSelect>` with `data` but no `valueColumn`, or whose `data` names no query on the page, or whose query fails, shows a message in place of the field; the rest of the page still renders. A value in the URL that the loaded options do not hold is dropped from the picks.

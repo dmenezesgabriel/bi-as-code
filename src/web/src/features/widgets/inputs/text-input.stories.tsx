@@ -168,3 +168,13 @@ export const InitialValueConsumption: Story = {
     );
   },
 };
+
+/** `placeholder` replaces the default hint the empty field shows. */
+export const CustomPlaceholder: Story = {
+  args: { placeholder: "e.g. Biscoe" },
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  play: async ({ canvas }) => {
+    const input = await canvas.findByRole("textbox", { name: "Search" });
+    await expect(input).toHaveAttribute("placeholder", "e.g. Biscoe");
+  },
+};

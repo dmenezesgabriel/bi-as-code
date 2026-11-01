@@ -11,6 +11,7 @@ import {
   CHANNELS,
   channelDecorators,
   expectAlert,
+  labelledChannelDecorators,
   MIX,
 } from "./input-stories.fixture";
 import type { ButtonGroupProps } from "./types";
@@ -278,5 +279,27 @@ export const MissingValueColumn: Story = {
   decorators: channelDecorators(),
   play: async ({ canvas }) => {
     await expectAlert(canvas, "valueColumn");
+  },
+};
+
+/** `initialValue` presses its button on first paint without writing the URL. */
+export const InitialValue: Story = {
+  args: { initialValue: "Partner" },
+  decorators: channelDecorators(),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole("button", { name: "Partner" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  },
+};
+
+/** `labelColumn` drives the button text while the URL stores the raw value. */
+export const Labels: Story = {
+  args: { labelColumn: "label" },
+  decorators: labelledChannelDecorators(),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole("button", { name: "Direct channel" }),
+    ).toHaveAttribute("aria-pressed", "false");
   },
 };

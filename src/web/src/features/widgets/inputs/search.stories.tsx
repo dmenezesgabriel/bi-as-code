@@ -9,7 +9,7 @@ import {
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { Table } from "../table/table";
-import { expectAlert } from "./input-stories.fixture";
+import { expectAlert, type StoryCanvas } from "./input-stories.fixture";
 import { Search } from "./search";
 import type { SearchProps } from "./types";
 
@@ -27,6 +27,11 @@ function regionDb(): FakeDuckDb {
   );
 }
 
+/** The authored box every story labels "Search regions". */
+function regionsBox(canvas: StoryCanvas): Promise<HTMLElement> {
+  return canvas.findByRole("searchbox", { name: "Search regions" });
+}
+
 const meta = {
   title: "Widgets/Search",
   component: Search,
@@ -40,9 +45,7 @@ type Story = StoryObj<typeof meta>;
 export const Empty: Story = {
   decorators: [withPageFilters(new FakeFilterUrlPort(""))],
   play: async ({ canvas }) => {
-    const input = await canvas.findByRole("searchbox", {
-      name: "Search regions",
-    });
+    const input = await regionsBox(canvas);
     await expect(input).toHaveAttribute("placeholder", "Search");
     await expect(input).toHaveValue("");
   },
@@ -69,6 +72,13 @@ export const Disabled: Story = {
   },
 };
 
+const renderFilteredOrders: Story["render"] = (args) => (
+  <>
+    <Search {...args} />
+    <Table data="orders" filters={["q"]} />
+  </>
+);
+
 const narrowPort = new FakeFilterUrlPort("");
 const narrowDb = regionDb();
 
@@ -76,12 +86,7 @@ const narrowDb = regionDb();
  * no fence names the search text. */
 export const NarrowsFilteredTable: Story = {
   decorators: [withQueryData([ORDERS], narrowDb), withPageFilters(narrowPort)],
-  render: (args) => (
-    <>
-      <Search {...args} />
-      <Table data="orders" filters={["q"]} />
-    </>
-  ),
+  render: renderFilteredOrders,
   play: async ({ canvas }) => {
     const table = await canvas.findByRole("table");
     await expect(table).toHaveTextContent("North");
@@ -178,5 +183,41 @@ export const CountQueryError: Story = {
   ],
   play: async ({ canvas }) => {
     await expectAlert(canvas, "orders", "does not exist");
+  },
+};
+
+/** `placeholder` replaces the default hint the empty box shows. */
+export const CustomPlaceholder: Story = {
+  args: { placeholder: "e.g. West" },
+  decorators: [withPageFilters(new FakeFilterUrlPort(""))],
+  play: async ({ canvas }) => {
+    const input = await regionsBox(canvas);
+    await expect(input).toHaveAttribute("placeholder", "e.g. West");
+  },
+};
+
+/** `method="prefix"` matches the text at the start of the column. */
+export const PrefixMethod: Story = {
+  args: { method: "prefix" },
+  decorators: [
+    withQueryData(
+      [ORDERS],
+      FakeDuckDb.withRowsWhen(ALL_ORDERS, (sql) =>
+        sql.includes("prefix(lower(region), lower(?))")
+          ? [ALL_ORDERS[0]!]
+          : null,
+      ),
+    ),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ],
+  render: renderFilteredOrders,
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toHaveTextContent("North");
+    const input = canvas.getByRole("searchbox", { name: "Search regions" });
+    await userEvent.type(input, "we");
+    await userEvent.tab();
+    await waitFor(() =>
+      expect(canvas.getByRole("table")).not.toHaveTextContent("North"),
+    );
   },
 };

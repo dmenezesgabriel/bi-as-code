@@ -1,0 +1,77 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as SearchStories from "./search.stories";
+
+<Meta of={SearchStories} />
+
+# Search
+
+`<Search>` is a box whose text narrows the widgets that list its `id` in `filters`, matching it against one column. The text is written to the page URL as `?id=text`, so a reload or a shared link opens the page with the box as it was left.
+
+The reader-facing reference is `docs/pages/filters/search.md` (`/filters/search` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Narrow a widget
+
+`column` is the column the text is matched in. A widget that lists the `id` in `filters` keeps only the rows whose column holds the text.
+
+<Canvas of={SearchStories.NarrowsFilteredTable} />
+
+### Match the start or the end
+
+`method` sets where the text must sit in the column: `contains` (the default) anywhere, `prefix` at the start, `suffix` at the end.
+
+<Canvas of={SearchStories.PrefixMethod} />
+
+### Count the matches
+
+`data` names a query whose matching rows are counted beside the box, and updated as the reader types. The count goes to screen readers too.
+
+<Canvas of={SearchStories.Counted} />
+
+<Canvas of={SearchStories.NoMatches} />
+
+### Count under other filters
+
+`filters` lists other filters that narrow the counted rows, so the count reads as matches among the rows the page already shows. The count line stays empty while the query loads.
+
+<Canvas of={SearchStories.CountLoading} />
+
+### Title
+
+`title` is the label above the box. Without it, the label is the `id` in title case.
+
+<Canvas of={SearchStories.Empty} />
+
+### Placeholder
+
+`placeholder` is the hint the box shows while it is empty. Without it, the hint is Search.
+
+<Canvas of={SearchStories.CustomPlaceholder} />
+
+### Start on some text
+
+`initialValue` is the search the page opens with when the URL holds none; a link restores the text the same way.
+
+<Canvas of={SearchStories.Held} />
+
+## Props
+
+| Prop           | Type                             | Default    | What it does                                                          |
+| -------------- | -------------------------------- | ---------- | --------------------------------------------------------------------- |
+| `id`           | string                           | required   | The filter's name: in widgets' `filters`, the URL and `{{params.id}}` |
+| `column`       | string                           | required   | The column the text is matched in                                     |
+| `method`       | `contains`, `prefix` or `suffix` | `contains` | Where in the column the text must sit                                 |
+| `data`         | string                           | —          | The query whose matching rows are counted beside the box              |
+| `filters`      | string or list of strings        | —          | Other filters that narrow the counted rows                            |
+| `title`        | string                           | `id`       | The label above the box                                               |
+| `placeholder`  | string                           | Search     | The hint the box shows while it is empty                              |
+| `initialValue` | string                           | —          | The search the page opens with when the URL holds none                |
+
+## Errors
+
+A `<Search>` whose `method` is not one of the three stops the page from compiling, with a message naming the method. One whose `data` names no query on the page, or whose query fails, shows a message in place of the box; the rest of the page still renders.
+
+<Canvas of={SearchStories.UnknownSource} />
+
+<Canvas of={SearchStories.CountQueryError} />

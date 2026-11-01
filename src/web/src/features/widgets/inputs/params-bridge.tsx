@@ -3,6 +3,7 @@ import type { FilterUrlPort } from "../../filters/filter-url-port";
 import { usePageFilters } from "../../filters/page-filters-context";
 import { decodeSearchParam } from "../../filters/search-param-value";
 import { usePageFilter } from "../../filters/use-page-filter";
+import { Table } from "../table/table";
 import { QueryRegistryProvider } from "../../pages/query-registry";
 import type { SqlBlock } from "../../pages/types";
 
@@ -48,5 +49,28 @@ export function ParamsBridge({
     >
       {children}
     </QueryRegistryProvider>
+  );
+}
+
+/**
+ * A `{{params.id}}` fence rendered as a table — the consumer half of the
+ * input stories' params-consumption examples.
+ *
+ * @example
+ * <ParamsTable id="amount" block={HEAVY} port={port} />
+ */
+export function ParamsTable({
+  id,
+  block,
+  port,
+}: {
+  readonly id: string;
+  readonly block: SqlBlock;
+  readonly port: FilterUrlPort;
+}): ReactElement {
+  return (
+    <ParamsBridge id={id} blocks={[block]} port={port}>
+      <Table data={block.name} />
+    </ParamsBridge>
   );
 }

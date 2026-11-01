@@ -1,14 +1,16 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent } from "storybook/test";
+import { expect, userEvent, waitFor } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import {
+  withDataRuntime,
   withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { expectAlert, type StoryCanvas } from "./input-stories.fixture";
+import { ParamsTable } from "./params-bridge";
 import { Slider } from "./slider";
 import type { SliderProps } from "./types";
 
@@ -228,5 +230,46 @@ export const MissingValueColumn: Story = {
   decorators: amountDecorators(),
   play: async ({ canvas }) => {
     await expectAlert(canvas, "valueColumn");
+  },
+};
+
+/** `initialValue` seeds the thumb without writing the URL. */
+export const InitialValue: Story = {
+  args: { title: "Amount", initialValue: 30 },
+  decorators: amountDecorators(),
+  play: async ({ canvas }) => {
+    const input = await canvas.findByRole("slider", { name: "Amount" });
+    await expect(input).toHaveAttribute("aria-valuenow", "30");
+  },
+};
+
+const consumptionPort = new FakeFilterUrlPort("");
+const consumptionDb = FakeDuckDb.withRows([{ heavy: 2 }]);
+const HEAVY: SqlBlock = {
+  name: "heavy",
+  sql: "select count(*) as heavy from orders where amount >= {{params.amount}}",
+};
+
+/** A `{{params.amount}}` fence binds the pick, here the seeded 30, as its `?` arg. */
+export const ParamsConsumption: Story = {
+  args: { title: "Amount", initialValue: 30 },
+  decorators: [
+    withDataRuntime(consumptionDb),
+    withPageFilters(consumptionPort),
+  ],
+  render: (args) => (
+    <>
+      <Slider {...args} data={undefined} min={0} max={50} />
+      <ParamsTable id="amount" block={HEAVY} port={consumptionPort} />
+    </>
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toHaveTextContent("2");
+    await waitFor(() =>
+      expect(consumptionDb.queries).toContainEqual({
+        sql: "select count(*) as heavy from orders where amount >= ?",
+        params: [30],
+      }),
+    );
   },
 };

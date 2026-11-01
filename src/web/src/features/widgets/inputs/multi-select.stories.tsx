@@ -11,6 +11,7 @@ import {
   CHANNELS,
   channelDecorators,
   expectAlert,
+  labelledChannelDecorators,
   MIX,
 } from "./input-stories.fixture";
 import type { MultiSelectProps } from "./types";
@@ -81,16 +82,7 @@ export const Success: Story = {
 /** `labelColumn` drives the chips and the list; the URL stores raw values. */
 export const Labels: Story = {
   args: { labelColumn: "label" },
-  decorators: [
-    withQueryData(
-      [MIX],
-      FakeDuckDb.withRows([
-        { channel: "D", label: "Direct channel" },
-        { channel: "M", label: "Marketplace channel" },
-      ]),
-    ),
-    withPageFilters(new FakeFilterUrlPort("")),
-  ],
+  decorators: labelledChannelDecorators(),
   play: async ({ canvas }) => {
     await openField(canvas);
     await userEvent.click(
@@ -273,5 +265,62 @@ export const UnknownName: Story = {
   play: async ({ canvas }) => {
     await expectAlert(canvas, /ghost.*no sql fence/);
     await expect(canvas.queryByRole("combobox")).toBeNull();
+  },
+};
+
+/** `initialValue` shows its chips on first paint without writing the URL. */
+export const InitialValue: Story = {
+  args: { title: "Channel", initialValue: ["Partner", "Organic"] },
+  decorators: channelDecorators(),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole("button", { name: /Remove Partner/ }),
+    ).toBeVisible();
+  },
+};
+
+/** `placeholder` replaces the default "Select Channel" hint. */
+export const CustomPlaceholder: Story = {
+  args: { title: "Channel", placeholder: "Pick channels" },
+  decorators: channelDecorators(),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("combobox")).toHaveAttribute(
+      "placeholder",
+      "Pick channels",
+    );
+  },
+};
+
+/** `clear={false}` drops Select All and Clear from the open list. */
+export const WithoutSearchOrClear: Story = {
+  args: { title: "Channel", clear: false },
+  decorators: channelDecorators(),
+  play: async ({ canvas }) => {
+    await openField(canvas);
+    await expect(await popup().findAllByRole("option")).toHaveLength(5);
+    await expect(popup().queryByRole("button", { name: "Clear" })).toBeNull();
+    await expect(
+      popup().queryByRole("button", { name: "Select All" }),
+    ).toBeNull();
+  },
+};
+
+/** `filters` cascades another page filter into the option query — the
+ * `?region=West` param narrows the list to Direct alone. */
+export const CascadedOptions: Story = {
+  args: { title: "Channel", filters: "region" },
+  decorators: [
+    withQueryData(
+      [MIX],
+      FakeDuckDb.withRowsWhen(CHANNELS, (sql) =>
+        sql.includes("where region = ?") ? [CHANNELS[0]!] : null,
+      ),
+    ),
+    withPageFilters(new FakeFilterUrlPort("?region=West")),
+  ],
+  play: async ({ canvas }) => {
+    await openField(canvas);
+    await waitFor(() => expect(popup().getAllByRole("option")).toHaveLength(1));
+    await expect(popup().getByRole("option", { name: "Direct" })).toBeVisible();
   },
 };

@@ -7,12 +7,14 @@ import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import {
+  withDataRuntime,
   withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { Table } from "../table/table";
 import { Dropdown } from "./dropdown";
 import { expectAlert } from "./input-stories.fixture";
+import { ParamsTable } from "./params-bridge";
 import type { DropdownProps } from "./types";
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
@@ -334,5 +336,55 @@ export const MissingValueColumn: Story = {
   decorators: regionDecorators(),
   play: async ({ canvas }) => {
     await expectAlert(canvas, "valueColumn");
+  },
+};
+
+/** `initialValue` shows its option in the trigger without writing the URL. */
+export const InitialValue: Story = {
+  args: { title: "Region", initialValue: "North" },
+  decorators: regionDecorators(),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("combobox")).toHaveTextContent("North");
+  },
+};
+
+/** `placeholder` replaces the default "Select Region" text. */
+export const CustomPlaceholder: Story = {
+  args: { title: "Region", placeholder: "Choose a region" },
+  decorators: regionDecorators(),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("combobox")).toHaveTextContent(
+      "Choose a region",
+    );
+  },
+};
+
+const consumptionPort = new FakeFilterUrlPort("");
+const consumptionDb = FakeDuckDb.withRows([{ orders: 140 }]);
+const WEST_ORDERS: SqlBlock = {
+  name: "west_orders",
+  sql: "select count(*) as orders from orders where region = {{params.region}}",
+};
+
+/** A `{{params.region}}` fence binds the pick, here the seeded West, as its `?` arg. */
+export const ParamsConsumption: Story = {
+  args: { title: "Region", initialValue: "West" },
+  decorators: [
+    withDataRuntime(consumptionDb),
+    withPageFilters(consumptionPort),
+  ],
+  render: (args) => (
+    <>
+      <Dropdown {...args} data={undefined} options={["West", "North"]} />
+      <ParamsTable id="region" block={WEST_ORDERS} port={consumptionPort} />
+    </>
+  ),
+  play: async () => {
+    await waitFor(() =>
+      expect(consumptionDb.queries).toContainEqual({
+        sql: "select count(*) as orders from orders where region = ?",
+        params: ["West"],
+      }),
+    );
   },
 };

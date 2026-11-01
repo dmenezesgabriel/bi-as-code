@@ -1,0 +1,70 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as DateRangeStories from "./date-range.stories";
+
+<Meta of={DateRangeStories} />
+
+# DateRange
+
+`<DateRange>` is a field that opens a list of presets and two date fields, and narrows the widgets that list its `id` in `filters` to the days picked. The pick is written to the page URL as words such as `2015-06-01 to 2015-06-30`, so a reload or a shared link opens the page with the span as it was left.
+
+The reader-facing reference is `docs/pages/filters/date-range.md` (`/filters/date-range` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Narrow a widget
+
+`valueColumn` is the date column the widgets are narrowed on. A table that lists the `id` in `filters` keeps only the days in the pick.
+
+<Canvas
+  of={DateRangeStories.PredicateConsumption}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Start on a span
+
+`initialValue` is the span the page opens with when the URL holds none, in the words the URL holds: `2015-06-01 to 2015-06-30`, `from 2015-06-01`, `until 2012-01-31`, `last 30 days`, `last day`, `month to date`, `all time`.
+
+<Canvas of={DateRangeStories.InitialValue} />
+
+A link restores the span the same way:
+
+<Canvas of={DateRangeStories.UrlSeeded} />
+
+### Presets
+
+The open field lists four presets: Last 7 Days, Last 30 Days, Month to Date and All Time. A pick of All Time narrows nothing. Picking a start or an end date writes a span; picking only one writes `from` or `until` that date.
+
+<Canvas
+  of={DateRangeStories.PresetPick}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={DateRangeStories.FieldRange}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Title
+
+`title` is the label above the field. Without it, the label is the `id` in title case.
+
+<Canvas of={DateRangeStories.Default} />
+
+### Use the pick in a query
+
+A query can read the pick itself as `{{params.id}}`: the words, which are the `initialValue` until the reader picks, or `null` with neither. A date range without `valueColumn` narrows no widget, and is read only this way.
+
+<Canvas of={DateRangeStories.WordsConsumption} />
+
+## Props
+
+| Prop           | Type   | Default  | What it does                                                          |
+| -------------- | ------ | -------- | --------------------------------------------------------------------- |
+| `id`           | string | required | The filter's name: in widgets' `filters`, the URL and `{{params.id}}` |
+| `valueColumn`  | string | —        | The date column widgets are narrowed on                               |
+| `title`        | string | `id`     | The label above the field                                             |
+| `initialValue` | string | —        | The span the page opens with when the URL holds none                  |
+
+## Errors
+
+A `<DateRange>` whose `initialValue` is not one of the spans above shows a message in place of the field; the rest of the page still renders. Words in the URL that are not a span narrow nothing.

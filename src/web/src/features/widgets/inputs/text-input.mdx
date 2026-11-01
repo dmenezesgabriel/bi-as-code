@@ -1,0 +1,51 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as TextInputStories from "./text-input.stories";
+
+<Meta of={TextInputStories} />
+
+# TextInput
+
+`<TextInput>` is a free-text box whose text reaches the page's queries as `{{params.id}}`, `null` while the box is empty. The text is written to the page URL as `?id=text` once the reader stops typing, so a reload or a shared link opens the page with the box as it was left.
+
+The reader-facing reference is `docs/pages/filters/text-input.md` (`/filters/text-input` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Use the text in a query
+
+A query reads the text as `{{params.id}}`. Typing re-runs it after the debounce settles, and the table narrows. The URL reads `?id=42` as the number 42 and `?id=true` as true, so cast with `::varchar` where the query needs text.
+
+<Canvas of={TextInputStories.ParamsConsumption} />
+
+### Title
+
+`title` is the label above the box. Without it, the label is the `id` in title case.
+
+<Canvas of={TextInputStories.Default} />
+
+### Placeholder
+
+`placeholder` is the hint the box shows while it is empty.
+
+<Canvas of={TextInputStories.CustomPlaceholder} />
+
+### Start on some text
+
+`initialValue` is the text the page opens with when the URL holds none. It reaches `{{params.id}}` before the reader types, and writes no URL param.
+
+<Canvas of={TextInputStories.InitialValue} />
+
+<Canvas of={TextInputStories.InitialValueConsumption} />
+
+## Props
+
+| Prop           | Type   | Default  | What it does                                         |
+| -------------- | ------ | -------- | ---------------------------------------------------- |
+| `id`           | string | required | The filter's name: in the URL and `{{params.id}}`    |
+| `title`        | string | `id`     | The label above the box                              |
+| `placeholder`  | string | —        | The hint the box shows while it is empty             |
+| `initialValue` | string | —        | The text the page opens with when the URL holds none |
+
+## Errors
+
+A `<TextInput>` has no error of its own. A query that reads `{{params.id}}` and fails on the text shows its message where its widget would be.

@@ -36,6 +36,20 @@ export function channelDecorators(search?: string): Decorator[] {
   ];
 }
 
+/** Two channels whose `label` column differs from the `channel` value. */
+export function labelledChannelDecorators(): Decorator[] {
+  return [
+    withQueryData(
+      [MIX],
+      FakeDuckDb.withRows([
+        { channel: "D", label: "Direct channel" },
+        { channel: "M", label: "Marketplace channel" },
+      ]),
+    ),
+    withPageFilters(new FakeFilterUrlPort("")),
+  ];
+}
+
 export type StoryCanvas = ReturnType<typeof within>;
 
 /** Asserts the inline `role=alert` carries every fragment. */

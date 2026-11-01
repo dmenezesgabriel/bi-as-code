@@ -1,0 +1,51 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as ToggleStories from "./toggle.stories";
+
+<Meta of={ToggleStories} />
+
+# Toggle
+
+`<Toggle>` is a switch a reader turns on or off, and hands its state to the page's queries as `{{params.id}}`: `true` or `false`, and `false` before the first flip unless `initialValue` says otherwise. It narrows no widget by itself: a query decides what on means. The state is written to the page URL as `?id=true` or `?id=false`.
+
+The reader-facing reference is `docs/pages/filters/toggle.md` (`/filters/toggle` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Use the state in a query
+
+A query reads the state as `{{params.id}}`. Flipping the switch writes the URL and re-runs the query, so the table narrows live.
+
+<Canvas of={ToggleStories.ParamsConsumption} />
+
+### Label
+
+`label` is the text beside the switch; a click on it flips the switch too. Without it, the label is the `id` in title case.
+
+<Canvas of={ToggleStories.Default} />
+
+### Start on
+
+`initialValue` is the state the page opens with when the URL holds none. It reaches `{{params.id}}` before the reader acts, and writes no URL param.
+
+<Canvas of={ToggleStories.InitialValue} />
+
+<Canvas of={ToggleStories.InitialValueConsumption} />
+
+### Invert
+
+`invert` flips what the switch shows against the value it holds: the switch is on while the value is `false`.
+
+<Canvas of={ToggleStories.Invert} />
+
+## Props
+
+| Prop           | Type    | Default  | What it does                                                        |
+| -------------- | ------- | -------- | ------------------------------------------------------------------- |
+| `id`           | string  | required | The filter's name: in the URL and `{{params.id}}`                   |
+| `label`        | string  | `id`     | The text beside the switch                                          |
+| `initialValue` | boolean | `false`  | The state the page opens with when the URL holds none               |
+| `invert`       | boolean | `false`  | Show the switch on while the value is `false`, and off while `true` |
+
+## Errors
+
+A `<Toggle>` has no error of its own. A query that reads `{{params.id}}` and fails shows its message where its widget would be.

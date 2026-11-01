@@ -1,0 +1,81 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as SliderStories from "./slider.stories";
+
+<Meta of={SliderStories} />
+
+# Slider
+
+`<Slider>` is a track a reader drags to pick a number, or a range of two, and hands the pick to the page's queries and to the widgets that list its `id` in `filters`. The pick is written to the page URL, so a reload or a shared link opens the page with it as it was left.
+
+The reader-facing reference is `docs/pages/filters/slider.md` (`/filters/slider` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Narrow a widget
+
+`data` names the query the slider's ends come from, and `valueColumn` the column whose smallest and largest values they are. A widget that lists the `id` in `filters` keeps the rows at least the pick.
+
+<Canvas of={SliderStories.Success} />
+
+<Canvas of={SliderStories.KeyboardStep} />
+
+### Pick a range
+
+`range` draws two thumbs, and the widget keeps the rows between them, both ends included.
+
+<Canvas of={SliderStories.Range} />
+
+### Set the ends and the step
+
+`min`, `max` and `step` set the slider's ends and how far one move goes. They work without `data`. Page Up and Shift+Arrow move a tenth of the range in whole steps.
+
+<Canvas of={SliderStories.StaticBounds} />
+
+<Canvas of={SliderStories.KeyboardPage} />
+
+### Start on a value
+
+`initialValue` is the pick the page opens with when the URL holds none. A range slider takes a pair. A pick outside the slider's ends moves to the nearest end.
+
+<Canvas of={SliderStories.InitialValue} />
+
+<Canvas of={SliderStories.ClampedUrlValue} />
+
+### Title
+
+`title` is the label above the slider. Without it, the label is the `id` in title case.
+
+<Canvas of={SliderStories.Success} />
+
+### Narrow the ends with another filter
+
+`filters` lists other filters that narrow the query the ends come from. When the other filters leave a single value, the slider shows that value as text in place of the track.
+
+<Canvas of={SliderStories.CascadedBounds} />
+
+<Canvas of={SliderStories.PinnedByProps} />
+
+### Use the pick in a query
+
+A query can read the pick itself as `{{params.id}}`, which holds the slider's lower end before the reader drags, or both ends for a range.
+
+<Canvas of={SliderStories.ParamsConsumption} />
+
+## Props
+
+| Prop           | Type                      | Default          | What it does                                                          |
+| -------------- | ------------------------- | ---------------- | --------------------------------------------------------------------- |
+| `id`           | string                    | required         | The filter's name: in widgets' `filters`, the URL and `{{params.id}}` |
+| `data`         | string                    | —                | The query the slider's ends come from                                 |
+| `valueColumn`  | string                    | —                | The column the ends come from and widgets are narrowed on             |
+| `min`          | number                    | the query's, 0   | The lower end                                                         |
+| `max`          | number                    | the query's, 100 | The upper end                                                         |
+| `step`         | number                    | `1`              | How far one move goes                                                 |
+| `range`        | boolean                   | `false`          | Draw two thumbs and keep the rows between them                        |
+| `title`        | string                    | `id`             | The label above the slider                                            |
+| `initialValue` | number, or a pair         | —                | The pick the page opens with when the URL holds none                  |
+| `filters`      | string or list of strings | —                | Other filters that narrow the query the ends come from                |
+
+## Errors
+
+A `<Slider>` with `data` but no `valueColumn`, or whose `data` names no query on the page, or whose query fails, shows a message in place of the slider; so does one whose `min` is larger than its `max`. The rest of the page still renders. A value in the URL outside the slider's ends moves to the nearest end.

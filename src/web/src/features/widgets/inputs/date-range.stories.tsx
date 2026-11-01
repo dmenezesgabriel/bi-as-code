@@ -5,11 +5,13 @@ import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
 import type { SqlBlock } from "../../pages/types";
 import {
+  withDataRuntime,
   withPageFilters,
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { Table } from "../table/table";
 import { DateRange } from "./date-range";
+import { ParamsBridge } from "./params-bridge";
 import type { DateRangeProps } from "./types";
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
@@ -187,6 +189,34 @@ export const PredicateConsumption: Story = {
         sql: "select * from (select * from orders) where order_date BETWEEN ? AND ?",
         params: ["2026-01-01", "2026-01-31"],
       }),
+    );
+  },
+};
+
+const wordsPort = new FakeFilterUrlPort("");
+const WORDS: SqlBlock = {
+  name: "words",
+  sql: "select {{params.ordered}}::varchar as chosen_words",
+};
+
+/** A fence reads the pick itself as `{{params.ordered}}`: the words, with no `valueColumn` to narrow on. */
+export const WordsConsumption: Story = {
+  args: { initialValue: "last 30 days" },
+  decorators: [
+    withDataRuntime(FakeDuckDb.withRows([{ chosen_words: "last 30 days" }])),
+    withPageFilters(wordsPort),
+  ],
+  render: (args) => (
+    <>
+      <DateRange {...args} />
+      <ParamsBridge id="ordered" blocks={[WORDS]} port={wordsPort}>
+        <Table data="words" />
+      </ParamsBridge>
+    </>
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toHaveTextContent(
+      "last 30 days",
     );
   },
 };
