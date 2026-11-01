@@ -1,0 +1,51 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as CalloutStories from "./callout.stories";
+
+<Meta of={CalloutStories} />
+
+# Callout
+
+`<Callout>` draws a tinted, bordered box around a message so it stands out from the prose around it: a reading guide, a caveat on the numbers, a warning before a decision. Its children are ordinary Markdown, so a callout can hold paragraphs, lists, links and widgets.
+
+The reader-facing reference is `docs/pages/layout/callout.md` (`/layout/callout` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### A message
+
+With no props, a callout is an `info` box.
+
+<Canvas of={CalloutStories.Untitled} />
+
+### Title
+
+`title` adds a bold heading line above the message.
+
+<Canvas of={CalloutStories.Info} />
+
+### Type
+
+`type` picks the tone: `info`, `success`, `warning` or `error`. Each keeps its contrast in light and dark mode.
+
+<Canvas of={CalloutStories.Success} />
+
+<Canvas of={CalloutStories.Warning} />
+
+<Canvas of={CalloutStories.ErrorVariant} />
+
+### Markdown and widgets inside
+
+The message is Markdown, so it takes emphasis, links and inline widgets such as a Value.
+
+<Canvas of={CalloutStories.WithWidgets} />
+
+## Props
+
+| Prop    | Type                                            | Default  | What it does                 |
+| ------- | ----------------------------------------------- | -------- | ---------------------------- |
+| `type`  | `"info"`, `"success"`, `"warning"` or `"error"` | `"info"` | The tone of the box          |
+| `title` | string                                          | none     | A bold heading line above it |
+
+## Errors
+
+A `type` outside the four names shows a message where the callout would be, naming the value and the four it accepts; the rest of the page still renders.

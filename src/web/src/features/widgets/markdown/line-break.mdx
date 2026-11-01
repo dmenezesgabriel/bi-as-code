@@ -1,0 +1,30 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as LineBreakStories from "./line-break.stories";
+
+<Meta of={LineBreakStories} />
+
+# Line break
+
+`<LineBreak>` adds vertical space: one or more blank lines between two blocks that would otherwise sit close together. Markdown collapses extra blank lines in the source, so a line break is how a page asks for more room.
+
+The reader-facing reference is `docs/pages/layout/line-break.md` (`/layout/line-break` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### One line
+
+With no props, a line break adds one blank line.
+
+<Canvas of={LineBreakStories.OneLine} />
+
+### Several lines
+
+`lines` sets how many blank lines to add. Zero or a negative number adds none.
+
+<Canvas of={LineBreakStories.ThreeLines} />
+
+## Props
+
+| Prop    | Type   | Default | What it does                |
+| ------- | ------ | ------- | --------------------------- |
+| `lines` | number | `1`     | How many blank lines to add |

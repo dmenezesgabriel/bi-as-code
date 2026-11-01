@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
+import { withQueryData } from "../../../../.storybook/decorators";
+import { dbWith, KPI, KPI_ROWS } from "../value/big-value.fixture";
+import { Value } from "../value/value";
 import { Callout } from "./callout";
 import type { CalloutProps, CalloutType } from "./types";
 
@@ -63,6 +66,26 @@ export const Untitled: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("note")).toBeInTheDocument();
     await expect(canvas.queryByRole("heading")).toBeNull();
+  },
+};
+
+/** The message is Markdown: emphasis and inline `<Value>`s read the page's queries. */
+export const WithWidgets: Story = {
+  args: {
+    title: "At a glance",
+    children: (
+      <>
+        The dataset holds <em>every</em> order:{" "}
+        <Value data="kpi" column="orders" /> of them, worth{" "}
+        <Value data="kpi" column="revenue" fmt="usd" />.
+      </>
+    ),
+  },
+  decorators: [withQueryData([KPI], dbWith(KPI_ROWS))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("355")).toBeInTheDocument();
+    await expect(await canvas.findByText("$1.2M")).toBeInTheDocument();
+    await expect(canvas.getByText("every").tagName).toBe("EM");
   },
 };
 

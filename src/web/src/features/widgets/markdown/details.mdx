@@ -1,0 +1,42 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as DetailsStories from "./details.stories";
+
+<Meta of={DetailsStories} />
+
+# Details
+
+`<Details>` hides a section behind a titled toggle: metric definitions, methodology, a table most readers do not need. A reader clicks the title, or focuses it and presses Enter or Space, to open or close it. Its children are Markdown and widgets.
+
+The reader-facing reference is `docs/pages/layout/details.md` (`/layout/details` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Closed until clicked
+
+`title` labels the toggle. The section starts closed.
+
+<Canvas of={DetailsStories.Closed} />
+
+### Open from the start
+
+`open` starts the section expanded. The reader can still close it.
+
+<Canvas of={DetailsStories.StartsOpen} />
+
+### Open on phones only
+
+`openMobile` sets the starting state on a phone-width window (narrower than 768 px), where it wins over `open`. Both are read once, when the page loads. The canvas below answers as a phone-width window would.
+
+<Canvas of={DetailsStories.OpenMobile} />
+
+## Props
+
+| Prop         | Type    | Default  | What it does                                    |
+| ------------ | ------- | -------- | ----------------------------------------------- |
+| `title`      | string  | required | The toggle's label                              |
+| `open`       | boolean | `false`  | Start expanded                                  |
+| `openMobile` | boolean | `open`   | Start expanded on a window narrower than 768 px |
+
+## Errors
+
+A `<Details>` without a `title` shows a message where it would be instead of a toggle with no label; the rest of the page still renders.

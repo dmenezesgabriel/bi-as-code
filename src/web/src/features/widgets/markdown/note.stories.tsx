@@ -25,6 +25,26 @@ export const Default: Story = {
   },
 };
 
+/** Links, emphasis and inline code work inside a note, as MDX compiles them. */
+export const WithMarkdown: Story = {
+  args: {
+    children: (
+      <>
+        Counts include penguins with <em>missing</em> measurements; see{" "}
+        <a href="/layout/callout">Callout</a> for <code>type</code> options.
+      </>
+    ),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("link", { name: "Callout" })).toHaveAttribute(
+      "href",
+      "/layout/callout",
+    );
+    await expect(canvas.getByText("missing").tagName).toBe("EM");
+    await expect(canvas.getByText("type").tagName).toBe("CODE");
+  },
+};
+
 /** The muted palette dims further under `.dark`. */
 export const Dark: Story = {
   globals: { theme: "dark" },

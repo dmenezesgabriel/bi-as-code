@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { expect, userEvent } from "storybook/test";
 import { Details } from "./details";
 import type { DetailsProps } from "./types";
@@ -35,6 +36,48 @@ export const StartsOpen: Story = {
     const trigger = canvas.getByRole("button", { name: "Metric definitions" });
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
     await expect(canvas.getByText(/Sales includes/)).toBeInTheDocument();
+  },
+};
+
+/** Answers every media query as a phone-width window would, until unmounted —
+ * `useMediaQuery` reads `window.matchMedia`, which a story iframe cannot narrow. */
+function PhoneWidth({ children }: { children: ReactNode }): ReactElement {
+  const [realMatchMedia] = useState(() => {
+    const real = window.matchMedia.bind(window);
+    window.matchMedia = (query) => {
+      const mql = real(query);
+      return new Proxy(mql, {
+        get: (target, key) => {
+          if (key === "matches") return query.includes("max-width");
+          const member: unknown = Reflect.get(target, key, target);
+          return typeof member === "function" ? member.bind(target) : member;
+        },
+      });
+    };
+    return real;
+  });
+  useEffect(
+    () => () => {
+      window.matchMedia = realMatchMedia;
+    },
+    [realMatchMedia],
+  );
+  return <>{children}</>;
+}
+
+/** `openMobile` wins over `open` on a window narrower than 768 px: this one starts expanded. */
+export const OpenMobile: Story = {
+  args: { openMobile: true },
+  decorators: [
+    (Story) => (
+      <PhoneWidth>
+        <Story />
+      </PhoneWidth>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole("button", { name: "Metric definitions" });
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
   },
 };
 

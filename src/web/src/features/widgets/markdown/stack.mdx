@@ -1,0 +1,34 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as StackStories from "./stack.stories";
+
+<Meta of={StackStories} />
+
+# Stack
+
+`<Stack>` places its children one under the other with an even gap between them. On its own a page already flows top to bottom; a stack earns its place inside a Row, where it turns one share of the row into a column, such as a number over its caption.
+
+The reader-facing reference is `docs/pages/layout/stack.md` (`/layout/stack` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### A column inside a row
+
+<Canvas of={StackStories.Default} />
+
+### Horizontal alignment
+
+`align` sets where each child sits across the stack's width: `left`, `center`, `right`, or `stretch` (the default) to the full width. Any value but `stretch` sizes each child to its content.
+
+<Canvas of={StackStories.AlignCenter} />
+
+<Canvas of={StackStories.AlignRight} />
+
+## Props
+
+| Prop    | Type                                           | Default     | What it does                                   |
+| ------- | ---------------------------------------------- | ----------- | ---------------------------------------------- |
+| `align` | `"left"`, `"center"`, `"right"` or `"stretch"` | `"stretch"` | Where each child sits across the stack's width |
+
+## Errors
+
+An `align` outside the four names shows a message where the stack would be, naming the value and the four it accepts; the rest of the page still renders.

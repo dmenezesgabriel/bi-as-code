@@ -1,6 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { withQueryData } from "../../../../.storybook/decorators";
+import { BarChart } from "../charts/bar-chart";
+import {
+  ORDERS_REGIONAL,
+  REGIONAL_ROWS,
+  dbWith as dbWithRegional,
+  readyHost,
+} from "../charts/series-chart.fixture";
 import { BigValue } from "../value/big-value";
 import { dbWith, KPI, KPI_ROWS, WEEKLY } from "../value/big-value.fixture";
 import { Callout } from "./callout";
@@ -138,6 +145,36 @@ export const Widgets: Story = {
       canvas.getByText(t).getBoundingClientRect(),
     );
     expect(new Set(cells.map((c) => c.top)).size).toBe(1);
+  },
+};
+
+/** Two charts side by side get equal shares of the row. */
+export const TwoCharts: Story = {
+  args: {
+    children: [
+      <BarChart
+        key="revenue"
+        data="orders"
+        x="region"
+        y="revenue"
+        title="Revenue"
+      />,
+      <BarChart
+        key="orders"
+        data="orders"
+        x="region"
+        y="orders"
+        title="Orders"
+      />,
+    ],
+  },
+  decorators: [withQueryData([ORDERS_REGIONAL], dbWithRegional(REGIONAL_ROWS))],
+  play: async ({ canvasElement, canvas }) => {
+    await readyHost(canvasElement);
+    const left = canvas.getByText("Revenue").getBoundingClientRect();
+    const right = canvas.getByText("Orders").getBoundingClientRect();
+    expect(left.top).toBe(right.top);
+    expect(Math.abs(left.width - right.width)).toBeLessThan(2);
   },
 };
 

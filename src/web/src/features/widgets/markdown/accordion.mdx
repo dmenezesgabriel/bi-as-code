@@ -1,0 +1,58 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as AccordionStories from "./accordion.stories";
+
+<Meta of={AccordionStories} />
+
+# Accordion
+
+`<Accordion>` stacks titled sections that each open and close on a click: a list of definitions, an FAQ, a set of supporting tables. Each section is an `<AccordionItem>` whose children are Markdown and widgets. A closed section stays in the page, so the browser's find-in-page still finds its text and opens it.
+
+The reader-facing reference is `docs/pages/layout/accordion.md` (`/layout/accordion` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Sections that open on a click
+
+Each `<AccordionItem>` needs a `title`. Every section starts closed, and several can be open at once.
+
+<Canvas of={AccordionStories.Default} />
+
+### Open from the start
+
+`open` on an `<AccordionItem>` starts that section expanded.
+
+<Canvas of={AccordionStories.ItemOpen} />
+
+### One at a time
+
+`single` keeps at most one section open: opening another closes the one before. If several items set `open`, only the first starts expanded.
+
+<Canvas of={AccordionStories.SingleMode} />
+
+### Well and card
+
+`variant="well"` sets the sections on a shaded panel; `variant="card"` on a raised card.
+
+<Canvas of={AccordionStories.WellVariant} />
+
+<Canvas of={AccordionStories.CardVariant} />
+
+## Props
+
+### Accordion
+
+| Prop      | Type                              | Default     | What it does                             |
+| --------- | --------------------------------- | ----------- | ---------------------------------------- |
+| `variant` | `"default"`, `"well"` or `"card"` | `"default"` | No box, a shaded panel, or a raised card |
+| `single`  | boolean                           | `false`     | Keep at most one section open            |
+
+### AccordionItem
+
+| Prop    | Type    | Default  | What it does                |
+| ------- | ------- | -------- | --------------------------- |
+| `title` | string  | required | The section's label         |
+| `open`  | boolean | `false`  | Start this section expanded |
+
+## Errors
+
+A mistake in the markup shows as a message where the accordion would be, and the rest of the page still renders: a `variant` outside the three names, a child of `<Accordion>` that is not an `<AccordionItem>`, an `<AccordionItem>` without a `title`, or an `<AccordionItem>` outside `<Accordion>`.

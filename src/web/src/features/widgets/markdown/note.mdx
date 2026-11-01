@@ -1,0 +1,28 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as NoteStories from "./note.stories";
+
+<Meta of={NoteStories} />
+
+# Note
+
+`<Note>` sets a line in small, muted text: a source credit under a chart, a footnote on how a number was computed. It takes no props; its children are Markdown.
+
+The reader-facing reference is `docs/pages/layout/note.md` (`/layout/note` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### A source line under a chart
+
+Place a note right after the widget it describes.
+
+<Canvas of={NoteStories.Default} />
+
+### A footnote with Markdown
+
+Links, emphasis and inline code work inside a note.
+
+<Canvas of={NoteStories.WithMarkdown} />
+
+## Props
+
+`<Note>` takes no props.
