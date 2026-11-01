@@ -14,6 +14,8 @@ import {
   WEEKLY_TREND,
   appliedOption,
   dbWith,
+  expectHostHeight,
+  expectSvgHost,
   readyHost,
 } from "./series-chart.fixture";
 import type { HeatmapChartProps } from "./types";
@@ -365,21 +367,14 @@ export const NoLegend: Story = {
 export const Height: Story = {
   args: { height: 180 },
   decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
-  play: async ({ canvasElement }) => {
-    const host = await readyHost(canvasElement);
-    expect(host.getBoundingClientRect().height).toBe(180);
-  },
+  play: ({ canvasElement }) => expectHostHeight(canvasElement, 180),
 };
 
 /** `renderer="svg"` draws SVG instead of a canvas. */
 export const SvgRenderer: Story = {
   args: { renderer: "svg" },
   decorators: [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))],
-  play: async ({ canvasElement }) => {
-    const host = await readyHost(canvasElement);
-    expect(host.querySelector("svg")).not.toBeNull();
-    expect(host.querySelector("canvas")).toBeNull();
-  },
+  play: ({ canvasElement }) => expectSvgHost(canvasElement),
 };
 
 /** A `data` naming no fence alerts in the chart's place. */

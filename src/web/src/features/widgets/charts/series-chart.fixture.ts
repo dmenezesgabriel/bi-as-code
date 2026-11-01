@@ -163,6 +163,22 @@ export async function readyHost(
   return host;
 }
 
+/** The story play shared by every chart's `height` story: the host is `px` tall. */
+export async function expectHostHeight(
+  root: ParentNode,
+  px: number,
+): Promise<void> {
+  const host = await readyHost(root);
+  expect(host.getBoundingClientRect().height).toBe(px);
+}
+
+/** The story play shared by every chart's `renderer="svg"` story: SVG, no canvas. */
+export async function expectSvgHost(root: ParentNode): Promise<void> {
+  const host = await readyHost(root);
+  expect(host.querySelector("svg")).not.toBeNull();
+  expect(host.querySelector("canvas")).toBeNull();
+}
+
 /** The option the live echarts instance last applied, narrowed to `T`. */
 export async function appliedOption<T>(
   root: ParentNode,
