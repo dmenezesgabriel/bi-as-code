@@ -1,0 +1,163 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as LineChartStories from "./line-chart.stories";
+
+<Meta of={LineChartStories} />
+
+# Line chart
+
+`<LineChart>` joins one point per row of a ` ```sql ` fence named by `data`: `x` names the column along the axis and `y` the column that sets each point's height. Lines show how a measure moves over time or along any ordered axis; to compare amounts across categories, use a Bar chart.
+
+The chart issues no query of its own. The query groups, sorts and computes, so the points join in the fence's `order by` order. A `DATE` or `TIMESTAMP` `x` draws a time axis, a numeric `x` a number axis, and any other `x` one position per value.
+
+The reader-facing reference is `docs/pages/components/line-chart.md` (`/components/line-chart` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### A line from a query
+
+`data`, `x` and `y` are all a line chart needs. Hover the line to read each point.
+
+<Canvas of={LineChartStories.LineFromQuery} />
+
+### Several measures
+
+`y` takes a list of columns, and each column draws its own line. A legend names them.
+
+<Canvas of={LineChartStories.SeveralMeasures} />
+
+### Split by a column
+
+`series` names a column whose values split the points into one line each. With `series`, the query returns one row per `x` and series value.
+
+<Canvas of={LineChartStories.MultiSeries} />
+
+### Stacked
+
+`stacked` piles each line on the ones below it, so the top line reads the total. Every week here stacks up to the total orders. A series with no row at an `x` stacks as 0 there, so the layers above it keep their base.
+
+<Canvas of={LineChartStories.Stacked} />
+
+### Stacked to 100%
+
+`stacked="100%"` draws each series as its share of the total at every `x`, and the value axis reads in percent.
+
+<Canvas of={LineChartStories.StackedToPercent} />
+
+### Value labels
+
+`labels` prints each point's value above it. Labels that would overlap are left out.
+
+<Canvas of={LineChartStories.Labeled} />
+
+### Label format
+
+`labelsFmt` formats the labels with a [format code](/components/value#format-codes). Without it, labels follow `yFmt`, or show percent on a 100% stack.
+
+<Canvas of={LineChartStories.LabelFormat} />
+
+### Colour
+
+`color` draws every line in one CSS colour.
+
+<Canvas of={LineChartStories.Color} />
+
+### Series colours
+
+`seriesColors` maps a series name to a CSS colour. Series it does not name keep the theme's colours.
+
+<Canvas of={LineChartStories.SeriesColors} />
+
+### X format
+
+`xFmt` formats the `x` labels and the tooltip's heading. A numeric `x` draws a number axis whose ticks are grouped like any number; `id` prints the years whole.
+
+<Canvas of={LineChartStories.XFormat} />
+
+### Y format
+
+`yFmt` formats the value axis and the tooltip. With no `yFmt`, the axis picks its decimals from its range.
+
+<Canvas of={LineChartStories.YFormat} />
+
+### Title and subtitle
+
+`title` heads the chart and `subtitle` sits under it, both above the plot.
+
+<Canvas of={LineChartStories.TitleAndSubtitle} />
+
+### Axis titles
+
+`xTitle` and `yTitle` name the axes.
+
+<Canvas of={LineChartStories.AxisTitles} />
+
+### Without the legend
+
+A chart with more than one series shows a legend. `legend={false}` hides it; the tooltip still names each series.
+
+<Canvas of={LineChartStories.NoLegend} />
+
+### Height
+
+`height` sets the chart's height in pixels. The width always fills the column.
+
+<Canvas of={LineChartStories.Height} />
+
+### SVG renderer
+
+`renderer="svg"` draws the chart as SVG instead of on a canvas, which keeps it sharp when zoomed or printed.
+
+<Canvas of={LineChartStories.SvgRenderer} />
+
+### Narrow with a filter
+
+`filters` names the page filters whose selections narrow the chart's query. A filter narrows on its `valueColumn`, so the query must return a column of that name. Here the region filter is set to North and the chart re-queries to that one region; clear it and every region returns.
+
+`filters` also takes a list, `filters={["region", "week"]}`, and every listed filter narrows the query.
+
+<Canvas of={LineChartStories.Filtered} />
+
+### Select to cross-filter
+
+`select="crossfilter"` lets a reader select on the chart: click a point, shift-click to add more, drag across the chart to select a stretch of `x`, or click a legend entry to select a series. The selection is a filter named after the selected column, so it narrows every widget whose `filters` name that column. Click a point in the chart and the table shows only that region; click the point again to clear it.
+
+Give each chart both `select` and `filters` and the selections run both ways; a chart is never narrowed by its own selection.
+
+<Canvas of={LineChartStories.SelectCrossfilter} />
+
+## Props
+
+| Prop           | Type                   | Default                           | What it does                                                          |
+| -------------- | ---------------------- | --------------------------------- | --------------------------------------------------------------------- |
+| `data`         | string                 | required                          | The name of a ` ```sql ` fence on the page                            |
+| `x`            | string                 | required                          | The column along the axis                                             |
+| `y`            | string or string\[\]   | required                          | The numeric column, or columns, that set the points' heights          |
+| `series`       | string                 | none                              | A column whose values split the points into one line each             |
+| `stacked`      | boolean or `"100%"`    | `false`                           | Pile each line on the ones below; `"100%"` draws shares               |
+| `labels`       | boolean                | `false`                           | Print each point's value above it                                     |
+| `labelsFmt`    | string                 | `yFmt`, or `pct0` on a 100% stack | A [format code](/components/value#format-codes) for the labels        |
+| `color`        | string                 | the theme's palette               | One CSS colour for every line                                         |
+| `seriesColors` | `{ [series]: colour }` | the theme's palette               | A CSS colour per series name                                          |
+| `xFmt`         | string                 | the axis's own labels             | A format code for the `x` labels and the tooltip heading              |
+| `yFmt`         | string                 | auto-scaled number                | A format code for the value axis and the tooltip                      |
+| `title`        | string                 | none                              | The chart's heading                                                   |
+| `subtitle`     | string                 | none                              | A line under the title                                                |
+| `xTitle`       | string                 | none                              | The `x` axis name                                                     |
+| `yTitle`       | string                 | none                              | The value axis name                                                   |
+| `legend`       | boolean                | `true` with more than one series  | Show the legend                                                       |
+| `height`       | number                 | `300`                             | The chart's height in pixels                                          |
+| `renderer`     | `"canvas"` or `"svg"`  | `"canvas"`                        | How the chart is drawn                                                |
+| `filters`      | string or string\[\]   | none                              | Page filter ids whose selections narrow the query                     |
+| `select`       | `"crossfilter"`        | none                              | Let a reader's selection on the chart narrow the page's other widgets |
+
+## Errors
+
+A mistake in a line chart's markup shows as a message where the chart would be, and the rest of the page still renders. The message names the query and what is wrong: a `data` that names no fence on the page, an `x`, `y` or `series` the query does not return (with the columns it does return), or a format code the column cannot take. A query that returns no rows, such as one a filter narrows to nothing, shows "0 rows" in the chart's place, at the chart's height.
+
+<Canvas of={LineChartStories.UnknownName} />
+
+<Canvas of={LineChartStories.UnknownColumn} />
+
+<Canvas of={LineChartStories.UnknownFmt} />
+
+<Canvas of={LineChartStories.NoRows} />

@@ -183,7 +183,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4c2c4 — `heatmap` (`charts/heatmap-chart.mdx`)
 - [x] T4c2c5 — `histogram` (`charts/histogram-chart.mdx`)
 - [x] T4c2c6 — `bar-chart` (`charts/bar-chart.mdx`)
-- [ ] T4c2c7 — `line-chart`
+- [x] T4c2c7 — `line-chart`
 - [ ] T4c2c8 — `area-chart`
 - [ ] T4c2c9 — `scatter-chart`
 - [ ] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation)
