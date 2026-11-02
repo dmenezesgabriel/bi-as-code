@@ -184,7 +184,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4c2c5 — `histogram` (`charts/histogram-chart.mdx`)
 - [x] T4c2c6 — `bar-chart` (`charts/bar-chart.mdx`)
 - [x] T4c2c7 — `line-chart`
-- [ ] T4c2c8 — `area-chart`
+- [x] T4c2c8 — `area-chart`
 - [ ] T4c2c9 — `scatter-chart`
 - [ ] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation)
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages

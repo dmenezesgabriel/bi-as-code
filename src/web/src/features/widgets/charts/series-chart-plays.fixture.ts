@@ -100,6 +100,15 @@ export async function expectTotalStack(
   expect(option.series?.every((s) => s.stack === "total")).toBe(true);
 }
 
+/** An area chart shades every series under its line: each carries an `areaStyle`. */
+export async function expectAreaFilled(root: ParentNode): Promise<void> {
+  const option = await appliedOption<{
+    series?: { areaStyle?: unknown }[];
+  }>(root);
+  expect(option.series?.length).toBeGreaterThan(0);
+  expect(option.series?.every((s) => s.areaStyle !== undefined)).toBe(true);
+}
+
 /** The `select="crossfilter"` scene: a regional chart fence plus the `opts` consumer fence. */
 export const REGIONAL_CROSSFILTER_DECORATORS = [
   withQueryData([ORDERS_REGIONAL, OPTS], dbSelectable("region", REGIONAL_ROWS)),
