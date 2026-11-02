@@ -421,3 +421,75 @@ export function drawnBars(page: Page, index: number): Promise<DrawnBar[]> {
     return bars;
   }, index);
 }
+
+/**
+ * The page-space center of legend item `name` on chart host `hostIndex`.
+ * The canvas renderer draws the legend as zrender text, so the label is
+ * found in the display list and its transformed rect lifted to viewport
+ * space. The host scrolls to the viewport's bottom edge first — centered,
+ * the sticky filter bar covers the chart's top-docked legend.
+ */
+export async function legendItemPoint(
+  page: Page,
+  hostIndex: number,
+  name: string,
+): Promise<PagePoint> {
+  return page.evaluate(
+    ([hi, label]) => {
+      interface TextElement {
+        style?: { text?: string };
+        getBoundingRect(): {
+          clone(): {
+            applyTransform(m: unknown): void;
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+          };
+        };
+        getComputedTransform(): unknown;
+      }
+      const host = document.querySelectorAll<HTMLElement>(
+        "[data-echarts-theme]",
+      )[hi];
+      if (!host) throw new Error(`chart host ${hi} not in the document`);
+      host.scrollIntoView({ block: "end" });
+      const chart = (
+        host as unknown as {
+          echartsInstance?: {
+            getZr(): { storage: { getDisplayList(): TextElement[] } };
+          };
+        }
+      ).echartsInstance;
+      if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
+      const text = chart
+        .getZr()
+        .storage.getDisplayList()
+        .find((el) => el.style?.text === label);
+      if (!text) throw new Error(`no legend label "${label}" on host ${hi}`);
+      const box = text.getBoundingRect().clone();
+      box.applyTransform(text.getComputedTransform());
+      const rect = host.getBoundingClientRect();
+      return {
+        x: rect.left + box.x + box.width / 2,
+        y: rect.top + box.y + box.height / 2,
+      };
+    },
+    [hostIndex, name] as const,
+  );
+}
+
+/**
+ * Presses at `from`, drags to `to` in eight moves and releases — the
+ * gesture that draws a chart's brush.
+ */
+export async function dragAcross(
+  page: Page,
+  from: PagePoint,
+  to: PagePoint,
+): Promise<void> {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await page.mouse.up();
+}

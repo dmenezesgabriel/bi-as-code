@@ -12,72 +12,16 @@ import {
   chartHosts,
   chartPoint,
   drawnBars,
+  dragAcross,
+  legendItemPoint,
   openWeeklyReviewCharts,
   optionAt,
-  type PagePoint,
 } from "./echart-hosts.js";
 
 test.beforeEach(async ({ page }) => {
   // The selection tests assert a gesture's re-query reached the worker.
   await instrumentWorkerPosts(page);
 });
-
-/**
- * The page-space center of legend item `name` on chart host `hostIndex`.
- * The canvas renderer draws the legend as zrender text, so the label is
- * found in the display list and its transformed rect lifted to viewport
- * space. The host scrolls to the viewport's bottom edge first — centered,
- * the sticky filter bar covers the chart's top-docked legend.
- */
-async function legendItemPoint(
-  page: Page,
-  hostIndex: number,
-  name: string,
-): Promise<PagePoint> {
-  return page.evaluate(
-    ([hi, label]) => {
-      interface TextElement {
-        style?: { text?: string };
-        getBoundingRect(): {
-          clone(): {
-            applyTransform(m: unknown): void;
-            x: number;
-            y: number;
-            width: number;
-            height: number;
-          };
-        };
-        getComputedTransform(): unknown;
-      }
-      const host = document.querySelectorAll<HTMLElement>(
-        "[data-echarts-theme]",
-      )[hi];
-      if (!host) throw new Error(`chart host ${hi} not in the document`);
-      host.scrollIntoView({ block: "end" });
-      const chart = (
-        host as unknown as {
-          echartsInstance?: {
-            getZr(): { storage: { getDisplayList(): TextElement[] } };
-          };
-        }
-      ).echartsInstance;
-      if (!chart) throw new Error(`chart host ${hi} has no echartsInstance`);
-      const text = chart
-        .getZr()
-        .storage.getDisplayList()
-        .find((el) => el.style?.text === label);
-      if (!text) throw new Error(`no legend label "${label}" on host ${hi}`);
-      const box = text.getBoundingRect().clone();
-      box.applyTransform(text.getComputedTransform());
-      const rect = host.getBoundingClientRect();
-      return {
-        x: rect.left + box.x + box.width / 2,
-        y: rect.top + box.y + box.height / 2,
-      };
-    },
-    [hostIndex, name] as const,
-  );
-}
 
 /**
  * The order_id table — the `order_detail` `<Table>` widget; its fence opts
@@ -171,10 +115,7 @@ test("a histogram brush cross-filters the amount consumers while the histogram h
   await chartHosts(page).nth(2).scrollIntoViewIfNeeded();
   const from = await binPoint(page, 2, 0, 60);
   const to = await binPoint(page, 2, 3, 60);
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: 8 });
-  await page.mouse.up();
+  await dragAcross(page, from, to);
 
   // The publisher's own clause skips it — all 15 bins hold — while the
   // amount-filtered order_detail re-queries to the covered rows; the
@@ -244,10 +185,7 @@ test("a held histogram brush survives the histogram's own re-query when a region
   await chartHosts(page).nth(2).scrollIntoViewIfNeeded();
   const from = await binPoint(page, 2, 12, 60);
   const to = await binPoint(page, 2, 13, 60);
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: 8 });
-  await page.mouse.up();
+  await dragAcross(page, from, to);
   await expect(table).toContainText("· 60 rows");
   // Tag the host: a remount (the loading face swapped in) drops the tag.
   await chartHosts(page)

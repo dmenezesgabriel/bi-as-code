@@ -1,0 +1,69 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as BarChartStories from "../widgets/charts/bar-chart.stories";
+import * as HistogramChartStories from "../widgets/charts/histogram-chart.stories";
+import * as ScatterChartStories from "../widgets/charts/scatter-chart.stories";
+
+<Meta title="Cross-filter/Select on a chart" />
+
+# Select on a chart
+
+A chart can narrow the other widgets on its page. Give it `select="crossfilter"`, then click a mark, drag across the plot or click a legend entry. This page shows each gesture, and which charts take which.
+
+The reader-facing how-to is `docs/pages/crossfilter/select-on-a-chart.md` (`/crossfilter/select-on-a-chart` in `bin/biac dev docs`); each example there has a story here.
+
+## Narrow other widgets
+
+A chart's selection narrows a widget when the widget's `filters` names the selected column, and its query returns a column of that name. A widget with no `filters`, or one that names another column, is left alone. The chart that makes the selection is never narrowed by it: it keeps every mark and dims the ones outside the selection.
+
+## Click a mark
+
+Click a bar to select it. The selection is the bar's `x` value, so the table, which lists that column in `filters`, shows only that region's rows. Shift-click, or Cmd-click, another bar to add it to the selection, or to take it out again; click the only selected bar to clear the selection.
+
+<Canvas
+  of={BarChartStories.SelectCrossfilter}
+  story={{ inline: false, height: "320px" }}
+/>
+
+## Drag across the plot
+
+Drag across a chart to select a range. On a bar chart the range selects the bars it covers, and the table shows the regions under the drag.
+
+<Canvas
+  of={BarChartStories.SelectCrossfilterBrush}
+  story={{ inline: false, height: "320px" }}
+/>
+
+On a histogram the range selects a stretch of `value`, and the table shows the amounts inside it. On a line, area or scatter chart the range selects a stretch of `x`.
+
+<Canvas
+  of={HistogramChartStories.SelectCrossfilterBrush}
+  story={{ inline: false, height: "320px" }}
+/>
+
+## Click a legend entry
+
+A chart with a `series` has a legend. Click an entry to switch its series off, and every widget whose `filters` names the `series` column drops that series' rows. Click it again to switch it back on.
+
+<Canvas
+  of={ScatterChartStories.SelectCrossfilterLegend}
+  story={{ inline: false, height: "320px" }}
+/>
+
+A legend selects only when `series` names a column and `y` is a single column.
+
+## Which gestures each widget takes
+
+| Widget        | Click a mark     | Drag a range       | Legend entry              |
+| ------------- | ---------------- | ------------------ | ------------------------- |
+| Bar chart     | a bar            | the bars it covers | with `series` and one `y` |
+| Line chart    | a point          | a stretch of `x`   | with `series` and one `y` |
+| Area chart    | a point          | a stretch of `x`   | with `series` and one `y` |
+| Scatter chart | a point          | a range of `x`     | with `series` and one `y` |
+| Histogram     | no click gesture | a range of `value` | with `series`             |
+| Heatmap       | no `select`      | no `select`        | no `select`               |
+
+A Table, Big value and Value take no `select`; they only narrow.
+
+## A chart's pick is not in the URL
+
+A selection made on a chart lasts for the visit. It is not written to the URL, and reloading the page clears it. To share a narrowed page, use a filter input, which writes its value to the URL.

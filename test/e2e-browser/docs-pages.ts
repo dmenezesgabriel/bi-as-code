@@ -238,6 +238,14 @@ export const WIDGET_PAGES: readonly WidgetPage[] = [
     file: "pages/filters/filters-and-urls.md",
     drawn: [{ tag: /<(?:Dropdown|MultiSelect)\b/g, live: comboboxes }],
   },
+  {
+    route: "/crossfilter/select-on-a-chart",
+    file: "pages/crossfilter/select-on-a-chart.md",
+    drawn: [
+      { tag: /<(?:BarChart|ScatterChart|Histogram)\b/g, live: charts },
+      { tag: /<Table\b/g, live: resultTables },
+    ],
+  },
 ];
 
 /** How many times `tag` appears inside the page file's `mdx echo` fences. */
