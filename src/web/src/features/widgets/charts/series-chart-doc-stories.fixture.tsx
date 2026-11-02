@@ -1,5 +1,4 @@
 import type { StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
 import { withQueryData } from "../../../../.storybook/decorators";
 import { Table } from "../table/table";
 import {
@@ -7,7 +6,6 @@ import {
   REGIONAL_ROWS,
   TREND_ROWS,
   WEEKLY_TREND,
-  appliedOption,
   crossfilterTogglePlay,
   dbWith,
   expectAxisNames,
@@ -19,7 +17,6 @@ import {
   expectSvgHost,
 } from "./series-chart.fixture";
 import {
-  type FormatterProbe,
   REGIONAL_CROSSFILTER_DECORATORS,
   expectAlertNaming,
   expectLabelFormatter,
@@ -30,6 +27,7 @@ import {
   expectSinglePlainSeries,
   expectTotalStack,
   expectUsdAxisTicks,
+  expectWholeNumberXAxis,
 } from "./series-chart-plays.fixture";
 import type { SeriesChartProps } from "./types";
 
@@ -112,12 +110,7 @@ export const SERIES_DOC_STORIES = {
   XFormat: {
     args: { ...SPLIT_ARGS, xFmt: "id" },
     decorators: TREND_DATA,
-    play: async ({ canvasElement }) => {
-      const option = await appliedOption<{
-        xAxis?: { axisLabel?: FormatterProbe }[];
-      }>(canvasElement);
-      expect(option.xAxis?.[0]?.axisLabel?.formatter?.(1234)).toBe("1234");
-    },
+    play: ({ canvasElement }) => expectWholeNumberXAxis(canvasElement),
   },
   /** `yFmt` formats the value axis' ticks and the tooltip. */
   YFormat: {

@@ -10,6 +10,7 @@ import {
   REGIONAL_ROWS,
   appliedOption,
   dbSelectable,
+  dbWith,
 } from "./series-chart.fixture";
 
 /** A format-code probe: a formatter the applied option carries. */
@@ -54,6 +55,14 @@ export async function expectLabelFormatter(root: ParentNode): Promise<void> {
   }>(root);
   expect(option.series?.[0]?.label?.show).toBe(true);
   expect(option.series?.[0]?.label?.formatter).toBeDefined();
+}
+
+/** `xFmt="id"` prints a numeric x whole: the number axis would group 1234 as 1,234. */
+export async function expectWholeNumberXAxis(root: ParentNode): Promise<void> {
+  const option = await appliedOption<{
+    xAxis?: { axisLabel?: FormatterProbe }[];
+  }>(root);
+  expect(option.xAxis?.[0]?.axisLabel?.formatter?.(1234)).toBe("1234");
 }
 
 /** `yFmt="usd0"` formats the value axis' ticks. */
@@ -114,3 +123,6 @@ export const REGIONAL_CROSSFILTER_DECORATORS = [
   withQueryData([ORDERS_REGIONAL, OPTS], dbSelectable("region", REGIONAL_ROWS)),
   withPageFilters(new FakeFilterUrlPort("")),
 ];
+
+/** The `orders` fence answering with no rows — the "0 rows" face's scene. */
+export const NO_ROWS_DATA = [withQueryData([ORDERS_REGIONAL], dbWith([]))];
