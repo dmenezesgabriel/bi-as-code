@@ -18,7 +18,12 @@ import {
   crossfilterScene,
   dbSelectable,
   dbWith,
+  expectAxisNames,
+  expectHeading,
   expectHostHeight,
+  expectNoLegend,
+  expectPaletteColor,
+  expectSeriesColor,
   expectSvgHost,
   readyHost,
 } from "./series-chart.fixture";
@@ -262,25 +267,15 @@ export const LabelFormat: Story = {
 export const Color: Story = {
   args: { color: "#0f766e" },
   decorators: [withQueryData([ORDER_AMOUNTS], dbWith(AMOUNT_ROWS))],
-  play: async ({ canvasElement }) => {
-    const option = await appliedOption<{ color?: string[] }>(canvasElement);
-    expect(option.color).toEqual(["#0f766e"]);
-  },
+  play: ({ canvasElement }) => expectPaletteColor(canvasElement, "#0f766e"),
 };
 
 /** `seriesColors` maps a series name to a colour; unnamed series keep the theme's. */
 export const SeriesColors: Story = {
   args: { series: "region", seriesColors: { South: "#f97316" } },
   decorators: [withQueryData([ORDER_AMOUNTS], dbWith(AMOUNT_ROWS))],
-  play: async ({ canvasElement }) => {
-    const option = await appliedOption<{
-      series?: { name?: string; color?: string }[];
-    }>(canvasElement);
-    const colorOf = (name: string) =>
-      option.series?.find((s) => s.name === name)?.color;
-    expect(colorOf("South")).toBe("#f97316");
-    expect(colorOf("North")).toBeUndefined();
-  },
+  play: ({ canvasElement }) =>
+    expectSeriesColor(canvasElement, "South", "#f97316", "North"),
 };
 
 /** `valueFmt` formats the value axis' ticks. */
@@ -311,34 +306,22 @@ export const YFormat: Story = {
 export const TitleAndSubtitle: Story = {
   args: { title: "Order amounts", subtitle: "USD" },
   decorators: [withQueryData([ORDER_AMOUNTS], dbWith(AMOUNT_ROWS))],
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByText("Order amounts")).toBeInTheDocument();
-    await expect(canvas.getByText("USD")).toBeInTheDocument();
-  },
+  play: ({ canvas }) => expectHeading(canvas, "Order amounts", "USD"),
 };
 
 /** `xTitle` names the bin axis; `yTitle` the count axis (Frequency by default). */
 export const AxisTitles: Story = {
   args: { xTitle: "Amount (USD)", yTitle: "Orders" },
   decorators: [withQueryData([ORDER_AMOUNTS], dbWith(AMOUNT_ROWS))],
-  play: async ({ canvasElement }) => {
-    const option = await appliedOption<{
-      xAxis?: { name?: string }[];
-      yAxis?: { name?: string }[];
-    }>(canvasElement);
-    expect(option.xAxis?.[0]?.name).toBe("Amount (USD)");
-    expect(option.yAxis?.[0]?.name).toBe("Orders");
-  },
+  play: ({ canvasElement }) =>
+    expectAxisNames(canvasElement, "Amount (USD)", "Orders"),
 };
 
 /** `legend={false}` hides the legend a multi-series histogram shows. */
 export const NoLegend: Story = {
   args: { series: "region", legend: false },
   decorators: [withQueryData([ORDER_AMOUNTS], dbWith(AMOUNT_ROWS))],
-  play: async ({ canvasElement }) => {
-    const option = await appliedOption<{ legend?: unknown[] }>(canvasElement);
-    expect(option.legend ?? []).toEqual([]);
-  },
+  play: ({ canvasElement }) => expectNoLegend(canvasElement),
 };
 
 /** `height` sets the chart's height in pixels. */

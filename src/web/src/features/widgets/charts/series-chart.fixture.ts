@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { expect, screen, waitFor } from "storybook/test";
+import { expect, screen, waitFor, within } from "storybook/test";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import type { SqlBlock } from "../../pages/types";
@@ -428,4 +428,59 @@ export function clickMark(
     zrY: 0,
     ...modifiers,
   });
+}
+
+/** The story play shared by every chart's `color` story: one CSS colour for the palette. */
+export async function expectPaletteColor(
+  root: ParentNode,
+  color: string,
+): Promise<void> {
+  const option = await appliedOption<{ color?: string[] }>(root);
+  expect(option.color).toEqual([color]);
+}
+
+/** The story play shared by every chart's `seriesColors` story: `named` takes `color`, `unnamed` keeps the theme's. */
+export async function expectSeriesColor(
+  root: ParentNode,
+  named: string,
+  color: string,
+  unnamed: string,
+): Promise<void> {
+  const option = await appliedOption<{
+    series?: { name?: string; color?: string }[];
+  }>(root);
+  const colorOf = (name: string) =>
+    option.series?.find((s) => s.name === name)?.color;
+  expect(colorOf(named)).toBe(color);
+  expect(colorOf(unnamed)).toBeUndefined();
+}
+
+/** The story play shared by every chart's `xTitle`/`yTitle` story. */
+export async function expectAxisNames(
+  root: ParentNode,
+  x: string,
+  y: string,
+): Promise<void> {
+  const option = await appliedOption<{
+    xAxis?: { name?: string }[];
+    yAxis?: { name?: string }[];
+  }>(root);
+  expect(option.xAxis?.[0]?.name).toBe(x);
+  expect(option.yAxis?.[0]?.name).toBe(y);
+}
+
+/** The story play shared by every chart's `legend={false}` story. */
+export async function expectNoLegend(root: ParentNode): Promise<void> {
+  const option = await appliedOption<{ legend?: unknown[] }>(root);
+  expect(option.legend ?? []).toEqual([]);
+}
+
+/** The story play shared by every chart's `title`/`subtitle` story. */
+export async function expectHeading(
+  canvas: ReturnType<typeof within>,
+  title: string,
+  subtitle: string,
+): Promise<void> {
+  await expect(await canvas.findByText(title)).toBeInTheDocument();
+  await expect(canvas.getByText(subtitle)).toBeInTheDocument();
 }

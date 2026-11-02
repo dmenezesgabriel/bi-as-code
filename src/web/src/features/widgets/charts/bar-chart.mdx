@@ -1,0 +1,163 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as BarChartStories from "./bar-chart.stories";
+
+<Meta of={BarChartStories} />
+
+# Bar chart
+
+`<BarChart>` draws one bar per row of a ` ```sql ` fence named by `data`: `x` names the column along the axis and `y` the column that sets each bar's height. Bars compare amounts across categories; for a trend over time, use a Line chart.
+
+The chart issues no query of its own. The query groups, sorts and computes, so the bars appear in the fence's `order by` order and a ratio or a total is a column you compute in SQL.
+
+The reader-facing reference is `docs/pages/components/bar-chart.md` (`/components/bar-chart` in `bin/biac dev docs`); each example there has a story here.
+
+## Examples
+
+### Bars from a query
+
+`data`, `x` and `y` are all a bar chart needs. Hover a bar to read its value.
+
+<Canvas of={BarChartStories.BarsFromQuery} />
+
+### Several measures
+
+`y` takes a list of columns, and each column draws its own bars side by side. A legend names them.
+
+<Canvas of={BarChartStories.SeveralMeasures} />
+
+### Split by a column
+
+`series` names a column whose values split the bars, one colour per value. With `series`, the query returns one row per `x` and series value.
+
+<Canvas of={BarChartStories.SplitByColumn} />
+
+### Stacked
+
+`stacked` piles the series into one bar per `x`, so the bar's height is the total.
+
+<Canvas of={BarChartStories.Stacked} />
+
+### Stacked to 100%
+
+`stacked="100%"` draws each series as its share of the bar, so every bar is the same height and the value axis reads in percent.
+
+<Canvas of={BarChartStories.StackedToPercent} />
+
+### Value labels
+
+`labels` prints each bar's value on it. On bars that are not stacked, the labels take the place of the value axis and its gridlines.
+
+<Canvas of={BarChartStories.Labeled} />
+
+### Label format
+
+`labelsFmt` formats the labels with a [format code](/components/value#format-codes). Without it, labels follow `yFmt`, or show percent on a 100% stack.
+
+<Canvas of={BarChartStories.LabelFormat} />
+
+### Colour
+
+`color` paints every bar one CSS colour.
+
+<Canvas of={BarChartStories.Color} />
+
+### Series colours
+
+`seriesColors` maps a series name to a CSS colour. Series it does not name keep the theme's colours.
+
+<Canvas of={BarChartStories.SeriesColors} />
+
+### X format
+
+`xFmt` formats the `x` labels and the tooltip's heading. A date `x` draws a time axis with a tick on each date when there are 15 or fewer; labels that would touch thin to every other one (or every third…), keeping the first and last.
+
+<Canvas of={BarChartStories.QuarterlyTimeAxis} />
+
+### Y format
+
+`yFmt` formats the value axis and the tooltip. With no `yFmt`, the axis picks its decimals from its range.
+
+<Canvas of={BarChartStories.YFormat} />
+
+### Title and subtitle
+
+`title` heads the chart and `subtitle` sits under it, both above the plot.
+
+<Canvas of={BarChartStories.TitleAndSubtitle} />
+
+### Axis titles
+
+`xTitle` and `yTitle` name the axes.
+
+<Canvas of={BarChartStories.AxisTitles} />
+
+### Without the legend
+
+A chart with more than one series shows a legend. `legend={false}` hides it; the tooltip still names each series.
+
+<Canvas of={BarChartStories.NoLegend} />
+
+### Height
+
+`height` sets the chart's height in pixels. The width always fills the column.
+
+<Canvas of={BarChartStories.Height} />
+
+### SVG renderer
+
+`renderer="svg"` draws the chart as SVG instead of on a canvas, which keeps it sharp when zoomed or printed.
+
+<Canvas of={BarChartStories.SvgRenderer} />
+
+### Narrow with a filter
+
+`filters` names the page filters whose selections narrow the chart's query. A filter narrows on its `valueColumn`, so the query must return a column of that name. Pick an island below and the chart re-queries; clear it and every island returns.
+
+<Canvas of={BarChartStories.Filtered} />
+
+`filters` also takes a list, `filters={["island", "species"]}`, and every listed filter narrows the query.
+
+### Select to cross-filter
+
+`select="crossfilter"` lets a reader select on the chart: click a bar, shift-click to add more, drag across bars, or click a legend entry to select a series. The selection is a filter named after the selected column, so it narrows every widget whose `filters` name that column. Click a species in the first chart and the second shows only that species; click the selected bar again to clear it.
+
+<Canvas of={BarChartStories.SelectCrossfilter} />
+
+Give each chart both `select` and `filters` and the selections run both ways; a chart is never narrowed by its own selection.
+
+## Props
+
+| Prop           | Type                   | Default                           | What it does                                                          |
+| -------------- | ---------------------- | --------------------------------- | --------------------------------------------------------------------- |
+| `data`         | string                 | required                          | The name of a ` ```sql ` fence on the page                            |
+| `x`            | string                 | required                          | The column along the axis                                             |
+| `y`            | string or string\[\]   | required                          | The numeric column, or columns, that set the bars' heights            |
+| `series`       | string                 | none                              | A column whose values split the bars, one colour each                 |
+| `stacked`      | boolean or `"100%"`    | `false`                           | Pile the series into one bar; `"100%"` draws shares                   |
+| `labels`       | boolean                | `false`                           | Print each bar's value on it                                          |
+| `labelsFmt`    | string                 | `yFmt`, or `pct0` on a 100% stack | A [format code](/components/value#format-codes) for the labels        |
+| `color`        | string                 | the theme's palette               | One CSS colour for every bar                                          |
+| `seriesColors` | `{ [series]: colour }` | the theme's palette               | A CSS colour per series name                                          |
+| `xFmt`         | string                 | the axis's own labels             | A format code for the `x` labels and the tooltip heading              |
+| `yFmt`         | string                 | auto-scaled number                | A format code for the value axis and the tooltip                      |
+| `title`        | string                 | none                              | The chart's heading                                                   |
+| `subtitle`     | string                 | none                              | A line under the title                                                |
+| `xTitle`       | string                 | none                              | The `x` axis name                                                     |
+| `yTitle`       | string                 | none                              | The value axis name                                                   |
+| `legend`       | boolean                | `true` with more than one series  | Show the legend                                                       |
+| `height`       | number                 | `300`                             | The chart's height in pixels                                          |
+| `renderer`     | `"canvas"` or `"svg"`  | `"canvas"`                        | How the chart is drawn                                                |
+| `filters`      | string or string\[\]   | none                              | Page filter ids whose selections narrow the query                     |
+| `select`       | `"crossfilter"`        | none                              | Let a reader's selection on the chart narrow the page's other widgets |
+
+## Errors
+
+A mistake in a bar chart's markup shows as a message where the chart would be, and the rest of the page still renders. The message names the query and what is wrong: a `data` that names no fence on the page, an `x`, `y` or `series` the query does not return (with the columns it does return), or a format code the column cannot take. A query that returns no rows, such as one a filter narrows to nothing, shows "0 rows" in the chart's place, at the chart's height.
+
+<Canvas of={BarChartStories.UnknownName} />
+
+<Canvas of={BarChartStories.UnknownColumn} />
+
+<Canvas of={BarChartStories.UnknownFmt} />
+
+<Canvas of={BarChartStories.NoRows} />

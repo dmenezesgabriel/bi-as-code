@@ -23,6 +23,13 @@ import {
   crossfilterTogglePlay,
   dbSelectable,
   dbWith,
+  expectAxisNames,
+  expectHeading,
+  expectHostHeight,
+  expectNoLegend,
+  expectPaletteColor,
+  expectSeriesColor,
+  expectSvgHost,
   readyHost,
 } from "./series-chart.fixture";
 import type { SeriesChartProps } from "./types";
@@ -263,5 +270,183 @@ export const MonthlyTimeAxisNarrow: Story = {
     expect(shown).toEqual(
       expect.arrayContaining(ends.map((d) => (d as Date).getTime())),
     );
+  },
+};
+
+const REGIONAL_DATA = [withQueryData([ORDERS_REGIONAL], dbWith(REGIONAL_ROWS))];
+const TREND_DATA = [withQueryData([WEEKLY_TREND], dbWith(TREND_ROWS))];
+const TREND_ARGS = { data: "weekly_trend", x: "week", y: "orders" } as const;
+
+/** The format-code probes: a formatter the applied option carries. */
+interface FormatterProbe {
+  formatter?: (value: number) => string;
+}
+
+/** `data`, `x` and `y` are all a bar chart needs: one bar per row. */
+export const BarsFromQuery: Story = {
+  decorators: REGIONAL_DATA,
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{ series?: { data?: unknown[] }[] }>(
+      canvasElement,
+    );
+    expect(option.series).toHaveLength(1);
+    expect(option.series?.[0]?.data).toHaveLength(3);
+  },
+};
+
+/** `y` as a list draws each column as its own bars, named in the legend. */
+export const SeveralMeasures: Story = {
+  args: { y: ["revenue", "orders"] },
+  decorators: REGIONAL_DATA,
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { name?: string; stack?: string }[];
+      legend?: unknown[];
+    }>(canvasElement);
+    expect(option.series?.map((s) => s.name)).toEqual(["revenue", "orders"]);
+    expect(option.series?.every((s) => s.stack === undefined)).toBe(true);
+    expect(option.legend).toHaveLength(1);
+  },
+};
+
+/** `series` splits the bars by a column's values, side by side. */
+export const SplitByColumn: Story = {
+  args: { ...TREND_ARGS, series: "region" },
+  decorators: TREND_DATA,
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { name?: string; stack?: string }[];
+    }>(canvasElement);
+    expect(option.series?.map((s) => s.name)).toEqual(["North", "South"]);
+    expect(option.series?.every((s) => s.stack === undefined)).toBe(true);
+  },
+};
+
+/** `stacked="100%"` draws each series as its share: the value axis pins to
+ * 0–1 and the labels default to percent. */
+export const StackedToPercent: Story = {
+  args: { ...TREND_ARGS, series: "region", stacked: "100%" },
+  decorators: TREND_DATA,
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{ yAxis?: { max?: number }[] }>(
+      canvasElement,
+    );
+    expect(option.yAxis?.[0]?.max).toBe(1);
+  },
+};
+
+/** `labelsFmt` formats the labels with a format code; the axis keeps `yFmt`. */
+export const LabelFormat: Story = {
+  args: { y: ["revenue", "orders"], labels: true, labelsFmt: "num1k" },
+  decorators: REGIONAL_DATA,
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      series?: { label?: FormatterProbe & { show?: boolean } }[];
+    }>(canvasElement);
+    expect(option.series?.[0]?.label?.show).toBe(true);
+    expect(option.series?.[0]?.label?.formatter).toBeDefined();
+  },
+};
+
+/** `color` paints every bar one CSS colour. */
+export const Color: Story = {
+  args: { color: "#0f766e" },
+  decorators: REGIONAL_DATA,
+  play: ({ canvasElement }) => expectPaletteColor(canvasElement, "#0f766e"),
+};
+
+/** `seriesColors` maps a series name to a colour; unnamed series keep the theme's. */
+export const SeriesColors: Story = {
+  args: { ...TREND_ARGS, series: "region", seriesColors: { South: "#f97316" } },
+  decorators: TREND_DATA,
+  play: ({ canvasElement }) =>
+    expectSeriesColor(canvasElement, "South", "#f97316", "North"),
+};
+
+/** `yFmt` formats the value axis' ticks and the tooltip. */
+export const YFormat: Story = {
+  args: { yFmt: "usd0" },
+  decorators: REGIONAL_DATA,
+  play: async ({ canvasElement }) => {
+    const option = await appliedOption<{
+      yAxis?: { axisLabel?: FormatterProbe }[];
+    }>(canvasElement);
+    expect(option.yAxis?.[0]?.axisLabel?.formatter?.(4000)).toBe("$4,000");
+  },
+};
+
+/** `title` heads the chart and `subtitle` sits under it, above the plot. */
+export const TitleAndSubtitle: Story = {
+  args: { title: "Revenue by region", subtitle: "US dollars" },
+  decorators: REGIONAL_DATA,
+  play: ({ canvas }) =>
+    expectHeading(canvas, "Revenue by region", "US dollars"),
+};
+
+/** `xTitle` and `yTitle` name the axes. */
+export const AxisTitles: Story = {
+  args: { xTitle: "Region", yTitle: "Revenue" },
+  decorators: REGIONAL_DATA,
+  play: ({ canvasElement }) =>
+    expectAxisNames(canvasElement, "Region", "Revenue"),
+};
+
+/** `legend={false}` hides the legend a multi-series chart shows. */
+export const NoLegend: Story = {
+  args: { ...TREND_ARGS, series: "region", legend: false },
+  decorators: TREND_DATA,
+  play: ({ canvasElement }) => expectNoLegend(canvasElement),
+};
+
+/** `height` sets the chart's height in pixels. */
+export const Height: Story = {
+  args: { height: 180 },
+  decorators: REGIONAL_DATA,
+  play: ({ canvasElement }) => expectHostHeight(canvasElement, 180),
+};
+
+/** `renderer="svg"` draws SVG instead of a canvas. */
+export const SvgRenderer: Story = {
+  args: { renderer: "svg" },
+  decorators: REGIONAL_DATA,
+  play: ({ canvasElement }) => expectSvgHost(canvasElement),
+};
+
+/** A `data` naming no fence alerts in the chart's place. */
+export const UnknownName: Story = {
+  args: { data: "ghost" },
+  decorators: REGIONAL_DATA,
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("alert")).toHaveTextContent("ghost");
+  },
+};
+
+/** A column the query does not return is named, with the columns it does. */
+export const UnknownColumn: Story = {
+  args: { x: "typo" },
+  decorators: REGIONAL_DATA,
+  play: async ({ canvas }) => {
+    const alert = await canvas.findByRole("alert");
+    await expect(alert).toHaveTextContent('"typo"');
+    await expect(alert).toHaveTextContent("region");
+  },
+};
+
+/** A format code the column cannot take names itself in the alert. */
+export const UnknownFmt: Story = {
+  args: { yFmt: "bogus" },
+  decorators: REGIONAL_DATA,
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      'fmt="bogus"',
+    );
+  },
+};
+
+/** A query that returns no rows shows "0 rows" at the chart's height. */
+export const NoRows: Story = {
+  decorators: [withQueryData([ORDERS_REGIONAL], dbWith([]))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText("0 rows")).toBeInTheDocument();
   },
 };
