@@ -1,7 +1,7 @@
 ---
 title: Markdown pages and front-matter
 icon: file-text
-sidebar_position: 701
+sidebar_position: 101
 keywords:
   [
     page,

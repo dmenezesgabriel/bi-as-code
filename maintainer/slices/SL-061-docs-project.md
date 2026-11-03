@@ -191,13 +191,13 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4d2 — The explanation `How cross-filtering works` (`docs/pages/crossfilter/how-cross-filtering-works.md` and its Storybook MDX page): selections, clauses, the publisher keeping its own rows, session state against the URL
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages — about ten pages, so split per page into T5a to T5j (owner rule: one task per session)
 - [x] T5a — Pages section, reference: Markdown pages, routing and front-matter (`title`, `icon`, `sidebar_position`, `table_of_contents`, `index`, `keywords`, layout) — `docs/pages/pages/markdown-pages.md` and `src/web/src/features/pages/markdown-pages.mdx`; the `sql` and `brand` front-matter keys are left to T5e and T5d
-- [ ] T5b — Pages section, reference: `biac.config.ts`, every key in `CONFIG_KEYS` (`src/engine/biac-config.ts`)
+- [x] T5b — Pages section, reference: `biac.config.ts`, every key in `CONFIG_KEYS` (`src/engine/biac-config.ts`) — `docs/pages/pages/biac-config.md` and `src/web/src/features/pages/biac-config.mdx`, with the project `sql`, `interpreters`, `embed` and `brand` keys in full; the Pages section sits in the 100s band
 - [ ] T5c — Pages section, reference: sidebar, table of contents and breadcrumbs
-- [ ] T5d — Pages section, reference: themes and brand, and add the `brand` key to the front-matter table of `docs/pages/pages/markdown-pages.md`
-- [ ] T5e — Data section, reference: `sql:` front-matter and config tables, and ` ```sql name ` fences with `echo`/`display`, and add the `sql` key to the front-matter table of `docs/pages/pages/markdown-pages.md`
+- [ ] T5d — Pages section, reference: themes and the page-level `brand` front-matter (the project `brand` and `theme` keys are on `docs/pages/pages/biac-config.md`), and add the `brand` key to the front-matter table of `docs/pages/pages/markdown-pages.md`
+- [ ] T5e — Data section, reference: `sql:` front-matter (the project `sql` key is on `docs/pages/pages/biac-config.md`), and ` ```sql name ` fences with `echo`/`display`, and add the `sql` key to the front-matter table of `docs/pages/pages/markdown-pages.md`
 - [ ] T5f — Data section, reference: `{{param}}` in queries
 - [ ] T5g — Data section, reference: query files under `queries/`
-- [ ] T5h — Data section, reference: data loaders (one live loader)
+- [ ] T5h — Data section, reference: data loaders (one live loader; the `interpreters` key and its default table are on `docs/pages/pages/biac-config.md`)
 - [ ] T5i — Data section, reference: translations
 - [ ] T5j — Data section, reference: site search
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor

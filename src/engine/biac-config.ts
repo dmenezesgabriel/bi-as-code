@@ -48,7 +48,7 @@ const DEFAULTS: BiacConfig = {
 // `interpreters` are open maps (table names, file extensions) and are never
 // checked; `directories` keys are folders, checked against the discovered
 // pages where the manifest is built.
-const CONFIG_KEYS = [
+export const CONFIG_KEYS = [
   "title",
   "theme",
   "nav",

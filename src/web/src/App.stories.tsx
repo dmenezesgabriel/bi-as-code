@@ -63,6 +63,16 @@ export const Default: Story = {
   },
 };
 
+/** `theme: "dark"` opens the site in dark mode for a reader who has not
+ * picked a mode of their own. */
+export const DarkTheme: Story = {
+  args: { site: { ...SITE, theme: "dark" } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("button", { name: /light/i })).toBeVisible();
+    await expect(document.documentElement).toHaveClass("dark");
+  },
+};
+
 /** The header button collapses the sidebar on desktop widths and reports
  * `aria-expanded` going false. */
 export const SidebarToggles: Story = {

@@ -85,6 +85,42 @@ export const ActiveInsideDirectory: Story = {
   },
 };
 
+/** `title` names the site: the sidebar header shows it above the search
+ * box. */
+export const SiteTitle: Story = {
+  args: { siteTitle: "Sales" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Sales")).toBeVisible();
+  },
+};
+
+/** A `directories` entry replaces the folder's name in the sidebar: the
+ * group is titled "Quarter 3" while its pages keep the folder's URL. */
+export const RenamedFolder: Story = {
+  args: {
+    tree: {
+      rootPages: [{ name: "Home", href: "/" }],
+      directories: [
+        {
+          id: "q3-reports",
+          name: "Quarter 3",
+          pages: [{ name: "Revenue", href: "/q3-reports/revenue" }],
+        },
+      ],
+    },
+  },
+  decorators: [
+    withMemoryRouter(["/", "/q3-reports/revenue"], "/q3-reports/revenue"),
+  ],
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Quarter 3")).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "Revenue" })).toHaveAttribute(
+      "href",
+      "/q3-reports/revenue/",
+    );
+  },
+};
+
 /** Toggling a group flips it open and writes the choice to storage. */
 export const ToggleDirectory: Story = {
   play: async ({ canvas }) => {

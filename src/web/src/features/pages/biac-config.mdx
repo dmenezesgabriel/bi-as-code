@@ -1,0 +1,154 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as AppStories from "../../App.stories";
+import * as MarkdownPageStories from "./markdown-page.stories";
+import * as PageBrandStyleStories from "./page-brand-style.stories";
+import * as SidebarNavStories from "../chrome/sidebar-nav.stories";
+
+<Meta title="Pages/biac.config.ts" />
+
+# biac.config.ts
+
+`biac.config.ts` holds the settings that belong to the whole project: its name, theme, sidebar, layout, data tables, loader languages, brand and deploy path. Every key is optional.
+
+The reader-facing reference is `docs/pages/pages/biac-config.md` (`/pages/biac-config` in `bin/biac dev docs`). It lists every key with its values, its default and the error a wrong value raises; the keys that change what a reader sees have a story here. `base`, `sql`, `interpreters` and the `embed.dataOrigins` grant change no pixel, so they have no canvas.
+
+## `title`
+
+`title` is the site's name, shown at the top of the sidebar.
+
+```ts
+export default { title: "Sales" };
+```
+
+<Canvas
+  of={SidebarNavStories.SiteTitle}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## `theme`
+
+`theme: "dark"` opens the site in dark mode for a reader who has not picked a mode of their own.
+
+```ts
+export default { theme: "dark" };
+```
+
+<Canvas of={AppStories.DarkTheme} story={{ inline: false, height: "420px" }} />
+
+## `nav`
+
+`nav.sidebar: false` removes the sidebar and its toggle, and the content fills the window.
+
+```ts
+export default { nav: { sidebar: false } };
+```
+
+<Canvas of={AppStories.NoSidebar} story={{ inline: false, height: "420px" }} />
+
+## `layout`
+
+`layout` sets the page layout for every page; a page overrides one key at a time.
+
+### Page width
+
+```ts
+export default { layout: { page_width: "full" } };
+```
+
+<Canvas
+  of={MarkdownPageStories.FullWidth}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Cards
+
+```ts
+export default { layout: { cards: true } };
+```
+
+<Canvas
+  of={MarkdownPageStories.Cards}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Without the table of contents
+
+```ts
+export default { layout: { table_of_contents: false } };
+```
+
+<Canvas
+  of={MarkdownPageStories.WithoutTableOfContents}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### A labelled table of contents
+
+```ts
+export default { layout: { table_of_contents_label: "Jump to" } };
+```
+
+<Canvas
+  of={MarkdownPageStories.LabelledTableOfContents}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## `directories`
+
+A `directories` entry replaces a folder's name in the sidebar and the breadcrumb; the URL keeps the folder name.
+
+```ts
+export default {
+  directories: { "pages/q3-reports": { title: "Quarter 3" } },
+};
+```
+
+<Canvas
+  of={SidebarNavStories.RenamedFolder}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## `embed`
+
+`embed.origins` lists the sites allowed to show the pages in an iframe. A framed page posts its height to a listed parent, so the parent can size the frame.
+
+```ts
+export default {
+  embed: { origins: ["https://intranet.example.com"] },
+};
+```
+
+<Canvas
+  of={AppStories.FramedByListedParent}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## `brand`
+
+`brand` replaces biac's colours, fonts, font size and corner radius with the project's own. The loader turns the block into a stylesheet of theme tokens, and the stories below apply the same kind of stylesheet.
+
+### Colours
+
+```ts
+export default {
+  brand: { colors: { primary: { light: "#154886", dark: "#60a5fa" } } },
+};
+```
+
+<Canvas
+  of={PageBrandStyleStories.BrandedPrimary}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Chart palette
+
+```ts
+export default {
+  brand: { palette: { light: ["#1e40af"] } },
+};
+```
+
+<Canvas
+  of={PageBrandStyleStories.BrandedPalette}
+  story={{ inline: false, height: "420px" }}
+/>

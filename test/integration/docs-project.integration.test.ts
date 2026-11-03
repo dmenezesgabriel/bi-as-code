@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { build } from "@/cli/commands/build.js";
+import { CONFIG_KEYS } from "@/engine/biac-config.js";
 import { PAGE_ICON_NAMES } from "@/engine/page-icon-frontmatter.js";
 import { copyDocsProject } from "../lib/shipped-project.js";
 import { cleanupProjects, makeTempProject } from "../lib/temp-project.js";
@@ -30,6 +31,7 @@ describe("the docs project", () => {
       "components/big-value",
       "components/value",
       "pages/markdown-pages",
+      "pages/biac-config",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }
@@ -50,6 +52,20 @@ describe("the docs project", () => {
     );
 
     // Assert — a catalog name the page omits would send a reader to the error message.
+    expect(unlisted).toEqual([]);
+  });
+
+  it("lists every biac.config.ts key on the config reference", () => {
+    // Arrange — the page is read from the repo; nothing is built.
+    const page = readFileSync(
+      new URL("../../docs/pages/pages/biac-config.md", import.meta.url),
+      "utf-8",
+    );
+
+    // Act
+    const unlisted = CONFIG_KEYS.filter((key) => !page.includes(`\`${key}\``));
+
+    // Assert — a key the page omits would leave a reader with only the error message.
     expect(unlisted).toEqual([]);
   });
 });
