@@ -26,6 +26,11 @@ const PAGES = [
     route: "/sql/sql-tables-and-fences",
     title: "SQL tables and fences",
   },
+  {
+    group: "Data",
+    route: "/sql/params-in-queries",
+    title: "Parameters in queries",
+  },
 ];
 
 for (const { group, route, title } of PAGES) {
@@ -233,6 +238,89 @@ test.describe("the SQL tables and fences the reference describes", () => {
 
     await expect(page.locator("main canvas, main svg").first()).toBeVisible();
     await expect(page.getByRole("alert")).toHaveCount(0);
+  });
+});
+
+test.describe("the parameters the reference describes", () => {
+  const route = "/sql/params-in-queries";
+
+  test("a typed value reruns the queries that read it, lands in the URL and survives a reload", async ({
+    page,
+    biacDev,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}${route}`);
+    const main = page.locator("main");
+    const islands = main.getByRole("table").filter({ hasText: "Torgersen" });
+    const typed = main.getByRole("table").filter({ hasText: "nothing typed" });
+    await expect(islands.getByRole("row")).toHaveCount(4);
+    await expect(typed).toBeVisible();
+
+    await main.getByRole("textbox", { name: "Island name" }).fill("bis");
+    await page.keyboard.press("Tab");
+
+    await expect(page).toHaveURL(/\?island_text=bis$/);
+    await expect(islands).toHaveCount(0);
+    const biscoe = main.getByRole("table").filter({ hasText: "Biscoe" });
+    await expect(biscoe.getByRole("row")).toHaveCount(2);
+    await expect(
+      main.getByRole("table").filter({ hasText: "Typed" }),
+    ).toContainText("bis");
+
+    await page.reload();
+
+    await expect(
+      main.getByRole("textbox", { name: "Island name" }),
+    ).toHaveValue("bis");
+    await expect(
+      main.getByRole("table").filter({ hasText: "Biscoe" }).getByRole("row"),
+    ).toHaveCount(2);
+  });
+
+  test("a composed fence follows the value its inlined fence reads", async ({
+    page,
+    biacDev,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}${route}`);
+    const main = page.locator("main");
+    const species = main.getByRole("table").filter({ hasText: "Chinstrap" });
+    await expect(species.getByRole("row")).toHaveCount(4);
+
+    await main.getByRole("textbox", { name: "Island name" }).fill("bis");
+    await page.keyboard.press("Tab");
+
+    // Biscoe holds no Chinstrap penguin, so the species table loses that row.
+    await expect(species).toHaveCount(0);
+    const adelieAndGentoo = main
+      .getByRole("table")
+      .filter({ hasText: "Gentoo" })
+      .filter({ hasText: "Adelie" });
+    await expect(adelieAndGentoo.getByRole("row")).toHaveCount(3);
+  });
+
+  test("a typed number binds as a DOUBLE", async ({ page, biacDev }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}${route}?island_text=42`);
+
+    const typed = page
+      .locator("main")
+      .getByRole("table")
+      .filter({ hasText: "Typed" });
+    await expect(typed).toContainText("42.0");
+  });
+
+  test("the page draws no query error and logs no console error", async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}${route}`);
+    await expect(page.locator("main").getByRole("table").first()).toBeVisible();
+
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    expect(errors).toEqual([]);
   });
 });
 

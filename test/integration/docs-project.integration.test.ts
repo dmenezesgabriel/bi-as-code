@@ -42,6 +42,7 @@ describe("the docs project", () => {
       "pages/themes-and-brand",
       "pages/branded-page-example",
       "sql/sql-tables-and-fences",
+      "sql/params-in-queries",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }

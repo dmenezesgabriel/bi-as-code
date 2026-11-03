@@ -1,0 +1,82 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as ParametersInQueriesStories from "./params-in-queries.stories";
+
+<Meta of={ParametersInQueriesStories} />
+
+# Parameters in queries
+
+A query on a page can change with the page. `{{params.id}}` hands a query the value a reader picked, typed or switched, and `{{name}}` splices another query's SQL into this one. Both are written inside a named ` ```sql ` fence, and both are resolved before DuckDB sees the query. The stories below stand a fake DuckDB behind the fences, so they show the argument each query receives and never a real result.
+
+The reader-facing reference is `docs/pages/sql/params-in-queries.md` (`/sql/params-in-queries` in `bin/biac dev docs`).
+
+## `{{params.id}}`
+
+`{{params.id}}` is the value of the page parameter `id`. The inputs write their value to the page URL under their `id`, so an input with `id="island_text"` is read as `{{params.island_text}}`.
+
+The value reaches DuckDB as a bound argument, not as text pasted into the SQL: `{{params.id}}` becomes a `?` and the value travels beside the query. Whatever a reader types, it stays a value, so it cannot change what the query does.
+
+### Use a value in a query
+
+Type `bis` to keep Biscoe. The query keeps the islands whose name holds the text, and every island while the box is empty. It reruns each time the value changes, and only the queries that read the changed parameter rerun.
+
+<Canvas
+  of={ParametersInQueriesStories.UseAValue}
+  story={{ inline: false, height: "300px" }}
+/>
+
+### Before a value exists
+
+A parameter nobody has set is `null`, and `null` is not an error. Write the query so that `null` means no filter. A name no input uses is `null` as well, so a misspelled parameter silently filters nothing.
+
+<Canvas
+  of={ParametersInQueriesStories.BeforeAValue}
+  story={{ inline: false, height: "160px" }}
+/>
+
+### Where a value comes from
+
+The page URL's search parameters, then the inputs' own starting values. When the URL holds a parameter, it wins. Otherwise an input's `initialValue`, or the first option a `selectFirst` input picked, is what the query reads.
+
+The URL carries text, and a value that parses as JSON is read as what it parses to:
+
+| In the URL          | `{{params.id}}` is | DuckDB type |
+| ------------------- | ------------------ | ----------- |
+| `?id=Dream`         | the text `Dream`   | `VARCHAR`   |
+| `?id=42`            | the number `42`    | `DOUBLE`    |
+| `?id=true`          | the boolean `true` | `BOOLEAN`   |
+| nothing, no initial | `null`             | —           |
+
+A number binds as a `DOUBLE`, which reads `42.0` once cast to text.
+
+### A value is not a name
+
+A bound value stands for a value only. It cannot name a column or a table, and it cannot be a piece of SQL, so a query that picks its column by parameter spells the choices out with `case`. Keep the token outside quotes too: inside `'…'` it is part of the text and not a placeholder, so the query fails with `Parameter argument/count mismatch`. Build the text from the value instead: `'%' || {{params.island_text}}::varchar || '%'`.
+
+## `{{name}}`
+
+`{{name}}` is the SQL of another named fence on the same page, placed where the token stands inside parentheses, as a subquery. The database receives one query: `islands_named` written in place, its own `{{params.island_text}}` already a `?`, and both values bound left to right.
+
+<Canvas
+  of={ParametersInQueriesStories.ComposedBlocks}
+  story={{ inline: false, height: "240px" }}
+/>
+
+Spaces inside the braces make no difference: `{{ islands_named }}` is the same token.
+
+## Errors
+
+A query with an error is never run. It shows the message under the block, whether or not the block has `echo` or `display`. A token that is not `params.`, a translation, a query file or the name of another fence on the page:
+
+<Canvas
+  of={ParametersInQueriesStories.UnknownToken}
+  story={{ inline: false, height: "160px" }}
+/>
+
+Two fences that reach each other, or one that reaches itself, never finish expanding:
+
+<Canvas
+  of={ParametersInQueriesStories.CircularReference}
+  story={{ inline: false, height: "160px" }}
+/>
+
+Several errors in one query are shown together, separated by `;`.
