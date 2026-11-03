@@ -190,11 +190,11 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4d1 — The how-to `Select on a chart` (`docs/pages/crossfilter/select-on-a-chart.md`, `src/web/src/features/crossfilter/select-on-a-chart.mdx`): click, shift-click, brush and legend, which charts take which gesture, and the Cross-filter section in `docs/biac.config.ts`
 - [x] T4d2 — The explanation `How cross-filtering works` (`docs/pages/crossfilter/how-cross-filtering-works.md` and its Storybook MDX page): selections, clauses, the publisher keeping its own rows, session state against the URL
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages — about ten pages, so split per page into T5a to T5j (owner rule: one task per session)
-- [ ] T5a — Pages section, reference: Markdown pages, routing and front-matter (`title`, `icon`, `sidebar_position`, `table_of_contents`, `index`, `keywords`, layout)
+- [x] T5a — Pages section, reference: Markdown pages, routing and front-matter (`title`, `icon`, `sidebar_position`, `table_of_contents`, `index`, `keywords`, layout) — `docs/pages/pages/markdown-pages.md` and `src/web/src/features/pages/markdown-pages.mdx`; the `sql` and `brand` front-matter keys are left to T5e and T5d
 - [ ] T5b — Pages section, reference: `biac.config.ts`, every key in `CONFIG_KEYS` (`src/engine/biac-config.ts`)
 - [ ] T5c — Pages section, reference: sidebar, table of contents and breadcrumbs
-- [ ] T5d — Pages section, reference: themes and brand
-- [ ] T5e — Data section, reference: `sql:` front-matter and config tables, and ` ```sql name ` fences with `echo`/`display`
+- [ ] T5d — Pages section, reference: themes and brand, and add the `brand` key to the front-matter table of `docs/pages/pages/markdown-pages.md`
+- [ ] T5e — Data section, reference: `sql:` front-matter and config tables, and ` ```sql name ` fences with `echo`/`display`, and add the `sql` key to the front-matter table of `docs/pages/pages/markdown-pages.md`
 - [ ] T5f — Data section, reference: `{{param}}` in queries
 - [ ] T5g — Data section, reference: query files under `queries/`
 - [ ] T5h — Data section, reference: data loaders (one live loader)

@@ -7,6 +7,7 @@ export default {
     "pages/layout": { title: "Layout" },
     "pages/filters": { title: "Filters" },
     "pages/crossfilter": { title: "Cross-filter" },
+    "pages/pages": { title: "Pages" },
   },
   sql: {
     penguins: "data/penguins.csv",

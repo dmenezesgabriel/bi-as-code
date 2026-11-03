@@ -1,0 +1,80 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as MarkdownPageStories from "./markdown-page.stories";
+import * as SidebarNavStories from "../chrome/sidebar-nav.stories";
+
+<Meta title="Pages/Markdown pages and front-matter" />
+
+# Markdown pages and front-matter
+
+A biac page is a Markdown file under `pages/`: its path is its URL, and an optional YAML block at the top sets how the page is named, ordered, laid out and searched.
+
+The reader-facing reference is `docs/pages/pages/markdown-pages.md` (`/pages/markdown-pages` in `bin/biac dev docs`). It lists the route rules, every front-matter key and the icon catalog; the keys that change what a page looks like have a story here.
+
+## Sidebar
+
+### Icons
+
+`icon` names one glyph from a fixed catalog; the sidebar draws it before the page's label.
+
+```yaml
+icon: calendar
+```
+
+<Canvas
+  of={SidebarNavStories.WithIcons}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Layout
+
+### Page width
+
+`page_width: full` lifts the reading column's width limits so the content fills the space beside the sidebar.
+
+```yaml
+page_width: full
+```
+
+<Canvas
+  of={MarkdownPageStories.FullWidth}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Cards
+
+`cards: true` puts each chart, table and big value on its own card over a tinted background.
+
+```yaml
+cards: true
+```
+
+<Canvas
+  of={MarkdownPageStories.Cards}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Without the table of contents
+
+`table_of_contents: false` hides the rail that lists the page's headings.
+
+```yaml
+table_of_contents: false
+```
+
+<Canvas
+  of={MarkdownPageStories.WithoutTableOfContents}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### A labelled table of contents
+
+`table_of_contents_label` renames the rail, and the name becomes its landmark's accessible name.
+
+```yaml
+table_of_contents_label: Jump to
+```
+
+<Canvas
+  of={MarkdownPageStories.LabelledTableOfContents}
+  story={{ inline: false, height: "420px" }}
+/>
