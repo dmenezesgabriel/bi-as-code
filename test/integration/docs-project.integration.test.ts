@@ -32,6 +32,7 @@ describe("the docs project", () => {
       "components/value",
       "pages/markdown-pages",
       "pages/biac-config",
+      "pages/sidebar-contents-breadcrumbs",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }

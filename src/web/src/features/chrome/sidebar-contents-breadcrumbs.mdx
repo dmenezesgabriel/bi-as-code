@@ -1,0 +1,152 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as AppStories from "../../App.stories";
+import * as BreadcrumbsStories from "./breadcrumbs.stories";
+import * as NavTocStories from "./nav-toc.stories";
+import * as SidebarNavStories from "./sidebar-nav.stories";
+
+<Meta title="Pages/Sidebar, table of contents and breadcrumbs" />
+
+# Sidebar, table of contents and breadcrumbs
+
+Three pieces of chrome help a reader find their way: the sidebar lists the site's pages, the contents rail lists the headings of the page on screen, and the breadcrumbs show where that page sits.
+
+The reader-facing reference is `docs/pages/pages/sidebar-contents-breadcrumbs.md` (`/pages/sidebar-contents-breadcrumbs` in `bin/biac dev docs`). It describes how each piece is built and what a reader can do with it; the front-matter and config keys that switch them are on the Markdown pages and `biac.config.ts` pages.
+
+## The sidebar
+
+The sidebar is built from the files under `pages/`: the site name, the search box, the pages directly under `pages/` as links, then one collapsible group for each folder directly under `pages/`.
+
+```text
+pages/
+  index.md              Home, always first
+  getting-started.md    a link at the top level
+  sales/
+    weekly.md           a link inside the Sales group
+    monthly.md
+```
+
+<Canvas
+  of={SidebarNavStories.Default}
+  story={{ inline: false, height: "420px" }}
+/>
+
+A group is named after its folder, or by its `directories` entry in `biac.config.ts`.
+
+<Canvas
+  of={SidebarNavStories.RenamedFolder}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Groups and their state
+
+A group opens by default when it holds the page on screen. Clicking a group's name opens or closes it, and that choice is kept for the browser tab.
+
+<Canvas
+  of={SidebarNavStories.ActiveInsideDirectory}
+  story={{ inline: false, height: "420px" }}
+/>
+
+<Canvas
+  of={SidebarNavStories.ToggleDirectory}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Showing and hiding the sidebar
+
+The ☰ button, named Toggle sidebar, shows and hides the sidebar and reports its state in `aria-expanded`.
+
+The `App/SidebarToggles` story clicks the button and checks `aria-expanded` and the sidebar leaving the page. A docs canvas is narrower than 1024 px, where the sidebar is a drawer that starts closed, so that story runs under `App` in the sidebar and not here.
+
+`nav.sidebar: false` in `biac.config.ts` removes the sidebar and its button from every page.
+
+```ts
+export default { nav: { sidebar: false } };
+```
+
+<Canvas of={AppStories.NoSidebar} story={{ inline: false, height: "420px" }} />
+
+A page that keeps the sidebar but sets `header: false` keeps the toggle as a small floating button.
+
+```yaml
+header: false
+```
+
+The `App/PageWithoutHeader` story shows it, and runs under `App` in the sidebar for the same reason.
+
+## The contents rail
+
+The contents rail lists the page's `##` and `###` headings, and a `###` is indented under the `##` above it.
+
+### What it lists
+
+<Canvas
+  of={NavTocStories.WithHeadings}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### Anchors
+
+A heading that sets its own `id` keeps it. Any other heading gets one made from its text, and a repeat takes the next free number.
+
+```md
+## Revenue
+
+### By region
+
+### By region
+```
+
+<Canvas
+  of={NavTocStories.RepeatedHeadings}
+  story={{ inline: false, height: "420px" }}
+/>
+
+### When it shows
+
+A page with fewer than two `##` or `###` headings has no rail.
+
+<Canvas
+  of={NavTocStories.TooFewHeadings}
+  story={{ inline: false, height: "420px" }}
+/>
+
+`table_of_contents_label` renames the rail, and the name becomes the landmark's accessible name too.
+
+```yaml
+table_of_contents_label: Jump to
+```
+
+<Canvas
+  of={NavTocStories.CustomLabel}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Breadcrumbs
+
+The breadcrumbs give the place of the page on screen in the same words as the sidebar. The home page is one crumb.
+
+<Canvas
+  of={BreadcrumbsStories.Home}
+  story={{ inline: false, height: "120px" }}
+/>
+
+A page directly under `pages/` has two.
+
+<Canvas
+  of={BreadcrumbsStories.RootPage}
+  story={{ inline: false, height: "120px" }}
+/>
+
+A page inside a folder has three, and the folder's crumb is plain text because a folder is not a page.
+
+<Canvas
+  of={BreadcrumbsStories.DirectoryPage}
+  story={{ inline: false, height: "120px" }}
+/>
+
+A path that matches no page shows no breadcrumbs.
+
+<Canvas
+  of={BreadcrumbsStories.UnknownRoute}
+  story={{ inline: false, height: "120px" }}
+/>
