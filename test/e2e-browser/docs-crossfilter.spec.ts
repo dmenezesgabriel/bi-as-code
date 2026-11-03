@@ -120,3 +120,73 @@ test("clicking a legend entry narrows the table to the islands still on, and cli
   await expect(rows).toHaveCount(5);
   expect(errors).toEqual([]);
 });
+
+// How cross-filtering works: the species bars that publish, then the island
+// bars that share their selection with the multi-select above them.
+const EXPLAINER = "/crossfilter/how-cross-filtering-works";
+const SPECIES_BARS = 0;
+const ISLAND_BARS = 1;
+const EXPLAINER_CHART_COUNT = 2;
+
+async function openExplainer(page: Page, url: string): Promise<void> {
+  await page.goto(`${url}${EXPLAINER}`);
+  await expect(readyCharts(page)).toHaveCount(EXPLAINER_CHART_COUNT);
+}
+
+async function pickIslands(page: Page, islands: string[]): Promise<void> {
+  await page.getByRole("combobox", { name: "Island" }).first().click();
+  for (const island of islands) {
+    await page.getByRole("option", { name: island }).click();
+  }
+  await page.keyboard.press("Escape");
+}
+
+test("the chart that publishes a selection keeps every bar while the table beside it narrows", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await openExplainer(page, biacDev.url);
+  const rows = tableRows(page, 0);
+  await expect(rows).toHaveCount(5);
+  await page
+    .locator("[data-echarts-theme]")
+    .nth(SPECIES_BARS)
+    .scrollIntoViewIfNeeded();
+  const adelie = await chartPoint(page, SPECIES_BARS, [0, 20]);
+
+  await page.mouse.click(adelie.x, adelie.y);
+
+  // Adelie lives on three islands; the publisher still draws all three species.
+  await expect(rows).toHaveCount(3);
+  expect((await optionAt(page, SPECIES_BARS)).series[0]?.data).toHaveLength(3);
+  expect(errors).toEqual([]);
+});
+
+test("a chart pick and an input pick on one column both apply, and only the input's pick rides the URL and survives a reload", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await openExplainer(page, biacDev.url);
+  const rows = tableRows(page, 1);
+  await pickIslands(page, ["Biscoe", "Dream"]);
+  // Biscoe holds two island × species pairs and Dream two.
+  await expect(rows).toHaveCount(4);
+  await page
+    .locator("[data-echarts-theme]")
+    .nth(ISLAND_BARS)
+    .scrollIntoViewIfNeeded();
+  const dream = await chartPoint(page, ISLAND_BARS, [1, 20]);
+
+  await page.mouse.click(dream.x, dream.y);
+
+  // Rows must satisfy the multi-select and the bar: Dream's two pairs.
+  await expect(rows).toHaveCount(2);
+  expect(urlParam(page, "island")).toBe('["Biscoe","Dream"]');
+
+  await page.reload();
+  await expect(readyCharts(page)).toHaveCount(EXPLAINER_CHART_COUNT);
+  await expect(rows).toHaveCount(4);
+  expect(errors).toEqual([]);
+});

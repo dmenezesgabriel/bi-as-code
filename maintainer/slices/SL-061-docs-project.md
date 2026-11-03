@@ -186,9 +186,9 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4c2c7 — `line-chart`
 - [x] T4c2c8 — `area-chart`
 - [x] T4c2c9 — `scatter-chart`
-- [ ] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation) — two pages of different kinds, each with its docs page, Storybook MDX page and browser test, so split into T4d1 and T4d2
+- [x] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation) — two pages of different kinds, each with its docs page, Storybook MDX page and browser test, so split into T4d1 and T4d2
 - [x] T4d1 — The how-to `Select on a chart` (`docs/pages/crossfilter/select-on-a-chart.md`, `src/web/src/features/crossfilter/select-on-a-chart.mdx`): click, shift-click, brush and legend, which charts take which gesture, and the Cross-filter section in `docs/biac.config.ts`
-- [ ] T4d2 — The explanation `How cross-filtering works` (`docs/pages/crossfilter/how-cross-filtering-works.md` and its Storybook MDX page): selections, clauses, the publisher keeping its own rows, session state against the URL
+- [x] T4d2 — The explanation `How cross-filtering works` (`docs/pages/crossfilter/how-cross-filtering-works.md` and its Storybook MDX page): selections, clauses, the publisher keeping its own rows, session state against the URL
 - [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor
 

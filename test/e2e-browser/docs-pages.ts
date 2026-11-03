@@ -246,6 +246,15 @@ export const WIDGET_PAGES: readonly WidgetPage[] = [
       { tag: /<Table\b/g, live: resultTables },
     ],
   },
+  {
+    route: "/crossfilter/how-cross-filtering-works",
+    file: "pages/crossfilter/how-cross-filtering-works.md",
+    drawn: [
+      { tag: /<BarChart\b/g, live: charts },
+      { tag: /<Table\b/g, live: resultTables },
+      { tag: /<MultiSelect\b/g, live: comboboxes },
+    ],
+  },
 ];
 
 /** How many times `tag` appears inside the page file's `mdx echo` fences. */

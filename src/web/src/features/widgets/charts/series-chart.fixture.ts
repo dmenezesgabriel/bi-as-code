@@ -4,6 +4,7 @@ import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
+import { rowsSatisfying } from "./fragment-rows.fixture";
 import type { TooltipParam } from "./to-option";
 import type { EChartHostElement } from "./types";
 
@@ -118,6 +119,7 @@ export function dbWith(rows: Row[]): FakeDuckDb {
  * and any wrapped query carrying the published clause's predicate — a point
  * `= ?`, a list `IN (?, …)`, an interval `BETWEEN ? AND ?` — gets the
  * consumer rows matching it, so clicks and brushes narrow to different rows.
+ * A conjunction of clauses on the field keeps the rows every one accepts.
  */
 export function dbSelectable(
   field: string,
@@ -125,20 +127,9 @@ export function dbSelectable(
   consumerRows: Row[] = OPTS_ROWS,
 ): FakeDuckDb {
   const db = new FakeDuckDb();
-  db.rowsWhen = (sql, params) => {
-    if (sql.includes(`where ${field} = ?`))
-      return consumerRows.filter((row) => row[field] === params[0]);
-    if (sql.includes(`${field} IN (`))
-      return consumerRows.filter((row) => params.includes(row[field]));
-    if (sql.includes(`${field} BETWEEN`)) {
-      const [lo, hi] = params;
-      return consumerRows.filter(
-        (row) =>
-          Number(row[field]) >= Number(lo) && Number(row[field]) <= Number(hi),
-      );
-    }
-    return sql.includes("from opts") ? consumerRows : allRows;
-  };
+  db.rowsWhen = (sql, params) =>
+    rowsSatisfying(field, consumerRows, sql, params) ??
+    (sql.includes("from opts") ? consumerRows : allRows);
   return db;
 }
 

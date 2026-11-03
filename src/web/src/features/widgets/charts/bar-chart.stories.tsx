@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, waitFor } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   withFilteredData,
   withQueryData,
@@ -7,6 +7,7 @@ import {
 } from "../../../../.storybook/decorators";
 import type { Row } from "../../data/types";
 import type { SqlBlock } from "../../pages/types";
+import { MultiSelect } from "../inputs/multi-select";
 import { Table } from "../table/table";
 import { BarChart } from "./bar-chart";
 import {
@@ -16,6 +17,7 @@ import {
   WEEKLY_TREND,
   appliedOption,
   brushMarks,
+  clickMark,
   crossfilterScene,
   crossfilterTogglePlay,
   dbWith,
@@ -142,6 +144,58 @@ export const SelectCrossfilterBrush: Story = {
 
     brushMarks(host, undefined);
     await waitFor(() => expect(bodyRows()).toBe(3));
+  },
+};
+
+/** Opens the Region multi-select and picks `regions`; its popup lives in a
+ * portal under `document.body`, so the options are found there. */
+async function pickRegions(
+  canvas: ReturnType<typeof within>,
+  regions: readonly string[],
+): Promise<void> {
+  await userEvent.click(canvas.getByRole("combobox"));
+  const popup = within(document.body);
+  for (const region of regions)
+    await userEvent.click(popup.getByRole("option", { name: region }));
+  await userEvent.keyboard("{Escape}");
+}
+
+/**
+ * A chart and an input on one column share a selection: the multi-select's
+ * two picks narrow the table to two rows, then a bar click adds its own
+ * pick and the table keeps only the rows that satisfy both — one. The
+ * publishing chart draws all three bars throughout.
+ */
+export const SelectCrossfilterWithInput: Story = {
+  args: { select: "crossfilter" },
+  decorators: REGIONAL_CROSSFILTER_DECORATORS,
+  render: (args) => (
+    <>
+      <MultiSelect
+        id="region"
+        data="orders"
+        valueColumn="region"
+        title="Region"
+      />
+      <BarChart {...args} />
+      <Table data="opts" filters="region" />
+    </>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const { host, bodyRows } = await crossfilterScene(canvasElement, 3);
+
+    await pickRegions(canvas, ["West", "North"]);
+    await waitFor(() => expect(bodyRows()).toBe(2));
+
+    clickMark(host, 1);
+    await waitFor(() => expect(bodyRows()).toBe(1));
+    expect(canvasElement.querySelector("tbody")?.textContent).toContain(
+      "North",
+    );
+    const option = await appliedOption<{ series?: { data?: unknown[] }[] }>(
+      canvasElement,
+    );
+    expect(option.series?.[0]?.data).toHaveLength(3);
   },
 };
 
