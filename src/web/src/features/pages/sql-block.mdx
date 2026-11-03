@@ -1,0 +1,96 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as SqlBlockStories from "./sql-block.stories";
+
+<Meta of={SqlBlockStories} />
+
+# SQL tables and fences
+
+A page queries data with SQL, and DuckDB runs the query in the reader's browser. The `sql:` key registers a data file as a table, and a ` ```sql ` fence with a name runs a query over the registered tables and hands its result to the widgets on the page. This page shows how the fence appears; the table registration has no component, so it is text only.
+
+The reader-facing reference is `docs/pages/sql/sql-tables-and-fences.md` (`/sql/sql-tables-and-fences` in `bin/biac dev docs`); each way a fence shows has a story here.
+
+## Registering tables
+
+`sql:` maps a table name to a file under `data/`. It goes in a page's front-matter, or in `biac.config.ts` to give every page the table. The value starts with `data/` and ends in `.csv`, `.json`, `.arrow` or `.parquet`. A page and `biac.config.ts` that declare the same name are an error, not an override.
+
+```yaml
+sql:
+  penguin_rows: data/penguins.csv
+```
+
+## Named fences
+
+A fence whose info string starts with a name is a query, and the name is how widgets find its result: `data="name"`. The stories below stand a fake DuckDB behind the fence, so they show the fence and never a real query.
+
+## Echo and display
+
+A named fence shows nothing by default. `echo` shows its SQL, highlighted, and `display` shows its result as a table that sorts by column, with headers in title case: `avg_body_mass_g` reads Avg Body Mass G. A bare flag or `=true` turns one on, and `=false` or leaving it out turns it off.
+
+### Neither flag
+
+The query runs for the widgets that use it, and the fence renders nothing.
+
+<Canvas of={SqlBlockStories.Hidden} story={{ inline: false, height: "80px" }} />
+
+### Echo
+
+<Canvas
+  of={SqlBlockStories.EchoOnly}
+  story={{ inline: false, height: "120px" }}
+/>
+
+### Display
+
+<Canvas
+  of={SqlBlockStories.DisplayOnly}
+  story={{ inline: false, height: "240px" }}
+/>
+
+### Both flags
+
+The result table sorts by column: a click on a header cycles none, descending and ascending.
+
+<Canvas
+  of={SqlBlockStories.EchoAndDisplay}
+  story={{ inline: false, height: "360px" }}
+/>
+
+While the query runs, the table's place holds a loading skeleton.
+
+<Canvas
+  of={SqlBlockStories.Loading}
+  story={{ inline: false, height: "240px" }}
+/>
+
+A query that returns no rows shows `0 rows`.
+
+<Canvas of={SqlBlockStories.Empty} story={{ inline: false, height: "240px" }} />
+
+## When a query fails
+
+A failed query shows its error under the block, naming the block and carrying the message DuckDB gave.
+
+<Canvas
+  of={SqlBlockStories.QueryError}
+  story={{ inline: false, height: "240px" }}
+/>
+
+It shows whether or not the block has `echo` or `display`, so hiding a block never hides a failure.
+
+<Canvas
+  of={SqlBlockStories.HiddenError}
+  story={{ inline: false, height: "120px" }}
+/>
+
+## Fence attributes
+
+A flag the fence does not know, a name that is a flag, a name with `=` in it and a name that starts with `/` are errors that name the file and line, and they stop the build and the dev server before a page renders. The reader-facing page quotes each message.
+
+## A fence with no name
+
+A ` ```sql ` fence with no name is code and nothing more: it runs no query and shows no result.
+
+<Canvas
+  of={SqlBlockStories.UnnamedFence}
+  story={{ inline: false, height: "120px" }}
+/>

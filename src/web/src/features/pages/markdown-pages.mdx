@@ -7,7 +7,7 @@ import * as PageBrandStyleStories from "./page-brand-style.stories";
 
 # Markdown pages and front-matter
 
-A biac page is a Markdown file under `pages/`: its path is its URL, and an optional YAML block at the top sets how the page is named, ordered, laid out, styled and searched.
+A biac page is a Markdown file under `pages/`: its path is its URL, and an optional YAML block at the top sets how the page is named, ordered, laid out, styled, searched and given tables to query.
 
 The reader-facing reference is `docs/pages/pages/markdown-pages.md` (`/pages/markdown-pages` in `bin/biac dev docs`). It lists the route rules, every front-matter key and the icon catalog; the keys that change what a page looks like have a story here.
 
@@ -95,3 +95,14 @@ brand:
   of={PageBrandStyleStories.BrandedPrimary}
   story={{ inline: false, height: "420px" }}
 />
+
+## SQL tables
+
+`sql` maps table names to `data/` files, so the page's queries can read them. The tables are added to those `biac.config.ts` declares, and a name both declare is an error.
+
+```yaml
+sql:
+  sales: data/sales.csv
+```
+
+The SQL tables and fences page (`/sql/sql-tables-and-fences` in `bin/biac dev docs`) lists the file kinds a table accepts, the errors, and the ` ```sql ` fences that query them.

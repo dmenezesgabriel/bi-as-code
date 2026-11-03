@@ -21,7 +21,7 @@ keywords:
 
 # Markdown pages and front-matter
 
-A biac page is a Markdown file under `pages/`. Its path is its URL, and an optional YAML block at the top of the file sets how the page is named, ordered, laid out, styled and searched. This page lists every route rule and every front-matter key.
+A biac page is a Markdown file under `pages/`. Its path is its URL, and an optional YAML block at the top of the file sets how the page is named, ordered, laid out, styled, searched and given tables to query. This page lists every route rule and every front-matter key.
 
 ## Routes
 
@@ -80,8 +80,9 @@ Invalid front-matter in pages/sales.md — page_width: expected "article" | "ful
 | `index`                   | `true` or `false`      |
 | `keywords`                | text or a list of text |
 | `brand`                   | a mapping              |
+| `sql`                     | a mapping              |
 
-A key a page leaves out takes the project's value: `nav.sidebar` in `biac.config.ts` for `sidebar` and `header`, its `layout` settings for `page_width`, `cards`, `table_of_contents` and `table_of_contents_label`, and `brand` in `biac.config.ts` for `brand`. The other keys have no project value, so a page that leaves them out has no icon, no keywords and no position, takes its title from its first heading, and is searchable. Each key has its section below.
+A key a page leaves out takes the project's value: `nav.sidebar` in `biac.config.ts` for `sidebar` and `header`, its `layout` settings for `page_width`, `cards`, `table_of_contents` and `table_of_contents_label`, and `brand` in `biac.config.ts` for `brand`. `sql` adds its tables to the project's `sql` tables, and the two share one set of names. The other keys have no project value, so a page that leaves them out has no icon, no keywords and no position, takes its title from its first heading, and is searchable. Each key has its section below.
 
 ## Title
 
@@ -163,3 +164,14 @@ brand:
 ```
 
 [Themes and brand](/pages/themes-and-brand) lists what the page's brand changes and the contrast it is checked against, and [A branded page](/pages/branded-page-example) shows it live.
+
+## SQL tables
+
+`sql` maps table names to `data/` files, so the page's queries can read them. The tables are added to those `biac.config.ts` declares, and a name both declare is an error.
+
+```yaml
+sql:
+  sales: data/sales.csv
+```
+
+[SQL tables and fences](/sql/sql-tables-and-fences) lists the file kinds a table accepts, the errors, and the ` ```sql ` fences that query them.

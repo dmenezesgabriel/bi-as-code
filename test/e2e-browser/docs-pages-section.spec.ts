@@ -5,18 +5,32 @@ import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 test.use({ biacProject: "docs", viewport: { width: 375, height: 812 } });
 
 const PAGES = [
-  { route: "/pages/markdown-pages", title: "Markdown pages and front-matter" },
-  { route: "/pages/biac-config", title: "biac.config.ts" },
   {
+    group: "Pages",
+    route: "/pages/markdown-pages",
+    title: "Markdown pages and front-matter",
+  },
+  { group: "Pages", route: "/pages/biac-config", title: "biac.config.ts" },
+  {
+    group: "Pages",
     route: "/pages/sidebar-contents-breadcrumbs",
     title: "Sidebar, table of contents and breadcrumbs",
   },
-  { route: "/pages/themes-and-brand", title: "Themes and brand" },
+  {
+    group: "Pages",
+    route: "/pages/themes-and-brand",
+    title: "Themes and brand",
+  },
+  {
+    group: "Data",
+    route: "/sql/sql-tables-and-fences",
+    title: "SQL tables and fences",
+  },
 ];
 
-for (const { route, title } of PAGES) {
+for (const { group, route, title } of PAGES) {
   test.describe(`the ${title} reference`, () => {
-    test("sits in the Pages sidebar group, titles the tab and its breadcrumb, and fits 375 px", async ({
+    test(`sits in the ${group} sidebar group, titles the tab and its breadcrumb, and fits 375 px`, async ({
       page,
       biacDev,
     }) => {
@@ -27,13 +41,15 @@ for (const { route, title } of PAGES) {
       await expect(page).toHaveTitle(title);
       const crumbs = page.getByRole("navigation", { name: "breadcrumb" });
       await expect(crumbs).toHaveText(
-        new RegExp(`What is biac\\s*/\\s*Pages\\s*/\\s*${escapeRegExp(title)}`),
+        new RegExp(
+          `What is biac\\s*/\\s*${group}\\s*/\\s*${escapeRegExp(title)}`,
+        ),
       );
       expect(await horizontalOverflowPx(page)).toBe(0);
       expect(errors).toEqual([]);
     });
 
-    test("is listed in the sidebar under a Pages group", async ({
+    test(`is listed in the sidebar under a ${group} group`, async ({
       page,
       biacDev,
     }) => {
@@ -41,8 +57,8 @@ for (const { route, title } of PAGES) {
       await page.goto(`${biacDev.url}${route}`);
 
       const nav = page.getByRole("navigation", { name: "Site navigation" });
-      const group = nav.locator("details", { hasText: "Pages" }).first();
-      await expect(group.getByRole("link", { name: title })).toHaveAttribute(
+      const details = nav.locator("details", { hasText: group }).first();
+      await expect(details.getByRole("link", { name: title })).toHaveAttribute(
         "aria-current",
         "page",
       );
@@ -175,6 +191,48 @@ test.describe("the page brand the themes reference describes", () => {
     expect(pagePrimary).toBe("#7c3aed");
     expect(projectPrimary).not.toBe(pagePrimary);
     expect(await readRootToken(page, "--primary")).toBe(projectPrimary);
+  });
+});
+
+test.describe("the SQL tables and fences the reference describes", () => {
+  test("a page's own sql table is queryable, and only display fences draw a result table", async ({
+    page,
+    biacDev,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}/sql/sql-tables-and-fences`);
+
+    const main = page.locator("main");
+    await expect(main.getByText("Penguins in the file")).toBeVisible();
+    await expect(main.getByText("344", { exact: true })).toBeVisible();
+    // The page's own Markdown tables also carry the table role, so the
+    // result tables are told apart by their columns.
+    const sexTable = main.getByRole("table").filter({ hasText: "unknown" });
+    const speciesTable = main.getByRole("table").filter({ hasText: "Adelie" });
+    await expect(sexTable).toHaveCount(1);
+    await expect(sexTable.getByRole("columnheader")).toHaveText([
+      "Sex",
+      "Penguins",
+    ]);
+    await expect(speciesTable).toHaveCount(1);
+    await expect(speciesTable.getByRole("columnheader")).toHaveText([
+      "Species",
+      "Avg Body Mass G",
+    ]);
+    await expect(
+      main.getByRole("table").filter({ hasText: "island" }),
+    ).toHaveCount(0);
+  });
+
+  test("a fence without display feeds a widget and draws no table of its own", async ({
+    page,
+    biacDev,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}/sql/sql-tables-and-fences`);
+
+    await expect(page.locator("main canvas, main svg").first()).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
   });
 });
 

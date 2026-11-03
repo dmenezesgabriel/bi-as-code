@@ -5,6 +5,11 @@ import { build } from "@/cli/commands/build.js";
 import { CONFIG_KEYS } from "@/engine/biac-config.js";
 import { BRAND_KEYS } from "@/engine/brand-config.js";
 import { PAGE_ICON_NAMES } from "@/engine/page-icon-frontmatter.js";
+import { parseSqlFenceMeta } from "@/engine/sql-fence-meta.js";
+import {
+  assertNoSqlTableCollision,
+  sqlTableMap,
+} from "@/engine/sql-frontmatter.js";
 import { copyDocsProject } from "../lib/shipped-project.js";
 import { cleanupProjects, makeTempProject } from "../lib/temp-project.js";
 
@@ -36,6 +41,7 @@ describe("the docs project", () => {
       "pages/sidebar-contents-breadcrumbs",
       "pages/themes-and-brand",
       "pages/branded-page-example",
+      "sql/sql-tables-and-fences",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }
@@ -94,4 +100,51 @@ describe("the docs project", () => {
       true,
     );
   });
+
+  it("quotes every sql: and sql fence error on the SQL reference and lists sql among the front-matter keys", () => {
+    // Arrange — the pages are read from the repo; nothing is built.
+    const read = (path: string) =>
+      readFileSync(
+        new URL(`../../docs/pages/${path}.md`, import.meta.url),
+        "utf-8",
+      );
+    const page = read("sql/sql-tables-and-fences");
+    const front = "front-matter in pages/sales.md";
+    const fence = "pages/sales.md:12";
+    const messages = [
+      thrownMessage(() => sqlTableMap({ sales: "data/a.txt" }, front)),
+      thrownMessage(() => sqlTableMap({ sales: 3 }, front)),
+      thrownMessage(() => sqlTableMap("data/a.csv", front)),
+      thrownMessage(() =>
+        assertNoSqlTableCollision(
+          { sales: "data/b.csv" },
+          { sales: "data/a.csv" },
+          front,
+        ),
+      ),
+      thrownMessage(() => parseSqlFenceMeta("sales shown", fence)),
+      thrownMessage(() => parseSqlFenceMeta("sales echo=maybe", fence)),
+      thrownMessage(() => parseSqlFenceMeta("echo sales", fence)),
+      thrownMessage(() => parseSqlFenceMeta("/sales", fence)),
+    ];
+    const frontMatterRows = read("pages/markdown-pages")
+      .split("\n")
+      .filter((line) => line.startsWith("| `"));
+
+    // Act
+    const unquoted = messages.filter((message) => !page.includes(message));
+
+    // Assert — a paraphrased message would send a reader to search for text the build never prints.
+    expect(unquoted).toEqual([]);
+    expect(frontMatterRows.some((row) => row.startsWith("| `sql`"))).toBe(true);
+  });
 });
+
+function thrownMessage(action: () => void): string {
+  try {
+    action();
+  } catch (error) {
+    return (error as Error).message;
+  }
+  throw new Error("expected the action to throw, but it returned");
+}
