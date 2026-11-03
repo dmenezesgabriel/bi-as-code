@@ -16,13 +16,22 @@ The mode a page opens in comes from the first of these that has an answer: the r
 
 The toggle's icon shows the mode a click switches to: a moon in light mode, a sun in dark mode.
 
-<Canvas of={ThemeToggleStories.Light} />
+<Canvas
+  of={ThemeToggleStories.Light}
+  story={{ inline: false, height: "120px" }}
+/>
 
-<Canvas of={ThemeToggleStories.Dark} />
+<Canvas
+  of={ThemeToggleStories.Dark}
+  story={{ inline: false, height: "120px" }}
+/>
 
 A click asks the shell to switch, and the shell stores the choice in `localStorage` under `biac.theme`.
 
-<Canvas of={ThemeToggleStories.ClickReportsToggle} />
+<Canvas
+  of={ThemeToggleStories.ClickReportsToggle}
+  story={{ inline: false, height: "120px" }}
+/>
 
 ## What a theme is made of
 
