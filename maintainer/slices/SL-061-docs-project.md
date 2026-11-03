@@ -189,7 +189,17 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation) — two pages of different kinds, each with its docs page, Storybook MDX page and browser test, so split into T4d1 and T4d2
 - [x] T4d1 — The how-to `Select on a chart` (`docs/pages/crossfilter/select-on-a-chart.md`, `src/web/src/features/crossfilter/select-on-a-chart.mdx`): click, shift-click, brush and legend, which charts take which gesture, and the Cross-filter section in `docs/biac.config.ts`
 - [x] T4d2 — The explanation `How cross-filtering works` (`docs/pages/crossfilter/how-cross-filtering-works.md` and its Storybook MDX page): selections, clauses, the publisher keeping its own rows, session state against the URL
-- [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages
+- [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages — about ten pages, so split per page into T5a to T5j (owner rule: one task per session)
+- [ ] T5a — Pages section, reference: Markdown pages, routing and front-matter (`title`, `icon`, `sidebar_position`, `table_of_contents`, `index`, `keywords`, layout)
+- [ ] T5b — Pages section, reference: `biac.config.ts`, every key in `CONFIG_KEYS` (`src/engine/biac-config.ts`)
+- [ ] T5c — Pages section, reference: sidebar, table of contents and breadcrumbs
+- [ ] T5d — Pages section, reference: themes and brand
+- [ ] T5e — Data section, reference: `sql:` front-matter and config tables, and ` ```sql name ` fences with `echo`/`display`
+- [ ] T5f — Data section, reference: `{{param}}` in queries
+- [ ] T5g — Data section, reference: query files under `queries/`
+- [ ] T5h — Data section, reference: data loaders (one live loader)
+- [ ] T5i — Data section, reference: translations
+- [ ] T5j — Data section, reference: site search
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor
 
 ## Out of scope
