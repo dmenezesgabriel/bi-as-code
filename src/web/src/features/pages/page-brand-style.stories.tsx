@@ -75,3 +75,19 @@ export const BrandedPaletteDark: Story = {
     expect(option.color?.[0]).toBe("#60a5fa");
   },
 };
+
+/** The page's `brand.fonts` and `brand.radius` set the root font and radius
+ * tokens for the page alone. */
+export const BrandedFontsAndRadius: Story = {
+  args: {
+    css: ":root {\n  --heading-font: var(--font-stack-serif);\n  --radius: 1rem;\n}\n",
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("primary surface");
+    const root = getComputedStyle(document.documentElement);
+    expect(root.getPropertyValue("--radius").trim()).toBe("1rem");
+    expect(root.getPropertyValue("--heading-font")).toBe(
+      root.getPropertyValue("--font-stack-serif"),
+    );
+  },
+};

@@ -21,7 +21,7 @@ keywords:
 
 # Markdown pages and front-matter
 
-A biac page is a Markdown file under `pages/`. Its path is its URL, and an optional YAML block at the top of the file sets how the page is named, ordered, laid out and searched. This page lists every route rule and every front-matter key.
+A biac page is a Markdown file under `pages/`. Its path is its URL, and an optional YAML block at the top of the file sets how the page is named, ordered, laid out, styled and searched. This page lists every route rule and every front-matter key.
 
 ## Routes
 
@@ -79,8 +79,9 @@ Invalid front-matter in pages/sales.md — page_width: expected "article" | "ful
 | `table_of_contents_label` | non-empty text         |
 | `index`                   | `true` or `false`      |
 | `keywords`                | text or a list of text |
+| `brand`                   | a mapping              |
 
-A key a page leaves out takes the project's value: `nav.sidebar` in `biac.config.ts` for `sidebar` and `header`, and its `layout` settings for `page_width`, `cards`, `table_of_contents` and `table_of_contents_label`. The other keys have no project value, so a page that leaves them out has no icon, no keywords and no position, takes its title from its first heading, and is searchable. Each key has its section below.
+A key a page leaves out takes the project's value: `nav.sidebar` in `biac.config.ts` for `sidebar` and `header`, its `layout` settings for `page_width`, `cards`, `table_of_contents` and `table_of_contents_label`, and `brand` in `biac.config.ts` for `brand`. The other keys have no project value, so a page that leaves them out has no icon, no keywords and no position, takes its title from its first heading, and is searchable. Each key has its section below.
 
 ## Title
 
@@ -149,3 +150,16 @@ keywords: [revenue, sales, weekly]
 ```
 
 A single word may be written as text: `keywords: revenue`. Anything else, such as a number or a list holding a number, fails the page.
+
+## Brand
+
+`brand` sets the page's own colours, palette, heatmap scale, fonts, root font size and corner radius, with the keys and rules of the project's `brand`. A key the page leaves out keeps the project's value, and the page's brand ends when the reader leaves the page.
+
+```yaml
+brand:
+  colors:
+    primary: { light: "#7c3aed", dark: "#c4b5fd" }
+  fonts: { heading: "serif" }
+```
+
+[Themes and brand](/pages/themes-and-brand) lists what the page's brand changes and the contrast it is checked against, and [A branded page](/pages/branded-page-example) shows it live.

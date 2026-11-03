@@ -1,12 +1,13 @@
 import { Canvas, Meta } from "@storybook/addon-docs/blocks";
 import * as MarkdownPageStories from "./markdown-page.stories";
 import * as SidebarNavStories from "../chrome/sidebar-nav.stories";
+import * as PageBrandStyleStories from "./page-brand-style.stories";
 
 <Meta title="Pages/Markdown pages and front-matter" />
 
 # Markdown pages and front-matter
 
-A biac page is a Markdown file under `pages/`: its path is its URL, and an optional YAML block at the top sets how the page is named, ordered, laid out and searched.
+A biac page is a Markdown file under `pages/`: its path is its URL, and an optional YAML block at the top sets how the page is named, ordered, laid out, styled and searched.
 
 The reader-facing reference is `docs/pages/pages/markdown-pages.md` (`/pages/markdown-pages` in `bin/biac dev docs`). It lists the route rules, every front-matter key and the icon catalog; the keys that change what a page looks like have a story here.
 
@@ -76,5 +77,21 @@ table_of_contents_label: Jump to
 
 <Canvas
   of={MarkdownPageStories.LabelledTableOfContents}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Brand
+
+`brand` sets the page's own colours, palette, heatmap scale, fonts, root font size and corner radius, with the keys and rules of the project's `brand`. A key the page leaves out keeps the project's value, and the page's brand ends when the reader leaves the page.
+
+```yaml
+brand:
+  colors:
+    primary: { light: "#7c3aed", dark: "#c4b5fd" }
+  fonts: { heading: "serif" }
+```
+
+<Canvas
+  of={PageBrandStyleStories.BrandedPrimary}
   story={{ inline: false, height: "420px" }}
 />

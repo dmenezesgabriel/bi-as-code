@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+import { readRootToken } from "./contrast.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
 test.use({ biacProject: "docs", viewport: { width: 375, height: 812 } });
@@ -9,6 +11,7 @@ const PAGES = [
     route: "/pages/sidebar-contents-breadcrumbs",
     title: "Sidebar, table of contents and breadcrumbs",
   },
+  { route: "/pages/themes-and-brand", title: "Themes and brand" },
 ];
 
 for (const { route, title } of PAGES) {
@@ -26,10 +29,7 @@ for (const { route, title } of PAGES) {
       await expect(crumbs).toHaveText(
         new RegExp(`What is biac\\s*/\\s*Pages\\s*/\\s*${escapeRegExp(title)}`),
       );
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - window.innerWidth,
-      );
-      expect(overflow).toBe(0);
+      expect(await horizontalOverflowPx(page)).toBe(0);
       expect(errors).toEqual([]);
     });
 
@@ -138,6 +138,52 @@ test.describe("the sidebar, contents rail and breadcrumbs the reference describe
     await expect(item).toHaveClass(/pl-4/);
   });
 });
+
+test.describe("the page brand the themes reference describes", () => {
+  test("the example page fits 375 px with a clean console and a working chart", async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.goto(`${biacDev.url}/pages/branded-page-example`);
+
+    await expect(page).toHaveTitle("A branded page");
+    await expect(page.getByRole("button", { name: "Biscoe" })).toBeVisible();
+    await expect(page.locator("main canvas, main svg").first()).toBeVisible();
+    expect(await horizontalOverflowPx(page)).toBe(0);
+    expect(errors).toEqual([]);
+  });
+
+  test("the example page has its own primary and the next page gets the project's back", async ({
+    page,
+    biacDev,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}/pages/themes-and-brand`);
+    const projectPrimary = await readRootToken(page, "--primary");
+
+    await page.goto(`${biacDev.url}/pages/branded-page-example`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "A branded page",
+    );
+    const pagePrimary = await readRootToken(page, "--primary");
+    await page.getByRole("link", { name: "Themes and brand" }).last().click();
+
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Themes and brand",
+    );
+    expect(pagePrimary).toBe("#7c3aed");
+    expect(projectPrimary).not.toBe(pagePrimary);
+    expect(await readRootToken(page, "--primary")).toBe(projectPrimary);
+  });
+});
+
+/** Pixels the page is wider than the window; 0 means nothing scrolls sideways. */
+function horizontalOverflowPx(page: Page): Promise<number> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+}
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -1,0 +1,116 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as ThemeToggleStories from "../chrome/theme-toggle.stories";
+import * as PageBrandStyleStories from "./page-brand-style.stories";
+
+<Meta title="Pages/Themes and brand" />
+
+# Themes and brand
+
+A site has two themes, light and dark, and a reader picks between them. The brand is the set of colours, fonts and corner radius that both themes are drawn in. A project sets its brand once in `biac.config.ts`, and a single page can set its own in front-matter.
+
+The reader-facing reference is `docs/pages/pages/themes-and-brand.md` (`/pages/themes-and-brand` in `bin/biac dev docs`), and `/pages/branded-page-example` there is the live branded page. The project's `theme` and `brand` keys are on the `biac.config.ts` page.
+
+## Light and dark
+
+The mode a page opens in comes from the first of these that has an answer: the reader's own choice made with the toggle in the header, the project's `theme` when it is `light` or `dark`, then the reader's operating system through `prefers-color-scheme` when `theme` is `system`.
+
+The toggle's icon shows the mode a click switches to: a moon in light mode, a sun in dark mode.
+
+<Canvas of={ThemeToggleStories.Light} />
+
+<Canvas of={ThemeToggleStories.Dark} />
+
+A click asks the shell to switch, and the shell stores the choice in `localStorage` under `biac.theme`.
+
+<Canvas of={ThemeToggleStories.ClickReportsToggle} />
+
+## What a theme is made of
+
+Every colour on the site is a named value with one setting for light and one for dark. Switching the mode swaps all of them together, and charts redraw in the new colours. The brand's six keys, `colors`, `palette`, `scale`, `fonts`, `fontSize` and `radius`, replace some of those values, and are the same in `biac.config.ts` and in a page's front-matter.
+
+## A page's own brand
+
+A page sets `brand` in its front-matter with the same keys and rules. Only the keys the page sets change, and the page's brand ends when the reader leaves the page.
+
+A page without a `brand` keeps the project's colours.
+
+<Canvas
+  of={PageBrandStyleStories.Unbranded}
+  story={{ inline: false, height: "420px" }}
+/>
+
+`colors.primary` repaints every primary surface on the page.
+
+```yaml
+brand:
+  colors:
+    primary: { light: "#154886", dark: "#60a5fa" }
+```
+
+<Canvas
+  of={PageBrandStyleStories.BrandedPrimary}
+  story={{ inline: false, height: "420px" }}
+/>
+
+`palette` reaches a chart on the page. A `palette` can name one mode alone, and each mode is independent.
+
+```yaml
+brand:
+  palette: { light: ["#1e40af"] }
+```
+
+<Canvas
+  of={PageBrandStyleStories.BrandedPalette}
+  story={{ inline: false, height: "420px" }}
+/>
+
+```yaml
+brand:
+  palette: { dark: ["#60a5fa"] }
+```
+
+<Canvas
+  of={PageBrandStyleStories.BrandedPaletteDark}
+  story={{ inline: false, height: "420px" }}
+/>
+
+`fonts` and `radius` set the heading font and the corner radius for the page alone.
+
+```yaml
+brand:
+  fonts: { heading: "serif" }
+  radius: "1rem"
+```
+
+<Canvas
+  of={PageBrandStyleStories.BrandedFontsAndRadius}
+  story={{ inline: false, height: "420px" }}
+/>
+
+## Checks
+
+A page's colours are measured when the page is compiled, with the floors the project's are: 4.5:1 for text and 3:1 for control shapes, the focus ring and every chart series. They are measured against the project's brand, because those are the values they land on. A failure names the page file, the key, the neighbour it fails against, the measured ratio and the key to change.
+
+```text
+Invalid front-matter in pages/sales.md — brand.colors.background.light: #fdf6e3 against --chart-4 #cc79a7 measures 2.83:1, expected at least 3:1 (WCAG 2.2 SC 1.4.11) — change brand.colors.background.light
+```
+
+A key of the wrong shape fails the page the same way:
+
+```text
+Invalid front-matter in pages/sales.md — brand.colors.primary.light: expected a "#rrggbb" colour, got "red"
+```
+
+```text
+Invalid front-matter in pages/sales.md — brand.fonts.body: expected one of "sans-serif", "serif", "mono", got "Inter"
+```
+
+```text
+Invalid front-matter in pages/sales.md — brand.fontSize: expected a "<n>px" size, n a whole number from 12 to 24, got "30px"
+```
+
+A misspelt key is refused with a suggestion:
+
+```text
+Invalid front-matter in pages/sales.md — brand.colour: unknown key, expected one of colors, palette, scale, fonts, fontSize, radius (did you mean colors?)
+```

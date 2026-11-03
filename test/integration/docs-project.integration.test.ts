@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { build } from "@/cli/commands/build.js";
 import { CONFIG_KEYS } from "@/engine/biac-config.js";
+import { BRAND_KEYS } from "@/engine/brand-config.js";
 import { PAGE_ICON_NAMES } from "@/engine/page-icon-frontmatter.js";
 import { copyDocsProject } from "../lib/shipped-project.js";
 import { cleanupProjects, makeTempProject } from "../lib/temp-project.js";
@@ -33,6 +34,8 @@ describe("the docs project", () => {
       "pages/markdown-pages",
       "pages/biac-config",
       "pages/sidebar-contents-breadcrumbs",
+      "pages/themes-and-brand",
+      "pages/branded-page-example",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }
@@ -68,5 +71,27 @@ describe("the docs project", () => {
 
     // Assert — a key the page omits would leave a reader with only the error message.
     expect(unlisted).toEqual([]);
+  });
+
+  it("names every brand key on the themes reference and lists brand among the front-matter keys", () => {
+    // Arrange — the pages are read from the repo; nothing is built.
+    const read = (name: string) =>
+      readFileSync(
+        new URL(`../../docs/pages/pages/${name}.md`, import.meta.url),
+        "utf-8",
+      );
+    const themes = read("themes-and-brand");
+    const frontMatterRows = read("markdown-pages")
+      .split("\n")
+      .filter((line) => line.startsWith("| `"));
+
+    // Act
+    const unnamed = BRAND_KEYS.filter((key) => !themes.includes(`\`${key}\``));
+
+    // Assert — a key the page omits would leave a reader with only the error message.
+    expect(unnamed).toEqual([]);
+    expect(frontMatterRows.some((row) => row.startsWith("| `brand`"))).toBe(
+      true,
+    );
   });
 });

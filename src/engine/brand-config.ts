@@ -11,7 +11,8 @@ import type {
   ModeColourLists,
 } from "./types.js";
 
-const BRAND_KEYS = [
+/** The keys a `brand` takes, in `biac.config.ts` and in a page's front-matter. */
+export const BRAND_KEYS = [
   "colors",
   "palette",
   "scale",
