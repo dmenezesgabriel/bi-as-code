@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { readRootToken } from "./contrast.js";
 import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 
@@ -251,7 +251,7 @@ test.describe("the parameters the reference describes", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`${biacDev.url}${route}`);
     const main = page.locator("main");
-    const islands = main.getByRole("table").filter({ hasText: "Torgersen" });
+    const islands = islandsNamed(main).filter({ hasText: "Torgersen" });
     const typed = main.getByRole("table").filter({ hasText: "nothing typed" });
     await expect(islands.getByRole("row")).toHaveCount(4);
     await expect(typed).toBeVisible();
@@ -261,7 +261,7 @@ test.describe("the parameters the reference describes", () => {
 
     await expect(page).toHaveURL(/\?island_text=bis$/);
     await expect(islands).toHaveCount(0);
-    const biscoe = main.getByRole("table").filter({ hasText: "Biscoe" });
+    const biscoe = islandsNamed(main).filter({ hasText: "Biscoe" });
     await expect(biscoe.getByRole("row")).toHaveCount(2);
     await expect(
       main.getByRole("table").filter({ hasText: "Typed" }),
@@ -273,8 +273,36 @@ test.describe("the parameters the reference describes", () => {
       main.getByRole("textbox", { name: "Island name" }),
     ).toHaveValue("bis");
     await expect(
-      main.getByRole("table").filter({ hasText: "Biscoe" }).getByRole("row"),
+      islandsNamed(main).filter({ hasText: "Biscoe" }).getByRole("row"),
     ).toHaveCount(2);
+  });
+
+  test("a MultiSelect's picks bind as a list, and an unset list keeps every island", async ({
+    page,
+    biacDev,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`${biacDev.url}${route}`);
+    const main = page.locator("main");
+    const picked = main.getByRole("table").filter({ hasText: "Species Count" });
+    await expect(picked.getByRole("row")).toHaveCount(4);
+
+    await main.getByRole("combobox", { name: "Islands" }).click();
+    await page.getByRole("option", { name: "Dream" }).click();
+    await page.getByRole("option", { name: "Biscoe" }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(
+      /\?island_picks=%5B%22Dream%22%2C%22Biscoe%22%5D$/,
+    );
+    await expect(picked.getByRole("row")).toHaveCount(3);
+    await expect(picked).not.toContainText("Torgersen");
+    await expect(page.getByRole("alert")).toHaveCount(0);
+
+    await main.getByRole("button", { name: "Remove Dream" }).click();
+    await main.getByRole("button", { name: "Remove Biscoe" }).click();
+
+    await expect(picked.getByRole("row")).toHaveCount(4);
   });
 
   test("a composed fence follows the value its inlined fence reads", async ({
@@ -323,6 +351,11 @@ test.describe("the parameters the reference describes", () => {
     expect(errors).toEqual([]);
   });
 });
+
+/** The `islands_named` table: the only one under a Penguins header that lists islands. */
+function islandsNamed(main: Locator): Locator {
+  return main.getByRole("table").filter({ hasText: "Penguins" });
+}
 
 /** Pixels the page is wider than the window; 0 means nothing scrolls sideways. */
 function horizontalOverflowPx(page: Page): Promise<number> {

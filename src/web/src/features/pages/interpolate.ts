@@ -1,7 +1,8 @@
 /**
  * The `{{…}}` template surface inside ` ```sql ` blocks. `{{params.name}}`
  * binds a URL search-param value through a `?` placeholder (injection-safe —
- * the value travels as a prepared-statement arg, never as text),
+ * the value travels as a prepared-statement arg, never as text; a list
+ * value binds element by element as `[?, ?]`),
  * `{{name}}` inlines another named block's SQL as a parenthesized subquery,
  * and `{{/queries/<path>}}` inlines a query file the engine put on the page
  * under that name — its own `{{…}}` tokens resolve the same way.
@@ -17,7 +18,7 @@
 import type { TranslationMap } from "./types";
 
 export interface InterpolationContext {
-  /** URL search params — `{{params.name}}` binds `params[name]`, absent → NULL. */
+  /** URL search params — `{{params.name}}` binds `params[name]`, absent → NULL, a list → one arg per element. */
   readonly params: Readonly<Record<string, unknown>>;
   /** The page's named sql blocks and query files — `{{name}}` inlines `queries[name]`. */
   readonly queries: Readonly<Record<string, string>>;
@@ -60,8 +61,7 @@ export function interpolateQuery(
   const resolved = sql.replace(TEMPLATE_TOKEN, (_match, rawToken: string) => {
     const token = rawToken.trim();
     if (token.startsWith("params.")) {
-      params.push(context.params[token.slice("params.".length)] ?? null);
-      return "?";
+      return bindParam(context.params[token.slice("params.".length)], params);
     }
     if (token.startsWith(TRANSLATIONS_PREFIX)) {
       return bindTranslation(token, context.translations, params, errors);
@@ -89,6 +89,22 @@ export function interpolateQuery(
     return `(${expanded.sql})`;
   });
   return { sql: resolved, params, errors };
+}
+
+/**
+ * Binds a param's value and returns the SQL that stands for it. The driver
+ * refuses an array as one argument (`Invalid column type encountered for
+ * argument 0`), so a list — what a MultiSelect writes — becomes a list
+ * literal with one `?` per element: `[?, ?]`, and `[]` when nothing is
+ * picked. Absent → one NULL arg.
+ */
+function bindParam(value: unknown, params: unknown[]): string {
+  if (!Array.isArray(value)) {
+    params.push(value ?? null);
+    return "?";
+  }
+  params.push(...value);
+  return `[${value.map(() => "?").join(", ")}]`;
 }
 
 /** Binds the text `token` names as a `?` arg, or records why it cannot. */

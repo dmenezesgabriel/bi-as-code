@@ -69,14 +69,45 @@ The page URL's search parameters, then the inputs' own starting values. When the
 
 The URL carries text, and a value that parses as JSON is read as what it parses to:
 
-| In the URL          | `{{params.id}}` is | DuckDB type |
-| ------------------- | ------------------ | ----------- |
-| `?id=Dream`         | the text `Dream`   | `VARCHAR`   |
-| `?id=42`            | the number `42`    | `DOUBLE`    |
-| `?id=true`          | the boolean `true` | `BOOLEAN`   |
-| nothing, no initial | `null`             | —           |
+| In the URL          | `{{params.id}}` is    | DuckDB type |
+| ------------------- | --------------------- | ----------- |
+| `?id=Dream`         | the text `Dream`      | `VARCHAR`   |
+| `?id=42`            | the number `42`       | `DOUBLE`    |
+| `?id=true`          | the boolean `true`    | `BOOLEAN`   |
+| `?id=["a","b"]`     | the list `['a', 'b']` | `VARCHAR[]` |
+| nothing, no initial | `null`                | —           |
 
 That is why `islands_named` casts with `::varchar`: a reader who types `42` hands the query a `DOUBLE`, which reads `42.0` once cast to text.
+
+### A list of values
+
+A [MultiSelect](/filters/multi-select) writes its picks as a list, and `{{params.id}}` hands the query that list. Each pick is its own bound argument, so the database receives `[?, ?]` for two picks, and the picks stay values like any other. Test a column against the list with `list_contains({{params.id}}, column)`.
+
+With nothing picked, the parameter is `null`, not an empty list. `= any(null)` is an error in DuckDB, so test for `null` first and let `list_contains` do the rest, as `islands_picked` does.
+
+```mdx echo
+<MultiSelect
+  id="island_picks"
+  options={["Biscoe", "Dream", "Torgersen"]}
+  valueColumn="island"
+  title="Islands"
+/>
+```
+
+```sql islands_picked echo
+select island, count(distinct species) as species_count
+from penguins
+where {{params.island_picks}} is null
+  or list_contains({{params.island_picks}}, island)
+group by island
+order by island
+```
+
+```mdx echo
+<Table data="islands_picked" />
+```
+
+Pick Dream and Biscoe and the table keeps those two islands. The token is written twice, so the picks are bound twice, once for each place it stands.
 
 ### A value is not a name
 

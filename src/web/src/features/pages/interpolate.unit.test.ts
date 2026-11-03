@@ -51,6 +51,49 @@ describe("interpolateQuery", () => {
     expect(out.params).toEqual(["West", "store"]);
   });
 
+  it("binds a list param as a list literal with one ? per element", () => {
+    const out = interpolateQuery(
+      "select * from orders where region = any({{params.region}})",
+      { params: { region: ["West", "East"] }, queries: {} },
+    );
+
+    expect(out.sql).toBe("select * from orders where region = any([?, ?])");
+    expect(out.params).toEqual(["West", "East"]);
+  });
+
+  it("binds a one-element list as a one-element list literal", () => {
+    const out = interpolateQuery("select {{params.ids}}", {
+      params: { ids: [7] },
+      queries: {},
+    });
+
+    expect(out.sql).toBe("select [?]");
+    expect(out.params).toEqual([7]);
+  });
+
+  it("binds an empty list as an empty list literal and no args", () => {
+    const out = interpolateQuery("select {{params.ids}}", {
+      params: { ids: [] },
+      queries: {},
+    });
+
+    expect(out.sql).toBe("select []");
+    expect(out.params).toEqual([]);
+  });
+
+  it("keeps ? order aligned when a list sits between two scalars", () => {
+    const out = interpolateQuery(
+      "select {{params.first}}, {{params.picks}}, {{params.last}}",
+      {
+        params: { first: "a", picks: ["b", "c"], last: "d" },
+        queries: {},
+      },
+    );
+
+    expect(out.sql).toBe("select ?, [?, ?], ?");
+    expect(out.params).toEqual(["a", "b", "c", "d"]);
+  });
+
   it("inlines {{name}} as a parenthesized subquery", () => {
     const out = interpolateQuery("select count(*) from {{orders}}", {
       params: {},

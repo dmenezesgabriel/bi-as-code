@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   withDataRuntime,
   withPageFilters,
@@ -7,6 +7,7 @@ import {
 import { FakeDuckDb } from "../data/fake-duckdb";
 import type { Row } from "../data/types";
 import { FakeFilterUrlPort } from "../filters/fake-url-port";
+import { MultiSelect } from "../widgets/inputs/multi-select";
 import { ParamsBridge } from "../widgets/inputs/params-bridge";
 import { TextInput } from "../widgets/inputs/text-input";
 import { Table } from "../widgets/table/table";
@@ -19,6 +20,17 @@ const ISLANDS_NAMED: SqlBlock = {
 from penguins
 where {{params.island_text}} is null
   or island ilike '%' || {{params.island_text}}::varchar || '%'
+group by island
+order by island`,
+};
+
+/** The page's list fence: a MultiSelect's picks as one list; null while nothing is picked. */
+const ISLANDS_PICKED: SqlBlock = {
+  name: "islands_picked",
+  sql: `select island, count(distinct species) as species_count
+from penguins
+where {{params.island_picks}} is null
+  or list_contains({{params.island_picks}}, island)
 group by island
 order by island`,
 };
@@ -90,6 +102,51 @@ export const UseAValue: Story = {
       expect(canvas.getByRole("table")).not.toHaveTextContent("Dream"),
     );
     await expect(valueDb.queries.at(-1)?.params).toEqual(["bis", "bis"]);
+  },
+};
+
+const listPort = new FakeFilterUrlPort("");
+const listDb = FakeDuckDb.withRows(ALL_ISLANDS);
+
+/** A MultiSelect writes `?island_picks=["Dream","Biscoe"]`, and the list
+ * binds element by element: `[?, ?]` with one argument per pick. */
+export const UseAList: Story = {
+  args: { id: "island_picks", blocks: [ISLANDS_PICKED], port: listPort },
+  decorators: [withDataRuntime(listDb), withPageFilters(listPort)],
+  render: (args) => (
+    <>
+      <MultiSelect
+        id="island_picks"
+        options={["Biscoe", "Dream", "Torgersen"]}
+        valueColumn="island"
+        title="Islands"
+      />
+      <ParamsBridge {...args}>
+        <Table data="islands_picked" />
+      </ParamsBridge>
+    </>
+  ),
+  play: async ({ canvas }) => {
+    const popup = within(document.body);
+    await userEvent.click(canvas.getByRole("combobox"));
+    await userEvent.click(await popup.findByRole("option", { name: "Dream" }));
+    await userEvent.click(popup.getByRole("option", { name: "Biscoe" }));
+    await userEvent.keyboard("{Escape}");
+
+    // Nothing picked yet: the list is null, so the query keeps every island.
+    // The token is written twice, so each pick is bound twice.
+    await expect(listDb.queries[0]?.params).toEqual([null, null]);
+    await waitFor(() =>
+      expect(listDb.queries.at(-1)?.params).toEqual([
+        "Dream",
+        "Biscoe",
+        "Dream",
+        "Biscoe",
+      ]),
+    );
+    await expect(listDb.queries.at(-1)?.sql).toContain(
+      "list_contains([?, ?], island)",
+    );
   },
 };
 
