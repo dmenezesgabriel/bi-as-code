@@ -40,6 +40,11 @@ const PAGES = [
     route: "/ship/build-preview-serve",
     title: "Build, preview and serve",
   },
+  {
+    group: "Ship",
+    route: "/ship/base-path",
+    title: "Serve under a path prefix",
+  },
 ];
 
 for (const { group, route, title } of PAGES) {
