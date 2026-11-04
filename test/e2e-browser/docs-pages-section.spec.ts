@@ -35,6 +35,11 @@ const PAGES = [
   { group: "Data", route: "/sql/data-loaders", title: "Data loaders" },
   { group: "Data", route: "/sql/translations", title: "Translations" },
   { group: "Data", route: "/sql/site-search", title: "Site search" },
+  {
+    group: "Ship",
+    route: "/ship/build-preview-serve",
+    title: "Build, preview and serve",
+  },
 ];
 
 for (const { group, route, title } of PAGES) {

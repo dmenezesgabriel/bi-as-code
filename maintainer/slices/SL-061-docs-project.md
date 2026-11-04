@@ -201,7 +201,14 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T5h — Data section, reference: data loaders (one live loader; the `interpreters` key and its default table are on `docs/pages/pages/biac-config.md`) — `docs/pages/sql/data-loaders.md`, `docs/data/island-summary.csv.js` and `src/web/src/features/pages/data-loaders.mdx`
 - [x] T5i — Data section, reference: translations — `docs/pages/sql/translations.md`, `docs/translations.yaml` (`en` + `fr`, so the docs header carries the language menu) and `src/web/src/features/pages/translations.mdx`; site search is left to T5j
 - [x] T5j — Data section, reference: site search — `docs/pages/sql/site-search.md` and `src/web/src/features/search/site-search.mdx`; the example table is checked against the docs site's own index by `test/integration/docs-site-search.integration.test.ts`
-- [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor
+- [x] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor — six guides, so split per guide into T6a to T6f (owner rule: one task per session)
+- [x] T6a — Ship section, how-to: `biac build`, `biac preview` and `biac serve` — `docs/pages/ship/build-preview-serve.md`, its Storybook MDX page, and the Ship entry in `directories` of `docs/biac.config.ts`; links to the later Ship pages stay plain text until they exist (ADR-0034 fails a dead link)
+- [ ] T6a1 — Storybook MDX docs pages render GFM tables as tables, not as `| a | b |` text (every `src/web/src/**/*.mdx` page with a table shows raw pipes in `bin/biac storybook`; `remark-gfm` is installed, but `src/web/.storybook/main.ts` does not hand it to `@storybook/addon-docs`) — found writing T6a; a tooling gap gets its own task
+- [ ] T6b — Ship section, how-to: the `base` path (`base` key of `biac.config.ts`, a build served under a path prefix)
+- [ ] T6c — Ship section, how-to: Deploy on AWS moved from `pages/deploy-on-aws.md` to `docs/pages/ship/deploy-on-aws.md`, with `test/e2e-browser/page-typography.spec.ts` (3 places), `test/integration/features/step_definitions/page-chrome.steps.ts:58`, `maintainer/adr/0032-biac-serve-ships-as-one-baked-image-on-a-read-only-root.md:9` and demo step 5 (`/ship/deploy-on-aws`) updated
+- [ ] T6d — Ship section, how-to: the SSO example (`examples/s3-sso/`)
+- [ ] T6e — Ship section, how-to: embeds (iframe, exported files, widget modules)
+- [ ] T6f — Ship section, how-to: the page editor (dev server only, ADR-0010; screenshots are the one place the docs use them)
 
 ## Out of scope
 

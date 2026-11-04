@@ -9,6 +9,7 @@ export default {
     "pages/crossfilter": { title: "Cross-filter" },
     "pages/pages": { title: "Pages" },
     "pages/sql": { title: "Data" },
+    "pages/ship": { title: "Ship" },
   },
   sql: {
     penguins: "data/penguins.csv",

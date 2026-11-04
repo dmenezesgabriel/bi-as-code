@@ -119,7 +119,7 @@ Serve the build exactly as a static host would:
 bin/biac preview ../my-site
 ```
 
-It prints a local URL, `http://localhost:4173/` unless that port is taken. Open it: the page, the table and the chart render from the built files. Stop the server with Ctrl+C when you are done.
+It prints a local URL, `http://localhost:4173/`; if another program holds that port it stops with `Port 4173 is already in use`, and `--port` picks another. Open it: the page, the table and the chart render from the built files. Stop the server with Ctrl+C when you are done.
 
 ## Next
 
