@@ -153,6 +153,26 @@ async function visitDocsPage(
     );
   }
   await page.waitForLoadState("networkidle");
+  const rawTableRows = await countRawTablePipeParagraphs(page);
+  if (rawTableRows > 0) {
+    messages.push(`raw GFM table pipes in ${rawTableRows} paragraph(s)`);
+  }
+}
+
+/**
+ * Paragraphs on a docs page that are a Markdown table row printed as text.
+ * MDX has no GFM tables unless addon-docs is handed `remark-gfm`; without
+ * it a `| a | b |` table lands in a `<p>` instead of a `<table>`.
+ */
+async function countRawTablePipeParagraphs(page: Page): Promise<number> {
+  return page
+    .locator(".sbdocs-content p")
+    .evaluateAll(
+      (paragraphs) =>
+        paragraphs.filter((paragraph) =>
+          /^\|.*\|/.test((paragraph.textContent ?? "").trim()),
+        ).length,
+    );
 }
 
 /** The index entries of one `type`, by id. */
