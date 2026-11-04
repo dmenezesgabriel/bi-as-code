@@ -86,7 +86,7 @@ order by species
 <Table data="species_count" />
 ````
 
-A name is the first word after ` ```sql `. It may not start with `/`, because `data="/queries/…"` names a query file. Two fences on one page may not share a name:
+A name is the first word after ` ```sql `. It may not start with `/`, because `data="/queries/…"` names a [query file](/sql/query-files). Two fences on one page may not share a name:
 
 ```text
 Duplicate sql block name "species_count" at pages/sales.md:30

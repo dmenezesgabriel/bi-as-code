@@ -197,7 +197,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T5e — Data section, reference: `sql:` front-matter (the project `sql` key is on `docs/pages/pages/biac-config.md`), and ` ```sql name ` fences with `echo`/`display`, and add the `sql` key to the front-matter table of `docs/pages/pages/markdown-pages.md` — `docs/pages/sql/sql-tables-and-fences.md` and `src/web/src/features/pages/sql-block.mdx`; the Data folder is `pages/sql/` because `data` is a reserved first route segment
 - [x] T5f — Data section, reference: `{{params.id}}` and `{{name}}` in queries — `docs/pages/sql/params-in-queries.md` and `src/web/src/features/pages/params-in-queries.mdx`; `{{/queries/path}}` is left to T5g and `{{$translations.key}}` to T5i
 - [x] T5f1 — A MultiSelect's picks bind through `{{params.id}}` as a list a query can read (`= any({{params.id}})`, `list_contains`), then add the list row to the value table on `docs/pages/sql/params-in-queries.md` and its Storybook MDX page — closes GAP-083 (found writing T5f; a product gap gets its own task)
-- [ ] T5g — Data section, reference: query files under `queries/`
+- [x] T5g — Data section, reference: query files under `queries/` — `docs/pages/sql/query-files.md`, `docs/queries/` and `src/web/src/features/pages/query-files.mdx`
 - [ ] T5h — Data section, reference: data loaders (one live loader; the `interpreters` key and its default table are on `docs/pages/pages/biac-config.md`)
 - [ ] T5i — Data section, reference: translations
 - [ ] T5j — Data section, reference: site search

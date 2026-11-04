@@ -31,6 +31,7 @@ const PAGES = [
     route: "/sql/params-in-queries",
     title: "Parameters in queries",
   },
+  { group: "Data", route: "/sql/query-files", title: "Query files" },
 ];
 
 for (const { group, route, title } of PAGES) {
@@ -351,6 +352,51 @@ test.describe("the parameters the reference describes", () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe("the query files the reference describes", () => {
+  const route = "/sql/query-files";
+
+  test("a file is a widget's data and a fence's subquery", async ({
+    page,
+    biacDev,
+  }) => {
+    const main = await openAtDesktopWidth(page, `${biacDev.url}${route}`);
+
+    const fromFile = main.getByRole("table").filter({ hasText: "Torgersen" });
+    await expect(fromFile).toHaveCount(2);
+    await expect(fromFile.first().getByRole("row")).toHaveCount(4);
+    const largeIslands = main
+      .getByRole("table")
+      .filter({ hasText: "Dream" })
+      .filter({ hasNotText: "Torgersen" });
+    await expect(largeIslands.getByRole("row")).toHaveCount(3);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  });
+
+  test("a parameter inside a file narrows the table that reads it, and the URL carries it", async ({
+    page,
+    biacDev,
+  }) => {
+    const main = await openAtDesktopWidth(page, `${biacDev.url}${route}`);
+    const searched = main.getByRole("table").filter({ hasText: "Torgersen" });
+    await expect(searched).toHaveCount(2);
+
+    await main.getByRole("textbox", { name: "Island name" }).fill("bis");
+    await page.keyboard.press("Tab");
+
+    await expect(page).toHaveURL(/\?island_text=bis$/);
+    await expect(searched).toHaveCount(1);
+    const biscoe = main.getByRole("table").filter({ hasText: "168" });
+    await expect(biscoe.last().getByRole("row")).toHaveCount(2);
+  });
+});
+
+/** Opens `url` at 1280 px and returns the page's `main` landmark. */
+async function openAtDesktopWidth(page: Page, url: string): Promise<Locator> {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(url);
+  return page.locator("main");
+}
 
 /** The `islands_named` table: the only one under a Penguins header that lists islands. */
 function islandsNamed(main: Locator): Locator {

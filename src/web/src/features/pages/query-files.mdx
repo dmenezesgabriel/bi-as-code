@@ -1,0 +1,80 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as QueryFilesStories from "./query-files.stories";
+
+<Meta of={QueryFilesStories} />
+
+# Query files
+
+A query that more than one page needs lives in its own file. A `.sql` file under the project's `queries/` folder is a named query: a widget reads it with `data="/queries/<path>"`, and a ` ```sql ` fence builds on it with `{{/queries/<path>}}`. The file is plain SQL over the tables the page can read, so the page that uses it never copies it. The stories below stand a fake DuckDB behind the widgets, so they show the query each file produces and never a real result.
+
+The reader-facing reference is `docs/pages/sql/query-files.md` (`/sql/query-files` in `bin/biac dev docs`).
+
+## A query in its own file
+
+The file `queries/island_counts.sql` holds one `select`. A widget names the file in `data`. The name is the path under `queries/`, without `.sql`, written from the project root: `queries/penguins/island_search.sql` is `/queries/penguins/island_search`. The leading `/` and the `/queries/` prefix are both required, and a path is never read relative to the page that writes it. A `data` that does not start with `/` is the name of a fence, so `data="island_counts"` looks for a fence of that name and finds none.
+
+<Canvas
+  of={QueryFilesStories.DataFromAFile}
+  story={{ inline: false, height: "240px" }}
+/>
+
+## Inside a fence
+
+A named ` ```sql ` fence reads a file with `{{/queries/<path>}}`. The file's SQL is placed where the token stands, inside parentheses, as a subquery, the way `{{name}}` places another fence. A fence without a name is never run, so a token inside it is only text.
+
+<Canvas
+  of={QueryFilesStories.InsideAFence}
+  story={{ inline: false, height: "200px" }}
+/>
+
+## Files that build on files
+
+A file may name other files with `{{/queries/<path>}}`, and it may read `{{params.id}}` as a page does. `queries/penguins/island_search.sql` takes `island_counts` and keeps the islands whose name holds the text in the `island_text` parameter. A parameter inside a file is a bound argument exactly as it is in a fence, so a reader's text stays a value. Type `bis` to keep Biscoe.
+
+<Canvas
+  of={QueryFilesStories.FilesThatBuildOnFiles}
+  story={{ inline: false, height: "300px" }}
+/>
+
+## Which files a page reads
+
+The build reads a file for each `data="/queries/…"` and each `{{/queries/…}}` it finds in a named fence, in the files it reads in turn. The page then carries only those files, and `biac build` ships no other `.sql` file of `queries/`. Under `biac dev`, saving a file updates every open page that reads it, without a reload.
+
+A `data` value has to be written out as a string, `data="/queries/island_counts"` or `data={"/queries/island_counts"}`. A value computed on the page is not known until the page runs, so the build cannot read its file, and the widget shows the same message as for a fence that does not exist:
+
+```text
+/queries/island_counts: no sql fence on this page declares this name
+```
+
+A comment in a file is read like the rest of it, so a brace token written in a comment expands too. Name a parameter in a comment without its braces.
+
+## Errors
+
+A file that does not exist fails the page where it is named, with the file looked for and the closest one that exists:
+
+```text
+Query file queries/island_count.sql not found for data="/queries/island_count" (did you mean /queries/island_counts?)
+```
+
+A name that does not start with `/queries/` names no file at all:
+
+```text
+data="/island_counts" names no query file — expected data="/queries/<path>" for queries/<path>.sql
+```
+
+A name that climbs out of `queries/` with `..` is read as missing, so a page cannot pull any other file of the project into its code.
+
+A file that fails when it runs shows its error under the widget that reads it, led by the file's path. DuckDB's own text follows:
+
+```text
+/queries/island_counts: queries/island_counts.sql: query failed (-- Penguins per island, the largest colony first. selec island, …): Error: …"syntax error at or near \"selec\"…
+```
+
+A fence that builds on a file gets DuckDB's error without the file's path, because DuckDB reports a position in the combined query and cannot say which part failed. The query it quotes holds the file's lines in place, so the text that failed is in the message.
+
+Two files that reach each other, or one that reaches itself, never finish expanding. The query is not run and shows:
+
+<Canvas
+  of={QueryFilesStories.CircularFiles}
+  story={{ inline: false, height: "160px" }}
+/>

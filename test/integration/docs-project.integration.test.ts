@@ -1,10 +1,19 @@
-import { existsSync, readFileSync } from "node:fs";
+import { compile } from "@mdx-js/mdx";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { build } from "@/cli/commands/build.js";
 import { CONFIG_KEYS } from "@/engine/biac-config.js";
 import { BRAND_KEYS } from "@/engine/brand-config.js";
+import { diskQueryFiles } from "@/engine/disk-query-files.js";
 import { PAGE_ICON_NAMES } from "@/engine/page-icon-frontmatter.js";
+import { remarkQueryFiles } from "@/engine/query-files.js";
 import { parseSqlFenceMeta } from "@/engine/sql-fence-meta.js";
 import {
   assertNoSqlTableCollision,
@@ -23,6 +32,10 @@ describe("the docs project", () => {
     // Arrange — a copy, so the build never writes into the repo's docs/.
     const root = makeTempProject("biac-docs-");
     copyDocsProject(root);
+    writeFileSync(
+      join(root, "queries/never_read.sql"),
+      "select 'never-shipped-probe'\n",
+    );
     vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     // Act — build rejects on a broken internal link, so resolving is the check.
@@ -43,11 +56,14 @@ describe("the docs project", () => {
       "pages/branded-page-example",
       "sql/sql-tables-and-fences",
       "sql/params-in-queries",
+      "sql/query-files",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }
     expect(existsSync(join(outDir, "data", "penguins.csv"))).toBe(true);
     expect(existsSync(join(outDir, "data", "seattle-weather.csv"))).toBe(true);
+    expect(filesCarrying(outDir, "island_counts").length).toBeGreaterThan(0);
+    expect(filesCarrying(outDir, "never-shipped-probe")).toEqual([]);
   }, 120_000);
 
   it("lists every icon name the front-matter accepts on the Markdown pages reference", () => {
@@ -139,7 +155,49 @@ describe("the docs project", () => {
     expect(unquoted).toEqual([]);
     expect(frontMatterRows.some((row) => row.startsWith("| `sql`"))).toBe(true);
   });
+
+  it("quotes the query-file errors on the Query files reference verbatim", async () => {
+    // Arrange — the page is read from the repo; nothing is built.
+    const page = readFileSync(
+      new URL("../../docs/pages/sql/query-files.md", import.meta.url),
+      "utf-8",
+    );
+
+    // Act
+    const missing = await queryFileError(
+      '<Table data="/queries/island_count" />\n',
+    );
+    const outside = await queryFileError('<Table data="/island_counts" />\n');
+
+    // Assert — a paraphrased message would send a reader to search for text the build never prints.
+    expect(missing).toContain("did you mean /queries/island_counts?");
+    expect(page).toContain(missing);
+    expect(page).toContain(outside);
+  });
 });
+
+/** The files under `dir` whose text holds `text`. */
+function filesCarrying(dir: string, text: string): string[] {
+  return readdirSync(dir, { recursive: true, encoding: "utf8" }).filter(
+    (name) =>
+      statSync(join(dir, name)).isFile() &&
+      readFileSync(join(dir, name), "utf8").includes(text),
+  );
+}
+
+/** The reason the engine fails `markdown` against the docs project's `queries/`. */
+async function queryFileError(markdown: string): Promise<string> {
+  const docsRoot = new URL("../../docs", import.meta.url).pathname;
+  try {
+    await compile(markdown, {
+      format: "mdx",
+      remarkPlugins: [[remarkQueryFiles, diskQueryFiles(docsRoot), []]],
+    });
+  } catch (error) {
+    return (error as { reason: string }).reason;
+  }
+  throw new Error(`compiling ${markdown} raised no error; expected one`);
+}
 
 function thrownMessage(action: () => void): string {
   try {
