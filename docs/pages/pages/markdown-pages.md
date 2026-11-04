@@ -140,7 +140,7 @@ table_of_contents_label: Jump to
 
 ## Search
 
-Site search finds a page by its title, its text and its keywords, and a match in the title or the keywords ranks above one in the text. `index: false` removes the page from the results, and `keywords` adds words the page does not otherwise contain.
+Site search finds a page by its title, its text and its keywords, and a match in the title or the keywords ranks above one in the text. `index: false` removes the page from the results, and `keywords` adds words the page does not otherwise contain. How a query matches is on [Site search](/sql/site-search).
 
 ```yaml
 index: false

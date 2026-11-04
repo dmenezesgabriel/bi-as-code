@@ -189,7 +189,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T4d — Cross-filter how-to (brush, click, legend select) and how cross-filtering works (explanation) — two pages of different kinds, each with its docs page, Storybook MDX page and browser test, so split into T4d1 and T4d2
 - [x] T4d1 — The how-to `Select on a chart` (`docs/pages/crossfilter/select-on-a-chart.md`, `src/web/src/features/crossfilter/select-on-a-chart.mdx`): click, shift-click, brush and legend, which charts take which gesture, and the Cross-filter section in `docs/biac.config.ts`
 - [x] T4d2 — The explanation `How cross-filtering works` (`docs/pages/crossfilter/how-cross-filtering-works.md` and its Storybook MDX page): selections, clauses, the publisher keeping its own rows, session state against the URL
-- [ ] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages — about ten pages, so split per page into T5a to T5j (owner rule: one task per session)
+- [x] T5 — Pages, config, themes, data, SQL, query files, loaders, translations and search reference pages — about ten pages, so split per page into T5a to T5j (owner rule: one task per session)
 - [x] T5a — Pages section, reference: Markdown pages, routing and front-matter (`title`, `icon`, `sidebar_position`, `table_of_contents`, `index`, `keywords`, layout) — `docs/pages/pages/markdown-pages.md` and `src/web/src/features/pages/markdown-pages.mdx`; the `sql` and `brand` front-matter keys are left to T5e and T5d
 - [x] T5b — Pages section, reference: `biac.config.ts`, every key in `CONFIG_KEYS` (`src/engine/biac-config.ts`) — `docs/pages/pages/biac-config.md` and `src/web/src/features/pages/biac-config.mdx`, with the project `sql`, `interpreters`, `embed` and `brand` keys in full; the Pages section sits in the 100s band
 - [x] T5c — Pages section, reference: sidebar, table of contents and breadcrumbs — `docs/pages/pages/sidebar-contents-breadcrumbs.md` and `src/web/src/features/chrome/sidebar-contents-breadcrumbs.mdx`; the keys that switch them stay on the Markdown pages and `biac.config.ts` pages
@@ -200,7 +200,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T5g — Data section, reference: query files under `queries/` — `docs/pages/sql/query-files.md`, `docs/queries/` and `src/web/src/features/pages/query-files.mdx`
 - [x] T5h — Data section, reference: data loaders (one live loader; the `interpreters` key and its default table are on `docs/pages/pages/biac-config.md`) — `docs/pages/sql/data-loaders.md`, `docs/data/island-summary.csv.js` and `src/web/src/features/pages/data-loaders.mdx`
 - [x] T5i — Data section, reference: translations — `docs/pages/sql/translations.md`, `docs/translations.yaml` (`en` + `fr`, so the docs header carries the language menu) and `src/web/src/features/pages/translations.mdx`; site search is left to T5j
-- [ ] T5j — Data section, reference: site search
+- [x] T5j — Data section, reference: site search — `docs/pages/sql/site-search.md` and `src/web/src/features/search/site-search.mdx`; the example table is checked against the docs site's own index by `test/integration/docs-site-search.integration.test.ts`
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor
 
 ## Out of scope

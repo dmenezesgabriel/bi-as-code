@@ -10,6 +10,14 @@ import {
 } from "./fake-search-documents";
 import { SiteSearch } from "./site-search";
 
+// A docs page runs a dozen of these stories at once, so a result can take
+// longer than a default one-second wait.
+const SETTLE_MS = 5000;
+
+// Typing without the timer between keystrokes: a docs page's frames are
+// throttled, where the default delay leaves a word half typed for seconds.
+const user = userEvent.setup({ delay: null });
+
 const PATHS = ["/", "/weekly-orders", "/weekly-review", "/nested/allocation"];
 
 const meta: Meta<typeof SiteSearch> = {
@@ -49,7 +57,7 @@ export const Idle: Story = {
 /** Matches ranked, the first highlighted: title matches above text-only ones. */
 export const Results: Story = {
   play: async ({ canvas }) => {
-    await userEvent.type(canvas.getByRole("combobox"), "weekly");
+    await user.type(canvas.getByRole("combobox"), "weekly");
 
     await waitFor(() =>
       expect(
@@ -63,10 +71,65 @@ export const Results: Story = {
   },
 };
 
+/** One word off still finds the page: "fulfilmant" for "fulfilment". */
+export const TypoStillMatches: Story = {
+  play: async ({ canvas }) => {
+    await user.type(canvas.getByRole("combobox"), "fulfilmant");
+
+    // The count is read once typing has settled: a slow frame renders the
+    // results of a shorter prefix first.
+    await waitFor(
+      () => expect(canvas.getByRole("status")).toHaveTextContent("1 result"),
+      { timeout: SETTLE_MS },
+    );
+    await expect(
+      canvas.getByRole("option", { name: "Allocation" }),
+    ).toBeVisible();
+  },
+};
+
+/** A typed word matches the longer words it begins: "fulfil" for "fulfilment". */
+export const PrefixMatchesLongerWords: Story = {
+  play: async ({ canvas }) => {
+    await user.type(canvas.getByRole("combobox"), "fulfil");
+
+    // The count is read once typing has settled: a slow frame renders the
+    // results of a shorter prefix first.
+    await waitFor(
+      () => expect(canvas.getByRole("status")).toHaveTextContent("1 result"),
+      { timeout: SETTLE_MS },
+    );
+    await expect(
+      canvas.getByRole("option", { name: "Allocation" }),
+    ).toBeVisible();
+  },
+};
+
+/** Accents do not matter: "resume" finds the page that spells "résumé". */
+export const AccentsAreIgnored: Story = {
+  args: {
+    loadDocuments: new FakeSearchDocuments(
+      [{ id: "/cv", title: "Curriculum", text: "Mon résumé", keywords: "" }],
+      { held: false },
+    ).load,
+  },
+  play: async ({ canvas }) => {
+    await user.type(canvas.getByRole("combobox"), "resume");
+
+    await expect(
+      await canvas.findByRole(
+        "option",
+        { name: "Curriculum" },
+        { timeout: SETTLE_MS },
+      ),
+    ).toBeVisible();
+  },
+};
+
 /** A word no page holds. */
 export const NoResults: Story = {
   play: async ({ canvas }) => {
-    await userEvent.type(canvas.getByRole("combobox"), "zebra");
+    await user.type(canvas.getByRole("combobox"), "zebra");
 
     await waitFor(() =>
       expect(canvas.getByRole("status")).toHaveTextContent("No results"),
@@ -78,7 +141,7 @@ export const NoResults: Story = {
 export const Loading: Story = {
   args: { loadDocuments: new FakeSearchDocuments(PAGES).load },
   play: async ({ canvas }) => {
-    await userEvent.type(canvas.getByRole("combobox"), "weekly");
+    await user.type(canvas.getByRole("combobox"), "weekly");
 
     await expect(await canvas.findByText("Loading…")).toBeVisible();
   },
@@ -90,7 +153,7 @@ const failing = new FakeSearchDocuments(PAGES);
 export const Unavailable: Story = {
   args: { loadDocuments: failing.load },
   play: async ({ canvas }) => {
-    await userEvent.type(canvas.getByRole("combobox"), "weekly");
+    await user.type(canvas.getByRole("combobox"), "weekly");
     failing.fail();
 
     await expect(
@@ -102,7 +165,7 @@ export const Unavailable: Story = {
 /** Types `weekly` and waits for its last result, returning the box. */
 async function typeWeekly(canvas: Canvas): Promise<HTMLElement> {
   const box = canvas.getByRole("combobox");
-  await userEvent.type(box, "weekly");
+  await user.type(box, "weekly");
   await canvas.findByRole("option", { name: "Allocation" });
   return box;
 }
@@ -112,11 +175,11 @@ export const ChooseWithKeyboard: Story = {
   play: async ({ args, canvas }) => {
     const box = await typeWeekly(canvas);
 
-    await userEvent.keyboard("{ArrowDown}");
+    await user.keyboard("{ArrowDown}");
     await expect(
       canvas.getByRole("option", { name: "Weekly review" }),
     ).toHaveAttribute("data-highlighted");
-    await userEvent.keyboard("{Enter}");
+    await user.keyboard("{Enter}");
 
     await waitFor(() => expect(args.onNavigate).toHaveBeenCalledOnce());
     await expect(box).toHaveValue("");
@@ -127,10 +190,10 @@ export const ChooseWithKeyboard: Story = {
 export const FocusWithShortcut: Story = {
   play: async ({ args, canvas }) => {
     const box = canvas.getByRole<HTMLInputElement>("combobox");
-    await userEvent.type(box, "weekly");
+    await user.type(box, "weekly");
     box.blur();
 
-    await userEvent.keyboard("/");
+    await user.keyboard("/");
 
     await expect(args.onReveal).toHaveBeenCalledOnce();
     await expect(box).toHaveFocus();
@@ -145,12 +208,12 @@ export const EscapeClearsThenLeaves: Story = {
   play: async ({ args, canvas }) => {
     const box = await typeWeekly(canvas);
 
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     await expect(box).toHaveValue("");
     await expect(box).toHaveFocus();
     await expect(args.onSearchingChange).toHaveBeenLastCalledWith(false);
 
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     await expect(box).not.toHaveFocus();
   },
 };
@@ -174,7 +237,7 @@ export const FrenchReader: Story = {
   },
   decorators: [withPageLanguage("fr")],
   play: async ({ canvas }) => {
-    await userEvent.type(canvas.getByRole("combobox"), "hebdomadaire");
+    await user.type(canvas.getByRole("combobox"), "hebdomadaire");
 
     await expect(
       await canvas.findByRole("option", { name: "Weekly review" }),
@@ -191,7 +254,7 @@ export const DocumentsUpdateWhileOpen: Story = {
   play: async ({ canvas }) => {
     // The fake outlives a replay of the story, so it starts from the sample.
     updating.update(PAGES);
-    await userEvent.type(canvas.getByRole("combobox"), "margin");
+    await user.type(canvas.getByRole("combobox"), "margin");
     await waitFor(() =>
       expect(canvas.getByRole("status")).toHaveTextContent("No results"),
     );

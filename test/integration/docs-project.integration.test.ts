@@ -73,6 +73,7 @@ describe("the docs project", () => {
       "sql/query-files",
       "sql/data-loaders",
       "sql/translations",
+      "sql/site-search",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }

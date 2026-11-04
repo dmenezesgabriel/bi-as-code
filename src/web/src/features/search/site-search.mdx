@@ -1,0 +1,127 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as SiteSearchStories from "./site-search.stories";
+
+<Meta of={SiteSearchStories} />
+
+# Site search
+
+Every biac site has a search box in its sidebar. A reader types a word and the box lists the pages that contain it, best match first. There is nothing to configure: the box is built from the pages under `pages/`, and a page can opt out or add words with two front-matter keys.
+
+The reader-facing reference is `docs/pages/sql/site-search.md` (`/sql/site-search` in `bin/biac dev docs`), whose box searches the docs site itself. The stories below search three sample pages.
+
+## Using the box
+
+The box sits under the site name, above the page links. Typing replaces the page links with the matching pages, in place; clearing the box brings the links back. Each result shows the page's sidebar title. The first result is highlighted, and the arrow keys move the highlight.
+
+<Canvas
+  of={SiteSearchStories.Idle}
+  story={{ inline: false, height: "120px" }}
+/>
+
+<Canvas
+  of={SiteSearchStories.Results}
+  story={{ inline: false, height: "220px" }}
+/>
+
+| Reader does                    | Result                                                                |
+| ------------------------------ | --------------------------------------------------------------------- |
+| Clicks a result                | Opens the page and clears the box                                     |
+| Presses Enter                  | Opens the highlighted page, the first one until the arrows move it    |
+| Presses `/`                    | Focuses the box, unless the reader is typing in another field         |
+| Presses ⌘K or Ctrl-K           | Focuses the box from anywhere, even from another field, text selected |
+| Presses Escape with a query    | Clears the box and keeps the focus                                    |
+| Presses Escape in an empty box | Leaves the box                                                        |
+
+The keyboard rows of this table need the window's focus, which a frame on this page does not have, so they are stories of their own: `ChooseWithKeyboard`, `FocusWithShortcut` and `EscapeClearsThenLeaves` under Search/SiteSearch.
+
+Under 1024 px the sidebar is a drawer, and `/` or ⌘K opens it on the box. Escape clears the box first and closes the drawer on the second press.
+
+A line under the box reports where the search stands:
+
+- `Loading…` while the search data is on its way.
+
+<Canvas
+  of={SiteSearchStories.Loading}
+  story={{ inline: false, height: "140px" }}
+/>
+
+- `1 result` or `3 results` once it has matched. The list holds every match, with no cap.
+- `No results` when nothing matches.
+
+<Canvas
+  of={SiteSearchStories.NoResults}
+  story={{ inline: false, height: "140px" }}
+/>
+
+- `Search is unavailable` when the search data failed to load. The page links stay usable.
+
+<Canvas
+  of={SiteSearchStories.Unavailable}
+  story={{ inline: false, height: "140px" }}
+/>
+
+## What the box searches
+
+Each page is searched by three fields:
+
+- Its sidebar title: the `title` front-matter key, or the file name turned into words.
+- Its prose: headings, paragraphs, list items, table cells, link text and inline code. Code fences are left out, so the SQL of a query and the source of an example are not searched. A tag with a `data` attribute, such as a `Table` or a chart, is left out too, because what it shows comes from the data and changes with it. Layout tags such as `Callout` and `Details` keep their text.
+- Its `keywords`.
+
+`keywords` adds words the page does not otherwise contain, and `index: false` takes the page out of the results altogether. Both keys are on the Markdown pages and front-matter page.
+
+## How a query matches
+
+- A match in the title or in the keywords counts four times as much as one in the prose, so a page named after the word comes first. In the first story above, `weekly` lists the two pages titled with it before the page that only mentions it.
+- A word you type matches the longer words it begins, so `fulfil` finds `fulfilment`.
+
+<Canvas
+  of={SiteSearchStories.PrefixMatchesLongerWords}
+  story={{ inline: false, height: "160px" }}
+/>
+
+- A word may be off by about 15% of its length, rounded to a whole letter. A four-letter word may miss by one letter, a ten-letter word by two, and a word of three letters or fewer must be exact.
+
+<Canvas
+  of={SiteSearchStories.TypoStillMatches}
+  story={{ inline: false, height: "160px" }}
+/>
+
+- Case does not matter, and neither do accents: `resume` finds `résumé`.
+
+<Canvas
+  of={SiteSearchStories.AccentsAreIgnored}
+  story={{ inline: false, height: "160px" }}
+/>
+
+- Only the first 15 letters of a word count, which keeps the search data small.
+- A word with more than six digits, such as an order number or a key, is left out as noise.
+- A query of several words finds the pages holding any of them, and the pages holding most of them come first.
+
+## Try it
+
+The reference page lists queries to type into the docs site's own box, each with the page it ranks first. The stories above are the same rules on sample pages.
+
+## One search per language
+
+A site with a `translations.yaml` has a search of the page text in each of its languages. The box searches the text in the language the page is shown in, so a French reader finds French words and an English word finds nothing there unless the French text spells it. A language the site does not declare is searched in the first declared language. Titles and keywords are the same in every language.
+
+<Canvas
+  of={SiteSearchStories.FrenchReader}
+  story={{ inline: false, height: "160px" }}
+/>
+
+## When the search data loads
+
+A site that nobody searches never downloads its search data. The pages' text and the search code are two separate files, and the browser fetches them the first time the box takes the focus. The index is then built in the browser, and it is built again if the reader switches language.
+
+While `biac dev` runs, saving a page updates the open box without a reload: a new `keywords` entry or a new sentence can be searched a moment later. `biac build` writes the same data into the built site, so a deployed site searches as it does in development.
+
+<Canvas
+  of={SiteSearchStories.DocumentsUpdateWhileOpen}
+  story={{ inline: false, height: "160px" }}
+/>
+
+## A site without the box
+
+The box is part of the sidebar. A project that sets `nav.sidebar: false` in `biac.config.ts`, or a page that sets `sidebar: false`, has no box on it and no `/` or ⌘K shortcut either.
