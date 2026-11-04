@@ -181,7 +181,7 @@ A page may declare tables of its own with the `sql` front-matter key. Page and p
 
 ## `interpreters`
 
-`interpreters` chooses the program that runs each kind of data loader. A loader is a program in `data/` whose output becomes a data file, and its extension picks the interpreter. An entry maps an extension, with its leading dot, to the command that runs the loader. biac appends the loader's path to the command. An empty list runs the file itself, and `null` removes the extension, so files with it are ordinary data again.
+`interpreters` chooses the program that runs each kind of data loader. A loader is a program in `data/` whose output becomes a data file (see [Data loaders](/sql/data-loaders)), and its extension picks the interpreter. An entry maps an extension, with its leading dot, to the command that runs the loader. biac appends the loader's path to the command. An empty list runs the file itself, and `null` removes the extension, so files with it are ordinary data again.
 
 ```ts
 export default {

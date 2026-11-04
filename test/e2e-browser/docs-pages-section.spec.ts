@@ -32,6 +32,7 @@ const PAGES = [
     title: "Parameters in queries",
   },
   { group: "Data", route: "/sql/query-files", title: "Query files" },
+  { group: "Data", route: "/sql/data-loaders", title: "Data loaders" },
 ];
 
 for (const { group, route, title } of PAGES) {
@@ -388,6 +389,25 @@ test.describe("the query files the reference describes", () => {
     await expect(searched).toHaveCount(1);
     const biscoe = main.getByRole("table").filter({ hasText: "168" });
     await expect(biscoe.last().getByRole("row")).toHaveCount(2);
+  });
+});
+
+test.describe("the data loader the reference runs", () => {
+  test("its output is a table the page queries, with no error", async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    const main = await openAtDesktopWidth(
+      page,
+      `${biacDev.url}/sql/data-loaders`,
+    );
+
+    const summary = main.getByRole("table").filter({ hasText: "Torgersen" });
+    await expect(summary.first().getByRole("row")).toHaveCount(4);
+    await expect(summary.first()).toContainText("168");
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    expect(errors).toEqual([]);
   });
 });
 

@@ -1,0 +1,72 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as DataLoadersStories from "./data-loaders.stories";
+
+<Meta of={DataLoadersStories} />
+
+# Data loaders
+
+A data loader is a program that prints a data file. Put it in `data/` with the file's name followed by the language's extension, and biac runs it whenever a page needs the file: `data/island-summary.csv.js` produces `data/island-summary.csv`. Use one for data that no file in the repository holds, such as a warehouse extract, an API response or a summary computed from another file. The page reads the output like any other data file, and the site that `biac build` writes ships the output and never the program. The stories below stand a fake DuckDB behind the widgets, so they show the query the page runs and never a loader's real output.
+
+The reader-facing reference is `docs/pages/sql/data-loaders.md` (`/sql/data-loaders` in `bin/biac dev docs`), which runs the loader `docs/data/island-summary.csv.js`.
+
+## A program that prints a file
+
+The loader reads `data/penguins.csv` and prints one row per island. Whatever the program writes to standard output is the file. The file name carries the output's format: `island-summary.csv.js` makes `island-summary.csv`, so a loader that prints Parquet is `island-summary.parquet.js`. A page registers the output in `sql:` by the name without the language, the way it registers a file written by hand.
+
+<Canvas
+  of={DataLoadersStories.LoaderOutputAsATable}
+  story={{ inline: false, height: "240px" }}
+/>
+
+## Which file a loader makes
+
+The output keeps its own extension, so a loader needs two: the format and the language. A path without a format extension has no loader, which makes `data/lib/rows.py` a helper that a loader may import and that biac never runs by itself.
+
+| Situation                                            | Result                                                               |
+| ---------------------------------------------------- | -------------------------------------------------------------------- |
+| `data/quakes.csv.py` and no `data/quakes.csv`        | `data/quakes.csv` is the loader's output                             |
+| `data/quakes.csv.py` beside a file `data/quakes.csv` | the file is read, and the loader never runs                          |
+| `data/quakes.csv.js` and `data/quakes.csv.py`        | an error that names both, because choosing one would leave one stale |
+| `data/lib/rows.py`                                   | not a loader, because `lib/rows` has no extension of its own         |
+| `data/nested/b.parquet.py`                           | `data/nested/b.parquet`, with the folder kept                        |
+
+## Languages
+
+The extension after the format picks the program that runs the loader. biac appends the loader's path to that program's command, so `.py` runs `python3 data/quakes.csv.py` and `.sh` runs `sh data/quakes.csv.sh`. The default table, with the twelve languages, is under `interpreters` on the `biac.config.ts` reference, where a project adds a language, replaces a command or drops an extension.
+
+`.js` and `.ts` run with the node that runs biac, so they need nothing installed. Every other language needs its interpreter on the `PATH` of the shell that started biac, with any library the loader imports. A `.exe` loader is the executable itself, and it needs its executable bit set (`chmod +x data/quakes.csv.exe`).
+
+## Running a loader
+
+A loader runs with the project root as its working directory, wherever `biac` was started, so `data/penguins.csv` means the same file for every author. It reads no standard input. What it writes to standard output becomes the file, and what it writes to standard error is shown in the terminal as it is written. An exit code other than 0 is a failure, and a failed run writes no output. Two requests for one output at the same moment share one run.
+
+Each finished run prints one line in the terminal that runs `biac dev` or `biac build`, after the time stamp of vite, with the program, the size of the output and the time it took:
+
+```text
+10:12:41 AM [vite] data loader data/island-summary.csv.js → 82 bytes in 41 ms
+```
+
+## Cache
+
+An output is kept at `.biac/cache/data/<output>` under the project root, with the folders of its path, outside `data/` so that the dev server never serves the cache and the build never copies it. biac runs a loader again only when the loader file is newer than its output.
+
+That is the only thing biac compares. A change to what the loader reads, such as the rows of a table or the answer of an API, does not run it again, and neither does a new command for its language in `interpreters`. Delete `.biac/cache/` to run every loader again.
+
+## Under `biac dev` and `biac build`
+
+Under `biac dev`, a loader runs the first time its output is needed. Saving the loader runs it again for the next request and updates the pages that read it, without a reload.
+
+`biac build` runs every loader under `data/` that makes an output, whether or not a page reads it, before it writes anything, so a loader that fails stops the build with its message and leaves no half-written `build/`. The site then holds the outputs in `build/data/` and no program. The result is a snapshot, as old as the build.
+
+No file under `data/` whose name ends in the extension of a language in the table is served or copied, upper or lower case, which keeps a connection string in a loader off the site.
+
+## Errors
+
+A loader that exits with a code other than 0 names itself, the code and the last twenty lines it wrote to standard error. Under `biac dev`, every widget and fence that reads the output shows the dev server's message after the fence's name and the table it could not register, while the rest of the page renders. If the loader of this page broke, the `islands` fence would show:
+
+<Canvas
+  of={DataLoadersStories.LoaderThatFails}
+  story={{ inline: false, height: "200px" }}
+/>
+
+A missing command and two loaders for one output fail with their own messages, quoted on the reference page.

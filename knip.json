@@ -17,6 +17,7 @@
     // each `data/<target>.js` as a program — never imported, so knip can't
     // see it (src/engine/data-loader.ts).
     "data/**/*.js",
+    "docs/data/**/*.js",
     "test/fixtures/**",
     "vitest.stryker.config.ts",
     "test/e2e-browser/global-setup.ts",

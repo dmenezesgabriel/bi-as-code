@@ -52,6 +52,8 @@ select count(*) as penguins from penguin_rows
 | A leading `./`          | dropped: `./data/a.csv` is `data/a.csv`                                             |
 | Page and project tables | share one set of names                                                              |
 
+A file that a program prints is registered the same way, by its output name: see [Data loaders](/sql/data-loaders).
+
 A page and `biac.config.ts` that declare the same name are an error, not an override. The build and the dev server stop on the page and name the project's file:
 
 ```text

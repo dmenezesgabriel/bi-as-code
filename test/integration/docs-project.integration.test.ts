@@ -11,6 +11,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { build } from "@/cli/commands/build.js";
 import { CONFIG_KEYS } from "@/engine/biac-config.js";
 import { BRAND_KEYS } from "@/engine/brand-config.js";
+import { DEFAULT_INTERPRETERS } from "@/engine/data-loader-interpreters.js";
+import {
+  createDataLoaderCache,
+  type DataLoaderLog,
+} from "@/engine/data-loader.js";
 import { diskQueryFiles } from "@/engine/disk-query-files.js";
 import { PAGE_ICON_NAMES } from "@/engine/page-icon-frontmatter.js";
 import { remarkQueryFiles } from "@/engine/query-files.js";
@@ -19,8 +24,13 @@ import {
   assertNoSqlTableCollision,
   sqlTableMap,
 } from "@/engine/sql-frontmatter.js";
+import type { DataLoaderInterpreters } from "@/engine/types.js";
 import { copyDocsProject } from "../lib/shipped-project.js";
-import { cleanupProjects, makeTempProject } from "../lib/temp-project.js";
+import {
+  cleanupProjects,
+  makeTempProject,
+  writeProjectFile,
+} from "../lib/temp-project.js";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -57,11 +67,16 @@ describe("the docs project", () => {
       "sql/sql-tables-and-fences",
       "sql/params-in-queries",
       "sql/query-files",
+      "sql/data-loaders",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }
     expect(existsSync(join(outDir, "data", "penguins.csv"))).toBe(true);
     expect(existsSync(join(outDir, "data", "seattle-weather.csv"))).toBe(true);
+    expect(existsSync(join(outDir, "data", "island-summary.csv"))).toBe(true);
+    expect(existsSync(join(outDir, "data", "island-summary.csv.js"))).toBe(
+      false,
+    );
     expect(filesCarrying(outDir, "island_counts").length).toBeGreaterThan(0);
     expect(filesCarrying(outDir, "never-shipped-probe")).toEqual([]);
   }, 120_000);
@@ -174,7 +189,89 @@ describe("the docs project", () => {
     expect(page).toContain(missing);
     expect(page).toContain(outside);
   });
+
+  it("quotes the data-loader errors and the terminal line on the Data loaders reference verbatim", async () => {
+    // Arrange — the page is read from the repo; the loaders run in scratch projects.
+    const page = readFileSync(
+      new URL("../../docs/pages/sql/data-loaders.md", import.meta.url),
+      "utf-8",
+    );
+    const exited = await loaderFailure({
+      "data/quakes.csv.js":
+        'console.error("upstream timed out"); process.exit(3);\n',
+    });
+    const missing = await loaderFailure(
+      { "data/quakes.csv.sh": "echo a\n" },
+      { ...DEFAULT_INTERPRETERS, ".sh": ["no-such-tool"] },
+    );
+    const twice = await loaderFailure({
+      "data/quakes.csv.js": "console.log(1)\n",
+      "data/quakes.csv.py": "print(1)\n",
+    });
+
+    // Act
+    const unquoted = [exited, missing, twice].filter(
+      (message) => !page.includes(message),
+    );
+
+    // Assert — a paraphrased message would send a reader to search for text biac never prints.
+    expect(unquoted).toEqual([]);
+  });
+
+  it("quotes the terminal line a finished loader run prints", async () => {
+    // Arrange — a copy, so the cache never writes `.biac/` into the repo's docs/.
+    const root = makeTempProject("biac-docs-");
+    copyDocsProject(root);
+    const log = new FinishedRunLog();
+    const page = readFileSync(
+      new URL("../../docs/pages/sql/data-loaders.md", import.meta.url),
+      "utf-8",
+    );
+
+    // Act
+    await createDataLoaderCache(root, log).load(
+      "island-summary.csv",
+      DEFAULT_INTERPRETERS,
+    );
+
+    // Assert — the number of milliseconds varies, so only the line up to it is compared.
+    const [line] = log.runs;
+    expect(line).toMatch(
+      /^data loader data\/island-summary\.csv\.js → \d+ bytes in \d+ ms$/,
+    );
+    expect(page).toContain(line!.replace(/ in \d+ ms$/, " in "));
+  });
 });
+
+/** Keeps the lines a loader cache reports as finished runs. */
+class FinishedRunLog implements DataLoaderLog {
+  readonly runs: string[] = [];
+  info(line: string): void {
+    this.runs.push(line);
+  }
+  error(): void {}
+  stderr(): void {}
+}
+
+/** The message of the failure `load` raises for `files` in a scratch project. */
+async function loaderFailure(
+  files: Record<string, string>,
+  interpreters: DataLoaderInterpreters = DEFAULT_INTERPRETERS,
+): Promise<string> {
+  const root = makeTempProject("biac-loader-");
+  for (const [name, content] of Object.entries(files)) {
+    writeProjectFile(root, name, content);
+  }
+  const cache = createDataLoaderCache(root, new FinishedRunLog());
+  try {
+    await cache.load("quakes.csv", interpreters);
+  } catch (error) {
+    return (error as Error).message;
+  }
+  throw new Error(
+    `loading quakes.csv in ${root} raised no error; expected one`,
+  );
+}
 
 /** The files under `dir` whose text holds `text`. */
 function filesCarrying(dir: string, text: string): string[] {
