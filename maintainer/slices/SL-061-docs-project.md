@@ -199,7 +199,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T5f1 — A MultiSelect's picks bind through `{{params.id}}` as a list a query can read (`= any({{params.id}})`, `list_contains`), then add the list row to the value table on `docs/pages/sql/params-in-queries.md` and its Storybook MDX page — closes GAP-083 (found writing T5f; a product gap gets its own task)
 - [x] T5g — Data section, reference: query files under `queries/` — `docs/pages/sql/query-files.md`, `docs/queries/` and `src/web/src/features/pages/query-files.mdx`
 - [x] T5h — Data section, reference: data loaders (one live loader; the `interpreters` key and its default table are on `docs/pages/pages/biac-config.md`) — `docs/pages/sql/data-loaders.md`, `docs/data/island-summary.csv.js` and `src/web/src/features/pages/data-loaders.mdx`
-- [ ] T5i — Data section, reference: translations
+- [x] T5i — Data section, reference: translations — `docs/pages/sql/translations.md`, `docs/translations.yaml` (`en` + `fr`, so the docs header carries the language menu) and `src/web/src/features/pages/translations.mdx`; site search is left to T5j
 - [ ] T5j — Data section, reference: site search
 - [ ] T6 — Ship guides: build/preview/serve, base path, Deploy on AWS moved from `pages/deploy-on-aws.md` (with its test and ADR-0032 references), the SSO example, embeds, the editor
 

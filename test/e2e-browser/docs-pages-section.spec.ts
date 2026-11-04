@@ -33,6 +33,7 @@ const PAGES = [
   },
   { group: "Data", route: "/sql/query-files", title: "Query files" },
   { group: "Data", route: "/sql/data-loaders", title: "Data loaders" },
+  { group: "Data", route: "/sql/translations", title: "Translations" },
 ];
 
 for (const { group, route, title } of PAGES) {

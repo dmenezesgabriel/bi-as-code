@@ -18,12 +18,16 @@ import {
 } from "@/engine/data-loader.js";
 import { diskQueryFiles } from "@/engine/disk-query-files.js";
 import { PAGE_ICON_NAMES } from "@/engine/page-icon-frontmatter.js";
+import { remarkCheckTranslationKeys } from "@/engine/page-translations.js";
 import { remarkQueryFiles } from "@/engine/query-files.js";
+import { remarkRejectReservedFilterIds } from "@/engine/reserved-filter-id.js";
+import { loadProjectTranslations } from "@/engine/resolve-translations.js";
 import { parseSqlFenceMeta } from "@/engine/sql-fence-meta.js";
 import {
   assertNoSqlTableCollision,
   sqlTableMap,
 } from "@/engine/sql-frontmatter.js";
+import { parseTranslations } from "@/engine/translations-file.js";
 import type { DataLoaderInterpreters } from "@/engine/types.js";
 import { copyDocsProject } from "../lib/shipped-project.js";
 import {
@@ -68,6 +72,7 @@ describe("the docs project", () => {
       "sql/params-in-queries",
       "sql/query-files",
       "sql/data-loaders",
+      "sql/translations",
     ]) {
       expect(existsSync(join(outDir, route, "index.html"))).toBe(true);
     }
@@ -218,6 +223,46 @@ describe("the docs project", () => {
     expect(unquoted).toEqual([]);
   });
 
+  it("quotes the translations.yaml and unknown-key errors on the Translations reference verbatim", async () => {
+    // Arrange — the page is read from the repo; the errors come from the engine.
+    const page = readFileSync(
+      new URL("../../docs/pages/sql/translations.md", import.meta.url),
+      "utf-8",
+    );
+    const file = "/site/translations.yaml";
+    const messages = [
+      thrownMessage(() => parseTranslations("english:\n  a: Hi\n", file)),
+      thrownMessage(() => parseTranslations("en: Hello\n", file)),
+      thrownMessage(() =>
+        parseTranslations("en:\n  colors:\n    - red\n", file),
+      ),
+      thrownMessage(() => parseTranslations("- en\n", file)),
+      await unknownKeyError("# {$translations.weigehd}\n"),
+      await reservedLangError('<Dropdown id="lang" />\n'),
+    ];
+
+    // Act
+    const unquoted = messages.filter((message) => !page.includes(message));
+
+    // Assert — a paraphrased message would send a reader to search for text biac never prints.
+    expect(unquoted).toEqual([]);
+  });
+
+  it("resolves the docs translations so French keeps the English text it leaves out", async () => {
+    // Arrange
+    const docsRoot = new URL("../../docs", import.meta.url).pathname;
+
+    // Act
+    const { languages, byLanguage } = await loadProjectTranslations(docsRoot);
+
+    // Assert — the first declared language is the default; `$t()` expands in each.
+    expect(languages).toEqual(["en", "fr"]);
+    expect(byLanguage.fr!.welcome).toBe(
+      "Bonjour, et bienvenue dans la documentation de biac",
+    );
+    expect(byLanguage.fr!.fallback_note).toBe(byLanguage.en!.fallback_note);
+  });
+
   it("quotes the terminal line a finished loader run prints", async () => {
     // Arrange — a copy, so the cache never writes `.biac/` into the repo's docs/.
     const root = makeTempProject("biac-docs-");
@@ -289,6 +334,40 @@ async function queryFileError(markdown: string): Promise<string> {
     await compile(markdown, {
       format: "mdx",
       remarkPlugins: [[remarkQueryFiles, diskQueryFiles(docsRoot), []]],
+    });
+  } catch (error) {
+    return (error as { reason: string }).reason;
+  }
+  throw new Error(`compiling ${markdown} raised no error; expected one`);
+}
+
+/** The compile error for a filter whose id is the reserved `lang`. */
+async function reservedLangError(markdown: string): Promise<string> {
+  try {
+    await compile(markdown, {
+      format: "mdx",
+      remarkPlugins: [remarkRejectReservedFilterIds],
+    });
+  } catch (error) {
+    return (error as { reason: string }).reason;
+  }
+  throw new Error(`compiling ${markdown} raised no error; expected one`);
+}
+
+/** The compile error for `markdown` reading a key the docs `translations.yaml` lacks. */
+async function unknownKeyError(markdown: string): Promise<string> {
+  const docsRoot = new URL("../../docs", import.meta.url).pathname;
+  const translations = await loadProjectTranslations(docsRoot);
+  try {
+    await compile(markdown, {
+      format: "mdx",
+      remarkPlugins: [
+        [
+          remarkCheckTranslationKeys,
+          async () => translations,
+          { reads: false },
+        ],
+      ],
     });
   } catch (error) {
     return (error as { reason: string }).reason;

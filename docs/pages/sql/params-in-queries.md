@@ -166,7 +166,7 @@ Spaces inside the braces make no difference: `{{ islands_named }}` is the same t
 
 A query with an error is never run. It shows the message under the block, whether or not the block has `echo` or `display`; the rest of the page still renders.
 
-A token that is not `params.`, a translation, a [query file](/sql/query-files) or the name of another fence on the page:
+A token that is not `params.`, a [translation](/sql/translations), a [query file](/sql/query-files) or the name of another fence on the page:
 
 ```text
 Unknown token {{nope}} — expected {{params.<name>}}, {{$translations.<key>}}, {{/queries/<path>}} or the name of another sql block on this page

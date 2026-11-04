@@ -1,0 +1,18 @@
+# Page text in each language the docs offer. A page reads a key as
+# {$translations.key} and a sql fence as {{$translations.key}}; a key a
+# language leaves out shows its en value.
+en:
+  greeting: Hello
+  welcome: "$t(greeting), and welcome to the biac docs"
+  fallback_note: This sentence has no French translation, so a French reader sees it in English.
+  weighed: Penguins that were weighed
+  sex:
+    female: Female
+    male: Male
+fr:
+  greeting: Bonjour
+  welcome: "$t(greeting), et bienvenue dans la documentation de biac"
+  weighed: Pingouins qu'on a pesés
+  sex:
+    female: Femelle
+    male: Mâle
