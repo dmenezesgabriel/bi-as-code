@@ -47,6 +47,26 @@ const INTENTIONAL_ERROR_STATE_STORIES = new Set<string>();
 // a real error still in flight. It doubles as the suite's per-story pacing.
 const PER_STORY_BUDGET_MS = 30_000;
 
+// The settle window for requests a render fires late. A docs page that embeds
+// many `inline: false` story iframes can leave Playwright's page-level
+// `networkidle` unresolved for good: measured, `search-sitesearch--docs` (10
+// nested iframes) never resolved it in 40 s while Chromium's own lifecycle
+// events reported networkIdle for the main frame and every child, and CDP
+// listed 0 requests in flight. Cold, the slowest page that does resolve took
+// 12.8 s (`pages-themes-and-brand--docs`), so the ceiling clears that.
+const SETTLE_BUDGET_MS = 15_000;
+
+/**
+ * Wait for the network to go quiet, but never longer than `SETTLE_BUDGET_MS`:
+ * the settle only widens the window in which a late request's console error
+ * is caught, so running out of window is not a failure of the page.
+ */
+async function settleNetwork(page: Page): Promise<void> {
+  await page
+    .waitForLoadState("networkidle", { timeout: SETTLE_BUDGET_MS })
+    .catch(() => undefined);
+}
+
 /**
  * Visit one story's iframe and collect every unexpected console error or
  * uncaught exception from navigation until the story's render reaches a
@@ -124,7 +144,7 @@ async function visitStory(
       `render never reached a terminal phase within ${PER_STORY_BUDGET_MS}ms`,
     );
   }
-  await page.waitForLoadState("networkidle");
+  await settleNetwork(page);
 }
 
 /**
@@ -152,7 +172,7 @@ async function visitDocsPage(
       `docs content never rendered within ${PER_STORY_BUDGET_MS}ms`,
     );
   }
-  await page.waitForLoadState("networkidle");
+  await settleNetwork(page);
   const rawTableRows = await countRawTablePipeParagraphs(page);
   if (rawTableRows > 0) {
     messages.push(`raw GFM table pipes in ${rawTableRows} paragraph(s)`);
