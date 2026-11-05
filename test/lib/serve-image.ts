@@ -81,13 +81,23 @@ function envFlags(env: Record<string, string>): string[] {
 }
 
 /**
- * Builds the repo root's Dockerfile into `tag`.
+ * Builds the repo root's Dockerfile into `tag`. With `projectDir` the image
+ * bakes that directory (the Dockerfile's `project` named context) instead of
+ * the repo root's own project.
  *
  * @example
  * await buildServeImage("biac-serve:test");
+ * await buildServeImage("biac-site:test", "/home/me/my-site");
  */
-export async function buildServeImage(tag: string): Promise<void> {
-  await dockerOk(["build", "--quiet", "-t", tag, REPO_ROOT]);
+export async function buildServeImage(
+  tag: string,
+  projectDir?: string,
+): Promise<void> {
+  const projectContext =
+    projectDir === undefined
+      ? []
+      : ["--build-context", `project=${projectDir}`];
+  await dockerOk(["build", "--quiet", ...projectContext, "-t", tag, REPO_ROOT]);
 }
 
 /**

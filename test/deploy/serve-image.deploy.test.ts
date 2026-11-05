@@ -10,6 +10,11 @@ import {
   startServeImage,
   stopTimed,
 } from "../lib/serve-image.js";
+import {
+  cleanupProjects,
+  makeTempProject,
+  writeProjectFile,
+} from "../lib/temp-project.js";
 
 const TAG = "biac-serve:deploy-test";
 const BASIC_AUTH_ENV = {
@@ -22,8 +27,9 @@ const AUTHORIZATION = `Basic ${Buffer.from("viewer:s3cret").toString("base64")}`
 async function startAndAwaitHttp(
   env: Record<string, string>,
   containerPort: number,
+  tag: string = TAG,
 ): Promise<RunningServeImage> {
-  const running = await startServeImage(TAG, env, containerPort);
+  const running = await startServeImage(tag, env, containerPort);
   // fetch rejects until the server listens; any status means it is up.
   await eventually(async () => {
     await fetch(`${running.origin}/`);
@@ -154,5 +160,47 @@ describe("default port and process contract", () => {
     // after 10 s with 137.
     expect(elapsedMs).toBeLessThan(5_000);
     expect(exitCode).toBe(143);
+  });
+});
+
+describe("a project outside the clone", () => {
+  const EXTERNAL_TAG = "biac-serve:deploy-test-external";
+  const PEOPLE_CSV = "name\nAda\n";
+  let running: RunningServeImage;
+
+  beforeAll(async () => {
+    // Arrange: the Getting-started shape, a pages/ and a data/ directory and
+    // no biac.config.ts, beside the clone rather than inside it.
+    const project = makeTempProject();
+    writeProjectFile(project, "pages/hello.md", "# Hello\n");
+    writeProjectFile(project, "data/people.csv", PEOPLE_CSV);
+    await buildServeImage(EXTERNAL_TAG, project);
+    running = await startAndAwaitHttp(BASIC_AUTH_ENV, 3000, EXTERNAL_TAG);
+  });
+
+  afterAll(cleanupProjects);
+
+  it("serves that project's page and data file", async () => {
+    // Act
+    const page = await fetch(`${running.origin}/hello/`, {
+      headers: { Authorization: AUTHORIZATION },
+    });
+    const csv = await fetch(`${running.origin}/data/people.csv`, {
+      headers: { Authorization: AUTHORIZATION },
+    });
+
+    // Assert
+    expect(page.status).toBe(200);
+    expect(await csv.text()).toBe(PEOPLE_CSV);
+  });
+
+  it("does not serve the clone's own pages", async () => {
+    // Act
+    const res = await fetch(`${running.origin}/weekly-review/`, {
+      headers: { Authorization: AUTHORIZATION },
+    });
+
+    // Assert
+    expect(res.status).toBe(404);
   });
 });

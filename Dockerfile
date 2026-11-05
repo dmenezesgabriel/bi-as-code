@@ -2,6 +2,13 @@
 # `biac build`; the runtime serves that build/ with `biac serve`.
 #
 #   docker build -t biac-serve .
+#
+# That bakes this repository's own project. To bake another directory (a
+# Getting-started project next to the clone), name it as the `project` build
+# context:
+#
+#   docker build --build-context project=../my-site -t biac-serve .
+#
 #   docker run --read-only --cap-drop ALL \
 #     --security-opt no-new-privileges:true -p 3000:3000 \
 #     -e BIAC_BASIC_USER=viewer -e BIAC_BASIC_PASSWORD=... biac-serve
@@ -20,6 +27,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches/ patches/
 COPY src/web/package.json src/web/
 
+# The project to bake: this repository's own, unless a `project` build
+# context replaces this stage (--build-context project=<dir>).
+FROM scratch AS project
+COPY . /
+
 FROM base AS build
 # `biac build` runs every data loader under data/; the example project's
 # include a Python one. The runtime serves the built output and runs none.
@@ -29,11 +41,17 @@ RUN apt-get update \
 # HUSKY=0: the prepare script installs git hooks, and there is no .git here.
 RUN HUSKY=0 pnpm install --frozen-lockfile
 COPY . .
-# COPY keeps each file's mode from the build context, where a file may be
-# readable by its owner only (0600); the runtime user owns none of them, and
-# sirv inside vite preview crashes the server on a file it cannot open.
-RUN pnpm build:cli && node bin/biac build /app \
-  && chmod -R a+rX build biac.config.ts
+RUN pnpm build:cli
+COPY --from=project / /project
+# `served/` is what the runtime needs from the project: its build/ and, when
+# it has one, biac.config.ts (a Getting-started project has none). COPY keeps
+# each file's mode from the build context, where a file may be readable by its
+# owner only (0600); the runtime user owns none of them, and sirv inside vite
+# preview crashes the server on a file it cannot open.
+RUN node bin/biac build /project \
+  && mkdir /served && cp -r /project/build /served/build \
+  && if [ -f /project/biac.config.ts ]; then cp /project/biac.config.ts /served/; fi \
+  && chmod -R a+rX /served
 
 FROM base AS prod-deps
 # `biac serve` imports vite and the root's runtime dependencies only;
@@ -50,8 +68,7 @@ COPY --from=prod-deps /app/package.json ./
 COPY --from=prod-deps /app/node_modules/ node_modules/
 COPY --from=build /app/bin/ bin/
 COPY --from=build /app/dist/ dist/
-COPY --from=build /app/build/ build/
-COPY --from=build /app/biac.config.ts ./
+COPY --from=build /served/ ./
 # Numeric, so an orchestrator can verify a non-root user without /etc/passwd.
 USER 10001
 EXPOSE 3000
