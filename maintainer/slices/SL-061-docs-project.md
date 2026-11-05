@@ -210,7 +210,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T6c — Ship section, how-to: Deploy on AWS moved from `pages/deploy-on-aws.md` to `docs/pages/ship/deploy-on-aws.md` and `src/web/src/features/pages/deploy-on-aws.mdx`, with `test/e2e-browser/page-typography.spec.ts` (3 places), `test/e2e-browser/page-icon.spec.ts` (the example sidebar loses a link), `test/integration/features/step_definitions/page-chrome.steps.ts:58`, `maintainer/adr/0032-biac-serve-ships-as-one-baked-image-on-a-read-only-root.md:9` and demo step 5 (`/ship/deploy-on-aws`) updated
 - [x] T6c1 — The AWS guide's `Dockerfile` bakes a project from another directory, not only the biac clone's root project (it does `COPY . .` and `biac build` on `/app`, so a Getting-started project next to the clone cannot be deployed with it); decide the shape (build argument, or a documented copy step), update ADR-0032 and `test/deploy/serve-image.deploy.test.ts`, then drop the scope sentence from `docs/pages/ship/deploy-on-aws.md` and its MDX page — found writing T6c; a product gap gets its own task
 - [x] T6d — Ship section, how-to: the SSO example (`examples/s3-sso/`) — `docs/pages/ship/sso-behind-a-proxy.md` and `src/web/src/features/pages/sso-behind-a-proxy.mdx`; the example's README is now a pointer
-- [ ] T6e — Ship section, how-to: embeds (iframe, exported files, widget modules)
+- [x] T6e — Ship section, how-to: embeds (iframe, exported files, widget modules) — `docs/pages/ship/embeds.md` and `src/web/src/features/pages/embeds.mdx`
 - [ ] T6f — Ship section, how-to: the page editor (dev server only, ADR-0010; screenshots are the one place the docs use them)
 
 ## Out of scope

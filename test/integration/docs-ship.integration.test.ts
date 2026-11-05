@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { assertBootAllowed, parseServeArgs } from "@/cli/commands/serve.js";
 import { loadBiacConfig } from "@/engine/biac-config.js";
+import { dataCorsHeaders } from "@/engine/data-cors.js";
+import { frameAncestorsHeaders } from "@/engine/frame-ancestors.js";
+import { widgetExports } from "@/engine/widget-exports.js";
 import {
   cleanupProjects,
   makeTempProject,
@@ -235,5 +238,102 @@ describe("the SSO behind a proxy guide", () => {
     // Assert
     expect(named).toBeDefined();
     expect(manifest.scripts).toHaveProperty(named ?? "");
+  });
+});
+
+const EMBEDS_PAGE = "embeds.md";
+
+/** The `Name: value` lines of a page's `http` fences. */
+function headerLines(page: string): string[] {
+  return fencesOf(page, "http")
+    .flatMap((body) => body.split("\n"))
+    .filter((line) => line.includes(": "));
+}
+
+/** The first four-backtick `md` fence: a whole page, whose own fences are three-backtick. */
+function pageExample(page: string): string {
+  return page.match(/````md\n([\s\S]*?)````/)?.[1] ?? "";
+}
+
+/** A project holding `pageSource` as its only page, over a one-row `data/orders.csv`. */
+function projectWithPage(pageSource: string): string {
+  const root = makeTempProject("biac-docs-embeds-");
+  writeProjectFile(root, "pages/revenue.md", pageSource);
+  writeProjectFile(root, "data/orders.csv", "region,amount\neast,1\n");
+  return root;
+}
+
+async function exportFailure(pageSource: string): Promise<string> {
+  try {
+    await widgetExports(projectWithPage(pageSource));
+  } catch (error) {
+    return (error as Error).message;
+  }
+  return "";
+}
+
+describe("the Embeds guide", () => {
+  afterEach(cleanupProjects);
+
+  it("shows an embed config biac loads, and the headers biac sends for its origins", async () => {
+    // Arrange
+    const source = fencesOf(readShipPage(EMBEDS_PAGE), "ts").find((fence) =>
+      fence.includes("embed"),
+    );
+    const root = makeTempProject("biac-docs-embeds-");
+    writeProjectFile(root, "biac.config.ts", source ?? "");
+
+    // Act
+    const { embed } = await loadBiacConfig(root);
+
+    // Assert — the page is where a reader copies the headers a static host must send.
+    const sent = {
+      ...frameAncestorsHeaders(embed.origins),
+      ...dataCorsHeaders(embed.dataOrigins, embed.dataOrigins[0]),
+    };
+    expect(embed.origins.length).toBeGreaterThan(0);
+    expect(embed.dataOrigins.length).toBeGreaterThan(0);
+    for (const [name, value] of Object.entries(sent))
+      expect(headerLines(readShipPage(EMBEDS_PAGE))).toContain(
+        `${name}: ${value}`,
+      );
+  });
+
+  it("builds the module the page imports from the export the page shows", async () => {
+    // Arrange
+    const page = readShipPage(EMBEDS_PAGE);
+    const named = page.match(/widgets\/([a-z0-9-]+)\.js/)?.[1];
+
+    // Act
+    const modules = await widgetExports(projectWithPage(pageExample(page)));
+
+    // Assert — a renamed export moves the URL every host page imports.
+    expect(named).toBeDefined();
+    expect(modules.map((module) => module.name)).toEqual([named]);
+  });
+
+  it("quotes the refusals the build prints for a name that is not kebab-case and for a select", async () => {
+    // Arrange
+    const page = readShipPage(EMBEDS_PAGE);
+    const example = pageExample(page);
+    const named = example.match(/export="([^"]+)"/)?.[1] ?? "";
+    const badName = example.replace(`export="${named}"`, 'export="Revenue"');
+    const selecting = example.replace(
+      `export="${named}"`,
+      `export="${named}" select="region"`,
+    );
+
+    // Act
+    const refusals = [
+      await exportFailure(badName),
+      await exportFailure(selecting),
+    ];
+
+    // Assert — the page is where a reader looks up what the message says; the build adds the position in front.
+    const quoted = fencesOf(page, "text").join("\n");
+    for (const refusal of refusals) {
+      expect(refusal).not.toBe("");
+      expect(quoted).toContain(`: ${refusal}\n`);
+    }
   });
 });

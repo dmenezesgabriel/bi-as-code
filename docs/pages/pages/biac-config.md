@@ -238,7 +238,7 @@ export default {
 | `origins`     | the right to show the site's pages in an iframe: the list becomes the `frame-ancestors` response header |
 | `dataOrigins` | the right to read `/data/` files and exported widget modules from a script, through CORS                |
 
-The two grants are separate, so framing a page never lets that site read the raw data. An empty `origins` list sends `frame-ancestors 'none'`.
+The two grants are separate, so framing a page never lets that site read the raw data. An empty `origins` list sends `frame-ancestors 'none'`. The [Embeds guide](/ship/embeds) shows each grant in use.
 
 An origin is written as the browser writes it: `http` or `https`, a host and an optional port, with no path, no trailing slash and no wildcard. `https://intranet.example.com` is valid, and `https://intranet.example.com/` and `*.example.com` are not.
 

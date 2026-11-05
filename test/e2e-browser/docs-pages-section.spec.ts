@@ -51,6 +51,7 @@ const PAGES = [
     route: "/ship/sso-behind-a-proxy",
     title: "SSO behind a proxy",
   },
+  { group: "Ship", route: "/ship/embeds", title: "Embeds" },
 ];
 
 for (const { group, route, title } of PAGES) {
