@@ -16,8 +16,13 @@ import {
   startBiacServer,
   type DevServer,
 } from "../lib/dev-server.js";
+import { expectParquetMagicRange } from "../lib/parquet-range.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
-import { cleanupProjects, makeTempProject } from "../lib/temp-project.js";
+import {
+  cleanupProjects,
+  makeTempProject,
+  writeProjectFile,
+} from "../lib/temp-project.js";
 
 const biac = fileURLToPath(new URL("../../bin/biac", import.meta.url));
 const USER = "viewer";
@@ -169,14 +174,7 @@ describe("biac serve static contract", () => {
       headers: { Range: "bytes=0-3" },
     });
 
-    expect(ranged.status).toBe(206);
-    expect(ranged.headers.get("content-type")).toBe(
-      "application/vnd.apache.parquet",
-    );
-    expect(ranged.headers.get("content-range")).toBe(
-      `bytes 0-3/${statSync(parquet).size}`,
-    );
-    expect(await ranged.text()).toBe("PAR1");
+    await expectParquetMagicRange(ranged, parquet);
   }, 60_000);
 
   it.each([
@@ -301,5 +299,42 @@ describe("biac serve on a read-only project", () => {
       setProjectWritable(true);
       rmSync(join(root, "package.json"));
     }
+  }, 60_000);
+});
+
+describe("biac serve under a configured base", () => {
+  let baseRoot: string;
+  let baseServer: DevServer | undefined;
+
+  beforeAll(() => {
+    baseRoot = makeTempProject("biac-e2e-serve-base-");
+    copyShippedProject(baseRoot);
+    // base is baked at build, so the config names it before buildProject.
+    const config = readFileSync(join(baseRoot, "biac.config.ts"), "utf8");
+    writeProjectFile(
+      baseRoot,
+      "biac.config.ts",
+      config.replace(/\n};\s*$/, '\n  base: "/bi-as-code/",\n};\n'),
+    );
+    buildProject(baseRoot);
+  }, 240_000);
+
+  afterEach(() => {
+    baseServer?.kill();
+    baseServer = undefined;
+  });
+
+  it("redirects a slash-less route to the slash form beneath the base, keeping the query", async () => {
+    baseServer = await startBiacServer("serve", baseRoot, CREDENTIALS);
+    const url = `${baseServer.url}bi-as-code/`;
+
+    const deepLink = await getAuthorized(`${url}weekly-review/`);
+    const redirect = await getAuthorized(`${url}weekly-review?region=West`);
+
+    expect(deepLink.status).toBe(200);
+    expect(redirect.status).toBe(301);
+    expect(redirect.headers.get("location")).toBe(
+      "/bi-as-code/weekly-review/?region=West",
+    );
   }, 60_000);
 });

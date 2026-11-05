@@ -40,10 +40,10 @@ beforeEach(() => {
 
 afterEach(() => rmSync(outDir, { recursive: true, force: true }));
 
-function run(url: string, method = "GET"): Outcome {
+function run(url: string, method = "GET", base = "/"): Outcome {
   const response = new RecordingResponse();
   const nextCalls: unknown[][] = [];
-  serveRoutesMiddleware(outDir)(
+  serveRoutesMiddleware(outDir, base)(
     { url, method } as IncomingMessage,
     response as unknown as ServerResponse,
     (...args: unknown[]) => {
@@ -62,6 +62,15 @@ describe("serveRoutesMiddleware", () => {
       "/nested/allocation/?region=EU",
     );
     expect(nextCalls).toEqual([]);
+  });
+
+  it("keeps the base in the redirect, which vite stripped from the request", () => {
+    const { response } = run("/nested/allocation?region=EU", "GET", "/sales/");
+
+    expect(response.statusCode).toBe(301);
+    expect(response.headers.get("Location")).toBe(
+      "/sales/nested/allocation/?region=EU",
+    );
   });
 
   it("passes a route's rewritten index.html on to vite to serve", () => {

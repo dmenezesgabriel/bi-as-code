@@ -158,7 +158,7 @@ export async function serve(
     plugins: [
       ...servePolicyPlugins(base, env),
       ...staticHostPlugins(base, outDir, embed),
-      serveRoutesPlugin(outDir),
+      serveRoutesPlugin(outDir, base),
     ],
     preview: {
       cors: false,

@@ -16,6 +16,7 @@ import {
   revalidatedFramingPolicy,
   withEmbedOrigins,
 } from "../lib/framing-policy.js";
+import { expectParquetMagicRange } from "../lib/parquet-range.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
 import {
   cleanupProjects,
@@ -347,14 +348,7 @@ describe("biac preview", () => {
     const ranged = await fetch(`${server.url}data/flights.parquet`, {
       headers: { Range: "bytes=0-3" },
     });
-    expect(ranged.status).toBe(206);
-    expect(ranged.headers.get("content-type")).toBe(
-      "application/vnd.apache.parquet",
-    );
-    expect(ranged.headers.get("content-range")).toBe(
-      `bytes 0-3/${statSync(parquet).size}`,
-    );
-    expect(await ranged.text()).toBe("PAR1");
+    await expectParquetMagicRange(ranged, parquet);
 
     const generated = await fetch(`${server.url}data/gen.csv`);
     expect(generated.status).toBe(200);

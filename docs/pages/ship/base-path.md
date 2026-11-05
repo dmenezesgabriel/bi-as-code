@@ -60,6 +60,7 @@ It prints `http://localhost:4173/sales/`. Open that address: the page and its ta
 | `/`                     | `302` to `/sales/`          | `302` to `/sales/`          |
 | `/sales/`               | `200`, the site             | `200`, the site             |
 | `/sales/details/`       | `200`, the page             | `200`, the page             |
+| `/sales/details`        | `200`, the site             | `301` to `/sales/details/`  |
 | `/sales/data/sales.csv` | `200`, the file             | `200`, the file             |
 | `/data/sales.csv`       | `404`, nothing answers here | `404`, nothing answers here |
 | `/sales`                | `404`                       | `404`                       |
