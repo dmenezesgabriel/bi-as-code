@@ -6,7 +6,7 @@ Relates to: [ADR-0030](0030-biac-serve-is-env-basic-auth-that-fails-closed-beyon
 
 ## Context
 
-ADR-0030 gave biac a production server, `biac serve`, that refuses to bind beyond localhost without credentials or an explicit opt-out. A deployer on a container platform (ECS on Fargate behind an ALB, or any host that runs an image and sets `$PORT`) still needs an image to run, and that image has to fit the platform's hardening and health-check model without new biac code. The image is `Dockerfile` at the repository root. `test/deploy/serve-image.deploy.test.ts` (`pnpm test:deploy`) proves it, and `pages/deploy-on-aws.md` explains how to deploy it.
+ADR-0030 gave biac a production server, `biac serve`, that refuses to bind beyond localhost without credentials or an explicit opt-out. A deployer on a container platform (ECS on Fargate behind an ALB, or any host that runs an image and sets `$PORT`) still needs an image to run, and that image has to fit the platform's hardening and health-check model without new biac code. The image is `Dockerfile` at the repository root. `test/deploy/serve-image.deploy.test.ts` (`pnpm test:deploy`) proves it, and `docs/pages/ship/deploy-on-aws.md` explains how to deploy it.
 
 The facts that bind the design:
 

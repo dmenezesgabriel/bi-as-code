@@ -25,7 +25,6 @@ for (const route of [
   "/weekly-review",
   "/nested/allocation",
   "/nested/page",
-  "/deploy-on-aws",
 ]) {
   test(`${route} renders its title above body text and spaces its paragraphs`, async ({
     page,
@@ -320,7 +319,7 @@ function fenceScroll(scroller: Locator): Promise<FenceScroll> {
   }));
 }
 
-for (const route of ["/", "/weekly-review", "/deploy-on-aws"]) {
+for (const route of ["/", "/weekly-review"]) {
   test(`${route} scrolls a wide code fence inside itself on a phone`, async ({
     page,
     biacDev,
@@ -352,31 +351,36 @@ for (const route of ["/", "/weekly-review", "/deploy-on-aws"]) {
   });
 }
 
-test("a markdown table too wide for a phone scrolls inside itself", async ({
-  page,
-  biacDev,
-}) => {
-  const errors = collectConsoleErrors(page);
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto(`${biacDev.url}/deploy-on-aws`);
-  const scroller = page
-    .locator("main > div:has(> table)")
-    .filter({ hasText: "readonlyRootFilesystem" });
-  await expect(scroller).toBeVisible();
+// The wide table lives on a docs guide, so this one runs over the docs project.
+test.describe("in the docs project", () => {
+  test.use({ biacProject: "docs" });
 
-  const scroll = await scroller.evaluate((node) => ({
-    pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
-    scrollWidth: node.scrollWidth,
-    clientWidth: node.clientWidth,
-  }));
-  await scroller.focus();
-  await page.keyboard.press("ArrowRight");
+  test("a markdown table too wide for a phone scrolls inside itself", async ({
+    page,
+    biacDev,
+  }) => {
+    const errors = collectConsoleErrors(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(`${biacDev.url}/ship/deploy-on-aws`);
+    const scroller = page
+      .locator("main > div:has(> table)")
+      .filter({ hasText: "readonlyRootFilesystem" });
+    await expect(scroller).toBeVisible();
 
-  expect(scroll.pageOverflow).toBe(0);
-  expect(scroll.scrollWidth).toBeGreaterThan(scroll.clientWidth);
-  await expect(scroller).toBeFocused();
-  await expect
-    .poll(() => scroller.evaluate((node) => node.scrollLeft))
-    .toBeGreaterThan(0);
-  expect(errors).toEqual([]);
+    const scroll = await scroller.evaluate((node) => ({
+      pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+    }));
+    await scroller.focus();
+    await page.keyboard.press("ArrowRight");
+
+    expect(scroll.pageOverflow).toBe(0);
+    expect(scroll.scrollWidth).toBeGreaterThan(scroll.clientWidth);
+    await expect(scroller).toBeFocused();
+    await expect
+      .poll(() => scroller.evaluate((node) => node.scrollLeft))
+      .toBeGreaterThan(0);
+    expect(errors).toEqual([]);
+  });
 });

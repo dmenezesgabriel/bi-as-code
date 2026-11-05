@@ -117,3 +117,51 @@ describe("the Serve under a path prefix guide", () => {
     );
   });
 });
+
+/** The Dockerfile's `USER` uid and `EXPOSE` port, the two facts a task definition must repeat. */
+function dockerfileRuntime(): { user: string; port: number } {
+  const source = readFileSync(
+    new URL("../../Dockerfile", import.meta.url),
+    "utf-8",
+  );
+  const user = source.match(/^USER (\d+)$/m)?.[1] ?? "";
+  const port = Number(source.match(/^EXPOSE (\d+)$/m)?.[1]);
+  return { user, port };
+}
+
+describe("the Deploy on AWS guide", () => {
+  it("shows a task definition that repeats the user and port the image runs with", () => {
+    // Arrange
+    const [json] = fencesOf(readShipPage("deploy-on-aws.md"), "json");
+    expect(json).toBeDefined();
+
+    // Act
+    const container = JSON.parse(json ?? "") as {
+      user: string;
+      portMappings: { containerPort: number }[];
+    };
+
+    // Assert — a drifted uid or port would deploy a task the image does not match.
+    const { user, port } = dockerfileRuntime();
+    expect(container.user).toBe(user);
+    expect(container.portMappings[0]?.containerPort).toBe(port);
+  });
+
+  it("names every variable the refusal to start beyond localhost names", () => {
+    // Arrange
+    let refusal = "";
+
+    // Act
+    try {
+      assertBootAllowed("0.0.0.0", {});
+    } catch (error) {
+      refusal = (error as Error).message;
+    }
+
+    // Assert — the guide is where a reader looks up what the message says.
+    const variables = refusal.match(/BIAC_[A-Z_]+/g) ?? [];
+    expect(variables).toHaveLength(3);
+    for (const variable of variables)
+      expect(readShipPage("deploy-on-aws.md")).toContain(variable);
+  });
+});

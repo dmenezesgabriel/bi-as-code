@@ -45,6 +45,7 @@ const PAGES = [
     route: "/ship/base-path",
     title: "Serve under a path prefix",
   },
+  { group: "Ship", route: "/ship/deploy-on-aws", title: "Deploy on AWS" },
 ];
 
 for (const { group, route, title } of PAGES) {

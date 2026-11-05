@@ -2,17 +2,19 @@
 title: Deploy on AWS
 icon: cloud
 table_of_contents: true
+sidebar_position: 720
+keywords: [deploy, aws, ecs, fargate, alb, docker, container, sso, oidc]
 ---
 
 # Deploy on AWS
 
-This page runs a biac project as a container on Amazon ECS with Fargate, behind an Application Load Balancer (ALB). The image serves the project's static build with `biac serve`. It runs as uid 10001, needs no writable path and no Linux capabilities, and listens on the port `PORT` names.
+This page runs a biac project as a container on Amazon ECS with Fargate, behind an Application Load Balancer (ALB). The image serves the project's static build with [`biac serve`](/ship/build-preview-serve). It runs as uid 10001, needs no writable path and no Linux capabilities, and listens on the port `PORT` names.
 
 Pick one of two topologies. In the first, `biac serve` checks a shared username and password itself. In the second, the ALB signs viewers in against your identity provider, and `biac serve` runs with its own check turned off.
 
 ## Build and run the image
 
-The `Dockerfile` at the project root bakes the project into the image. Its build stage runs `biac build` and every data loader, so the image holds only the result. Build it, then run it locally with the same restrictions the task definition below applies:
+The `Dockerfile` at the root of the biac clone bakes that clone's own project, the `pages/` and `biac.config.ts` beside it, into the image. Its build stage runs `biac build` and every data loader, so the image holds only the result. Build it, then run it locally with the same restrictions the task definition below applies:
 
 ```sh
 docker build -t biac-serve .
