@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { Locator, Page } from "@playwright/test";
 import { resultTables } from "./dev-server.fixture.js";
 
@@ -264,4 +266,36 @@ export function echoedTagCount(source: string, tag: RegExp): number {
     (sum, [, body]) => sum + (body!.match(tag)?.length ?? 0),
     0,
   );
+}
+
+/**
+ * Pixels the page is wider than its window; 0 means nothing scrolls
+ * sideways. Code fences and tables scroll inside themselves, so they never
+ * count here.
+ */
+export function pageOverflow(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+}
+
+const DOCS_PAGES_DIR = fileURLToPath(
+  new URL("../../docs/pages/", import.meta.url),
+);
+
+/**
+ * The route of every page under `docs/pages/`, read from the files so a new
+ * page joins the sweep without a list to forget — `index.md` is `/`.
+ *
+ * @example
+ * docsRoutes(); // ["/", "/components/area-chart", …]
+ */
+export function docsRoutes(): string[] {
+  return readdirSync(DOCS_PAGES_DIR, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".md"))
+    .map((file) => file.replace(/\.md$/, "").replace(/(^|\/)index$/, ""))
+    .map((route) => `/${route}`)
+    .sort();
 }

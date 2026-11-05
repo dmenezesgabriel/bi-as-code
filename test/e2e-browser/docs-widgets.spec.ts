@@ -15,6 +15,7 @@ import { expectProbes, TOKENS } from "./theme-probes.js";
 import {
   charts,
   echoedTagCount,
+  pageOverflow,
   sparklines,
   WIDGET_PAGES,
 } from "./docs-pages.js";
@@ -124,14 +125,6 @@ function boxesMeet(a: PaintedText, b: PaintedText): boolean {
   const apartX = a.x + a.width <= b.x || b.x + b.width <= a.x;
   const apartY = a.y + a.height <= b.y || b.y + b.height <= a.y;
   return !apartX && !apartY;
-}
-
-function pageOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth,
-  );
 }
 
 for (const colorScheme of ["light", "dark"] as const) {
