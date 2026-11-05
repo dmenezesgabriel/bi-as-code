@@ -8,7 +8,9 @@ import remarkGfm from "remark-gfm";
 // the same styles as the app.
 const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(ts|tsx)"],
-  staticDirs: ["../public"],
+  // `docs/data` is served at `/data`, as the docs site serves it, so a docs
+  // page's `![alt](/data/shot.png)` is written the same in its MDX page.
+  staticDirs: ["../public", { from: "../../../docs/data", to: "/data" }],
   // The MCP server shares the dev server at /mcp on the storybook port;
   // addon-docs renders the `*.mdx` docs pages, whose canvases embed stories.
   // MDX has no GFM tables of its own, so addon-docs is handed `remark-gfm`

@@ -10,6 +10,7 @@ import {
   FakePageSourcePort,
   type FakePageSourceScript,
 } from "./fake-page-source-port";
+import { focusEditor } from "./focus-editor";
 import { PageEditor } from "./page-editor";
 
 const FILE = "pages/weekly-review.md";
@@ -112,7 +113,7 @@ export const SaveKeybinding: Story = {
   render: saving.render,
   play: async ({ canvas }) => {
     const textbox = await canvas.findByRole("textbox", { name: "Page source" });
-    await userEvent.click(textbox);
+    await focusEditor(textbox);
     await userEvent.keyboard("{Control>}{Home}{/Control}{End} (draft)");
     await expect(canvas.getByRole("status")).toHaveTextContent(
       "Unsaved changes",
@@ -142,7 +143,7 @@ export const Dirty: Story = {
   ),
   play: async ({ canvas }) => {
     const textbox = await canvas.findByRole("textbox", { name: "Page source" });
-    await userEvent.click(textbox);
+    await focusEditor(textbox);
     await userEvent.keyboard("{Control>}{Home}{/Control}{End} zz");
     await expect(canvas.getByRole("status")).toHaveTextContent(
       "Unsaved changes",
@@ -165,7 +166,7 @@ export const Saving: Story = {
   render: inFlight.render,
   play: async ({ canvas }) => {
     const textbox = await canvas.findByRole("textbox", { name: "Page source" });
-    await userEvent.click(textbox);
+    await focusEditor(textbox);
     await userEvent.keyboard(SAVE_CHORD);
     await expect(canvas.getByRole("status")).toHaveTextContent("Saving…");
   },
@@ -180,7 +181,7 @@ export const SaveFailed: Story = {
   render: refused.render,
   play: async ({ canvas }) => {
     const textbox = await canvas.findByRole("textbox", { name: "Page source" });
-    await userEvent.click(textbox);
+    await focusEditor(textbox);
     await userEvent.keyboard(SAVE_CHORD);
     await waitFor(() =>
       expect(canvas.getByRole("status")).toHaveTextContent("HTTP 413"),

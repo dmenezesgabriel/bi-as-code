@@ -212,7 +212,7 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T6d — Ship section, how-to: the SSO example (`examples/s3-sso/`) — `docs/pages/ship/sso-behind-a-proxy.md` and `src/web/src/features/pages/sso-behind-a-proxy.mdx`; the example's README is now a pointer
 - [x] T6e — Ship section, how-to: embeds (iframe, exported files, widget modules) — `docs/pages/ship/embeds.md` and `src/web/src/features/pages/embeds.mdx`
 - [x] T6f1 — A page shows an image from the project: `![alt](/data/x.png)` follows the site `base` (`ProseImage` in `src/web/src/features/pages/prose-elements.tsx`) and `data/` serves `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` and `.svg` with their image type (`src/engine/data-media-type.ts`); the Images section of `docs/pages/pages/markdown-pages.md` and its MDX page — found writing T6f, which needs screenshots and a project could not ship an image; a product gap gets its own task. A missing image is not a build error: Known-debt row in `maintainer/backlog.md`
-- [ ] T6f — Ship section, how-to: the page editor (dev server only, ADR-0010; screenshots are the one place the docs use them, committed under `docs/data/` and shown with `![alt](/data/…)`)
+- [x] T6f — Ship section, how-to: the page editor (dev server only, ADR-0010; screenshots are the one place the docs use them, committed under `docs/data/` and shown with `![alt](/data/…)`) — `docs/pages/ship/page-editor.md`, `docs/data/page-editor-open.png`, `docs/data/page-editor-compile-error.png` and `src/web/src/features/editor/page-editor.mdx`; Storybook serves `docs/data` at `/data` (`staticDirs` in `src/web/.storybook/main.ts`)
 
 ## Out of scope
 

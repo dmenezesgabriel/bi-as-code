@@ -1,10 +1,14 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { assertBootAllowed, parseServeArgs } from "@/cli/commands/serve.js";
 import { loadBiacConfig } from "@/engine/biac-config.js";
 import { dataCorsHeaders } from "@/engine/data-cors.js";
 import { frameAncestorsHeaders } from "@/engine/frame-ancestors.js";
 import { widgetExports } from "@/engine/widget-exports.js";
+import {
+  listenPagesServer,
+  makePagesServer,
+} from "../lib/pages-vite-server.js";
 import {
   cleanupProjects,
   makeTempProject,
@@ -335,5 +339,72 @@ describe("the Embeds guide", () => {
       expect(refusal).not.toBe("");
       expect(quoted).toContain(`: ${refusal}\n`);
     }
+  });
+});
+
+const EDITOR_PAGE = "page-editor.md";
+const PNG_SIGNATURE = "89504e470d0a1a0a";
+// A screenshot is the one binary a docs page commits; the cap keeps a clone small.
+const MAX_SCREENSHOT_BYTES = 300_000;
+
+describe("the Page editor guide", () => {
+  afterEach(cleanupProjects);
+
+  it("shows only screenshots that are committed PNG files of a modest size", () => {
+    // Arrange
+    const page = readShipPage(EDITOR_PAGE);
+    const shown = [...page.matchAll(/\]\(\/data\/([^)]+)\)/g)].map(
+      (match) => match[1] ?? "",
+    );
+
+    // Act
+    const files = shown.map((name) => {
+      const path = new URL(`../../docs/data/${name}`, import.meta.url);
+      return {
+        name,
+        signature: readFileSync(path).subarray(0, 8).toString("hex"),
+        bytes: statSync(path).size,
+      };
+    });
+
+    // Assert — biac builds a page whose image file is missing (backlog Known debt).
+    expect(files.length).toBeGreaterThanOrEqual(2);
+    for (const { name, signature, bytes } of files) {
+      expect({ name, signature }).toEqual({ name, signature: PNG_SIGNATURE });
+      expect(bytes).toBeLessThan(MAX_SCREENSHOT_BYTES);
+    }
+  });
+
+  it("lists the HTTP statuses the page-source endpoint really answers a failed save with", async () => {
+    // Arrange
+    const documented = [
+      ...readShipPage(EDITOR_PAGE).matchAll(/^\| `HTTP (\d{3})`/gm),
+    ].map((match) => Number(match[1]));
+    const root = makeTempProject("biac-docs-editor-");
+    writeProjectFile(root, "pages/weekly.md", "# Weekly\n");
+    const dev = await makePagesServer(root);
+    const listener = await listenPagesServer(dev);
+    const save = (page: string, source: string, origin?: string) =>
+      fetch(`${listener.url}/__biac/page-source/${page}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(origin ? { Origin: origin } : {}),
+        },
+        body: JSON.stringify({ source }),
+      });
+
+    // Act
+    const answered = [
+      (await save("gone.md", "# x\n")).status,
+      (await save("weekly.md", "# x\n", "http://localhost:1")).status,
+      (await save("weekly.md", "x".repeat(1024 * 1024 + 1))).status,
+    ];
+    await listener.close();
+    await dev.close();
+
+    // Assert — a reader matches the status line to this table.
+    expect(answered).toEqual([404, 403, 413]);
+    expect([...documented].sort()).toEqual([...answered].sort());
   });
 });

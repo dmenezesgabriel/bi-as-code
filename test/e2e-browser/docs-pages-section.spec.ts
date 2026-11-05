@@ -52,6 +52,7 @@ const PAGES = [
     title: "SSO behind a proxy",
   },
   { group: "Ship", route: "/ship/embeds", title: "Embeds" },
+  { group: "Ship", route: "/ship/page-editor", title: "The page editor" },
 ];
 
 for (const { group, route, title } of PAGES) {

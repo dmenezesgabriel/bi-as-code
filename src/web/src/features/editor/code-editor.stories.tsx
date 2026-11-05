@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, waitFor } from "storybook/test";
 import { withThemeMode } from "../../../.storybook/decorators";
 import { CodeEditor } from "./code-editor";
+import { focusEditor } from "./focus-editor";
 
 const LABEL = "Page source";
 
@@ -131,7 +132,7 @@ export const SelfClosedWidget: Story = {
   args: { doc: "" },
   play: async ({ args, canvas }) => {
     const textbox = canvas.getByRole("textbox", { name: LABEL });
-    await userEvent.click(textbox);
+    await focusEditor(textbox);
     await userEvent.keyboard('<Table data="orders" />');
     await expect(args.onChange).toHaveBeenLastCalledWith(
       '<Table data="orders" />',
@@ -148,7 +149,7 @@ export const SaveKeybinding: Story = {
   args: { doc: "# Orders " },
   play: async ({ args, canvas }) => {
     const textbox = canvas.getByRole("textbox", { name: LABEL });
-    await userEvent.click(textbox);
+    await focusEditor(textbox);
     await userEvent.keyboard("{End}Weekly");
     await userEvent.keyboard(SAVE_CHORD);
     await expect(args.onChange).toHaveBeenLastCalledWith("# Orders Weekly");
