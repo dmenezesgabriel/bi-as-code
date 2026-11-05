@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import {
   ProseBlockquote,
@@ -8,6 +8,7 @@ import {
   ProseH4,
   ProseH5,
   ProseH6,
+  ProseImage,
   ProseLink,
   ProseOrderedList,
   ProseParagraph,
@@ -325,5 +326,57 @@ describe("prose measure", () => {
     const classes = container.querySelector("p")?.className.split(" ");
     expect(classes).toContain("max-w-none");
     expect(classes).not.toContain("max-w-measure");
+  });
+});
+
+describe("prose image", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("serves a root-relative src from the site root by default", () => {
+    // Arrange / Act
+    render(<ProseImage src="/data/editor.png" alt="The editor" />);
+
+    // Assert
+    expect(screen.getByRole("img", { name: "The editor" })).toHaveAttribute(
+      "src",
+      "/data/editor.png",
+    );
+  });
+
+  it("puts the configured base in front of a root-relative src", () => {
+    // Arrange
+    vi.stubEnv("BASE_URL", "/sales/");
+
+    // Act
+    render(<ProseImage src="/data/editor.png" alt="The editor" />);
+
+    // Assert
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "src",
+      "/sales/data/editor.png",
+    );
+  });
+
+  it.each([
+    "https://example.com/a.png",
+    "//cdn.example.com/a.png",
+    "data/a.png",
+  ])("leaves %s as written", (src) => {
+    // Arrange
+    vi.stubEnv("BASE_URL", "/sales/");
+
+    // Act
+    render(<ProseImage src={src} alt="" />);
+
+    // Assert
+    expect(screen.getByRole("presentation")).toHaveAttribute("src", src);
+  });
+
+  it("never grows past its column", () => {
+    // Arrange / Act
+    render(<ProseImage src="/data/a.png" alt="wide" />);
+
+    // Assert
+    expect(screen.getByRole("img")).toHaveClass("max-w-full", "h-auto");
   });
 });

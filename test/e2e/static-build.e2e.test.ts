@@ -27,6 +27,9 @@ import {
 const biac = fileURLToPath(new URL("../../bin/biac", import.meta.url));
 const LOADER_OUTPUT = "id,amount\n1,10\n";
 const LOADER = `process.stdout.write(${JSON.stringify(LOADER_OUTPUT)});\n`;
+const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 
 beforeAll(() => {
   // The e2e exercises the shipped artifact: bin/biac runs dist/cli, never src.
@@ -326,6 +329,7 @@ describe("biac preview", () => {
     root = makeTempProject("biac-e2e-preview-");
     copyShippedProject(root);
     writeProjectFile(root, "data/gen.csv.js", LOADER);
+    writeProjectFile(root, "data/shot.png", PNG_SIGNATURE);
     buildProject(root);
   }, 240_000);
 
@@ -354,6 +358,10 @@ describe("biac preview", () => {
     expect(generated.status).toBe(200);
     expect(generated.headers.get("content-type")).toBe("text/csv");
     expect(await generated.text()).toBe(LOADER_OUTPUT);
+    // A page shows an image from data/ with the type a browser needs.
+    const image = await fetch(`${server.url}data/shot.png`);
+    expect(image.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await image.arrayBuffer())).toEqual(PNG_SIGNATURE);
     // The loader source was never copied: its path falls through to the shell.
     const source = await fetch(`${server.url}data/gen.csv.js`);
     expect(await source.text()).toBe(shell);

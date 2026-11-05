@@ -73,6 +73,8 @@ describe("/data/ serving", () => {
   it.each([
     ["orders.tsv", "text/tab-separated-values"],
     ["orders.arrow", "application/vnd.apache.arrow.file"],
+    ["editor.png", "image/png"],
+    ["logo.svg", "image/svg+xml"],
     ["orders.xlsx", "application/octet-stream"],
   ])("serves %s as %s", async (file, expected) => {
     await serve();

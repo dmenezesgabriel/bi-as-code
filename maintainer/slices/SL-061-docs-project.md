@@ -211,7 +211,8 @@ One TDD unit each, one conventional commit each. Each closes with a `playwright-
 - [x] T6c1 — The AWS guide's `Dockerfile` bakes a project from another directory, not only the biac clone's root project (it does `COPY . .` and `biac build` on `/app`, so a Getting-started project next to the clone cannot be deployed with it); decide the shape (build argument, or a documented copy step), update ADR-0032 and `test/deploy/serve-image.deploy.test.ts`, then drop the scope sentence from `docs/pages/ship/deploy-on-aws.md` and its MDX page — found writing T6c; a product gap gets its own task
 - [x] T6d — Ship section, how-to: the SSO example (`examples/s3-sso/`) — `docs/pages/ship/sso-behind-a-proxy.md` and `src/web/src/features/pages/sso-behind-a-proxy.mdx`; the example's README is now a pointer
 - [x] T6e — Ship section, how-to: embeds (iframe, exported files, widget modules) — `docs/pages/ship/embeds.md` and `src/web/src/features/pages/embeds.mdx`
-- [ ] T6f — Ship section, how-to: the page editor (dev server only, ADR-0010; screenshots are the one place the docs use them)
+- [x] T6f1 — A page shows an image from the project: `![alt](/data/x.png)` follows the site `base` (`ProseImage` in `src/web/src/features/pages/prose-elements.tsx`) and `data/` serves `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` and `.svg` with their image type (`src/engine/data-media-type.ts`); the Images section of `docs/pages/pages/markdown-pages.md` and its MDX page — found writing T6f, which needs screenshots and a project could not ship an image; a product gap gets its own task. A missing image is not a build error: Known-debt row in `maintainer/backlog.md`
+- [ ] T6f — Ship section, how-to: the page editor (dev server only, ADR-0010; screenshots are the one place the docs use them, committed under `docs/data/` and shown with `![alt](/data/…)`)
 
 ## Out of scope
 

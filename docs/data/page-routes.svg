@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="150" viewBox="0 0 360 150" role="img" aria-labelledby="title">
+  <title id="title">Three page files and the routes they serve</title>
+  <rect width="360" height="150" rx="8" fill="#f1f5f9"/>
+  <g font-family="ui-monospace, monospace" font-size="14" fill="#0f172a">
+    <text x="16" y="44">pages/index.md</text>
+    <text x="16" y="82">pages/sales.md</text>
+    <text x="16" y="120">pages/sales/weekly.md</text>
+    <text x="244" y="44">/</text>
+    <text x="244" y="82">/sales</text>
+    <text x="244" y="120">/sales/weekly</text>
+  </g>
+  <g stroke="#475569" stroke-width="2" fill="none">
+    <path d="M204 40h28M204 78h28M204 116h28"/>
+    <path d="M226 34l6 6-6 6M226 72l6 6-6 6M226 110l6 6-6 6"/>
+  </g>
+</svg>

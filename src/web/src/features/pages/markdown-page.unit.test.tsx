@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import {
@@ -139,6 +139,23 @@ describe("MarkdownPage", () => {
     expect(
       await screen.findByRole("link", { name: "external" }),
     ).toHaveAttribute("href", "https://example.com");
+  });
+
+  it("hands the mdx component map to the page so images follow the base", async () => {
+    vi.stubEnv("BASE_URL", "/sales/");
+    renderPage(
+      page({
+        default: ({ components }) => {
+          const Image = components?.img ?? "img";
+          return <Image src="/data/editor.png" alt="The editor" />;
+        },
+      }),
+    );
+
+    expect(
+      await screen.findByRole("img", { name: "The editor" }),
+    ).toHaveAttribute("src", "/sales/data/editor.png");
+    vi.unstubAllEnvs();
   });
 
   it("highlights fenced code through the pre component in the map", async () => {

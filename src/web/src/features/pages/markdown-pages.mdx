@@ -2,6 +2,7 @@ import { Canvas, Meta } from "@storybook/addon-docs/blocks";
 import * as MarkdownPageStories from "./markdown-page.stories";
 import * as SidebarNavStories from "../chrome/sidebar-nav.stories";
 import * as PageBrandStyleStories from "./page-brand-style.stories";
+import * as ProseElementsStories from "./prose-elements.stories";
 
 <Meta title="Pages/Markdown pages and front-matter" />
 
@@ -9,7 +10,28 @@ import * as PageBrandStyleStories from "./page-brand-style.stories";
 
 A biac page is a Markdown file under `pages/`: its path is its URL, and an optional YAML block at the top sets how the page is named, ordered, laid out, styled, searched and given tables to query.
 
-The reader-facing reference is `docs/pages/pages/markdown-pages.md` (`/pages/markdown-pages` in `bin/biac dev docs`). It lists the route rules, every front-matter key and the icon catalog; the keys that change what a page looks like have a story here.
+The reader-facing reference is `docs/pages/pages/markdown-pages.md` (`/pages/markdown-pages` in `bin/biac dev docs`). It lists the route rules, how a page shows an image, every front-matter key and the icon catalog; the keys that change what a page looks like have a story here.
+
+## Images
+
+A page shows an image with Markdown's image syntax. Put the file under `data/` and write its path from the site root:
+
+```md
+![Three page files and the routes they serve](/data/page-routes.svg)
+```
+
+`data/` is the one project folder served as it is: `biac dev` reads it from disk and `biac build` copies it, unhashed, to `build/data/`. Files ending `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` and `.svg` are sent with their image type.
+
+- **Write `/data/…`, not the base.** Under a `base` the page adds the prefix itself, so `/data/page-routes.svg` is `/sales/data/page-routes.svg` on a site built for `/sales/`.
+- **Other addresses stay as written.** An `https://` address or a path without a leading `/` is not changed, and a relative path resolves against the page's URL, which always ends in a slash.
+- **The image fits its column.** It scales down, keeping its proportions, and never widens the page at 375 px.
+- **The alt text is the accessible name.** Leave it empty (`![](/data/page-routes.svg)`) for a picture that only decorates.
+- **A missing file is not caught.** `biac build` fails on a link to a page that does not exist, but an image whose file is missing builds and shows a broken image.
+
+<Canvas
+  of={ProseElementsStories.WideImage}
+  story={{ inline: false, height: "200px" }}
+/>
 
 ## Sidebar
 

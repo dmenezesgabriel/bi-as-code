@@ -4,7 +4,7 @@ import { decodePathname, resolveContained } from "./contained-path.js";
 import { statFile } from "./stat-file.js";
 
 /**
- * The formats a page reads from `/data/`, by extension. A table of our own
+ * The formats a page reads or shows from `/data/`, by extension. A table of our own
  * rather than a `mime` dependency: it is a handful of entries, and vite
  * preview's built-in table (sirv's) has neither parquet nor arrow.
  * Registered types: https://www.iana.org/assignments/media-types/application/vnd.apache.parquet,
@@ -16,6 +16,14 @@ const DATA_MEDIA_TYPES: Readonly<Record<string, string>> = {
   ".json": "application/json",
   ".parquet": "application/vnd.apache.parquet",
   ".arrow": "application/vnd.apache.arrow.file",
+  // Images a page shows with `![alt](/data/x.png)`; `data/` is the one
+  // project directory both biac dev and the build serve as static files.
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
 };
 
 /**

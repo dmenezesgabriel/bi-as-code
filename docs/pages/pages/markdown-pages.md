@@ -21,7 +21,7 @@ keywords:
 
 # Markdown pages and front-matter
 
-A biac page is a Markdown file under `pages/`. Its path is its URL, and an optional YAML block at the top of the file sets how the page is named, ordered, laid out, styled, searched and given tables to query. This page lists every route rule and every front-matter key.
+A biac page is a Markdown file under `pages/`. Its path is its URL, and an optional YAML block at the top of the file sets how the page is named, ordered, laid out, styled, searched and given tables to query. This page lists every route rule, how a page shows an image, and every front-matter key.
 
 ## Routes
 
@@ -43,6 +43,22 @@ Duplicate page route "/sales" produced by "pages/sales.md" and "pages/sales/inde
 ```
 
 `biac build` writes each route as a folder of static files, so it also refuses a first path segment the output already uses: `assets`, `data` and `widgets`. Move a page out of `pages/data/`, for example, or rename the folder.
+
+## Images
+
+A page shows an image with Markdown's image syntax. Put the file under `data/` and write its path from the site root:
+
+```mdx echo
+![Three page files and the routes they serve](/data/page-routes.svg)
+```
+
+`data/` is the one project folder served as it is: `biac dev` reads it from disk and `biac build` copies it, unhashed, to `build/data/`. Files ending `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` and `.svg` are sent with their image type.
+
+- **Write `/data/…`, not the base.** Under a [`base`](/ship/base-path) the page adds the prefix itself, so `/data/page-routes.svg` is `/sales/data/page-routes.svg` on a site built for `/sales/`.
+- **Other addresses stay as written.** An `https://` address or a path without a leading `/` is not changed, and a relative path resolves against the page's URL, which always ends in a slash.
+- **The image fits its column.** It scales down, keeping its proportions, and never widens the page at 375 px.
+- **The alt text is the accessible name.** Leave it empty (`![](/data/page-routes.svg)`) for a picture that only decorates.
+- **A missing file is not caught.** `biac build` fails on a link to a page that does not exist, but an image whose file is missing builds and shows a broken image.
 
 ## Front-matter
 

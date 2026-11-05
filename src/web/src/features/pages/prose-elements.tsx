@@ -1,5 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
+import type {
+  AnchorHTMLAttributes,
+  HTMLAttributes,
+  ImgHTMLAttributes,
+} from "react";
 import { cn } from "../../lib/cn";
 
 type ProseTag =
@@ -137,6 +141,39 @@ export function ProseLink({
     return <Link {...routerTarget(href)} className={classes} {...rest} />;
   }
   return <a href={href} className={classes} {...rest} />;
+}
+
+/**
+ * The markdown `img` override: a root-relative `src` (`/data/editor.png`)
+ * gets the site's `base` in front, as the router does for a link, so one
+ * page works at `/` and under `/sales/`. Any other `src` is left as written.
+ * The image never grows past its column, so a wide screenshot scales down
+ * at 375 px instead of scrolling the page.
+ *
+ * @example
+ * <ProseImage src="/data/editor.png" alt="The page editor" />;
+ */
+export function ProseImage({
+  src,
+  className,
+  ...rest
+}: ImgHTMLAttributes<HTMLImageElement>) {
+  return (
+    <img
+      src={withBase(src)}
+      className={cn("h-auto max-w-full", className)}
+      {...rest}
+    />
+  );
+}
+
+// `BASE_URL` always ends in a slash ("/" or "/sales/"); `//host/x` is a
+// protocol-relative URL, not a path in this site.
+function withBase(src: string | undefined): string | undefined {
+  if (src === undefined || !src.startsWith("/") || src.startsWith("//")) {
+    return src;
+  }
+  return import.meta.env.BASE_URL + src.slice(1);
 }
 
 // The router appends the page URL's trailing slash to the end of `to`, so a

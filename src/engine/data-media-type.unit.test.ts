@@ -48,6 +48,12 @@ describe("dataMediaType", () => {
     ["orders.json", "application/json"],
     ["orders.parquet", "application/vnd.apache.parquet"],
     ["orders.arrow", "application/vnd.apache.arrow.file"],
+    ["editor.png", "image/png"],
+    ["photo.jpg", "image/jpeg"],
+    ["photo.jpeg", "image/jpeg"],
+    ["loop.gif", "image/gif"],
+    ["hero.webp", "image/webp"],
+    ["logo.svg", "image/svg+xml"],
   ])("types %s as %s", (file, expected) => {
     const type = dataMediaType(file);
 

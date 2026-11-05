@@ -8,6 +8,7 @@ import {
   ProseH4,
   ProseH5,
   ProseH6,
+  ProseImage,
   ProseLink,
   ProseParagraph,
   ProseTable,
@@ -104,6 +105,30 @@ export const Links: Story = {
     await userEvent.tab();
     await expect(internal).toHaveFocus();
     await expect(getComputedStyle(internal).outlineStyle).toBe("solid");
+  },
+};
+
+// A 1600 x 600 picture, wider than any column, so the story proves scaling.
+const WIDE_PICTURE = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600"><rect width="1600" height="600" fill="#cbd5e1"/></svg>',
+)}`;
+
+/** An image wider than its column scales down to the column and keeps its
+ * aspect ratio, so a screenshot never scrolls the page sideways. */
+export const WideImage: Story = {
+  render: () => (
+    <div data-testid="column" style={{ width: 320 }}>
+      <ProseImage src={WIDE_PICTURE} alt="A wide picture" />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const image = canvas.getByRole("img", { name: "A wide picture" });
+    const column = canvas.getByTestId("column");
+
+    await expect(image.getBoundingClientRect().width).toBe(
+      column.getBoundingClientRect().width,
+    );
+    await expect(image.getBoundingClientRect().height).toBe(120);
   },
 };
 
