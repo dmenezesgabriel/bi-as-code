@@ -59,7 +59,7 @@ A biac project gets single sign-on from a proxy in front of its static `build/`.
 
 ## Consequences
 
-- A static build deploys behind SSO with no biac change. The README maps each local service to its AWS counterpart (ALB listener + `authenticate-oidc`, a `url-rewrite` transform, an S3 interface endpoint + `aws:SourceVpce`), and swapping `keycloak-oidc` for `entra-id` is a provider change.
+- A static build deploys behind SSO with no biac change. The guide `docs/pages/ship/sso-behind-a-proxy.md` maps each local service to its AWS counterpart (ALB listener + `authenticate-oidc`, a `url-rewrite` transform, an S3 interface endpoint + `aws:SourceVpce`), and swapping `keycloak-oidc` for `entra-id` is a provider change.
 - Access is all or nothing. Every signed-in viewer can download every file under `data/`; one audience per build is the only way to scope data.
 - A viewer whose proxy session expires while the identity provider's lives notices nothing: the next request through the edge renews it with redirects and no form. With both expired, filters on loaded data keep working, an in-app navigation to an unvisited page shows "This page failed to render" (its script request lands on the sign-in HTML), and a reload signs in and returns to the page. An ALB redirects an expired session the same way, so biac needs no code for it.
 - duckdb-wasm loads its parquet extension from `extensions.duckdb.org`, the one browser request that does not pass the edge.

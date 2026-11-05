@@ -46,6 +46,11 @@ const PAGES = [
     title: "Serve under a path prefix",
   },
   { group: "Ship", route: "/ship/deploy-on-aws", title: "Deploy on AWS" },
+  {
+    group: "Ship",
+    route: "/ship/sso-behind-a-proxy",
+    title: "SSO behind a proxy",
+  },
 ];
 
 for (const { group, route, title } of PAGES) {

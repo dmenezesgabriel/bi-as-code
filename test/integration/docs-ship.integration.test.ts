@@ -165,3 +165,75 @@ describe("the Deploy on AWS guide", () => {
       expect(readShipPage("deploy-on-aws.md")).toContain(variable);
   });
 });
+
+/** The `key = value` lines of an oauth2-proxy config, comments and blanks dropped. */
+function settingLines(source: string): string[] {
+  return source
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"));
+}
+
+function readExampleFile(file: string): string {
+  return readFileSync(
+    new URL(`../../examples/s3-sso/${file}`, import.meta.url),
+    "utf-8",
+  );
+}
+
+describe("the SSO behind a proxy guide", () => {
+  const PAGE_FILE = "sso-behind-a-proxy.md";
+
+  it("shows a local gate config whose every setting is in the example's oauth2-proxy.cfg", () => {
+    // Arrange
+    const local = fencesOf(readShipPage(PAGE_FILE), "ini").find((fence) =>
+      fence.startsWith("# Local"),
+    );
+    expect(local).toBeDefined();
+
+    // Act
+    const shipped = settingLines(readExampleFile("oauth2-proxy.cfg"));
+
+    // Assert — a drifted key would send a reader to a gate that does not start.
+    for (const line of settingLines(local ?? ""))
+      expect(shipped).toContain(line);
+  });
+
+  it("lists in its services table exactly the services compose.yaml defines", () => {
+    // Arrange
+    const lines = readShipPage(PAGE_FILE).split("\n");
+    const header = lines.findIndex((line) => line.startsWith("| Service"));
+    expect(header).toBeGreaterThan(-1);
+    const afterHeader = lines.slice(header + 2);
+    const tableEnd = afterHeader.findIndex((line) => !line.startsWith("|"));
+    const documented = afterHeader
+      .slice(0, tableEnd)
+      .flatMap((line) => line.match(/^\| `([a-z0-9-]+)`\s+\|/)?.[1] ?? []);
+
+    // Act
+    const defined = [
+      ...readExampleFile("compose.yaml").matchAll(/^ {2}([a-z0-9-]+):$/gm),
+    ]
+      .map((match) => match[1] ?? "")
+      .filter((name) => name !== "credentials");
+
+    // Assert — a service missing from the table is a container a reader cannot explain.
+    expect(documented.sort()).toEqual(defined.sort());
+  });
+
+  it("tells the reader to run a package script that exists", () => {
+    // Arrange
+    const manifest = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf-8"),
+    ) as { scripts: Record<string, string> };
+
+    // Act
+    const named = readShipPage(PAGE_FILE).match(
+      /pnpm -s (example:[\w:-]+)/,
+    )?.[1];
+
+    // Assert
+    expect(named).toBeDefined();
+    expect(manifest.scripts).toHaveProperty(named ?? "");
+  });
+});
