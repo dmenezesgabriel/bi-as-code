@@ -332,12 +332,16 @@ test("the Ordered date range persists the expression and narrows order_detail", 
 
   // A preset writes its rolling expression; the reload re-rolls the window
   // rather than pinning dates, so only the param, the label and the widget
-  // narrowing (any delta from the raw 355) assert here.
+  // narrowing (any delta from the raw 355) assert here. The shipped fixture
+  // ends on a fixed date, so a rolling window falls past it as the calendar
+  // moves: the table then renders "0 rows" with no column headers. The count
+  // is therefore read page-wide, not through the table's header locator.
+  const table = orderDetailTable(page);
+  await expect(table).toContainText("· 355 rows");
   await page.locator("#ordered").click();
   await page.getByRole("button", { name: "Last 30 Days" }).click();
   await expect.poll(() => urlParam(page, "ordered")).toBe("last 30 days");
-  const table = orderDetailTable(page);
-  await expect(table).not.toContainText("· 355 rows");
+  await expect(page.getByText("· 355 rows")).toHaveCount(0);
 
   await page.reload();
   await expect(page.locator("#ordered")).toContainText("Last 30 Days");
