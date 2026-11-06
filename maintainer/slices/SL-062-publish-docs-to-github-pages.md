@@ -84,17 +84,17 @@ A reader opens `https://dmenezesgabriel.github.io/bi-as-code/`, follows any link
 
 ## Surface
 
-| Layer  | Files                                                                                                                                                        |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| engine | none                                                                                                                                                         |
-| client | none                                                                                                                                                         |
-| ui     | none — an infrastructure slice; the stack it crosses is config → build → static host, closed by the live demo                                                |
-| config | `docs/biac.config.ts` (`base`), `.github/workflows/deploy.yml` (new)                                                                                         |
-| tests  | `test/integration/docs-project.integration.test.ts` (docs `base`), `test/e2e-browser/docs-static-host.spec.ts` (new; `copyDocsProject` and `serveStaticDir`) |
+| Layer  | Files                                                                                                                                                                                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| engine | none                                                                                                                                                                                                                                                    |
+| client | none                                                                                                                                                                                                                                                    |
+| ui     | none — an infrastructure slice; the stack it crosses is config → build → static host, closed by the live demo                                                                                                                                           |
+| config | `docs/biac.config.ts` (`base`), `.github/workflows/deploy.yml` (new)                                                                                                                                                                                    |
+| tests  | `test/integration/docs-project.integration.test.ts` (docs `base`), `test/e2e-browser/docs-static-host.spec.ts` (new; `copyDocsProject` and `servePrefixed`), `test/lib/prefixed-host.ts` (new; shared by it and `test/e2e-browser/static-host.spec.ts`) |
 
 ## Tasks
 
-- [ ] T1 — The docs project carries its base: `docs/biac.config.ts` sets `base: "/bi-as-code"`; an integration test pins the resolved `/bi-as-code/`; a browser spec builds the real docs project under it and serves it on `serveStaticDir` — deep link, reload, slash-less redirect, `404.html`, every request under the prefix, console clean; `playwright-cli` over `biac preview docs`.
+- [x] T1 — The docs project carries its base: `docs/biac.config.ts` sets `base: "/bi-as-code"`; `test/integration/docs-project.integration.test.ts` pins the resolved `/bi-as-code/`; `test/e2e-browser/docs-static-host.spec.ts` builds the real docs project and serves it beneath that prefix on `serveStaticDir` — slash-less redirect, deep link, reload, a filtered URL, 0 requests outside the prefix, console clean. `serveStaticDir` answers a bare 404 and never serves `404.html`, so the `404.html` page is checked in the Demo (step 6), not in this spec.
 - [ ] T2 — `.github/workflows/deploy.yml` per the decisions above; verified by a clean checkout running `pnpm install --frozen-lockfile`, `pnpm build:cli`, `bin/biac build docs` under `nice`/`timeout`; then, once the owner has enabled Pages, a push and the Demo above. Closes GAP-067 in `maintainer/research/docs-site.md`, marks SL-062 `shipped` in `maintainer/backlog.md`, deletes this file.
 
 ## Out of scope

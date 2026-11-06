@@ -7,9 +7,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { build } from "@/cli/commands/build.js";
-import { CONFIG_KEYS } from "@/engine/biac-config.js";
+import { CONFIG_KEYS, loadBiacConfig } from "@/engine/biac-config.js";
 import { BRAND_KEYS } from "@/engine/brand-config.js";
 import { DEFAULT_INTERPRETERS } from "@/engine/data-loader-interpreters.js";
 import {
@@ -86,6 +87,18 @@ describe("the docs project", () => {
     expect(filesCarrying(outDir, "island_counts").length).toBeGreaterThan(0);
     expect(filesCarrying(outDir, "never-shipped-probe")).toEqual([]);
   }, 120_000);
+
+  it("is built for the repo's GitHub Pages project path", async () => {
+    // Arrange — the repo's own docs/, read in place; nothing is built.
+    const docsRoot = fileURLToPath(new URL("../../docs/", import.meta.url));
+
+    // Act
+    const { base } = await loadBiacConfig(docsRoot);
+
+    // Assert — a project site is served below /<repo>/, and the build bakes
+    // this prefix into every asset, route and data URL.
+    expect(base).toBe("/bi-as-code/");
+  });
 
   it("keeps every /data/ image a docs page shows in docs/data", () => {
     // Arrange — the pages are read from the repo; nothing is built.

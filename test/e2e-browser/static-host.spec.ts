@@ -1,13 +1,8 @@
-import {
-  cpSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildProject } from "../lib/dev-server.js";
+import { servePrefixed } from "../lib/prefixed-host.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
 import { serveStaticDir, type StaticDir } from "../lib/static-server.js";
 import {
@@ -118,7 +113,6 @@ test.describe("the build on a host with no rewrite rules", () => {
 test.describe("the build under a configured base", () => {
   const BASE = "/bi-as-code/";
   let projectDir: string;
-  let hostRoot: string;
   let staticHost: StaticDir;
 
   test.beforeAll(async () => {
@@ -134,21 +128,14 @@ test.describe("the build under a configured base", () => {
     buildProject(projectDir);
     // The host shape the demo deploys: the build's contents land under the
     // prefix; host.html is a consumer page on the same origin.
-    hostRoot = mkdtempSync(join(tmpdir(), "biac-hostcheck-"));
-    cpSync(join(projectDir, "build"), join(hostRoot, "bi-as-code"), {
-      recursive: true,
+    staticHost = await servePrefixed(join(projectDir, "build"), "bi-as-code", {
+      "host.html": `<!doctype html><title>host</title>${WIDGET_HOST_PAGE}`,
     });
-    writeFileSync(
-      join(hostRoot, "host.html"),
-      `<!doctype html><title>host</title>${WIDGET_HOST_PAGE}`,
-    );
-    staticHost = await serveStaticDir(hostRoot);
   });
 
   test.afterAll(async () => {
     await staticHost.close();
     rmSync(projectDir, { recursive: true, force: true });
-    rmSync(hostRoot, { recursive: true, force: true });
   });
 
   test("renders every route and read beneath the prefix", async ({ page }) => {

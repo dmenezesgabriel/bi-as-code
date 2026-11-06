@@ -1,6 +1,9 @@
 export default {
   title: "biac docs",
   theme: "system",
+  // GitHub Pages serves a repository's site below /<repo>/. `biac dev`
+  // ignores base; `biac build` and `biac preview` use it (ADR-0029).
+  base: "/bi-as-code",
   nav: { sidebar: true },
   directories: {
     "pages/components": { title: "Widgets" },
