@@ -1,5 +1,5 @@
 /**
- * The named-filter model, a semantic port of evidence's `Filter.svelte.ts`:
+ * The named-filter model, a semantic port of evidence's `Filter` model:
  * the URL is the persistence layer through an injected `FilterUrlPort`, and
  * the port is the only browser boundary, so tests drive the model with an
  * in-memory fake.

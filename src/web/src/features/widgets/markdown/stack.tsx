@@ -3,7 +3,7 @@ import { cn } from "../../../lib/cn";
 import { WidgetError } from "./states";
 import type { StackAlign, StackProps } from "./types";
 
-// Evidence's `align` → `align-items` map (tags/stack/Stack.svelte). Its
+// Evidence's `align` → `align-items` map for its Stack tag. Its
 // `*:w-auto` ports verbatim: children carrying `w-full` (our charts) must
 // shrink-wrap or a non-stretch `align` would be a no-op.
 const STACK_ALIGN: Record<StackAlign, string> = {

@@ -3,7 +3,7 @@ import { cn } from "../../../lib/cn";
 import { WidgetError } from "./states";
 import type { RowAlign, RowProps } from "./types";
 
-// Evidence's `align` → `align-items` map (tags/row/Row.svelte); its
+// Evidence's `align` → `align-items` map for its Row tag; its
 // ResizeObserver grow-fix exists only for a per-child `width` prop we
 // don't ship, so equal `flex-1` shares need no fix-up. `h-auto` mirrors
 // its `*:h-auto` — keeps a child carrying `h-full` from pinning the line.

@@ -6,7 +6,7 @@ import { WidgetError } from "./states";
 import type { TabProps, TabsProps, TabsVariant } from "./types";
 
 // Class maps ported from evidence's `tv()` variants in
-// core/src/user-components/tags/tabs/Tabs.svelte, on the same shadcn token
+// its Tabs tag, on the same shadcn token
 // names; evidence's `muted` well is our `accent` (neutral-100/800).
 const LIST_VARIANTS: Record<TabsVariant, string> = {
   default: "border-b border-border text-muted-foreground-faded",

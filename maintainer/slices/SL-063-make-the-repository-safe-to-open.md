@@ -109,7 +109,7 @@ Everything a stranger needs to trust and use the repository is in it — a licen
 
 - [x] T1 — `LICENSE` (the Apache-2.0 text fetched from https://www.apache.org/licenses/LICENSE-2.0.txt, `sha256sum` recorded in the commit body), the `license` field per decision b, and `NOTICE` per decision a. Closes the license half of GAP-084.
 - [x] T2 — `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/` (bug report, feature request, config). Closes the policy half of GAP-084.
-- [ ] T3 — Comment wording in the 7 files above: drop `SL-010`, replace reference-repo file paths with the upstream project and concept. Closes GAP-085. Runs `pnpm gate`.
+- [x] T3 — Comment wording in the 7 files above, plus `widgets/inputs/types.unit.test.ts` (it cited the task codes `T2/T3`): drop `SL-010`, replace reference-repo file paths with the upstream project and concept. Closes GAP-085. Runs `pnpm gate`.
 - [ ] T4 — Install `gitleaks` v8.30.1 from the release binary with its sha256 checked into a disk path; run `gitleaks git --redact` over the full history; triage each finding into a fix or an anchored allowlist entry in `.gitleaks.toml`; end at exit 0; delete the binary. Closes GAP-086 and marks GAP-084…GAP-086 closed in `maintainer/research/release-and-security.md`.
 
 ## Out of scope

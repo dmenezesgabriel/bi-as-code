@@ -12,8 +12,8 @@ import type {
 } from "./types";
 
 /**
- * The input widgets' authored MDX surface — the component contract T2/T3
- * implement against. `expectTypeOf` pins the prop shapes so the tags land
+ * The input widgets' authored MDX surface — the component contract the input
+ * widgets implement against. `expectTypeOf` pins the prop shapes so the tags land
  * already-typed.
  */
 describe("input widget prop types", () => {

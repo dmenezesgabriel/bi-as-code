@@ -11,9 +11,8 @@ import type {
   AccordionVariant,
 } from "./types";
 
-// Class maps ported from evidence's `tv()` variants in
-// core/src/user-components/tags/accordion/Accordion.svelte, on the same
-// shadcn token names (accent, card, card-border) the Tabs variants use.
+// Class maps ported from evidence's `tv()` variants for
+// its Accordion tag, on the same shadcn token names (accent, card, card-border) the Tabs variants use.
 const VARIANTS: Record<AccordionVariant, string> = {
   default: "",
   well: "rounded-lg border border-card-border bg-accent px-4 py-2",

@@ -8,7 +8,7 @@ import type {
 import { FakeFilterUrlPort } from "./fake-url-port";
 import { Filter, type FilterOptions } from "./filter";
 
-/** JSON-array round-trip, the shape a multi-value input will pass (SL-010). */
+/** JSON-array round-trip, the shape a multi-value input passes. */
 const listOptions: FilterOptions<string | string[]> = {
   column: "region",
   serialize: (value) => {

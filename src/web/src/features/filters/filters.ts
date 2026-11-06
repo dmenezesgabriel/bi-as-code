@@ -5,7 +5,7 @@ import type { FilterUrlPort } from "./filter-url-port";
 import { decodeSearchParam } from "./search-param-value";
 
 /**
- * A page's named filters — the port of evidence's `Filters.svelte.ts` —
+ * A page's named filters — the port of evidence's `Filters` collection —
  * and the page's cross-filter `Coordinator`: each `Filter` owns the
  * `Selection` it publishes into, and `coordinator` brokers every
  * `filters=[...]` consumer's re-query. Page-scoped: each page mounts its
