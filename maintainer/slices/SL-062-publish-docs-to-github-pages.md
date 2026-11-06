@@ -1,6 +1,6 @@
 # SL-062 — A push to master publishes the docs site on GitHub Pages
 
-Milestone: Phase 8 — Documentation site · State: open · Depends on: SL-056, SL-061 (both shipped) · Closes: GAP-067
+Milestone: Phase 8 — Documentation site · State: partial (T2 waits for Phase 9 and a public repository, owner 2026-11-06) · Depends on: SL-056, SL-061 (both shipped) · Closes: GAP-067
 
 > Delete this file when the slice ships.
 >
