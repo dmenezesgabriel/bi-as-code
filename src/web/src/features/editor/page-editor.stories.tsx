@@ -115,8 +115,11 @@ export const SaveKeybinding: Story = {
     const textbox = await canvas.findByRole("textbox", { name: "Page source" });
     await focusEditor(textbox);
     await userEvent.keyboard("{Control>}{Home}{/Control}{End} (draft)");
-    await expect(canvas.getByRole("status")).toHaveTextContent(
-      "Unsaved changes",
+    // The status re-renders after the typed text reaches React state; on the
+    // docs page, where several editors render at once, a one-shot read can
+    // still see "No unsaved changes".
+    await waitFor(() =>
+      expect(canvas.getByRole("status")).toHaveTextContent("Unsaved changes"),
     );
     await userEvent.keyboard(SAVE_CHORD);
     await waitFor(() =>
