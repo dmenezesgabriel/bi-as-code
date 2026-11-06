@@ -1,0 +1,17 @@
+# Keep the default rule set; add only this repo's known-non-secret allowlist.
+# A full-history scan (`gitleaks git`) flags exactly one value without this:
+# the `viewer:s3cret` Basic-auth pair that `curl -u` examples in the history
+# used, taken from the fixtures in src/cli/basic-auth.unit.test.ts.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known non-secrets: the fake Basic-auth pair used by tests and curl examples"
+# regexTarget "secret" matches against the extracted secret only, and the
+# regex is anchored — a real credential in the same file still trips the rules.
+regexTarget = "secret"
+regexes = [
+  # `viewer` / `s3cret` are the fixture credentials of the biac serve
+  # Basic-auth tests (src/cli/basic-auth.unit.test.ts); no deployment uses them.
+  '''^viewer:s3cret$''',
+]
