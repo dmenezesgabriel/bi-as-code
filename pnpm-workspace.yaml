@@ -5,7 +5,7 @@ overrides:
   tmp: ">=0.2.6"
   # GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g: qs DoS
   # (transitive via @stryker-mutator/core>typed-rest-client, dev-only)
-  qs: ">=6.16.0"
+  qs: ">=6.16.1"
   # GHSA-w5hq-g745-h8pq: uuid <11.1.1 partial buffer write in v3/v5/v6
   # (transitive via @cucumber/cucumber>@cucumber/messages, dev-only).
   # ^-bounded: a bare >= floor resolves cross-major (uuid 14).
@@ -20,6 +20,14 @@ overrides:
   # attestation, so no-downgrade refuses it. Types-only dep: route it to the
   # root's already-trusted 24.x tree instead of exempting the flagged one.
   "apache-arrow>@types/node": "24.0.10"
+  # GHSA-3g3m-2fjr-6pw4: glob 9-14.0.1 AbortSignal bypass; fixed in 14.0.2.
+  # Transitive and dev-only: @cucumber/cucumber and archiver-utils pin ^10,
+  # the Storybook docgen plugin ^13, so no parent release carries the fix.
+  # glob 7 (commitizen) is unaffected and stays.
+  "glob@>=9 <14": "^14.0.2"
+  # GHSA-g3hv-75wg-m249: minimatch 7-11.0.0 globparts DoS; fixed in 11.0.1.
+  # Transitive and dev-only: eslint and glob 10 pin ^10 and ^9.
+  "minimatch@>=7 <11": "^11.0.1"
 # msw's postinstall only re-runs `msw init` when package.json declares a
 # workerDirectory (verified against config/scripts/postinstall.js in the
 # tarball) — dev-only, and we invoke it explicitly. Everything else stays
