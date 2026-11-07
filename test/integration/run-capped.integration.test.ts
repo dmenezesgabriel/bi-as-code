@@ -1,11 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  existsSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,12 +11,18 @@ const SCRIPT = join(
 );
 
 /**
- * The wrapper's caps only apply under a systemd user manager — present
- * when its private socket is.
+ * The wrapper's caps only apply where a systemd user scope can be started the
+ * way it starts one. A GitHub-hosted runner has the user manager's socket yet
+ * cannot place a scope, so the socket's presence would not be enough; a
+ * missing `systemd-run` leaves the status null.
  */
-const HAS_USER_SYSTEMD = existsSync(
-  `/run/user/${process.getuid?.() ?? -1}/systemd/private`,
-);
+const CAN_START_SCOPE =
+  spawnSync(
+    // eslint-disable-next-line sonarjs/no-os-command-from-path -- the probe must resolve `systemd-run` through PATH exactly as scripts/run-capped.sh does; a fixed path would probe a different binary
+    "systemd-run",
+    ["--user", "--scope", "--slice-inherit", "--quiet", "true"],
+    { stdio: "ignore" },
+  ).status === 0;
 
 /** The environment of a wrapper call outside any enclosing capped scope. */
 function cappedEnvironment(): NodeJS.ProcessEnv {
@@ -110,7 +110,7 @@ describe("run-capped.sh", () => {
     expect(result.stderr).toContain("got: probe");
   });
 
-  it.runIf(HAS_USER_SYSTEMD)(
+  it.runIf(CAN_START_SCOPE)(
     "kills a background child the command left running",
     () => {
       const result = runCapped(
