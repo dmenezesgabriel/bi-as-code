@@ -98,6 +98,7 @@ Nothing in `maintainer/` or the backlog claims either gap is shipped.
 
 - The backlog row says "fails a required check". Rulesets and required status checks need the repository to be public (or a paid plan) and are an owner act listed in `maintainer/research/release-and-security.md` "Owner-only acts". This slice ships the checks and their stable job `name:` values (`gate`, `commit-messages`, `pull-request-title`); binding them is the owner's, on the day the repository goes public. A job `name:` is the required-check API, so renaming one means updating the ruleset in the same change.
 - The default branch is `master`; the owner's reference workflows trigger on `main`.
+- The gate runs as two jobs, not one. On a 2 vCPU private runner `pnpm gate` took 78 s of static checks, 592 s of vitest and 25 s of cucumber, then the browser tier (466 tests) was still at about 290 tests after an hour and hit the 110 minute cap. `ci.yml` runs `pnpm gate` with `BIAC_GATE_SKIP_BROWSER=1` as job `gate`, and the browser tier as four Playwright shards, `e2e-browser (N/4)`; the required-check names are therefore `gate` and the four shard names.
 
 ## Open decisions
 

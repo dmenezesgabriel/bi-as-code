@@ -1,12 +1,14 @@
 name: CI
 
-# The required merge gate. `gate` runs `pnpm gate` verbatim, so CI can never
-# pass what a contributor's machine cannot: scripts/gate.sh is the one list of
-# steps. Job `name:` values are the required-check API — a `master` ruleset
-# binds these names, so renaming one means updating the ruleset in the same
-# commit. The commit-message and PR-title checks live in
-# conventional-commits.yml, which re-runs on a title edit; this file keeps the
-# default pull_request types so a body edit does not re-run the gate.
+# The required merge gate, split in two so it fits a hosted runner. `gate` runs
+# `pnpm gate` minus its browser tier, and `e2e-browser` runs that tier in
+# shards: scripts/gate.sh stays the one list of steps, and the browser suite
+# alone took 6565 s on the 2 vCPU a private repository's runner has. Job
+# `name:` values are the required-check API — a `master` ruleset binds these
+# names, so renaming one means updating the ruleset in the same commit. The
+# commit-message and PR-title checks live in conventional-commits.yml, which
+# re-runs on a title edit; this file keeps the default pull_request types so a
+# body edit does not re-run the gate.
 on:
   push:
     branches: [master]
@@ -25,46 +27,50 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
+env:
+  # `prepare` runs `husky`, which would point git at hooks nobody runs here.
+  HUSKY: "0"
+
 jobs:
   gate:
     name: gate
     runs-on: ubuntu-24.04
     # Above BIAC_RUNTIME_MAX, so the gate's own cap fires first and prints which
-    # step it was in. A private runner has 2 vCPU and 8 GB; the browser tier
-    # alone took 6565 s in a container of that size, so scripts/run-capped.sh's
-    # 45 minute default would kill the gate before it reports.
-    timeout-minutes: 120
+    # step it was in. The static checks, vitest and cucumber took 11 minutes.
+    timeout-minutes: 30
     permissions:
       contents: read
     env:
-      # `prepare` runs `husky`, which would point git at hooks nobody runs here.
-      HUSKY: "0"
-      BIAC_RUNTIME_MAX: 110m
+      BIAC_RUNTIME_MAX: 25m
+      BIAC_GATE_SKIP_BROWSER: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      # Exact patch, not .nvmrc's floating `24`: a runner's Node bump must not
-      # turn the gate red with no change in this repository. `engines` in
-      # package.json allows >=24.12.0 <25.
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "24.18.0"
-          package-manager-cache: false
-
-      # Corepack ships with Node 24 and installs the pnpm that `packageManager`
-      # in package.json names, so no third-party action has to be pinned for it.
-      - name: Enable the pinned pnpm
-        run: corepack enable
-
-      - name: Install the locked dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Only chromium: playwright.config.ts has a single chromium project.
-      # `--with-deps` installs the system libraries it needs through apt.
-      - name: Install the browser
-        run: pnpm exec playwright install --with-deps chromium
-
+      - uses: ./.github/actions/setup
       - name: Gate
         run: pnpm gate
+
+  # The browser suite is one required check per shard: `e2e-browser (1/4)` and
+  # so on. `--reporter=list` prints one line per finished test with its
+  # duration, which the dot reporter in playwright.config.ts does not.
+  e2e-browser:
+    name: e2e-browser (${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      BIAC_RUNTIME_MAX: 55m
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Browser tests, one shard
+        run: pnpm test:e2e-browser --shard="$SHARD/4" --reporter=list

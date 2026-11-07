@@ -1,0 +1,29 @@
+name: Set up the workspace
+description: Node, the pinned pnpm, the locked dependencies and chromium.
+
+runs:
+  using: composite
+  steps:
+    # Exact patch, not .nvmrc's floating `24`: a runner's Node bump must not
+    # turn a check red with no change in this repository. `engines` in
+    # package.json allows >=24.12.0 <25.
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: "24.18.0"
+        package-manager-cache: false
+
+    # Corepack ships with Node 24 and installs the pnpm that `packageManager`
+    # in package.json names, so no third-party action has to be pinned for it.
+    - name: Enable the pinned pnpm
+      shell: bash
+      run: corepack enable
+
+    - name: Install the locked dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    # Only chromium: playwright.config.ts has a single chromium project.
+    # `--with-deps` installs the system libraries it needs through apt.
+    - name: Install the browser
+      shell: bash
+      run: pnpm exec playwright install --with-deps chromium
