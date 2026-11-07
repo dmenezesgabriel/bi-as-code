@@ -119,7 +119,7 @@ Our `.github/workflows/` holds `ci.yml` and `conventional-commits.yml` only; `.g
 
 ## Tasks
 
-- [ ] T1 — `security.yml` with `gitleaks` (history and checkout), `osv-scanner`, `actionlint` and `zizmor`, binaries pinned by version and sha256, `permissions: {}`, sha-keyed concurrency, triggers `push` to `master`, `pull_request`, Monday cron, `workflow_dispatch`. RED: each scanner run locally on the tree, findings recorded; GREEN: the jobs pass, real findings fixed.
+- [x] T1 — `security.yml` with `gitleaks` (history and checkout), `osv-scanner`, `actionlint` and `zizmor`, binaries pinned by version and sha256, `permissions: {}`, sha-keyed concurrency, triggers `push` to `master`, `pull_request`, Monday cron, `workflow_dispatch`. RED: each scanner run locally on the tree, findings recorded; GREEN: the jobs pass, real findings fixed.
 - [ ] T2 — `opengrep` (version + sha256, rules by commit) and `grype` on the `Dockerfile` base, the latter off the pull-request path.
 - [ ] T3 — `codeql`, `dependency-review` and `scorecard.yml`, each guarded by `github.event.repository.visibility == 'public'`.
 - [ ] T4 — GAP-090: measure the three options in open decision 1 and carry out the chosen one.
