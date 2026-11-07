@@ -41,5 +41,10 @@
     "msw",
     // Imported only by src/web/vitest.setup.ts (ignored above).
     "@testing-library/jest-dom"
+  ],
+  "ignoreBinaries": [
+    // A systemd tool, not an npm dependency: test/integration/run-capped
+    // .integration.test.ts probes it the way scripts/run-capped.sh runs it.
+    "systemd-run"
   ]
 }
