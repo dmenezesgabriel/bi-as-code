@@ -51,8 +51,8 @@ jobs:
       - name: Gate
         run: pnpm gate
 
-  # The browser suite is one required check per shard: `e2e-browser (1/4)` and
-  # so on. `--reporter=list` prints one line per finished test with its
+  # The browser suite, minus the storybook sweep, is one required check per
+  # shard: `e2e-browser (1/4)` and so on. `--reporter=list` prints one line per finished test with its
   # duration, which the dot reporter in playwright.config.ts does not.
   e2e-browser:
     name: e2e-browser (${{ matrix.shard }}/4)
@@ -73,4 +73,25 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Browser tests, one shard
-        run: pnpm test:e2e-browser --shard="$SHARD/4" --reporter=list
+        run: pnpm test:e2e-browser --shard="$SHARD/4" --reporter=list --grep-invert="storybook stories"
+
+  # The storybook sweep is two tests that each visit every story or docs page
+  # in one browser, so sharding cannot split them and one shard would carry
+  # them alone: a measured attempt took 13 to 29 minutes. Own job, own cap,
+  # sized for the first attempt and both retries, so a failure's message
+  # prints before the cap fires.
+  storybook:
+    name: storybook
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    permissions:
+      contents: read
+    env:
+      BIAC_RUNTIME_MAX: 90m
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Every story and docs page
+        run: pnpm test:e2e-browser storybook-stories.spec.ts --reporter=list
