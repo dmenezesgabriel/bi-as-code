@@ -1,8 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 const SCRIPT = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -17,11 +24,48 @@ const HAS_USER_SYSTEMD = existsSync(
   `/run/user/${process.getuid?.() ?? -1}/systemd/private`,
 );
 
-/** Runs the wrapper outside any enclosing capped scope. */
-function runCapped(...args: string[]) {
+/** The environment of a wrapper call outside any enclosing capped scope. */
+function cappedEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   delete env.BIAC_CAPPED;
-  return spawnSync(SCRIPT, args, { encoding: "utf8", env });
+  return env;
+}
+
+/** Runs the wrapper outside any enclosing capped scope. */
+function runCapped(...args: string[]) {
+  return spawnSync(SCRIPT, args, {
+    encoding: "utf8",
+    env: cappedEnvironment(),
+  });
+}
+
+/**
+ * A PATH directory holding a `systemd-run` that fails the way a GitHub-hosted
+ * runner's does: the user manager answers, but cannot report the slice a scope
+ * would join.
+ */
+class FailingSystemdRun {
+  private readonly directory = mkdtempSync(
+    join(tmpdir(), "biac-fake-systemd-"),
+  );
+
+  constructor() {
+    const stub = join(this.directory, "systemd-run");
+    writeFileSync(
+      stub,
+      "#!/bin/sh\necho 'Failed to get PID slice: No such device or address' >&2\nexit 1\n",
+    );
+    chmodSync(stub, 0o755);
+  }
+
+  /** The PATH to run the wrapper with: the stub first, the real tools after. */
+  get path(): string {
+    return `${this.directory}:${process.env.PATH ?? ""}`;
+  }
+
+  remove(): void {
+    rmSync(this.directory, { recursive: true, force: true });
+  }
 }
 
 function isAlive(pid: number): boolean {
@@ -34,9 +78,28 @@ function isAlive(pid: number): boolean {
 }
 
 describe("run-capped.sh", () => {
+  let failingSystemdRun: FailingSystemdRun | undefined;
+
+  afterEach(() => {
+    failingSystemdRun?.remove();
+    failingSystemdRun = undefined;
+  });
+
   it("passes the wrapped command's exit status through", () => {
     const result = runCapped("probe", "sh", "-c", "exit 3");
 
+    expect(result.status).toBe(3);
+  });
+
+  it("falls back to nice and timeout when the user manager cannot start a scope", () => {
+    failingSystemdRun = new FailingSystemdRun();
+
+    const result = spawnSync(SCRIPT, ["probe", "sh", "-c", "exit 3"], {
+      encoding: "utf8",
+      env: { ...cappedEnvironment(), PATH: failingSystemdRun.path },
+    });
+
+    expect(result.stderr).not.toContain("Failed to get PID slice");
     expect(result.status).toBe(3);
   });
 
