@@ -1,0 +1,14 @@
+# actionlint reads this file on its own; no flag names it.
+#
+# GitHub's `$/path` form (workflow-syntax reference, "jobs.<job_id>.steps[*].uses")
+# resolves a same-repository action at the running commit with no checkout, and
+# zizmor's `self-repository` audit asks for it in place of the workspace-relative
+# `./path`. actionlint 1.7.12 predates that syntax and reports every `$/` use as
+# "invalid format because ref is missing"; rhysd/actionlint issues 711, 732 and
+# 760 track support. This ignore matches that one message for a `$/.github/`
+# path and nothing else, so a malformed `uses:` of any other shape still fails.
+# Delete this file once a pinned actionlint release accepts `$/`.
+paths:
+  .github/workflows/**/*.yml:
+    ignore:
+      - 'specifying action "\$/\.github/[^"]+" in invalid format because ref is missing'

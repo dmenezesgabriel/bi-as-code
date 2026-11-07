@@ -1,0 +1,172 @@
+name: Security
+
+# The scanners that read the tree, its history and its workflows, in a file of
+# their own: ci.yml stays the commit gate, and a weekly run catches drift no
+# change triggers (a new advisory, a new audit rule). Every scanner is a release
+# binary pinned by version and by sha256, not a marketplace action, so no job
+# runs code fetched at run time that a checksum has not vouched for. A scanner
+# blocks only where its findings on this tree are real. Job `name:` values are
+# the required-check API — a `master` ruleset binds them, so renaming one means
+# updating the ruleset in the same commit.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Mondays 04:17 UTC, off the hour so it does not queue behind every other
+    # job scheduled on it.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+# Default-deny: a job inherits nothing unless it re-declares a scope. Even
+# checkout needs `contents: read`, since a zero-scope token cannot clone a
+# private repository.
+permissions: {}
+
+# Keyed on the commit for a push and the cron, so consecutive runs on `master`
+# never cancel each other; a pull request keys on its number, so a fresh push
+# replaces a stale run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # Pinned twice, by version and by the sha256 the project publishes beside
+      # the release (gitleaks_8.30.1_checksums.txt). The marketplace action is
+      # not used: its owner lookup needs a token and its binary is not pinned
+      # by sum. `.gitleaks.toml` is read from the checkout.
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      # Full history, because `gitleaks git` reads every commit and a shallow
+      # clone hides the old ones.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # `--retry 3` on every download in this file: a release host that answers
+      # a 5xx fails the job before any scan runs. curl retries a timeout and the
+      # transient HTTP statuses with a doubling wait, and the sha256 check still
+      # decides whether the file is the pinned one.
+      - name: Install the pinned gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -o "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" gitleaks
+
+      # `--redact` keeps a finding's secret out of the run log, which outlives
+      # the branch.
+      - name: Scan every commit
+        run: '"${RUNNER_TEMP}/gitleaks" git --redact --no-banner --exit-code 1 .'
+
+      # The checkout holds tracked files only, so this reads what the history
+      # scan reads, as files.
+      - name: Scan the checkout
+        run: '"${RUNNER_TEMP}/gitleaks" dir --redact --no-banner --exit-code 1 .'
+
+  osv-scanner:
+    name: osv-scanner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # Pinned twice, by version and by the sha256 the project publishes
+      # (osv-scanner_SHA256SUMS).
+      OSV_SCANNER_VERSION: "2.7.0"
+      OSV_SCANNER_SHA256: "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned osv-scanner
+        run: |
+          curl -fsSL --retry 3 -o "${RUNNER_TEMP}/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  ${RUNNER_TEMP}/osv-scanner" | sha256sum -c -
+          chmod +x "${RUNNER_TEMP}/osv-scanner"
+
+      # The one lockfile that decides what is installed, named outright so the
+      # scan never walks `node_modules/` or a stray fixture. Any advisory on a
+      # locked package exits 1.
+      - name: Scan the lockfile
+        run: '"${RUNNER_TEMP}/osv-scanner" scan source -L pnpm-lock.yaml'
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # Pinned twice, by version and by the sha256 the project publishes
+      # (actionlint_1.7.12_checksums.txt). `.github/actionlint.yaml` is read
+      # from the checkout.
+      ACTIONLINT_VERSION: "1.7.12"
+      ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned actionlint
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" actionlint
+
+      # Syntax, expression types and shellcheck over `run:` scripts, for every
+      # file under .github/workflows/. It lints workflows only: the composite
+      # action under .github/actions/ is zizmor's.
+      - name: Lint the workflows
+        run: '"${RUNNER_TEMP}/actionlint" -color'
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # zizmor publishes no checksum file, so the sha256 is the one measured on
+      # the release asset (zizmor-x86_64-unknown-linux-gnu.tar.gz) when this
+      # version was chosen: the newest release older than two weeks that has
+      # the `self-repository` audit.
+      ZIZMOR_VERSION: "1.31.1"
+      ZIZMOR_SHA256: "d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned zizmor
+        run: |
+          archive="zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSL --retry 3 -o "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/${archive}"
+          echo "${ZIZMOR_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" zizmor
+
+      # Plain output, because `--format=sarif` always exits 0 and its upload
+      # needs code scanning, which a private repository lacks. `.github/` as the
+      # scope audits the composite action under .github/actions/ beside the
+      # workflows. The token lets the online audits run (an impostor commit
+      # behind a pinned sha, a known-vulnerable action); it reads public
+      # metadata only, and it is set on this step alone.
+      - name: Audit the workflows and the composite action
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: '"${RUNNER_TEMP}/zizmor" --persona pedantic --no-progress .github/'
