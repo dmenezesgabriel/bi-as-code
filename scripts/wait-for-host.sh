@@ -31,8 +31,10 @@ read_load1() {
   echo "${BASH_REMATCH[1]}"
 }
 
+# `load` is a reserved word in gawk (a GitHub-hosted runner's awk): used as a
+# variable name it is a fatal error, and `is_busy` would read as "not busy".
 is_busy() {
-  awk -v load="$1" -v cores="$cores" 'BEGIN { exit !(load > cores) }'
+  awk -v reading="$1" -v cores="$cores" 'BEGIN { exit !(reading > cores) }'
 }
 
 start=$SECONDS
