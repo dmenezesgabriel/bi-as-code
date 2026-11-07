@@ -1,0 +1,70 @@
+name: CI
+
+# The required merge gate. `gate` runs `pnpm gate` verbatim, so CI can never
+# pass what a contributor's machine cannot: scripts/gate.sh is the one list of
+# steps. Job `name:` values are the required-check API — a `master` ruleset
+# binds these names, so renaming one means updating the ruleset in the same
+# commit. The commit-message and PR-title checks live in
+# conventional-commits.yml, which re-runs on a title edit; this file keeps the
+# default pull_request types so a body edit does not re-run the gate.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# Default-deny: a job inherits nothing unless it re-declares a scope. Even
+# checkout needs `contents: read`, since a zero-scope token cannot clone a
+# private repository.
+permissions: {}
+
+# Keyed on the commit for a push, so consecutive pushes to master never cancel
+# each other; a pull request keys on its number, so a fresh push replaces a
+# stale run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-24.04
+    # Above BIAC_RUNTIME_MAX, so the gate's own cap fires first and prints which
+    # step it was in. A private runner has 2 vCPU and 8 GB; the browser tier
+    # alone took 6565 s in a container of that size, so scripts/run-capped.sh's
+    # 45 minute default would kill the gate before it reports.
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      # `prepare` runs `husky`, which would point git at hooks nobody runs here.
+      HUSKY: "0"
+      BIAC_RUNTIME_MAX: 110m
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Exact patch, not .nvmrc's floating `24`: a runner's Node bump must not
+      # turn the gate red with no change in this repository. `engines` in
+      # package.json allows >=24.12.0 <25.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+
+      # Corepack ships with Node 24 and installs the pnpm that `packageManager`
+      # in package.json names, so no third-party action has to be pinned for it.
+      - name: Enable the pinned pnpm
+        run: corepack enable
+
+      - name: Install the locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Only chromium: playwright.config.ts has a single chromium project.
+      # `--with-deps` installs the system libraries it needs through apt.
+      - name: Install the browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Gate
+        run: pnpm gate
