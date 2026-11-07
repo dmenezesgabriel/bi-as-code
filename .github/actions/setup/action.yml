@@ -1,6 +1,11 @@
 name: Set up the workspace
 description: Node, the pinned pnpm, the locked dependencies and chromium.
 
+inputs:
+  browser:
+    description: Install chromium and its system libraries. Jobs that never open a page pass "false".
+    default: "true"
+
 runs:
   using: composite
   steps:
@@ -25,5 +30,6 @@ runs:
     # Only chromium: playwright.config.ts has a single chromium project.
     # `--with-deps` installs the system libraries it needs through apt.
     - name: Install the browser
+      if: ${{ inputs.browser == 'true' }}
       shell: bash
       run: pnpm exec playwright install --with-deps chromium
