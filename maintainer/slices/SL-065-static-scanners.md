@@ -121,7 +121,7 @@ Our `.github/workflows/` holds `ci.yml` and `conventional-commits.yml` only; `.g
 
 - [x] T1 — `security.yml` with `gitleaks` (history and checkout), `osv-scanner`, `actionlint` and `zizmor`, binaries pinned by version and sha256, `permissions: {}`, sha-keyed concurrency, triggers `push` to `master`, `pull_request`, Monday cron, `workflow_dispatch`. RED: each scanner run locally on the tree, findings recorded; GREEN: the jobs pass, real findings fixed.
 - [x] T2 — `opengrep` (version + sha256, rules by commit) and `grype` on the `Dockerfile` base, the latter off the pull-request path. `grype` blocks on fixable medium and above and is red today (8 High, 12 Medium in the pinned `node:24-slim` digest), so `master` stays red until the `Dockerfile` digest is bumped.
-- [ ] T3 — `codeql`, `dependency-review` and `scorecard.yml`, each guarded by `github.event.repository.visibility == 'public'`.
+- [x] T3 — `codeql`, `dependency-review` and `scorecard.yml`, each guarded by `github.event.repository.visibility == 'public'`.
 - [ ] T4 — GAP-090: measure the three options in open decision 1 and carry out the chosen one.
 - [ ] T5 — close: mark GAP-089 and GAP-090 `closed` in `maintainer/research/release-and-security.md`, set SL-065 `shipped` in `maintainer/backlog.md`, run the Demo, delete this file.
 
