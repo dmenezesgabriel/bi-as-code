@@ -8,7 +8,7 @@
 # after the maximum wait rather than start a run that would only fail.
 # Overrides: BIAC_GATE_POLL_SECONDS (default 15 — the 1 min load moves
 # slowly), BIAC_GATE_MAX_WAIT_SECONDS (default 600 — two waits plus a
-# full gate stay inside run-capped.sh's 45m runtime cap),
+# full gate stay inside run-capped.sh's 90m runtime cap),
 # BIAC_LOADAVG_FILE (default /proc/loadavg) and BIAC_NPROC (default
 # nproc), which tests use to inject a reading.
 #

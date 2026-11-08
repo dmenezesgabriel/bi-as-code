@@ -24,10 +24,15 @@ const CAN_START_SCOPE =
     { stdio: "ignore" },
   ).status === 0;
 
-/** The environment of a wrapper call outside any enclosing capped scope. */
+/**
+ * The environment of a wrapper call outside any enclosing capped scope and
+ * outside any devjob job (the suite itself usually runs under one, and a job
+ * makes the wrapper skip the scope these tests exercise).
+ */
 function cappedEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   delete env.BIAC_CAPPED;
+  delete env.DEVJOB_UNIT;
   return env;
 }
 
@@ -101,6 +106,35 @@ describe("run-capped.sh", () => {
 
     expect(result.stderr).not.toContain("Failed to get PID slice");
     expect(result.status).toBe(3);
+  });
+
+  describe("inside a devjob job", () => {
+    const insideDevjob = (extra: NodeJS.ProcessEnv = {}) => ({
+      ...cappedEnvironment(),
+      DEVJOB_UNIT: "devjob-probe-1",
+      ...extra,
+    });
+
+    it("runs the command without starting a scope of its own", () => {
+      const result = spawnSync(
+        SCRIPT,
+        ["probe", "sh", "-c", "cat /proc/self/cgroup; exit 3"],
+        { encoding: "utf8", env: insideDevjob() },
+      );
+
+      expect(result.status).toBe(3);
+      expect(result.stdout).not.toContain("biac-probe");
+    });
+
+    it("still ends a run that exceeds BIAC_RUNTIME_MAX", () => {
+      const result = spawnSync(SCRIPT, ["probe", "sleep", "30"], {
+        encoding: "utf8",
+        env: insideDevjob({ BIAC_RUNTIME_MAX: "1" }),
+        timeout: 20_000,
+      });
+
+      expect(result.status).toBe(124);
+    });
   });
 
   it("rejects a call without a command, naming what it got", () => {
