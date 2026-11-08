@@ -1,0 +1,47 @@
+name: Scorecard
+
+# A file of its own: it runs on the default branch and weekly, never on a pull
+# request (the action's README calls its `pull_request` trigger experimental),
+# and it holds scopes no job in security.yml needs.
+on:
+  push:
+    branches: [master]
+  schedule:
+    # Mondays 05:47 UTC, off the hour and an hour after security.yml's run.
+    - cron: "47 5 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+# Keyed on the commit, so consecutive pushes to `master` never cancel a run that
+# is publishing its results.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  scorecard:
+    name: scorecard
+    # Publishing the result and uploading the SARIF need a public repository;
+    # the guard keeps the job skipped, not failing, while it is private.
+    if: ${{ github.event.repository.visibility == 'public' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read # checkout
+      security-events: write # upload results.sarif to code scanning
+      id-token: write # OIDC token for publish_results
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: results.sarif

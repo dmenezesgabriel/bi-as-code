@@ -286,3 +286,60 @@ jobs:
           image="$(grep -E '^FROM ' Dockerfile | tail -1 | cut -d' ' -f2)"
           "${RUNNER_TEMP}/grype" "registry:${image}" --platform linux/amd64 \
             --only-fixed --fail-on medium
+
+  codeql:
+    name: codeql (${{ matrix.language }})
+    # Uploading the analysis needs code scanning, which a private repository
+    # only has with a paid licence. The job is written now and skipped until the
+    # repository is public, rather than failing on every run.
+    if: ${{ github.event.repository.visibility == 'public' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # upload the analysis to code scanning
+      actions: read # CodeQL reads workflow metadata
+    strategy:
+      fail-fast: false
+      matrix:
+        # Neither language compiles anything: `actions` reads the workflows and
+        # the composite action, `javascript-typescript` reads the sources.
+        language: [actions, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:${{ matrix.language }}
+
+  dependency-review:
+    name: dependency-review
+    # The dependency graph this action diffs exists only on a public repository
+    # (or one with GitHub Advanced Security), and it compares a pull request's
+    # base and head, so it has nothing to do on any other event.
+    if: ${{ github.event_name == 'pull_request' && github.event.repository.visibility == 'public' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Blocks a pull request that adds a dependency with a high or critical
+      # advisory; osv-scanner owns the whole lockfile. The license check is off
+      # because no license policy exists to enforce, and the summary stays out
+      # of the pull request so the job needs no write scope.
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          license-check: false
+          comment-summary-in-pr: never
