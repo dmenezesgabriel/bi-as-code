@@ -12,7 +12,7 @@ A pull request, a push to `master` and a weekly cron run secret, lockfile-adviso
 
 ## Demo
 
-1. Open a pull request: `gh run list --workflow security.yml` shows the run, and `gh run view <id>` lists the jobs `gitleaks`, `osv-scanner`, `actionlint`, `zizmor`, `opengrep` green; `codeql`, `dependency-review` and `scorecard` show `skipped` while `gh repo view dmenezesgabriel/bi-as-code --json visibility` answers `PRIVATE`.
+1. Open a pull request: `gh run list --workflow security.yml` shows the run, and `gh run view <id>` lists the jobs `gitleaks`, `osv-scanner`, `pnpm-signatures`, `actionlint`, `zizmor`, `opengrep` green; `codeql`, `dependency-review` and `scorecard` show `skipped` while `gh repo view dmenezesgabriel/bi-as-code --json visibility` answers `PRIVATE`.
 2. On a throwaway branch commit a fake AWS key (`AKIAIOSFODNN7EXAMPLE` with a secret-shaped pair): `gitleaks` goes red and its log shows the finding redacted.
 3. On a throwaway branch change one `uses:` to a movable tag (`actions/checkout@v7`): `zizmor` goes red naming the file and the `unpinned-uses` finding.
 4. On a throwaway branch add a package with a known advisory to `pnpm-lock.yaml`: `osv-scanner` goes red naming the package and the advisory id.
@@ -101,7 +101,7 @@ Our `.github/workflows/` holds `ci.yml` and `conventional-commits.yml` only; `.g
 
 ## Open decisions
 
-1. **GAP-090 signature audit.** `pnpm audit --help` has no signature option and `npm audit signatures` reads `package-lock.json`. Measure in T4: (a) osv-scanner on `pnpm-lock.yaml`, (b) a throwaway `npm install --package-lock-only` then `npm audit signatures`, (c) whether pnpm's own lockfile `integrity` check already covers it. Choose the least-workaround option, or close the gap with the measured statement that pnpm has none.
+1. **GAP-090 signature audit.** Decided in T4: `pnpm audit signatures` from pnpm 12.15.0 (https://pnpm.io/cli/audit), run by a second pinned pnpm in the `pnpm-signatures` job. Measured: osv-scanner 2.7.0 reads 1535 packages for advisories and has no signature option; npm needs `--legacy-peer-deps` after `ERESOLVE`, resolves a tree that lacks 142 of pnpm's 1535 pins and adds 172 versions pnpm never locked, and must install 1.1 GB before `npm audit signatures` (1510 verified) can run; pnpm 10.33.2 treats `signatures` as a stray argument and passes a plain advisory audit; pnpm 12.15.0 verifies 1535 of 1535 from `pnpm-lock.yaml` alone. The repo's `packageManager: pnpm@10…` pin makes pnpm 12 hand over to pnpm 10 unless `pnpm_config_manage_package_manager_versions=false`, so the job also requires the "verified registry signatures" summary line. Moving the repo to pnpm 12 would drop the second binary; that is its own change.
 2. **opengrep: block or report.** Decided in T2: report. The security rule directories flag 28 places over `src/`, `scripts/`, `test/`, `.github/` and the `Dockerfile` with the pinned rule commit, none a defect; the best-practice and i18n directories add about 400 more and are left out.
 3. **osv-scanner at PR time.** Whether any advisory blocks, given `aa27c11` upgraded past 33 advisories and `pnpm audit` is clean today.
 4. **zizmor persona.** `pedantic` as in claude-acc-manager; run it on our two workflows and the setup composite, fix real findings in the same commit.
@@ -122,7 +122,7 @@ Our `.github/workflows/` holds `ci.yml` and `conventional-commits.yml` only; `.g
 - [x] T1 — `security.yml` with `gitleaks` (history and checkout), `osv-scanner`, `actionlint` and `zizmor`, binaries pinned by version and sha256, `permissions: {}`, sha-keyed concurrency, triggers `push` to `master`, `pull_request`, Monday cron, `workflow_dispatch`. RED: each scanner run locally on the tree, findings recorded; GREEN: the jobs pass, real findings fixed.
 - [x] T2 — `opengrep` (version + sha256, rules by commit) and `grype` on the `Dockerfile` base, the latter off the pull-request path. `grype` blocks on fixable medium and above and is red today (8 High, 12 Medium in the pinned `node:24-slim` digest), so `master` stays red until the `Dockerfile` digest is bumped.
 - [x] T3 — `codeql`, `dependency-review` and `scorecard.yml`, each guarded by `github.event.repository.visibility == 'public'`.
-- [ ] T4 — GAP-090: measure the three options in open decision 1 and carry out the chosen one.
+- [x] T4 — GAP-090: `pnpm-signatures` job in `security.yml`, pnpm 12.15.0 pinned by version and sha256, chosen from the measurements in open decision 1.
 - [ ] T5 — close: mark GAP-089 and GAP-090 `closed` in `maintainer/research/release-and-security.md`, set SL-065 `shipped` in `maintainer/backlog.md`, run the Demo, delete this file.
 
 ## Out of scope
