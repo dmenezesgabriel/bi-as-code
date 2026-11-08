@@ -102,7 +102,7 @@ Our `.github/workflows/` holds `ci.yml` and `conventional-commits.yml` only; `.g
 ## Open decisions
 
 1. **GAP-090 signature audit.** `pnpm audit --help` has no signature option and `npm audit signatures` reads `package-lock.json`. Measure in T4: (a) osv-scanner on `pnpm-lock.yaml`, (b) a throwaway `npm install --package-lock-only` then `npm audit signatures`, (c) whether pnpm's own lockfile `integrity` check already covers it. Choose the least-workaround option, or close the gap with the measured statement that pnpm has none.
-2. **opengrep: block or report.** Count findings over `src/`, `scripts/`, `test/` and `.github/` with a pinned rule commit; block only where a finding is real.
+2. **opengrep: block or report.** Decided in T2: report. The security rule directories flag 28 places over `src/`, `scripts/`, `test/`, `.github/` and the `Dockerfile` with the pinned rule commit, none a defect; the best-practice and i18n directories add about 400 more and are left out.
 3. **osv-scanner at PR time.** Whether any advisory blocks, given `aa27c11` upgraded past 33 advisories and `pnpm audit` is clean today.
 4. **zizmor persona.** `pedantic` as in claude-acc-manager; run it on our two workflows and the setup composite, fix real findings in the same commit.
 5. **actionlint pinning.** Version and sha256 of the release archive, taken from the project's published checksum file in the session that writes the job.
@@ -120,7 +120,7 @@ Our `.github/workflows/` holds `ci.yml` and `conventional-commits.yml` only; `.g
 ## Tasks
 
 - [x] T1 — `security.yml` with `gitleaks` (history and checkout), `osv-scanner`, `actionlint` and `zizmor`, binaries pinned by version and sha256, `permissions: {}`, sha-keyed concurrency, triggers `push` to `master`, `pull_request`, Monday cron, `workflow_dispatch`. RED: each scanner run locally on the tree, findings recorded; GREEN: the jobs pass, real findings fixed.
-- [ ] T2 — `opengrep` (version + sha256, rules by commit) and `grype` on the `Dockerfile` base, the latter off the pull-request path.
+- [x] T2 — `opengrep` (version + sha256, rules by commit) and `grype` on the `Dockerfile` base, the latter off the pull-request path. `grype` blocks on fixable medium and above and is red today (8 High, 12 Medium in the pinned `node:24-slim` digest), so `master` stays red until the `Dockerfile` digest is bumped.
 - [ ] T3 — `codeql`, `dependency-review` and `scorecard.yml`, each guarded by `github.event.repository.visibility == 'public'`.
 - [ ] T4 — GAP-090: measure the three options in open decision 1 and carry out the chosen one.
 - [ ] T5 — close: mark GAP-089 and GAP-090 `closed` in `maintainer/research/release-and-security.md`, set SL-065 `shipped` in `maintainer/backlog.md`, run the Demo, delete this file.
