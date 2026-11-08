@@ -170,3 +170,119 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: '"${RUNNER_TEMP}/zizmor" --persona pedantic --no-progress .github/'
+
+  opengrep:
+    name: opengrep
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # opengrep publishes a cosign signature, not a sum file, so the sha256 is
+      # the one measured on the release asset (opengrep_manylinux_x86) when this
+      # version was chosen: the newest release older than two weeks. The rules
+      # are the project's own mirror at a commit; that repository is archived,
+      # so they will not move. Never `--config auto`, which fetches third-party
+      # rules at run time.
+      OPENGREP_VERSION: "1.32.0"
+      OPENGREP_SHA256: "7360d60174880bd9214f2dfbe439b7bce82b7a3d44cfe945ba833c85cc8bda75"
+      OPENGREP_RULES_SHA: "f1d2b562b414783763fd02a6ed2736eaed622efa"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned opengrep
+        run: |
+          curl -fsSL --retry 3 -o "${RUNNER_TEMP}/opengrep" \
+            "https://github.com/opengrep/opengrep/releases/download/v${OPENGREP_VERSION}/opengrep_manylinux_x86"
+          echo "${OPENGREP_SHA256}  ${RUNNER_TEMP}/opengrep" | sha256sum -c -
+          chmod +x "${RUNNER_TEMP}/opengrep"
+
+      # A fetch by commit, so the tree is what the SHA names and nothing else.
+      - name: Fetch the pinned rules
+        run: |
+          git init --quiet "${RUNNER_TEMP}/opengrep-rules"
+          git -C "${RUNNER_TEMP}/opengrep-rules" fetch --quiet --depth 1 \
+            https://github.com/opengrep/opengrep-rules.git "${OPENGREP_RULES_SHA}"
+          git -C "${RUNNER_TEMP}/opengrep-rules" checkout --quiet FETCH_HEAD
+
+      # Reports and does not block. The security rule directories alone flag 28
+      # places on this tree and none is a defect: a `value = value[part]` read
+      # that the prototype-pollution rule takes for a write, regexes built from
+      # test fixtures or from an escaped name, an `innerHTML` in a unit test,
+      # the five-character HTML escape the replaceAll rule cannot see whole, a
+      # linear hostname pattern flagged as ReDoS, and local `./.github/actions`
+      # uses that the unpinned-action rule reads as third-party (zizmor owns
+      # that check). The best-practice and i18n directories add 400 more and
+      # are left out. A scanner that always fails teaches readers to ignore
+      # it, so there is no `--error`: findings exit 0. Re-read them when a rule
+      # is added that has a real one to catch.
+      - name: Scan the sources
+        run: |
+          rules="${RUNNER_TEMP}/opengrep-rules"
+          "${RUNNER_TEMP}/opengrep" scan --quiet --disable-version-check \
+            --config "${rules}/javascript/lang/security" \
+            --config "${rules}/javascript/browser" \
+            --config "${rules}/javascript/audit" \
+            --config "${rules}/typescript/lang/security" \
+            --config "${rules}/typescript/react/security" \
+            --config "${rules}/bash" \
+            --config "${rules}/yaml/github-actions/security" \
+            --config "${rules}/yaml/docker-compose" \
+            --config "${rules}/dockerfile/security" \
+            --text-output "${RUNNER_TEMP}/opengrep.txt" \
+            --sarif-output "${RUNNER_TEMP}/opengrep.sarif" \
+            src scripts test .github Dockerfile
+          cat "${RUNNER_TEMP}/opengrep.txt"
+
+      # A plain artifact, not a code-scanning upload: that needs a public
+      # repository.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: opengrep-findings
+          path: |
+            ${{ runner.temp }}/opengrep.txt
+            ${{ runner.temp }}/opengrep.sarif
+          retention-days: 14
+
+  grype:
+    name: grype
+    # Its input changes with the Dockerfile alone and a pull request spends
+    # minutes, so it runs on `master`, the weekly cron and a manual dispatch.
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      # Pinned twice, by version and by the sha256 the project publishes
+      # (grype_0.121.0_checksums.txt): the newest release older than two weeks.
+      GRYPE_VERSION: "0.121.0"
+      GRYPE_SHA256: "64e07133d3486115de647a66581461dccf5c732748a0a3119077395565f15519"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the pinned grype
+        run: |
+          archive="grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/${archive}"
+          echo "${GRYPE_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" grype
+
+      # The image is the last `FROM` of the Dockerfile, the runtime stage that
+      # ships, read at run time so a base bump cannot leave this scan on a stale
+      # digest. It is fetched without a Docker daemon (`registry:`). Only a CVE
+      # with a fix blocks: an unfixed one is listed and nothing can be done
+      # about it. The vulnerability database is fetched fresh on purpose, since
+      # a weekly run exists to meet advisories published after the last commit.
+      # A red run means the base needs a newer digest.
+      - name: Scan the runtime base image
+        run: |
+          image="$(grep -E '^FROM ' Dockerfile | tail -1 | cut -d' ' -f2)"
+          "${RUNNER_TEMP}/grype" "registry:${image}" --platform linux/amd64 \
+            --only-fixed --fail-on medium
