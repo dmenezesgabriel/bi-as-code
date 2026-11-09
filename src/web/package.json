@@ -35,12 +35,12 @@
     "@storybook/addon-docs": "10.6.2",
     "@storybook/addon-mcp": "10.6.2",
     "@storybook/react-vite": "10.6.2",
-    "@tailwindcss/vite": "4.1.8",
+    "@tailwindcss/vite": "4.2.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "msw": "2.15.0",
-    "tailwindcss": "4.1.8",
+    "tailwindcss": "4.2.2",
     "vite": "8.2.4"
   }
 }
