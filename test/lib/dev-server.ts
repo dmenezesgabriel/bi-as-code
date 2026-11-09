@@ -81,7 +81,8 @@ export function startDevServer(
  * the advertised URL is the only reliable way to learn it — and proves the
  * user-facing output is truthful. `biac serve` advertises its loopback
  * address, not `localhost`; `extraArguments` follow `--port 0`, e.g.
- * `["--host", "0.0.0.0"]`.
+ * `["--host", "0.0.0.0"]`. `biacBin` runs an installed copy of the CLI
+ * instead of this repo's.
  *
  * @example
  * const server = await startBiacServer("preview", projectRoot);
@@ -93,17 +94,11 @@ export function startBiacServer(
   projectRoot: string,
   extraEnvironment: NodeJS.ProcessEnv = {},
   extraArguments: readonly string[] = [],
+  biacBin: string = join(repoRoot, "bin/biac"),
 ): Promise<DevServer> {
   const child = spawn(
     process.execPath,
-    [
-      join(repoRoot, "bin/biac"),
-      command,
-      projectRoot,
-      "--port",
-      "0",
-      ...extraArguments,
-    ],
+    [biacBin, command, projectRoot, "--port", "0", ...extraArguments],
     { env: { ...environmentWithoutNodeEnv(), ...extraEnvironment } },
   );
   const log = recordLog(child);

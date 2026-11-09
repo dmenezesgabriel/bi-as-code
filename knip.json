@@ -1,9 +1,13 @@
 {
   "$schema": "./node_modules/knip/schema.json",
   "ignoreExportsUsedInFile": true,
-  // Both vitest configs, so the deploy suite's config and specs are entries.
+  // Every vitest config, so the deploy and install suites' configs and specs are entries.
   "vitest": {
-    "config": ["vitest.config.ts", "vitest.deploy.config.ts"]
+    "config": [
+      "vitest.config.ts",
+      "vitest.deploy.config.ts",
+      "vitest.install.config.ts"
+    ]
   },
   "ignore": [
     // Run as a program by examples/s3-sso/smoke.sh — never imported, so

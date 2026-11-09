@@ -11,9 +11,15 @@ const created: string[] = [];
  * @example
  * const root = makeProject("biac-pages-");
  * writeProjectFile(root, "pages/index.md", "# Hi\n");
+ *
+ * `parent` defaults to the OS temp dir, which is RAM on some hosts; pass a
+ * disk path for bulk such as an installed `node_modules`.
  */
-export function makeTempProject(prefix = "biac-site-"): string {
-  const root = mkdtempSync(join(tmpdir(), prefix));
+export function makeTempProject(
+  prefix = "biac-site-",
+  parent: string = tmpdir(),
+): string {
+  const root = mkdtempSync(join(parent, prefix));
   created.push(root);
   return root;
 }
