@@ -13,6 +13,7 @@
   "include": [
     "src/**/*",
     "vite.config.ts",
+    "vite-plugins/**/*",
     "vitest.setup.ts",
     ".storybook/**/*"
   ],

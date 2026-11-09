@@ -15,14 +15,6 @@ overrides:
   glob@>=9 <14: ^14.0.2
   minimatch@>=7 <11: ^11.0.1
 
-patchedDependencies:
-  echarts@6.1.0:
-    hash: 8d8727ec4f2514a26154720f92a624bd1752600f0876b925b3561987788aea68
-    path: patches/echarts@6.1.0.patch
-  zrender@6.1.0:
-    hash: 6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae
-    path: patches/zrender@6.1.0.patch
-
 importers:
 
   .:
@@ -234,7 +226,7 @@ importers:
         version: 6.0.2
       echarts:
         specifier: 6.1.0
-        version: 6.1.0(patch_hash=8d8727ec4f2514a26154720f92a624bd1752600f0876b925b3561987788aea68)
+        version: 6.1.0
       effect:
         specifier: 4.0.0
         version: 4.0.0
@@ -10144,10 +10136,10 @@ snapshots:
       es-errors: 1.3.0
       gopd: 1.2.0
 
-  echarts@6.1.0(patch_hash=8d8727ec4f2514a26154720f92a624bd1752600f0876b925b3561987788aea68):
+  echarts@6.1.0:
     dependencies:
       tslib: 2.3.0
-      zrender: 6.1.0(patch_hash=6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae)
+      zrender: 6.1.0
 
   effect@4.0.0: {}
 
@@ -14171,7 +14163,7 @@ snapshots:
 
   zod@4.6.7: {}
 
-  zrender@6.1.0(patch_hash=6ba6492b005a934121d93e0fb28a43aa080d6dc13644a516cdc6712d2d02c6ae):
+  zrender@6.1.0:
     dependencies:
       tslib: 2.3.0
 

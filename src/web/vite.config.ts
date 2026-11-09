@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { chartSourceFixes } from "./vite-plugins/chart-source-fixes.ts";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,7 +13,7 @@ export default defineConfig({
   // repo (untracked foreign checkouts included) the app root. Pin the root
   // to the SPA dir.
   root: __dirname,
-  plugins: [react(), tailwindcss(), emptyProjectFallback()],
+  plugins: [chartSourceFixes(), react(), tailwindcss(), emptyProjectFallback()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -31,6 +32,9 @@ export default defineConfig({
   // `features/editor/lazy-editor-deps.unit.test.ts` fails when the editor
   // imports a bare specifier missing from this list.
   optimizeDeps: {
+    // The dev pre-bundle reads echarts and zrender without going through
+    // `plugins`, so the chart-library fixes are registered here as well.
+    rolldownOptions: { plugins: [chartSourceFixes()] },
     include: [
       "react",
       "@tanstack/react-router",

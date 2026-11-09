@@ -24,7 +24,6 @@ RUN corepack enable
 # The manifests alone, so the install layers cache across source edits.
 # pnpm-workspace.yaml carries minimumReleaseAge, trustPolicy and allowBuilds.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY patches/ patches/
 COPY src/web/package.json src/web/
 
 # The project to bake: this repository's own, unless a `project` build
