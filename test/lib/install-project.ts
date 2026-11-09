@@ -35,17 +35,12 @@ function consumerEnvironment(): NodeJS.ProcessEnv {
 }
 
 function run(command: PackageManager, args: string[], cwd: string): string {
-  const result = spawnSync(
-     
-    command,
-    args,
-    {
-      cwd,
-      env: consumerEnvironment(),
-      encoding: "utf8",
-      maxBuffer: 16 * 1024 * 1024,
-    },
-  );
+  const result = spawnSync(command, args, {
+    cwd,
+    env: consumerEnvironment(),
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
   if (result.status !== 0) {
     throw new Error(
       `${command} ${args.join(" ")} exited ${result.status} in ${cwd}:\n${result.stderr}${result.stdout}`,
