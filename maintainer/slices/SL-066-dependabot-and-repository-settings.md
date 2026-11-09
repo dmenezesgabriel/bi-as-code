@@ -1,6 +1,6 @@
 # SL-066 — Dependabot opens conventional-titled update PRs and the repository settings are written down
 
-Milestone: Phase 9 — Open-source release · State: open · Depends on: SL-064, SL-065 (both shipped) · Closes: GAP-091
+Milestone: Phase 9 — Open-source release · State: partial · Depends on: SL-064, SL-065 (both shipped) · Closes: GAP-091
 
 > Delete this file when the slice ships.
 >
@@ -104,7 +104,7 @@ All eight rows were measured on 2026-11-08 with the `gh api … --jq` GETs named
 ## Tasks
 
 - [x] T1 — `.github/dependabot.yml`: github-actions, npm and docker, weekly, `cooldown.default-days: 7`, explicit `commit-message`, one minor/patch group per ecosystem. RED first: a test parses the file with `yaml` and asserts each ecosystem's cooldown, schedule and prefix, then pipes the worst-case title each prefix can produce through `pnpm exec commitlint` and expects exit 0. Validate the file against the SchemaStore `dependabot-2.0` schema once, by hand, and say so in the commit body.
-- [ ] T2 — Durable record: an ADR for the policy values (squash only with the PR title as the commit, SHA pinning required, `selected` actions, 0 approvals, the required-check list) and a settings checklist in `CONTRIBUTING.md` with the owner's GitHub UI click path. Docs only. Backlog row edited in place.
+- [x] T2 — Durable record: an ADR for the policy values (squash only with the PR title as the commit, SHA pinning required, `selected` actions, 0 approvals, the required-check list) and a settings checklist in `CONTRIBUTING.md` with the owner's GitHub UI click path. Docs only. Backlog row edited in place.
 - [ ] T3 — Waits for the public flip, like SL-062 T2: the owner merges to `master`, the first Dependabot run answers the three open decisions, the owner applies the checklist in the UI. Then GAP-091 is marked closed in `maintainer/research/release-and-security.md` and this file is deleted.
 
 ## Out of scope
