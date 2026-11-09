@@ -19,9 +19,105 @@ importers:
 
   .:
     dependencies:
+      '@base-ui/react':
+        specifier: 1.8.0
+        version: 1.8.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@codemirror/lang-html':
+        specifier: 6.4.12
+        version: 6.4.12
+      '@codemirror/lang-markdown':
+        specifier: 6.5.2
+        version: 6.5.2
+      '@codemirror/lang-sql':
+        specifier: 6.10.0
+        version: 6.10.0
+      '@codemirror/language':
+        specifier: 6.13.1
+        version: 6.13.1
+      '@codemirror/state':
+        specifier: 6.7.6
+        version: 6.7.6
+      '@codemirror/theme-one-dark':
+        specifier: 6.1.3
+        version: 6.1.3
+      '@codemirror/view':
+        specifier: 6.43.14
+        version: 6.43.14
+      '@duckdb/duckdb-wasm':
+        specifier: 1.32.0
+        version: 1.32.0
+      '@mdx-js/mdx':
+        specifier: 3.1.1
+        version: 3.1.1
+      '@tailwindcss/vite':
+        specifier: 4.2.2
+        version: 4.2.2(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@tanstack/react-router':
+        specifier: 1.170.41
+        version: 1.170.41(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@vitejs/plugin-react':
+        specifier: 6.0.2
+        version: 6.0.2(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
+      codemirror:
+        specifier: 6.0.2
+        version: 6.0.2
+      echarts:
+        specifier: 6.1.0
+        version: 6.1.0
+      effect:
+        specifier: 4.0.0
+        version: 4.0.0
       i18next:
         specifier: 26.5.2
         version: 26.5.2(typescript@6.0.3)
+      lucide-react:
+        specifier: 1.49.0
+        version: 1.49.0(@types/react@19.2.14)(react@19.2.6)
+      mdast-util-mdx-jsx:
+        specifier: 3.2.0
+        version: 3.2.0
+      mdast-util-to-string:
+        specifier: 4.0.0
+        version: 4.0.0
+      minisearch:
+        specifier: 7.2.0
+        version: 7.2.0
+      react:
+        specifier: 19.2.6
+        version: 19.2.6
+      react-dom:
+        specifier: 19.2.6
+        version: 19.2.6(react@19.2.6)
+      remark-gfm:
+        specifier: 4.0.1
+        version: 4.0.1
+      shiki:
+        specifier: 4.4.3
+        version: 4.4.3
+      tailwind-merge:
+        specifier: 3.7.0
+        version: 3.7.0
+      tailwindcss:
+        specifier: 4.2.2
+        version: 4.2.2
+      unified:
+        specifier: 11.0.5
+        version: 11.0.5
+      unist-util-visit:
+        specifier: 5.1.0
+        version: 5.1.0
+      vfile:
+        specifier: 6.0.3
+        version: 6.0.3
+      vfile-matter:
+        specifier: 5.0.1
+        version: 5.0.1
       vite:
         specifier: 8.2.4
         version: 8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
@@ -41,9 +137,6 @@ importers:
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.6.0(jiti@2.7.0))
-      '@mdx-js/mdx':
-        specifier: 3.1.1
-        version: 3.1.1
       '@playwright/test':
         specifier: 1.62.1
         version: 1.62.1
@@ -53,9 +146,6 @@ importers:
       '@stryker-mutator/vitest-runner':
         specifier: 10.0.0
         version: 10.0.0(@stryker-mutator/core@10.0.0(@types/node@24.0.10))(vitest@4.1.12)
-      '@tailwindcss/vite':
-        specifier: 4.2.2
-        version: 4.2.2(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: 6.6.3
         version: 6.6.3
@@ -74,9 +164,6 @@ importers:
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.14)
-      '@vitejs/plugin-react':
-        specifier: 6.0.2
-        version: 6.0.2(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 4.1.12
         version: 4.1.12(vitest@4.1.12)
@@ -125,27 +212,12 @@ importers:
       lint-staged:
         specifier: 15.5.1
         version: 15.5.1
-      mdast-util-mdx-jsx:
-        specifier: 3.2.0
-        version: 3.2.0
-      mdast-util-to-string:
-        specifier: 4.0.0
-        version: 4.0.0
       msw:
         specifier: 2.15.0
         version: 2.15.0(@types/node@24.0.10)(typescript@6.0.3)
       prettier:
         specifier: 3.8.3
         version: 3.8.3
-      react:
-        specifier: 19.2.6
-        version: 19.2.6
-      react-dom:
-        specifier: 19.2.6
-        version: 19.2.6(react@19.2.6)
-      remark-gfm:
-        specifier: 4.0.1
-        version: 4.0.1
       storybook:
         specifier: 10.6.2
         version: 10.6.2(@types/react@19.2.14)(prettier@3.8.3)(react@19.2.6)
@@ -155,9 +227,6 @@ importers:
       stylelint-config-standard:
         specifier: 38.0.0
         version: 38.0.0(stylelint@16.18.0(typescript@6.0.3))
-      tailwindcss:
-        specifier: 4.2.2
-        version: 4.2.2
       testcontainers:
         specifier: 12.2.1
         version: 12.2.1
@@ -167,87 +236,11 @@ importers:
       typescript-eslint:
         specifier: 8.63.0
         version: 8.63.0(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3)
-      unified:
-        specifier: 11.0.5
-        version: 11.0.5
-      unist-util-visit:
-        specifier: 5.1.0
-        version: 5.1.0
-      vfile:
-        specifier: 6.0.3
-        version: 6.0.3
-      vfile-matter:
-        specifier: 5.0.1
-        version: 5.0.1
       vitest:
         specifier: 4.1.12
         version: 4.1.12(@types/node@24.0.10)(@vitest/coverage-v8@4.1.12)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.0.10)(typescript@6.0.3))(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   src/web:
-    dependencies:
-      '@base-ui/react':
-        specifier: 1.8.0
-        version: 1.8.0(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@codemirror/lang-html':
-        specifier: 6.4.12
-        version: 6.4.12
-      '@codemirror/lang-markdown':
-        specifier: 6.5.2
-        version: 6.5.2
-      '@codemirror/lang-sql':
-        specifier: 6.10.0
-        version: 6.10.0
-      '@codemirror/language':
-        specifier: 6.13.1
-        version: 6.13.1
-      '@codemirror/state':
-        specifier: 6.7.6
-        version: 6.7.6
-      '@codemirror/theme-one-dark':
-        specifier: 6.1.3
-        version: 6.1.3
-      '@codemirror/view':
-        specifier: 6.43.14
-        version: 6.43.14
-      '@duckdb/duckdb-wasm':
-        specifier: 1.32.0
-        version: 1.32.0
-      '@tanstack/react-router':
-        specifier: 1.170.41
-        version: 1.170.41(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      apache-arrow:
-        specifier: 17.0.0
-        version: 17.0.0
-      clsx:
-        specifier: 2.1.1
-        version: 2.1.1
-      codemirror:
-        specifier: 6.0.2
-        version: 6.0.2
-      echarts:
-        specifier: 6.1.0
-        version: 6.1.0
-      effect:
-        specifier: 4.0.0
-        version: 4.0.0
-      lucide-react:
-        specifier: 1.49.0
-        version: 1.49.0(@types/react@19.2.14)(react@19.2.6)
-      minisearch:
-        specifier: 7.2.0
-        version: 7.2.0
-      react:
-        specifier: 19.2.6
-        version: 19.2.6
-      react-dom:
-        specifier: 19.2.6
-        version: 19.2.6(react@19.2.6)
-      shiki:
-        specifier: 4.4.3
-        version: 4.4.3
-      tailwind-merge:
-        specifier: 3.7.0
-        version: 3.7.0
     devDependencies:
       '@storybook/addon-docs':
         specifier: 10.6.2
@@ -258,27 +251,15 @@ importers:
       '@storybook/react-vite':
         specifier: 10.6.2
         version: 10.6.2(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@10.6.2(@types/react@19.2.14)(prettier@3.8.3)(react@19.2.6))(typescript@7.0.2)(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-      '@tailwindcss/vite':
-        specifier: 4.2.2
-        version: 4.2.2(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@types/react':
         specifier: 19.2.14
         version: 19.2.14
       '@types/react-dom':
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.14)
-      '@vitejs/plugin-react':
-        specifier: 6.0.2
-        version: 6.0.2(vite@8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       msw:
         specifier: 2.15.0
         version: 2.15.0(@types/node@24.0.10)(typescript@7.0.2)
-      tailwindcss:
-        specifier: 4.2.2
-        version: 4.2.2
-      vite:
-        specifier: 8.2.4
-        version: 8.2.4(@types/node@24.0.10)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
 
 packages:
 

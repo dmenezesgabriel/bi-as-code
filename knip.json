@@ -35,9 +35,6 @@
   ],
   "ignoreDependencies": [
     "minimal",
-    "@tailwindcss/vite",
-    "tailwindcss",
-    "@vitejs/plugin-react",
     "msw",
     // Imported only by src/web/vitest.setup.ts (ignored above).
     "@testing-library/jest-dom"
