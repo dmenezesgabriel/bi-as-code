@@ -1,0 +1,49 @@
+name: Release
+
+# Turns merged conventional commits into a release pull request: release-please
+# reads the history since the last release, bumps `package.json`, writes
+# `CHANGELOG.md` and keeps one open PR up to date. Its settings live in
+# `release-please-config.json` and `.release-please-manifest.json`; the action
+# reads both by their default names.
+on:
+  push:
+    branches: [master]
+
+# Default-deny: the job writes through a GitHub App token, so the workflow's own
+# token needs no scope at all.
+permissions: {}
+
+# A release run never cancels another: a half-finished release would leave the
+# release PR and its tag out of step.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: release-please
+    # A fork has no App secrets, and no run there should try to mint a token.
+    if: ${{ github.repository == 'dmenezesgabriel/bi-as-code' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # `GITHUB_TOKEN` creates a pull request that triggers no workflow, so the
+      # release PR would never get its required checks and could never merge.
+      # An App installation token has no such limit. The token is narrowed to
+      # what release-please documents it needs (its README, "Workflow
+      # Permissions"): the release commit and tag, the pull request, and the
+      # labels that mark a release PR as pending or tagged.
+      - name: Mint the release App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      - name: Open or update the release pull request
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
