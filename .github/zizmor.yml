@@ -10,3 +10,4 @@ rules:
     ignore:
       - ci.yml
       - conventional-commits.yml
+      - release.yml
