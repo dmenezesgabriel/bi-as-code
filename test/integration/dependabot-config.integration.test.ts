@@ -53,6 +53,13 @@ function longestManifestDependency(): string {
   );
 }
 
+/**
+ * Each title test runs the commitlint CLI three times in a child process,
+ * about 0.7 s apiece on an idle host and more while vitest's workers share the
+ * CPU, so vitest's 5 s default expires under the full gate.
+ */
+const COMMITLINT_SPAWNS_TIMEOUT_MS = 30_000;
+
 function commitlintStatus(header: string): { status: number; output: string } {
   const run = spawnSync(process.execPath, [COMMITLINT_CLI], {
     cwd: REPO_ROOT,
@@ -127,5 +134,6 @@ describe("dependabot.yml", () => {
 
       expect(failures).toEqual([]);
     },
+    COMMITLINT_SPAWNS_TIMEOUT_MS,
   );
 });
