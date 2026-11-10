@@ -144,7 +144,7 @@ group by region
 `biac build` writes one module for each export and prints its path:
 
 ```sh
-bin/biac build my-site
+npx biac build
 ```
 
 The module for this widget is `build/widgets/revenue-by-region.js`, which the published site serves at:

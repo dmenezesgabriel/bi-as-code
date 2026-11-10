@@ -38,7 +38,7 @@ Nothing is durable. The bucket, the keys, the realm and the Terraform state live
 
 ## Run it
 
-Needs Docker with compose v2 and about 1.5 GB of free memory (Keycloak is a JVM at about 800 MiB; the whole stack measured about 1.2 GiB after a signed-in session).
+Needs Docker with compose v2 and about 1.5 GB of free memory (Keycloak is a JVM at about 800 MiB; the whole stack measured about 1.2 GiB after a signed-in session). The `examples/s3-sso/` stack is in the biac repository and not in the installed package, so these steps run from a clone.
 
 ```sh
 # From the repository root: build biac, then the project's static output

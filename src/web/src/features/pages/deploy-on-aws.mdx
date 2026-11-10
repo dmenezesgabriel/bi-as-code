@@ -12,7 +12,7 @@ Pick one of two topologies. In the first, `biac serve` checks a shared username 
 
 ## Build and run the image
 
-The `Dockerfile` at the root of the biac clone bakes one project into the image. Its build stage runs `biac build` and every data loader, so the image holds only the result. Name the project's directory as the `project` build context, here the `../my-site` that Getting started creates next to the clone. Leave the flag out to bake the clone's own project, the `pages/` and `biac.config.ts` beside the `Dockerfile`. The flag needs BuildKit, Docker's default builder. Build the image, then run it locally with the same restrictions the task definition below applies:
+The `Dockerfile` at the root of the biac clone, not in the installed package, bakes one project into the image. Its build stage runs `biac build` and every data loader, so the image holds only the result. Name the project's directory as the `project` build context, here a `../my-site` next to the clone, such as the project Getting started creates. Leave the flag out to bake the clone's own project, the `pages/` and `biac.config.ts` beside the `Dockerfile`. The flag needs BuildKit, Docker's default builder. Build the image, then run it locally with the same restrictions the task definition below applies:
 
 ```sh
 docker build --build-context project=../my-site -t biac-serve .

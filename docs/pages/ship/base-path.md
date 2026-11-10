@@ -27,8 +27,10 @@ A relative base such as `./` is refused the same way. The build copies the site'
 
 ## Build
 
+Run the commands from the project directory, where `npm i -D biac` installed `biac`.
+
 ```sh
-bin/biac build my-site
+npx biac build
 ```
 
 The files in `build/` sit where they always do: `index.html` and `assets/` are at its top, not inside a `sales/` folder. What changes is every address the files contain. The scripts and styles in `index.html` become `/sales/assets/...`, the favicon becomes `/sales/favicon.svg`, and the browser asks for the data files and the exported widget modules beneath `/sales/data/` and `/sales/widgets/`.
@@ -50,7 +52,7 @@ The built page links to `/sales/details/`, and clicking it opens that page. The 
 `biac preview` serves `build/` beneath the same `base`, so you see the site at the address a host will give it:
 
 ```sh
-bin/biac preview my-site
+npx biac preview
 ```
 
 It prints `http://localhost:4173/sales/`. Open that address: the page and its table load from `/sales/assets/` and `/sales/data/`.
