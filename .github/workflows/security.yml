@@ -315,17 +315,19 @@ jobs:
           echo "${GRYPE_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum -c -
           tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}" grype
 
-      # The image is the last `FROM` of the Dockerfile, the runtime stage that
-      # ships, read at run time so a base bump cannot leave this scan on a stale
-      # digest. It is fetched without a Docker daemon (`registry:`). Only a CVE
-      # with a fix blocks: an unfixed one is listed and nothing can be done
-      # about it. The vulnerability database is fetched fresh on purpose, since
-      # a weekly run exists to meet advisories published after the last commit.
-      # A red run means the base needs a newer digest.
-      - name: Scan the runtime base image
+      # The image is the Dockerfile's `node-base` stage: the one pinned digest
+      # every stage derives from, with npm removed. BuildKit builds only the
+      # stage named, so no project is compiled. Only a CVE with a fix blocks:
+      # an unfixed one is listed and nothing can be done about it. The
+      # vulnerability database is fetched fresh on purpose, since a weekly run
+      # exists to meet advisories published after the last commit. A red run
+      # means the base needs a newer digest.
+      - name: Build the base image stage
+        run: docker build --target node-base --tag biac-node-base:scan .
+
+      - name: Scan the base image
         run: |
-          image="$(grep -E '^FROM ' Dockerfile | tail -1 | cut -d' ' -f2)"
-          "${RUNNER_TEMP}/grype" "registry:${image}" --platform linux/amd64 \
+          "${RUNNER_TEMP}/grype" docker:biac-node-base:scan \
             --only-fixed --fail-on medium
 
   codeql:
