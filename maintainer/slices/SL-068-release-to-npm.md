@@ -1,4 +1,4 @@
-# SL-068 — A merged fix or feature becomes a release PR, and merging it publishes `biac` to npm with provenance
+# SL-068 — A merged fix or feature becomes a release PR, and merging it publishes `@biac/cli` to npm with provenance
 
 Milestone: Phase 9 — Open-source release · State: partial · Depends on: SL-064, SL-065, SL-067 (all shipped) · Closes: GAP-096, GAP-097
 
@@ -8,7 +8,7 @@ Milestone: Phase 9 — Open-source release · State: partial · Depends on: SL-0
 
 ## Outcome
 
-The maintainer merges a `fix:` or `feat:` pull request, finds a release pull request that bumps the version and writes the changelog, merges it, approves one environment prompt, and `npm i -D biac` then gives a reader the published version with a provenance attestation.
+The maintainer merges a `fix:` or `feat:` pull request, finds a release pull request that bumps the version and writes the changelog, merges it, approves one environment prompt, and `npm i -D @biac/cli` then gives a reader the published version with a provenance attestation.
 
 ## Demo
 
@@ -18,8 +18,8 @@ Preconditions are the owner-only acts in "Owner-only acts" below; a session cann
 2. `gh pr checks <number>` shows the required checks (`gate`, `e2e-browser (1/4)` … `(4/4)`, `storybook`, `commit-messages`, `pull-request-title`, the scanners) running on the release PR: they run only because the PR was opened with a GitHub App token, not `GITHUB_TOKEN`.
 3. Merge the release PR. `git ls-remote --tags origin v0.1.1` lists the tag and `gh release view v0.1.1` shows the notes.
 4. The `publish` job waits on the `npm` environment. Approve it in the Actions UI.
-5. `npm view biac@0.1.1 version` prints `0.1.1`, and in an empty directory `npm i biac@0.1.1 && npm audit signatures` reports a verified attestation for `biac`.
-6. In another empty directory `npm i -D biac && npx biac build` exits 0 against the project made by `docs/pages/getting-started.md`, and the page reads the same commands the reader just ran.
+5. `npm view @biac/cli@0.1.1 version` prints `0.1.1`, and in an empty directory `npm i @biac/cli@0.1.1 && npm audit signatures` reports a verified attestation for `@biac/cli`.
+6. In another empty directory `npm i -D @biac/cli && npx biac build` exits 0 against the project made by `docs/pages/getting-started.md`, and the page reads the same commands the reader just ran.
 
 ## Who else implements this
 
@@ -142,8 +142,8 @@ Nothing in the ledger claims `shipped` for any part of this slice: GAP-096 and G
 | Add `googleapis/release-please-action` to the Actions allow-list (Settings → Actions → General)                                                                                                                                                  | The first run of `release.yml`         |
 | Create environment `npm` with a required reviewer                                                                                                                                                                                                | The demo's step 4                      |
 | Make the repository public (owner, 2026-11-06: only once SL-063…SL-068 have shipped)                                                                                                                                                             | The first publish; provenance needs it |
-| npm account 2FA, then a manual `npm publish` of `biac@0.1.0` (npm requires the package to exist)                                                                                                                                                 | `npm trust`                            |
-| `npm trust github biac --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`, within 2 days of creating it                                                                                               | The demo's step 4                      |
+| npm account 2FA, then a manual `npm publish` of `@biac/cli@0.1.0` (npm requires the package to exist)                                                                                                                                            | `npm trust`                            |
+| `npm trust github @biac/cli --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`, within 2 days of creating it                                                                                          | The demo's step 4                      |
 
 ## Tasks
 

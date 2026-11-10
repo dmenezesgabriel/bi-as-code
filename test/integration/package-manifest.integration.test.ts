@@ -40,6 +40,8 @@ interface PackResult {
 interface Manifest {
   name: string;
   private?: boolean;
+  bin?: Record<string, string>;
+  publishConfig?: { access?: string };
   description?: string;
   keywords?: string[];
   homepage?: string;
@@ -86,14 +88,27 @@ describe("the published package", () => {
     packedPaths = packed.files.map((file) => file.path);
   }, 120_000);
 
-  it("is named biac and is not private", () => {
+  // The registry refused the unscoped name `biac` as too similar to existing
+  // packages, so the package lives under the `@biac` scope; the command it
+  // installs is still `biac` (the `bin` map below).
+  it("is named @biac/cli and is not private", () => {
     // Arrange
     const manifest = readManifest();
 
     // Assert
-    expect(manifest.name).toBe("biac");
+    expect(manifest.name).toBe("@biac/cli");
     expect(manifest.private).toBeUndefined();
     expect(manifest.repository).toBeDefined();
+  });
+
+  it("installs the biac command", () => {
+    expect(readManifest().bin).toEqual({ biac: "bin/biac" });
+  });
+
+  // A scoped package is restricted by default; without this, `npm publish`
+  // from the release workflow fails with a 402.
+  it("publishes publicly", () => {
+    expect(readManifest().publishConfig).toEqual({ access: "public" });
   });
 
   it("compiles the CLI before every pack", () => {

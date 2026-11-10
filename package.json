@@ -1,5 +1,5 @@
 {
-  "name": "biac",
+  "name": "@biac/cli",
   "version": "0.1.0",
   "description": "Business intelligence as code: turn Markdown pages and data files into a BI site",
   "keywords": [
@@ -29,6 +29,9 @@
   },
   "bin": {
     "biac": "bin/biac"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "bin",
