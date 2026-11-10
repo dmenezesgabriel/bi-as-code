@@ -18,7 +18,7 @@ keywords:
 
 ## Build
 
-Run the commands from the project directory, where `npm i -D biac` installed `biac`.
+Run the commands from the project directory, where `npm i -D @biac/cli` installed the `biac` command.
 
 ```sh
 npx biac build

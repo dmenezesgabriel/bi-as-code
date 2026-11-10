@@ -18,7 +18,7 @@ Make a directory for your project and install biac in it:
 ```sh
 mkdir my-site
 cd my-site
-npm i -D biac
+npm i -D @biac/cli
 ```
 
 `npx biac` now runs the installed command. Every command below runs from the `my-site` directory.

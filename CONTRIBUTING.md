@@ -53,16 +53,17 @@ The merge rules, the ruleset and the Actions policy live in GitHub, not in the r
 
 ## Releasing
 
-A merged `fix:` or `feat:` opens a release pull request; merging it tags the release, and approving the `npm` environment publishes `biac` to npm with provenance. The design and the reasons are in [ADR-0037](maintainer/adr/0037-releases-come-from-conventional-commits-and-publish-behind-an-environment.md). The owner does these once, in this order:
+A merged `fix:` or `feat:` opens a release pull request; merging it tags the release, and approving the `npm` environment publishes `@biac/cli` to npm with provenance. The design and the reasons are in [ADR-0037](maintainer/adr/0037-releases-come-from-conventional-commits-and-publish-behind-an-environment.md). The owner does these once, in this order:
 
 - Create a GitHub App with **Contents**, **Issues** and **Pull requests** read and write (`release.yml` requests all three, and the token step fails if the installation lacks one), install it on this repository, and store its client id as the Actions secret `RELEASE_APP_ID` and its private key as `RELEASE_APP_PRIVATE_KEY`. Without them the `release-please` job fails.
 - Settings → Environments → New environment `npm`, tick **Required reviewers** and add yourself.
-- Turn on two-factor authentication for the npm account, then publish `biac@0.1.0` by hand (`npm publish` from a clean checkout of that commit): npm accepts a trusted publisher only for a package that exists.
-- Within 2 days of creating it, run `npm trust github biac --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`. An unused trust expires after 2 days.
+- Create the npm organization `biac` on npmjs.com: it is the scope of `@biac/cli`, because npm refuses the unscoped name `biac` as too similar to existing packages.
+- Turn on two-factor authentication for the npm account, then publish `@biac/cli@0.1.0` by hand (`npm publish` from a clean checkout of that commit): npm accepts a trusted publisher only for a package that exists.
+- Within 2 days of creating it, run `npm trust github @biac/cli --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`. An unused trust expires after 2 days.
 - Add `"bootstrap-sha": "<the 0.1.0 commit>"` to `release-please-config.json`, so the first release pull request is `0.1.1` after a `fix:` rather than `0.2.0`.
 - Make the repository public before the first publish from Actions: provenance needs a public repository.
 
-To release: merge a `fix:` or `feat:` pull request, merge the release pull request that appears, approve the `npm` environment in the Actions run, then check `npm view biac version` and, in an empty directory, `npm i biac && npm audit signatures`. Renaming `release.yml` or the `npm` environment breaks the trust until `npm trust` is run again.
+To release: merge a `fix:` or `feat:` pull request, merge the release pull request that appears, approve the `npm` environment in the Actions run, then check `npm view @biac/cli version` and, in an empty directory, `npm i @biac/cli && npm audit signatures`. Renaming `release.yml` or the `npm` environment breaks the trust until `npm trust` is run again.
 
 ## Picking up work
 

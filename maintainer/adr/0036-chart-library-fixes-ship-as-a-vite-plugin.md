@@ -8,7 +8,7 @@ Relates to: [ADR-0001](0001-record-architecture-decisions.md)
 
 The SPA bundles echarts and zrender, and two behaviours of version 6.1.0 break it. A heatmap unmounted mid-paint runs a pending `_paintList` continuation after `Painter.dispose` and reads the nulled layer stack. A brush that restyles series through `updateVisual` leaves hovered bars grey after the brush is cleared, because that path skips the `clearStates`/`updateStates` wrap that `renderSeries` applies. Both are fixed by a short edit to one file each: `echarts/lib/core/echarts.js` and `zrender/lib/canvas/Painter.js`. Neither is fixed on the libraries' main branches.
 
-The fixes were pnpm `patchedDependencies`. pnpm applies a patch while it installs inside this repository, so a project that runs `npm i biac` or `pnpm add biac` receives the unpatched libraries and `biac build` and `biac dev` bundle them as they are. The facts that bind the design, measured on 2026-11-09 against the packed package:
+The fixes were pnpm `patchedDependencies`. pnpm applies a patch while it installs inside this repository, so a project that runs `npm i @biac/cli` or `pnpm add @biac/cli` receives the unpatched libraries and `biac build` and `biac dev` bundle them as they are. The facts that bind the design, measured on 2026-11-09 against the packed package:
 
 - The installed `node_modules/echarts` and `node_modules/zrender` are 6.1.0 without the fixes, and the built bundle lacks the zrender line.
 - A package that ships both libraries as `bundledDependencies` weighs 13,473,617 B packed, 65,698,047 B unpacked, 2,085 files; the package without them weighs 330,381 B packed.

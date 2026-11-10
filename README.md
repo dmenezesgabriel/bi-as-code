@@ -22,8 +22,10 @@ You need [Node.js](https://nodejs.org/) 24.12 or a later 24.x release.
 ```sh
 mkdir my-site
 cd my-site
-npm i -D biac
+npm i -D @biac/cli
 ```
+
+The package is `@biac/cli`; it installs the `biac` command.
 
 ## Quick start
 

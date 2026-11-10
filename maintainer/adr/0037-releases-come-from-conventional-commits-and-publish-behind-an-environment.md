@@ -48,14 +48,14 @@ The facts that bind the design, fetched on 2026-11-10:
 
 ## Decision
 
-A merged `fix:` or `feat:` produces one release pull request, merging it tags and creates the GitHub Release, and a reviewer's approval of the `npm` environment publishes `biac` with provenance, all from `.github/workflows/release.yml`.
+A merged `fix:` or `feat:` produces one release pull request, merging it tags and creates the GitHub Release, and a reviewer's approval of the `npm` environment publishes `@biac/cli` with provenance, all from `.github/workflows/release.yml`.
 
 - **Version**: release-please in manifest mode (`release-please-config.json`: `release-type: node`, `include-component-in-tag: false`, `bump-minor-pre-major`; `.release-please-manifest.json`: `{".": "0.1.0"}`). Before `1.0.0` a `feat:` bumps the minor and a `fix:` the patch. `CHANGELOG.md` is generated and listed in `.prettierignore`.
 - **Jobs**: `release-please` runs on every push to `master` in this repository only, and mints a GitHub App installation token narrowed to `contents`, `pull-requests` and `issues` write, so the release PR starts the required checks. `publish` runs only when `release_created` is `true`, checks out `tag_name`, builds through `prepack` and runs `npm publish` from the Node that `.github/actions/setup` installs.
 - **Permissions**: the workflow's `permissions` is `{}`; `publish` alone gets `contents: read` and `id-token: write`. A run never cancels another (`concurrency` with `cancel-in-progress: false`).
 - **Gate**: the `publish` job is bound to environment `npm` with a required reviewer, and npm's trusted publisher names `release.yml` and `npm`. The release PR is merged by hand.
 - **Allow-list**: `googleapis/release-please-action@*` joins `actions/*, github/*, ossf/*`. SHA pinning stays required, and the workflow pins the action to a full commit SHA with a `# vX.Y.Z` comment.
-- **Bootstrap**: npm accepts a trusted publisher only for an existing package, so the owner publishes `0.1.0` by hand once, runs `npm trust github biac --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish` within 2 days, and then adds `bootstrap-sha` (that commit) to `release-please-config.json` so the first release PR is `0.1.1` after a `fix:`. Without it the history holds `feat:` commits and the first release PR would be `0.2.0`.
+- **Bootstrap**: npm accepts a trusted publisher only for an existing package, so the owner publishes `0.1.0` by hand once, runs `npm trust github @biac/cli --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish` within 2 days, and then adds `bootstrap-sha` (that commit) to `release-please-config.json` so the first release PR is `0.1.1` after a `fix:`. Without it the history holds `feat:` commits and the first release PR would be `0.2.0`.
 
 The owner's one-time steps (App, secrets, environment, npm trust, public repository) are the checklist in `CONTRIBUTING.md`.
 
