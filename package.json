@@ -1,6 +1,6 @@
 {
   "name": "biac",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Business intelligence as code: turn Markdown pages and data files into a BI site",
   "keywords": [
     "business-intelligence",
