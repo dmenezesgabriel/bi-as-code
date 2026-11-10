@@ -34,7 +34,7 @@ export function manifestModuleSource(
     "const hotPageModules = new Map();",
     "const pageUpdateListeners = new Set();",
     `export const pages = [\n${entries.map(entryRow).join(",\n")}\n];`,
-    `export const navTree = ${JSON.stringify(buildNavTree(entries, directories))};`,
+    `export const navTree = ${jsLiteral(buildNavTree(entries, directories))};`,
     "export function subscribePageUpdates(listener) {",
     "  pageUpdateListeners.add(listener);",
     "  return () => void pageUpdateListeners.delete(listener);",
@@ -44,15 +44,15 @@ export function manifestModuleSource(
 }
 
 function entryRow(entry: PageManifestEntry): string {
-  const file = JSON.stringify(entry.file);
+  const file = jsLiteral(entry.file);
   const fields = [
-    `route: ${JSON.stringify(entry.route)}`,
+    `route: ${jsLiteral(entry.route)}`,
     `file: ${file}`,
     `isIndex: ${entry.isIndex}`,
-    entry.title === undefined ? null : `title: ${JSON.stringify(entry.title)}`,
+    entry.title === undefined ? null : `title: ${jsLiteral(entry.title)}`,
     entry.sidebarPosition === undefined
       ? null
-      : `sidebarPosition: ${JSON.stringify(entry.sidebarPosition)}`,
+      : `sidebarPosition: ${jsLiteral(entry.sidebarPosition)}`,
     entry.sidebar === undefined ? null : `sidebar: ${entry.sidebar}`,
     entry.header === undefined ? null : `header: ${entry.header}`,
     `load: async () => hotPageModules.get(${file}) ?? import(${pageId(entry)})`,
@@ -70,7 +70,7 @@ function hotAcceptBlock(entries: PageManifestEntry[]): string[] {
   return [
     "if (import.meta.hot) {",
     `  import.meta.hot.accept([${entries.map(pageId).join(", ")}], (modules) => {`,
-    `    const files = ${JSON.stringify(entries.map((entry) => entry.file))};`,
+    `    const files = ${jsLiteral(entries.map((entry) => entry.file))};`,
     "    modules.forEach((mod, i) => mod && hotPageModules.set(files[i], mod));",
     "    pageUpdateListeners.forEach((listener) => listener());",
     "  });",
@@ -79,8 +79,26 @@ function hotAcceptBlock(entries: PageManifestEntry[]): string[] {
   ];
 }
 
+/**
+ * A JavaScript literal for `value`, safe to embed in generated source. The
+ * values come from the project directory (page file names, titles, nav
+ * folders). `JSON.stringify` alone leaves U+2028 and U+2029 raw, which ended a
+ * string literal before ES2019, and `<` raw, which lets `</script>` close an
+ * inline script if the module is ever inlined into HTML. Escaping those four
+ * characters keeps the output valid JSON with the same value.
+ *
+ * @example
+ * jsLiteral("a</script>"); // → "a\\u003c/script\\u003e", quoted
+ */
+function jsLiteral(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[<>\u2028\u2029]/g,
+    (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+}
+
 function pageId(entry: PageManifestEntry): string {
-  return JSON.stringify(VIRTUAL_PAGE_PREFIX + entry.file);
+  return jsLiteral(VIRTUAL_PAGE_PREFIX + entry.file);
 }
 
 /**
