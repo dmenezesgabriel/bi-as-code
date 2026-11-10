@@ -60,7 +60,7 @@ A merged `fix:` or `feat:` opens a release pull request; merging it tags the rel
 - Create the npm organization `biac` on npmjs.com: it is the scope of `@biac/cli`, because npm refuses the unscoped name `biac` as too similar to existing packages.
 - Turn on two-factor authentication for the npm account, then publish `@biac/cli@0.1.0` by hand (`npm publish` from a clean checkout of that commit): npm accepts a trusted publisher only for a package that exists.
 - Within 2 days of creating it, run `npm trust github @biac/cli --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`. An unused trust expires after 2 days.
-- Add `"bootstrap-sha": "<the 0.1.0 commit>"` to `release-please-config.json`, so the first release pull request is `0.1.1` after a `fix:` rather than `0.2.0`.
+- Add `"bootstrap-sha": "<the full SHA of the commit 0.1.0 was published from>"` to `release-please-config.json`, so the first release pull request is `0.1.1` after a `fix:` rather than `0.2.0`.
 - Make the repository public before the first publish from Actions: provenance needs a public repository.
 
 To release: merge a `fix:` or `feat:` pull request, merge the release pull request that appears, approve the `npm` environment in the Actions run, then check `npm view @biac/cli version` and, in an empty directory, `npm i @biac/cli && npm audit signatures`. Renaming `release.yml` or the `npm` environment breaks the trust until `npm trust` is run again.

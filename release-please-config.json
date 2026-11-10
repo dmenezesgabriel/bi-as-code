@@ -3,6 +3,7 @@
   "release-type": "node",
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
+  "bootstrap-sha": "6fe814460f82a8aa8cf0739c5629527b3202c04a",
   "packages": {
     ".": {}
   }
