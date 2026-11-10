@@ -9,34 +9,29 @@ This tutorial installs biac, then builds a one-page site with a table and a bar 
 
 ## Before you begin
 
-You need:
-
-- [Node.js](https://nodejs.org/) 24.12 or a later 24.x release: `node --version` prints `v24.12.0` or higher.
-- [pnpm](https://pnpm.io/installation) 10: `pnpm --version` prints `10.x`.
-- [Git](https://git-scm.com/).
+You need [Node.js](https://nodejs.org/) 24.12 or a later 24.x release: `node --version` prints `v24.12.0` or higher. It includes `npm`, which installs biac.
 
 ## Install biac
 
-biac is not published to npm yet, so you run it from a clone of its repository. Clone it and build the command-line tool:
+Make a directory for your project and install biac in it:
 
 ```sh
-git clone https://github.com/dmenezesgabriel/bi-as-code.git
-cd bi-as-code
-pnpm install
-pnpm build:cli
+mkdir my-site
+cd my-site
+npm i -D biac
 ```
 
-The `biac` command is now `bin/biac` inside the clone. Every command below runs from the `bi-as-code` directory and names your project's directory as its last argument.
+`npx biac` now runs the installed command. Every command below runs from the `my-site` directory.
 
 ## Create a project
 
-A project is a directory with a `pages/` folder. Make one next to the clone:
+A project is a directory with a `pages/` folder. Add one, and a `data/` folder for the next step:
 
 ```sh
-mkdir -p ../my-site/pages ../my-site/data
+mkdir pages data
 ```
 
-Create `../my-site/pages/index.md` with a heading and a sentence:
+Create `pages/index.md` with a heading and a sentence:
 
 ```md
 # Sales
@@ -47,14 +42,14 @@ Monthly sales by region.
 Start the development server:
 
 ```sh
-bin/biac dev ../my-site
+npx biac dev
 ```
 
 It prints a local URL, `http://localhost:5173/` unless that port is taken. Open it: your page shows its heading and sentence. Leave the server running. It reloads the page each time you save a file.
 
 ## Add data
 
-Create `../my-site/data/sales.csv`:
+Create `data/sales.csv`:
 
 ```csv
 month,region,revenue
@@ -66,7 +61,7 @@ month,region,revenue
 2026-03,South,3400
 ```
 
-A page names the files it queries in its front matter, the block between `---` lines at the top. Replace `../my-site/pages/index.md` with:
+A page names the files it queries in its front matter, the block between `---` lines at the top. Replace `pages/index.md` with:
 
 ````md
 ---
@@ -106,17 +101,17 @@ Save the file. The chart draws one bar per region, and hovering a bar shows its 
 Stop the development server with Ctrl+C, then build:
 
 ```sh
-bin/biac build ../my-site
+npx biac build
 ```
 
-It writes a static site to `../my-site/build` and prints that path. Every query still runs in the reader's browser, so you can copy the `build` directory to any static host.
+It writes a static site to `build` inside `my-site` and prints its full path. Every query still runs in the reader's browser, so you can copy the `build` directory to any static host.
 
 ## Preview the build
 
 Serve the build exactly as a static host would:
 
 ```sh
-bin/biac preview ../my-site
+npx biac preview
 ```
 
 It prints a local URL, `http://localhost:4173/`; if another program holds that port it stops with `Port 4173 is already in use`, and `--port` picks another. Open it: the page, the table and the chart render from the built files. Stop the server with Ctrl+C when you are done.
