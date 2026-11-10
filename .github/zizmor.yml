@@ -10,4 +10,5 @@ rules:
     ignore:
       - ci.yml
       - conventional-commits.yml
+      - deploy.yml
       - release.yml
