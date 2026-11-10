@@ -56,6 +56,7 @@ A merged `fix:` or `feat:` produces one release pull request, merging it tags an
 - **Gate**: the `publish` job is bound to environment `npm` with a required reviewer, and npm's trusted publisher names `release.yml` and `npm`. The release PR is merged by hand.
 - **Allow-list**: `googleapis/release-please-action@*` joins `actions/*, github/*, ossf/*`. SHA pinning stays required, and the workflow pins the action to a full commit SHA with a `# vX.Y.Z` comment.
 - **Bootstrap**: npm accepts a trusted publisher only for an existing package, so the owner publishes `0.1.0` by hand once, runs `npm trust github @biac/cli --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish` within 2 days, and then adds `bootstrap-sha` (that commit) to `release-please-config.json` so the first release PR is `0.1.1` after a `fix:`. Without it the history holds `feat:` commits and the first release PR would be `0.2.0`.
+- **Name**: the first publish of the unscoped `biac` failed with `403 Package name too similar to existing packages`, so the package is `@biac/cli` under the npm organization `biac`. `bin` still installs the `biac` command, and `publishConfig.access` is `public` because a scoped package is restricted by default.
 
 The owner's one-time steps (App, secrets, environment, npm trust, public repository) are the checklist in `CONTRIBUTING.md`.
 
