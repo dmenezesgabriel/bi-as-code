@@ -2,10 +2,12 @@ import type { StorybookConfig } from "@storybook/react-vite";
 import { mergeConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import remarkGfm from "remark-gfm";
+import { STORYBOOK_PREBUNDLED_DEPS } from "./prebundled-deps";
 
 // Colocated stories and MDX docs pages glob, telemetry off, viteFinal
 // merge. The tailwind plugin is merged in so component stories render with
-// the same styles as the app.
+// the same styles as the app, and the pre-bundle list keeps Vite from
+// re-optimizing dependencies while stories load.
 const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(ts|tsx)"],
   // `docs/data` is served at `/data`, as the docs site serves it, so a docs
@@ -41,6 +43,7 @@ const config: StorybookConfig = {
   viteFinal: (viteConfig) =>
     mergeConfig(viteConfig, {
       plugins: [tailwindcss()],
+      optimizeDeps: { include: [...STORYBOOK_PREBUNDLED_DEPS] },
     }),
 };
 
