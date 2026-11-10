@@ -1,0 +1,13 @@
+# zizmor reads this file on its own; no flag names it.
+#
+# The `self-repository` audit asks for GitHub's newer `uses: $/path` form in
+# place of the workspace-relative `uses: ./path` these workflows use for the
+# composite action. `./path` is the form every other project writes and every
+# linter accepts (actionlint 1.7.12 rejects `$/`), so the workflows keep it and
+# accept this one low-severity suggestion: https://docs.zizmor.sh/audits/
+rules:
+  self-repository:
+    ignore:
+      - ci.yml
+      - conventional-commits.yml
+      - release.yml

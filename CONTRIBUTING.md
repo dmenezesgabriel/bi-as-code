@@ -25,6 +25,45 @@ The gate loads the host: run one at a time, and re-run a failure alone before ca
 - **Docs that mention what you changed**: the user documentation is the project in `docs/` (`bin/biac dev docs`). A page that still describes the old behavior is worse than none.
 - **Decisions**: a change to the system's shape gets an ADR in `maintainer/adr/`, written from `maintainer/adr/0000-template.md`.
 
+## Repository settings (owner)
+
+The merge rules, the ruleset and the Actions policy live in GitHub, not in the repository, and the free private plan cannot reach most of them through the API. The owner applies them once, in the UI, after the repository is public. The values and the reasons are in [ADR-0035](maintainer/adr/0035-the-repository-settings-are-written-down-and-applied-in-the-ui.md).
+
+**Settings → General → Pull Requests**
+
+- Leave **Allow squash merging** ticked and untick the merge-commit and rebase-merge checkboxes above it.
+- Set the squash default commit message to the pull request title and the pull request description.
+- Tick **Allow auto-merge** and **Automatically delete head branches**.
+
+**Settings → Rules → Rulesets → New ruleset → New branch ruleset**
+
+- Enforcement status **Active**, target branch `master`.
+- Restrict deletions and block force pushes stay on.
+- Require a pull request before merging, with 0 approvals.
+- Require status checks before merging: `gate`, `e2e-browser (1/4)`, `e2e-browser (2/4)`, `e2e-browser (3/4)`, `e2e-browser (4/4)`, `storybook`, `commit-messages`, `pull-request-title`, `gitleaks`, `osv-scanner`, `pnpm-signatures`, `actionlint`, `zizmor`, `opengrep`. Add `codeql (…)` and `dependency-review` only once a pull request has shown them reporting. A job renamed in a workflow is renamed here in the same change.
+
+**Settings → Actions → General**
+
+- Actions permissions: allow the owner's and select non-owner actions; tick **Allow actions created by GitHub**; in the allow-list enter `actions/*, github/*, ossf/*, googleapis/release-please-action@*` (the last one is the release workflow's, [ADR-0037](maintainer/adr/0037-releases-come-from-conventional-commits-and-publish-behind-an-environment.md)); tick **Require actions to be pinned to a full-length commit SHA**; save.
+- Workflow permissions: the restricted, read-only option.
+
+**Settings → Advanced Security**
+
+- Enable **Secret Protection** and its **Push protection**, and **Private vulnerability reporting** ([SECURITY.md](SECURITY.md) tells reporters to use it).
+
+## Releasing
+
+A merged `fix:` or `feat:` opens a release pull request; merging it tags the release, and approving the `npm` environment publishes `biac` to npm with provenance. The design and the reasons are in [ADR-0037](maintainer/adr/0037-releases-come-from-conventional-commits-and-publish-behind-an-environment.md). The owner does these once, in this order:
+
+- Create a GitHub App with **Contents** and **Pull requests** read and write, install it on this repository, and store its client id as the Actions secret `RELEASE_APP_ID` and its private key as `RELEASE_APP_PRIVATE_KEY`. Without them the `release-please` job fails.
+- Settings → Environments → New environment `npm`, tick **Required reviewers** and add yourself.
+- Turn on two-factor authentication for the npm account, then publish `biac@0.1.0` by hand (`npm publish` from a clean checkout of that commit): npm accepts a trusted publisher only for a package that exists.
+- Within 2 days of creating it, run `npm trust github biac --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`. An unused trust expires after 2 days.
+- Add `"bootstrap-sha": "<the 0.1.0 commit>"` to `release-please-config.json`, so the first release pull request is `0.1.1` after a `fix:` rather than `0.2.0`.
+- Make the repository public before the first publish from Actions: provenance needs a public repository.
+
+To release: merge a `fix:` or `feat:` pull request, merge the release pull request that appears, approve the `npm` environment in the Actions run, then check `npm view biac version` and, in an empty directory, `npm i biac && npm audit signatures`. Renaming `release.yml` or the `npm` environment breaks the trust until `npm trust` is run again.
+
 ## Picking up work
 
 `maintainer/backlog.md` is the ledger of what is planned and what is next. For anything beyond a small fix, open an issue first so the approach is agreed before the code is written.

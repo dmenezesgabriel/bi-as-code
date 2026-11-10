@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { chartSourceFixes } from "./src/web/vite-plugins/chart-source-fixes.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -31,13 +32,14 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
-          // Node-side sources only (src/cli, src/engine) — src/web is the
-          // SPA's own deployment artifact (web-unit project below); without
-          // this exclusion the web tests run twice with the wrong `@/` alias.
+          // Node-side sources only (src/cli, src/engine, and the vite
+          // plugins beside src/web/vite.config.ts) — the SPA's own sources
+          // under src/web/src are the web-unit project below; without this
+          // exclusion the web tests run twice with the wrong `@/` alias.
           // test/lib holds measurement helpers that later specs trust, so
           // their own unit tests run here too.
           include: ["src/**/*.unit.test.ts", "test/lib/**/*.unit.test.ts"],
-          exclude: ["src/web/**", "node_modules/**"],
+          exclude: ["src/web/src/**", "node_modules/**"],
         },
       },
       {
@@ -49,7 +51,11 @@ export default defineConfig({
           environment: "jsdom",
           include: ["src/web/src/**/*.unit.test.{ts,tsx}"],
           setupFiles: ["src/web/vitest.setup.ts"],
+          // Vitest loads node_modules through node, not vite, so the chart
+          // libraries are inlined for the fixes below to reach them.
+          server: { deps: { inline: ["echarts", "zrender"] } },
         },
+        plugins: [chartSourceFixes()],
         // The web app's `@/` alias points inside src/web/src — the root
         // alias (node-side `src/`) must not leak into web tests.
         resolve: {

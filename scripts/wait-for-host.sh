@@ -8,7 +8,7 @@
 # after the maximum wait rather than start a run that would only fail.
 # Overrides: BIAC_GATE_POLL_SECONDS (default 15 — the 1 min load moves
 # slowly), BIAC_GATE_MAX_WAIT_SECONDS (default 600 — two waits plus a
-# full gate stay inside run-capped.sh's 45m runtime cap),
+# full gate stay inside run-capped.sh's 90m runtime cap),
 # BIAC_LOADAVG_FILE (default /proc/loadavg) and BIAC_NPROC (default
 # nproc), which tests use to inject a reading.
 #
@@ -31,8 +31,10 @@ read_load1() {
   echo "${BASH_REMATCH[1]}"
 }
 
+# `load` is a reserved word in gawk (a GitHub-hosted runner's awk): used as a
+# variable name it is a fatal error, and `is_busy` would read as "not busy".
 is_busy() {
-  awk -v load="$1" -v cores="$cores" 'BEGIN { exit !(load > cores) }'
+  awk -v reading="$1" -v cores="$cores" 'BEGIN { exit !(reading > cores) }'
 }
 
 start=$SECONDS

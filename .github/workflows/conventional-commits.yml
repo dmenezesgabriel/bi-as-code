@@ -1,0 +1,69 @@
+name: Conventional commits
+
+# Server-side twin of .husky/commit-msg, which `--no-verify` skips. Both jobs
+# read commitlint.config.js, so the hook and the check share one rule set. This
+# is its own file because `edited` also fires on a body edit: listed in ci.yml
+# it would re-run the gate on every one, while here it re-runs a cheap check so
+# a title fix needs no push. `pull_request`, not `pull_request_target`: a fork's
+# pull request gets a read-only token and no secrets, and nothing here needs more.
+# Job `name:` values are the required-check API — a `master` ruleset binds them,
+# so renaming one means updating the ruleset in the same commit.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+# Default-deny: a job inherits nothing unless it re-declares a scope.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # `prepare` runs `husky`, which would point git at hooks nobody runs here.
+  HUSKY: "0"
+
+jobs:
+  # Every commit the pull request adds. The full history is fetched because the
+  # range base.sha..head.sha needs both ends. Event values arrive through `env`,
+  # never interpolated into the script.
+  commit-messages:
+    name: commit-messages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          browser: "false"
+      - name: Commit subjects
+        run: pnpm exec commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
+
+  # The title is what a squash merge writes to `master`. A separate job, so one
+  # failure never hides the other. The checkout is for commitlint.config.js and
+  # node_modules, not for history.
+  pull-request-title:
+    name: pull-request-title
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          browser: "false"
+      - name: Pull request title
+        run: printf '%s\n' "$TITLE" | pnpm exec commitlint --verbose

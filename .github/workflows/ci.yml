@@ -1,0 +1,118 @@
+name: CI
+
+# The required merge gate, split in two so it fits a hosted runner. `gate` runs
+# `pnpm gate` minus its browser tier, and `e2e-browser` runs that tier in
+# shards: scripts/gate.sh stays the one list of steps, and the browser suite
+# alone took 6565 s on the 2 vCPU a private repository's runner has. Job
+# `name:` values are the required-check API — a `master` ruleset binds these
+# names, so renaming one means updating the ruleset in the same commit. The
+# commit-message and PR-title checks live in conventional-commits.yml, which
+# re-runs on a title edit; this file keeps the default pull_request types so a
+# body edit does not re-run the gate.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# Default-deny: a job inherits nothing unless it re-declares a scope. Even
+# checkout needs `contents: read`, since a zero-scope token cannot clone a
+# private repository.
+permissions: {}
+
+# Keyed on the commit for a push, so consecutive pushes to master never cancel
+# each other; a pull request keys on its number, so a fresh push replaces a
+# stale run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  # `prepare` runs `husky`, which would point git at hooks nobody runs here.
+  HUSKY: "0"
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-24.04
+    # Above BIAC_RUNTIME_MAX, so the gate's own cap fires first and prints which
+    # step it was in. The static checks, vitest and cucumber took 11 minutes.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      BIAC_RUNTIME_MAX: 25m
+      BIAC_GATE_SKIP_BROWSER: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Gate
+        run: pnpm gate
+
+  # The browser suite, minus the storybook sweep, is one required check per
+  # shard: `e2e-browser (1/4)` and so on. `--reporter=list` prints one line per finished test with its
+  # duration, which the dot reporter in playwright.config.ts does not.
+  e2e-browser:
+    name: e2e-browser (${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      BIAC_RUNTIME_MAX: 55m
+      SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Browser tests, one shard
+        run: pnpm test:e2e-browser --shard="$SHARD/4" --reporter=list --grep-invert="storybook stories"
+
+  # The tarball installed with npm and with pnpm needs the package registry, so
+  # it is a job of its own: a registry outage must not fail the `gate` check.
+  # Measured locally: 117 s cold, 72 s with a warm package cache, 2.6 GB peak memory.
+  install:
+    name: install
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      BIAC_RUNTIME_MAX: 25m
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          browser: "false"
+      - name: Pack, install with npm and pnpm, build, serve
+        run: pnpm test:install
+
+  # The storybook sweep is two tests that each visit every story or docs page
+  # in one browser, so sharding cannot split them and one shard would carry
+  # them alone: a measured attempt took 13 to 29 minutes. Own job, own cap,
+  # sized for the first attempt and both retries, so a failure's message
+  # prints before the cap fires.
+  storybook:
+    name: storybook
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    permissions:
+      contents: read
+    env:
+      BIAC_RUNTIME_MAX: 90m
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Every story and docs page
+        run: pnpm test:e2e-browser storybook-stories.spec.ts --reporter=list

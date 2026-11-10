@@ -1,0 +1,92 @@
+name: Release
+
+# Turns merged conventional commits into a release pull request: release-please
+# reads the history since the last release, bumps `package.json`, writes
+# `CHANGELOG.md` and keeps one open PR up to date. Its settings live in
+# `release-please-config.json` and `.release-please-manifest.json`; the action
+# reads both by their default names. Merging that PR tags the release, and the
+# `publish` job then ships the tagged commit to npm once a reviewer approves the
+# `npm` environment.
+on:
+  push:
+    branches: [master]
+
+# Default-deny: the job writes through a GitHub App token, so the workflow's own
+# token needs no scope at all.
+permissions: {}
+
+# A release run never cancels another: a half-finished release would leave the
+# release PR and its tag out of step.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: release-please
+    # A fork has no App secrets, and no run there should try to mint a token.
+    if: ${{ github.repository == 'dmenezesgabriel/bi-as-code' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      # `GITHUB_TOKEN` creates a pull request that triggers no workflow, so the
+      # release PR would never get its required checks and could never merge.
+      # An App installation token has no such limit. The token is narrowed to
+      # what release-please documents it needs (its README, "Workflow
+      # Permissions"): the release commit and tag, the pull request, and the
+      # labels that mark a release PR as pending or tagged.
+      - name: Mint the release App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      - name: Open or update the release pull request
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+  publish:
+    name: publish
+    needs: release-please
+    # Skipped on every push that only updates the release PR; it runs when the
+    # run created a GitHub Release. A skipped `needs` job skips this one, so the
+    # same-repo guard above applies here too.
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The reviewer approval on this environment is the human gate before
+    # anything reaches the registry. npm's trusted publisher is bound to this
+    # workflow file and environment name.
+    environment: npm
+    # No registry token is stored: `npm publish` exchanges the job's OIDC token
+    # for a short-lived publish credential and signs a provenance attestation.
+    # Only this job gets the scope.
+    permissions:
+      contents: read # checkout
+      id-token: write # OIDC token for npm trusted publishing and provenance
+    env:
+      HUSKY: "0"
+    steps:
+      # The tag, not the push commit: the tarball is built from exactly what
+      # the release PR merged.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          persist-credentials: false
+      # Node 24's bundled npm is newer than the 11.5.1 that trusted publishing
+      # requires, so no separate npm install is needed.
+      - uses: ./.github/actions/setup
+        with:
+          browser: "false"
+      # `prepack` builds `dist/cli` before the tarball is packed.
+      - name: Publish biac to npm
+        run: npm publish

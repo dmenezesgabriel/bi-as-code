@@ -16,8 +16,10 @@ The reader-facing how-to is `docs/pages/ship/build-preview-serve.md` (`/ship/bui
 
 ## Build
 
+Run the commands from the project directory, where `npm i -D biac` installed `biac`.
+
 ```sh
-bin/biac build my-site
+npx biac build
 ```
 
 It prints `biac build — wrote` and the path of `my-site/build`. The command empties `build/` first, so a page you removed does not linger.
@@ -45,7 +47,7 @@ Run `biac build` before you deploy, and treat a non-zero exit as a stop.
 ## Preview
 
 ```sh
-bin/biac preview my-site
+npx biac preview
 ```
 
 It prints the address and keeps running until you press Ctrl+C. Open it and click through the pages: they come from the files in `build/`, with no page compiled on the way, so what you see is what a static host will send.
@@ -55,7 +57,7 @@ Preview refuses to start when `build/` is missing and says to run `biac build` f
 ## Serve
 
 ```sh
-bin/biac serve my-site
+npx biac serve
 ```
 
 `biac serve` is the command to run on a server or in a container. It serves the same `build/`, and it adds what a public address needs:
@@ -87,7 +89,7 @@ The server prints one line after its address that says which mode it started in:
 Binding anything other than `127.0.0.1`, `localhost` or `::1` without credentials or `BIAC_AUTH_DISABLED=true` stops the server before it listens. It exits `1` and names all three variables:
 
 ```sh
-bin/biac serve my-site --host 0.0.0.0
+npx biac serve --host 0.0.0.0
 ```
 
 ```text
@@ -97,7 +99,7 @@ biac serve: refusing to serve beyond localhost (host "0.0.0.0") without auth —
 Give the server credentials and it starts:
 
 ```sh
-BIAC_BASIC_USER=viewer BIAC_BASIC_PASSWORD=s3cret bin/biac serve my-site --host 0.0.0.0
+BIAC_BASIC_USER=viewer BIAC_BASIC_PASSWORD=s3cret npx biac serve --host 0.0.0.0
 ```
 
 Basic auth sends the password with every request, and `biac serve` speaks plain HTTP. Put a proxy that terminates HTTPS in front of it before a reader types a password.

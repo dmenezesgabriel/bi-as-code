@@ -15,8 +15,16 @@
 #
 # The runtime needs no writable path, so it boots on a read-only root.
 
-# node:24-slim (bookworm, Node 24.22.1), pinned by index digest.
-FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS base
+# node:24-slim (bookworm, Node 24.22.2), pinned by index digest. Every other
+# stage derives from this one, so the digest is pinned once and the security
+# scan reads exactly this stage. The npm that ships inside the image is
+# removed: nothing here runs it (corepack provides pnpm, the runtime runs
+# `node`), and its bundled packages carry advisories the base image's
+# maintainers fix only when npm itself is released.
+FROM node:24-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS node-base
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
+FROM node-base AS base
 WORKDIR /app
 # corepack provides the pnpm that package.json's packageManager names.
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -24,7 +32,6 @@ RUN corepack enable
 # The manifests alone, so the install layers cache across source edits.
 # pnpm-workspace.yaml carries minimumReleaseAge, trustPolicy and allowBuilds.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY patches/ patches/
 COPY src/web/package.json src/web/
 
 # The project to bake: this repository's own, unless a `project` build
@@ -56,9 +63,9 @@ RUN node bin/biac build /project \
 FROM base AS prod-deps
 # `biac serve` imports vite and the root's runtime dependencies only;
 # no install script of theirs is needed to serve a finished build.
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter bi-as-code
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter biac
 
-FROM node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
+FROM node-base
 WORKDIR /app
 # uid 10001, not the image's `node` user: uid 1000 is the first login uid
 # on most Linux hosts, so a bind mount or shared volume would map to it.

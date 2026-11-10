@@ -1,0 +1,61 @@
+version: 2
+
+# `cooldown` defers a release younger than 7 days: a freshly published version
+# is the window in which most supply-chain compromises are caught and pulled.
+# It applies to version updates only; a security update is never delayed. zizmor
+# (`dependabot-cooldown`, job `zizmor` in security.yml) fails a lower value.
+#
+# `commit-message` makes every title a conventional commit that
+# commitlint.config.js accepts, because conventional-commits.yml checks the
+# title of a Dependabot pull request like any other: `ci(deps): bump …` for
+# workflows, `build(deps): bump …` and `build(deps-dev): bump …` otherwise.
+#
+# One group per ecosystem holds the minor and patch bumps, so a week's updates
+# are one pull request; a major bump stays a pull request of its own.
+updates:
+  # Keeps every `# vX.Y.Z`-commented SHA pin in .github/workflows/ and
+  # .github/actions/ current, which is what makes pinning by SHA sustainable.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      github-actions-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # `pnpm-lock.yaml` is read through this ecosystem. The root directory covers
+  # the root manifest; `pnpm-workspace.yaml` lists `src/web` as a workspace.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # The runtime image's base in the Dockerfile.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      docker-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
