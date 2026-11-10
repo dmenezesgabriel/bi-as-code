@@ -27,7 +27,7 @@ The gate loads the host: run one at a time, and re-run a failure alone before ca
 
 ## Repository settings (owner)
 
-The merge rules, the ruleset and the Actions policy live in GitHub, not in the repository, and the free private plan cannot reach most of them through the API. The owner applies them once, in the UI, after the repository is public. The values and the reasons are in [ADR-0035](maintainer/adr/0035-the-repository-settings-are-written-down-and-applied-in-the-ui.md).
+The merge rules, the ruleset and the Actions policy live in GitHub, not in the repository. The owner applies them once, after the repository is public; the click paths below are for the UI. The values and the reasons are in [ADR-0035](maintainer/adr/0035-the-repository-settings-are-written-down-and-applied-in-the-ui.md).
 
 **Settings → General → Pull Requests**
 
@@ -55,7 +55,7 @@ The merge rules, the ruleset and the Actions policy live in GitHub, not in the r
 
 A merged `fix:` or `feat:` opens a release pull request; merging it tags the release, and approving the `npm` environment publishes `biac` to npm with provenance. The design and the reasons are in [ADR-0037](maintainer/adr/0037-releases-come-from-conventional-commits-and-publish-behind-an-environment.md). The owner does these once, in this order:
 
-- Create a GitHub App with **Contents** and **Pull requests** read and write, install it on this repository, and store its client id as the Actions secret `RELEASE_APP_ID` and its private key as `RELEASE_APP_PRIVATE_KEY`. Without them the `release-please` job fails.
+- Create a GitHub App with **Contents**, **Issues** and **Pull requests** read and write (`release.yml` requests all three, and the token step fails if the installation lacks one), install it on this repository, and store its client id as the Actions secret `RELEASE_APP_ID` and its private key as `RELEASE_APP_PRIVATE_KEY`. Without them the `release-please` job fails.
 - Settings → Environments → New environment `npm`, tick **Required reviewers** and add yourself.
 - Turn on two-factor authentication for the npm account, then publish `biac@0.1.0` by hand (`npm publish` from a clean checkout of that commit): npm accepts a trusted publisher only for a package that exists.
 - Within 2 days of creating it, run `npm trust github biac --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`. An unused trust expires after 2 days.
