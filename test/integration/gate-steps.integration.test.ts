@@ -71,7 +71,7 @@ describe("scripts/gate.sh steps", () => {
     const status = pnpm.runGate({ BIAC_GATE_SKIP_BROWSER: "" });
 
     expect(status).toBe(0);
-    expect(pnpm.calls().at(-1)).toBe("-s test:e2e-browser");
+    expect(pnpm.calls().at(-1)).toBe("-s test:e2e-browser --retries=1");
   });
 
   it("leaves the browser tier out when BIAC_GATE_SKIP_BROWSER is 1", () => {
@@ -80,7 +80,9 @@ describe("scripts/gate.sh steps", () => {
     const status = pnpm.runGate({ BIAC_GATE_SKIP_BROWSER: "1" });
 
     expect(status).toBe(0);
-    expect(pnpm.calls()).not.toContain("-s test:e2e-browser");
+    expect(
+      pnpm.calls().filter((call) => call.startsWith("-s test:e2e-browser")),
+    ).toEqual([]);
     expect(pnpm.calls()).toContain("-s test:cucumber");
   });
 });

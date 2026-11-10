@@ -29,4 +29,8 @@ if [[ ${BIAC_GATE_SKIP_BROWSER:-} == 1 ]]; then
   exit 0
 fi
 scripts/wait-for-host.sh
-step e2e-browser pnpm -s test:e2e-browser
+# One retry per failing test, as CI already does (playwright.config.ts retries 2): a gate that fails
+# one test out of 466 after 36-54 minutes otherwise costs a full rerun. Measured 2026-11-09: 6 of 8
+# failed gates lost 1-3 tests, a different test each time, and all 125 specs of those files passed
+# alone. Playwright still lists a test that passed on retry as "flaky" in the run output.
+step e2e-browser pnpm -s test:e2e-browser --retries=1
