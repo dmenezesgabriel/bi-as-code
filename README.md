@@ -52,7 +52,7 @@ biac is at version 0.x. Under [semantic versioning](https://semver.org/), anythi
 
 ## Contributing and security
 
-[`CONTRIBUTING.md`](CONTRIBUTING.md) is the working agreement: Node.js 24.12 or later, pnpm 10, `pnpm install` and `pnpm gate`. Report a vulnerability privately, as [`SECURITY.md`](SECURITY.md) describes.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) is the working agreement: Node.js 24.12 or later, pnpm 10, `pnpm install` and `pnpm gate`. Take part under the [Code of Conduct](CODE_OF_CONDUCT.md). Report a vulnerability privately, as [`SECURITY.md`](SECURITY.md) describes.
 
 ## License
 
