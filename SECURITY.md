@@ -12,13 +12,13 @@
 
 **Do not open a public issue for a security problem.**
 
-- Once the repository is public, use GitHub private vulnerability reporting: the repository's **Security** tab → **Report a vulnerability**.
-- If that channel is unavailable, contact the maintainer through the GitHub profile that owns this repository.
+- Use GitHub private vulnerability reporting: open the repository's [Security advisories](https://github.com/dmenezesgabriel/bi-as-code/security/advisories) page and choose **Report a vulnerability**.
+- If that channel is unavailable, contact the maintainer through the GitHub profile that owns this repository, <https://github.com/dmenezesgabriel>.
 
 Include what you observed, the commit you ran (`git rev-parse HEAD`), `node --version`, and a minimal reproduction. Never include real credentials, tokens or private data files in a report.
 
 ## Scope and expectations
 
-- The latest commit on `master` is in scope. No release has been published yet; once one exists, only the latest release is patched.
+- The latest commit on `master` and the latest release of [`@biac/cli`](https://www.npmjs.com/package/@biac/cli) on npm are in scope. Only the latest release is patched.
 - `biac dev` is a local authoring tool. Exposing it to a network, or running it as a public server, is outside its threat model; use `biac build` and serve the static folder instead.
 - Reports are acknowledged within a few days. Fixes land as ordinary commits; a GitHub security advisory is published once a fix is available.
