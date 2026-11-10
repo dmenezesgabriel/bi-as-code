@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Connect } from "vite";
 
 /** The slice of the process environment the auth variables are read from. */
@@ -52,15 +52,19 @@ export function basicCredentials(
   return null;
 }
 
+/** Keys the comparison tags; fresh per process, so a tag is meaningless elsewhere. */
+const COMPARISON_KEY = randomBytes(32);
+
 /**
- * Compares through SHA-256 digests so both buffers always have the same
+ * Compares through HMAC-SHA-256 tags so both buffers always have the same
  * length: comparing raw bytes would need a length check first, and that early
- * return leaks the secret's length through timing.
+ * return leaks the secret's length through timing. Nothing is stored or
+ * derived for later: the tags exist only for this one comparison.
  */
 function sameSecret(supplied: string, expected: string): boolean {
-  const digest = (text: string): Buffer =>
-    createHash("sha256").update(text, "utf8").digest();
-  return timingSafeEqual(digest(supplied), digest(expected));
+  const tag = (text: string): Buffer =>
+    createHmac("sha256", COMPARISON_KEY).update(text, "utf8").digest();
+  return timingSafeEqual(tag(supplied), tag(expected));
 }
 
 function decodeBasicToken(header: string | undefined): string | null {
