@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// biac CLI launcher — the product binary.
+// biac CLI launcher script: the file package.json's `bin` points to.
 // Node 24 type-stripping does not resolve NodeNext-style `.js` → `.ts`
 // specifiers, so this shim runs the compiled dist — `pnpm build:cli`
 // is mandatory before `biac` can run.
