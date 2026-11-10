@@ -75,6 +75,33 @@ describe("manifest entries", () => {
   });
 });
 
+describe("values embedded in the generated module", () => {
+  // A page's file name and title come from the project directory. JSON is
+  // not always safe JavaScript to embed: U+2028/U+2029 ended a string literal
+  // before ES2019, and `</script` closes an inline script when the module is
+  // ever inlined into HTML.
+  const hostile: PageManifestEntry = {
+    route: "/odd",
+    file: "pages/a\u2028b\u2029c</script>.md",
+    isIndex: false,
+    title: "T\u2028</script>",
+  };
+
+  it("escapes line separators and markup characters in every literal", () => {
+    const source = manifestModuleSource([hostile], {});
+
+    expect(source).not.toMatch(/[\u2028\u2029]/);
+    expect(source).not.toContain("</script");
+  });
+
+  it("keeps the literal's value: the escapes are plain JSON string escapes", () => {
+    const source = manifestModuleSource([hostile], {});
+    const file = /file: ("[^\n]*?"), isIndex/.exec(source)?.[1] ?? "";
+
+    expect(JSON.parse(file)).toBe(hostile.file);
+  });
+});
+
 describe("hot page updates", () => {
   it("accepts every page module as a literal HMR dependency", () => {
     const source = manifestModuleSource([index, report], {});
