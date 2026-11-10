@@ -63,7 +63,7 @@ RUN node bin/biac build /project \
 FROM base AS prod-deps
 # `biac serve` imports vite and the root's runtime dependencies only;
 # no install script of theirs is needed to serve a finished build.
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter biac
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter @biac/cli
 
 FROM node-base
 WORKDIR /app

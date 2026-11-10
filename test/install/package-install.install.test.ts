@@ -44,7 +44,7 @@ function installedProject(manager: PackageManager): {
   const root = makeDiskProject(`biac-install-${manager}-`);
   installTarball(manager, root, tarball);
   writeProjectFile(root, "site/pages/index.md", "# Hello\n");
-  return { root, biac: join(root, "node_modules/biac/bin/biac") };
+  return { root, biac: join(root, "node_modules/@biac/cli/bin/biac") };
 }
 
 function builtAssets(root: string, extension: string): string[] {
