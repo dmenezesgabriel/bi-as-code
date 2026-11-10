@@ -40,6 +40,11 @@ interface PackResult {
 interface Manifest {
   name: string;
   private?: boolean;
+  description?: string;
+  keywords?: string[];
+  homepage?: string;
+  bugs?: { url?: string };
+  author?: string;
   repository?: unknown;
   scripts: Record<string, string>;
   dependencies: Record<string, string>;
@@ -103,7 +108,25 @@ describe("the published package", () => {
     expect(declared).toEqual(expect.arrayContaining(RUNTIME_PACKAGES));
   });
 
+  it("describes itself for the npm page", () => {
+    // Arrange
+    const manifest = readManifest();
+
+    // Assert
+    expect(manifest.description).toMatch(/\S/);
+    expect(manifest.keywords?.length).toBeGreaterThan(0);
+    expect(manifest.homepage).toMatch(/^https:\/\//);
+    expect(manifest.bugs?.url).toMatch(/^https:\/\//);
+    expect(manifest.author).toMatch(/\S/);
+  });
+
+  // NOTICE carries the attribution the ported code's licenses and Apache-2.0
+  // section 4(d) require to travel with every copy; npm adds README and
+  // LICENSE on its own but not NOTICE.
   it.each([
+    "README.md",
+    "LICENSE",
+    "NOTICE",
     "bin/biac",
     "dist/cli/main.js",
     "dist/engine/pages-plugin.js",

@@ -1,7 +1,23 @@
 {
   "name": "biac",
   "version": "0.1.0",
+  "description": "Business intelligence as code: turn Markdown pages and data files into a BI site",
+  "keywords": [
+    "business-intelligence",
+    "bi",
+    "dashboard",
+    "data-visualization",
+    "duckdb",
+    "markdown",
+    "sql",
+    "static-site-generator"
+  ],
+  "homepage": "https://github.com/dmenezesgabriel/bi-as-code#readme",
+  "bugs": {
+    "url": "https://github.com/dmenezesgabriel/bi-as-code/issues"
+  },
   "license": "Apache-2.0",
+  "author": "Gabriel Menezes (https://github.com/dmenezesgabriel)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dmenezesgabriel/bi-as-code.git"
@@ -16,6 +32,7 @@
   },
   "files": [
     "bin",
+    "NOTICE",
     "dist/cli",
     "dist/engine",
     "src/web",
