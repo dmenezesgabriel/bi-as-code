@@ -44,12 +44,25 @@ The merge rules, the ruleset and the Actions policy live in GitHub, not in the r
 
 **Settings → Actions → General**
 
-- Actions permissions: allow the owner's and select non-owner actions; tick **Allow actions created by GitHub**; in the allow-list enter `actions/*, github/*, ossf/*`; tick **Require actions to be pinned to a full-length commit SHA**; save.
+- Actions permissions: allow the owner's and select non-owner actions; tick **Allow actions created by GitHub**; in the allow-list enter `actions/*, github/*, ossf/*, googleapis/release-please-action@*` (the last one is the release workflow's, [ADR-0037](maintainer/adr/0037-releases-come-from-conventional-commits-and-publish-behind-an-environment.md)); tick **Require actions to be pinned to a full-length commit SHA**; save.
 - Workflow permissions: the restricted, read-only option.
 
 **Settings → Advanced Security**
 
 - Enable **Secret Protection** and its **Push protection**, and **Private vulnerability reporting** ([SECURITY.md](SECURITY.md) tells reporters to use it).
+
+## Releasing
+
+A merged `fix:` or `feat:` opens a release pull request; merging it tags the release, and approving the `npm` environment publishes `biac` to npm with provenance. The design and the reasons are in [ADR-0037](maintainer/adr/0037-releases-come-from-conventional-commits-and-publish-behind-an-environment.md). The owner does these once, in this order:
+
+- Create a GitHub App with **Contents** and **Pull requests** read and write, install it on this repository, and store its client id as the Actions secret `RELEASE_APP_ID` and its private key as `RELEASE_APP_PRIVATE_KEY`. Without them the `release-please` job fails.
+- Settings → Environments → New environment `npm`, tick **Required reviewers** and add yourself.
+- Turn on two-factor authentication for the npm account, then publish `biac@0.1.0` by hand (`npm publish` from a clean checkout of that commit): npm accepts a trusted publisher only for a package that exists.
+- Within 2 days of creating it, run `npm trust github biac --repository dmenezesgabriel/bi-as-code --file release.yml --environment npm --allow-publish`. An unused trust expires after 2 days.
+- Add `"bootstrap-sha": "<the 0.1.0 commit>"` to `release-please-config.json`, so the first release pull request is `0.1.1` after a `fix:` rather than `0.2.0`.
+- Make the repository public before the first publish from Actions: provenance needs a public repository.
+
+To release: merge a `fix:` or `feat:` pull request, merge the release pull request that appears, approve the `npm` environment in the Actions run, then check `npm view biac version` and, in an empty directory, `npm i biac && npm audit signatures`. Renaming `release.yml` or the `npm` environment breaks the trust until `npm trust` is run again.
 
 ## Picking up work
 

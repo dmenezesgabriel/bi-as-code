@@ -1,6 +1,6 @@
 # SL-068 — A merged fix or feature becomes a release PR, and merging it publishes `biac` to npm with provenance
 
-Milestone: Phase 9 — Open-source release · State: open · Depends on: SL-064, SL-065, SL-067 (all shipped) · Closes: GAP-096, GAP-097
+Milestone: Phase 9 — Open-source release · State: partial · Depends on: SL-064, SL-065, SL-067 (all shipped) · Closes: GAP-096, GAP-097
 
 > Delete this file when the slice ships.
 >
@@ -154,7 +154,7 @@ One TDD unit each, one conventional commit each. A task that changes a screen en
 - [x] T3 — `ci: publish biac behind the npm environment` — job `publish` in the same file: `needs`, `if: release_created`, `environment: npm`, `permissions` of `contents: read` and `id-token: write` only, checkout at `tag_name`, `.github/actions/setup` with `browser: "false"`, `npm publish`, `HUSKY: "0"`. Same `actionlint` and `zizmor` checks.
 - [x] T4 — `docs: install biac from npm` — rewrite "Install biac" and the commands in `docs/pages/getting-started.md` to `npm i -D biac` and `npx biac`; drop the clone and the "next to the clone" wording; closes GAP-097. `playwright-cli` pass on `bin/biac dev docs` at `/getting-started`: heading count, code-block count, console clean.
 - [x] T5 — `docs: name the installed command on the ship pages` — `bin/biac build|preview|serve my-site` to `npx biac build|preview|serve` in `base-path`, `build-preview-serve` and `embeds`, in `docs/pages/ship/` and in each page's MDX twin (ADR-0006); a line under each Build heading says the commands run from the project directory. `deploy-on-aws` and `sso-behind-a-proxy` keep the clone wording and say the `Dockerfile` and `examples/s3-sso/` are not in the installed package. `playwright-cli` pass on each changed page.
-- [ ] T6 — `docs(adr): record the release process` — an ADR for release-please plus environment-gated trusted publishing; `CONTRIBUTING.md` gains the allow-list entry and the environment checklist; the backlog row and the ledger rows for GAP-096 and GAP-097 are edited to closed once re-measured. The slice ships when a human has run the Demo.
+- [x] T6 — `docs(adr): record the release process` — an ADR for release-please plus environment-gated trusted publishing; `CONTRIBUTING.md` gains the allow-list entry and the environment checklist; the backlog row and the ledger rows for GAP-096 and GAP-097 are edited to closed once re-measured. The slice ships when a human has run the Demo.
 
 ## Out of scope
 
