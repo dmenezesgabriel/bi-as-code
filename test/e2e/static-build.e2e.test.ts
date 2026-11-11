@@ -112,6 +112,35 @@ describe("biac build", () => {
     expect(existsSync(join(root, "build", "index.html"))).toBe(true);
   }, 240_000);
 
+  it("exits 1 naming a broken image's page line and path, then builds once its file exists", () => {
+    const root = makeTempProject("biac-e2e-build-broken-image-");
+    copyShippedProject(root);
+    const indexFile = join(root, "pages", "index.md");
+    const shipped = readFileSync(indexFile, "utf8");
+    const brokenLine = shipped.split("\n").length;
+    writeProjectFile(
+      root,
+      "pages/index.md",
+      `${shipped}![gone](/data/gone.png)\n`,
+    );
+
+    const run = spawnSync(process.execPath, [biac, "build", root], {
+      encoding: "utf8",
+    });
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(
+      "1 broken image — each must name a file biac serves:",
+    );
+    expect(run.stderr).toContain(
+      `pages/index.md:${brokenLine} → /data/gone.png (no file at data/gone.png)`,
+    );
+    expect(existsSync(join(root, "build"))).toBe(false);
+    writeProjectFile(root, "data/gone.png", PNG_SIGNATURE);
+    execFileSync(process.execPath, [biac, "build", root], { encoding: "utf8" });
+    expect(existsSync(join(root, "build", "index.html"))).toBe(true);
+  }, 240_000);
+
   it("writes the brand colours, palette, scale and fonts into build/index.html", () => {
     const root = makeTempProject("biac-e2e-build-brand-");
     writeProjectFile(root, "pages/index.md", "# Branded\n");
