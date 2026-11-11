@@ -58,7 +58,7 @@ A page shows an image with Markdown's image syntax. Put the file under `data/` a
 - **Other addresses stay as written.** An `https://` address or a path without a leading `/` is not changed, and a relative path resolves against the page's URL, which always ends in a slash.
 - **The image fits its column.** It scales down, keeping its proportions, and never widens the page at 375 px.
 - **The alt text is the accessible name.** Leave it empty (`![](/data/page-routes.svg)`) for a picture that only decorates.
-- **A missing file is not caught.** `biac build` fails on a link to a page that does not exist, but an image whose file is missing builds and shows a broken image.
+- **A missing file stops the build.** `biac build` exits `1` for an image no file serves, naming the page line and the path, such as `pages/index.md:3 → /data/gone.png (no file at data/gone.png)`. Only files in `data/` and what a data loader generates count, and the path must match the file's case.
 
 ## Front-matter
 
