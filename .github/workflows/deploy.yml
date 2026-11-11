@@ -1,0 +1,60 @@
+name: Deploy docs
+
+# Publishes the docs project (`docs/`) to GitHub Pages on every push to
+# `master`. The site is served below /bi-as-code/, a prefix that `base` in
+# docs/biac.config.ts carries into the build (ADR-0029). Pages answers a deep
+# link with that route's own `index.html` and an unknown path with `404.html`,
+# which the build writes as the SPA shell, so no rewrite rule is needed.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Default-deny: only the job re-declares the scopes it needs.
+permissions: {}
+
+# A half-finished deploy is never cancelled; the next run queues behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  # `prepare` runs `husky`, which would point git at hooks nobody runs here.
+  HUSKY: "0"
+
+jobs:
+  deploy:
+    name: deploy
+    # A fork has no Pages site to publish to.
+    if: ${{ github.repository == 'dmenezesgabriel/bi-as-code' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The environment's branch policy limits deploys to `master`; its url is
+    # what the run page links to.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read # checkout
+      pages: write # publish the artifact
+      id-token: write # `deploy-pages` proves the deploy comes from this workflow
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          browser: "false"
+      # `bin/biac` runs the compiled `dist/`, so the CLI is built first.
+      - name: Build the CLI
+        run: pnpm build:cli
+      - name: Build the docs project
+        run: bin/biac build docs
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      # `biac build` writes `<project>/build`.
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/build
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
