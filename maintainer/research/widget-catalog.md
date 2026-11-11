@@ -132,3 +132,11 @@ Status vocabulary: `SL-NNN` backlog row · `later` deferred milestone · `—` n
 | `file_uploader`/`camera`/`audio_input` | upload inputs — outside Phase-1 scope                                                                                                       | later                                               |
 | `chat`/feedback widgets                | conversational UX — out of scope                                                                                                            | —                                                   |
 | `balloons`/`snow`                      | decorative                                                                                                                                  | —                                                   |
+
+---
+
+## Gaps
+
+| Id      | Gap                                                                                                                                                                                               | Reference                                                                                                                                                                       | Closed by |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| GAP-100 | `<Table>` and the `display` sql fence have no way to take their rows away: no CSV serializer, no file-saving helper, no download icon (`grep -rli download src` finds no export code, 2026-11-11) | evidence `core/src/user-components/tags/table/TableDownloadButton.svelte` (xlsx), streamlit `DataFrame/hooks/useDataExporter.ts` (CSV with BOM); framework and mosaic have none | SL-070    |
