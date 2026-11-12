@@ -148,8 +148,7 @@ describe("series chart tags", () => {
 
     const option = appliedOption(await chartHost());
     const points = option.series[0]?.data as
-      | readonly (readonly unknown[])[]
-      | undefined;
+      readonly (readonly unknown[])[] | undefined;
     expect(points).toHaveLength(1);
     expect(points?.[0]?.[0]).toBe("West");
     expect(db.queries).toContainEqual({
