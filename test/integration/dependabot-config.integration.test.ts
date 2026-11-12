@@ -20,6 +20,7 @@ interface UpdateBlock {
   cooldown?: { "default-days": number };
   "commit-message"?: { prefix: string; include?: string };
   groups?: Record<string, { patterns?: string[]; "update-types"?: string[] }>;
+  ignore?: { "dependency-name": string; versions?: string[] }[];
 }
 
 function readUpdateBlocks(): UpdateBlock[] {
@@ -51,6 +52,28 @@ function longestManifestDependency(): string {
   return names.reduce((longest, name) =>
     name.length > longest.length ? name : longest,
   );
+}
+
+/**
+ * The apache-arrow major that `@duckdb/duckdb-wasm` declares as its own
+ * dependency. A second arrow major at the root makes two copies of the library
+ * whose classes TypeScript will not assign to each other.
+ */
+function duckdbArrowMajor(): number {
+  const manifest: { dependencies: Record<string, string> } = JSON.parse(
+    readFileSync(
+      join(REPO_ROOT, "node_modules/@duckdb/duckdb-wasm/package.json"),
+      "utf8",
+    ),
+  );
+  const range = manifest.dependencies["apache-arrow"] ?? "";
+  const major = /\d+/.exec(range)?.[0];
+  if (!major) {
+    throw new Error(
+      `@duckdb/duckdb-wasm declares apache-arrow "${range}"; expected a range such as "^17.0.0"`,
+    );
+  }
+  return Number(major);
 }
 
 /**
@@ -123,6 +146,14 @@ describe("dependabot.yml", () => {
       npm: { prefix: "build", include: "scope" },
       docker: { prefix: "build", include: "scope" },
     });
+  });
+
+  it("ignores the apache-arrow majors beyond the one @duckdb/duckdb-wasm depends on", () => {
+    const rule = updateFor("npm").ignore?.find(
+      (candidate) => candidate["dependency-name"] === "apache-arrow",
+    );
+
+    expect(rule?.versions).toEqual([`>=${duckdbArrowMajor() + 1}.0.0`]);
   });
 
   it.each(ecosystems)(
