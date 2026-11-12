@@ -58,14 +58,13 @@ describe("rewriteUntilServerLogs", () => {
   });
 
   it("accepts an hmr update naming the module that accepts the write", async () => {
-    const update =
-      "t stdout [vite] (client) hmr update /@id/__x00__virtual:biac-pages";
+    const update = "t stdout [vite] (client) hmr update \0virtual:biac-pages";
     const serverLog = new FakeServerLog(1, update);
 
     const line = await rewriteUntilServerLogs({
       rewrite: serverLog.rewrite,
       log: serverLog.log,
-      loggedPath: "/@id/__x00__virtual:biac-pages",
+      loggedPath: "\0virtual:biac-pages",
       attemptMs: 100,
       timeoutMs: 1_000,
     });

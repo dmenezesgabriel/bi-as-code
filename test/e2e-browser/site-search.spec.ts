@@ -6,7 +6,7 @@ import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 import { chooseLanguage } from "./language-menu.js";
 
 /** The search documents accept their own updates, so vite logs them by id. */
-const SEARCH_SWAP_LOGGED_PATH = "/@id/__x00__virtual:biac-search";
+const SEARCH_SWAP_LOGGED_PATH = "\0virtual:biac-search";
 
 /** Opens `url` at 1280 px; returns its console errors, the nav and the box. */
 async function openAtDesktop(
