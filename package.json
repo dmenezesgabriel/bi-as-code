@@ -139,7 +139,7 @@
     "@tailwindcss/vite": "4.2.2",
     "@tanstack/react-router": "1.170.41",
     "@vitejs/plugin-react": "6.0.2",
-    "apache-arrow": "17.0.0",
+    "apache-arrow": "21.2.0",
     "clsx": "2.1.1",
     "codemirror": "6.0.2",
     "echarts": "6.1.0",
