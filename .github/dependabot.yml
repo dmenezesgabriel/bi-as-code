@@ -40,6 +40,16 @@ updates:
     commit-message:
       prefix: build
       include: scope
+    # `@duckdb/duckdb-wasm` depends on apache-arrow ^17 and no release, stable
+    # or dev, moves past it (npm registry, checked 2026-11-12). A root
+    # apache-arrow 18 or later installs a second copy, and `pnpm typecheck`
+    # then fails on `AsyncDuckDB` against `ConnectionFactory`. The range holds
+    # back only those releases; `ignore` also applies to security updates, so a
+    # fix that exists only in 18 or later is still reported by `osv-scanner`.
+    # Raise the floor with the apache-arrow pin when duckdb-wasm moves.
+    ignore:
+      - dependency-name: apache-arrow
+        versions: [">=18.0.0"]
     groups:
       npm-minor-patch:
         patterns: ["*"]
