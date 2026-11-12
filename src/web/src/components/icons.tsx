@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
   Languages,
   LoaderCircle,
   Moon,
@@ -73,6 +74,11 @@ export function ChevronRightIcon(props: LucideProps) {
 /** Double chevron pointing right — jump to the last page. */
 export function ChevronsRightIcon(props: LucideProps) {
   return <ChevronsRight aria-hidden size={14} {...props} />;
+}
+
+/** Arrow into a tray — saves a table's rows as a file. */
+export function DownloadIcon(props: LucideProps) {
+  return <Download aria-hidden size={14} {...props} />;
 }
 
 /** Single chevron pointing down — a disclosure trigger's open state. */

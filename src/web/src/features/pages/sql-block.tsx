@@ -76,5 +76,5 @@ function SqlResult({
   }
   if (!display) return null;
   if (result.status === "loading") return <TableLoading />;
-  return <DataTable rows={result.rows} />;
+  return <DataTable rows={result.rows} downloadName={name} />;
 }

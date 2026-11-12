@@ -1,14 +1,17 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { Effect } from "effect";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FilterIds } from "../../filters/filter-ids";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import type { SqlBlock } from "../../pages/types";
 import { renderWithRegistry } from "../value/registry-harness";
 import { Column } from "./column";
+import { saveCsv } from "./save-csv";
 import { Table } from "./table";
+
+vi.mock("./save-csv", () => ({ saveCsv: vi.fn() }));
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
 
@@ -46,6 +49,10 @@ function renderTable({
 }
 
 describe("Table", () => {
+  beforeEach(() => {
+    vi.mocked(saveCsv).mockClear();
+  });
+
   it("renders the named query's rows as a sortable, paginated table", async () => {
     const db = new FakeDuckDb();
     db.rows = [
@@ -59,6 +66,36 @@ describe("Table", () => {
       screen.getAllByRole("columnheader").map((th) => th.textContent),
     ).toEqual(["Region", "Orders"]);
     expect(screen.getByRole("cell", { name: "West" })).toBeInTheDocument();
+  });
+
+  it("downloads the named query's rows as <data>.csv", async () => {
+    const db = new FakeDuckDb();
+    db.rows = [{ region: "West", orders: 140 }];
+    renderTable({ db });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Download CSV" }),
+    );
+
+    expect(saveCsv).toHaveBeenCalledWith(
+      "orders.csv",
+      "\ufeffRegion,Orders\r\nWest,140",
+    );
+  });
+
+  it("downloads under the <Column> titles when columns are chosen", async () => {
+    const db = new FakeDuckDb();
+    db.rows = [{ region: "West", orders: 140 }];
+    renderTable({
+      db,
+      children: [<Column key="r" id="region" title="Area" />],
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Download CSV" }),
+    );
+
+    expect(saveCsv).toHaveBeenCalledWith("orders.csv", "\ufeffArea\r\nWest");
   });
 
   it("pages at 10 rows by default", async () => {
