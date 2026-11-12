@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, spyOn, userEvent } from "storybook/test";
+import { expect, userEvent } from "storybook/test";
 import type { Row } from "../../data/types";
 import { DataTable } from "./data-table";
+import { downloadedCsvLines } from "./csv-download-lines";
 import { resolveTableColumns } from "./table-columns";
 
 const ROWS: Row[] = Array.from({ length: 39 }, (_, i) => ({
@@ -86,15 +87,14 @@ export const SinglePage: Story = {
  * just the page on screen. */
 export const Download: Story = {
   play: async ({ canvas }) => {
-    const createObjectURL = spyOn(URL, "createObjectURL");
     // desc then asc: the lowest `orders` row comes first.
-    await userEvent.click(canvas.getByRole("button", { name: "Orders" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Orders" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Download CSV" }));
-
-    const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
-    const lines = (await blob.text()).split("\r\n");
-    createObjectURL.mockRestore();
+    const lines = await downloadedCsvLines(async () => {
+      await userEvent.click(canvas.getByRole("button", { name: "Orders" }));
+      await userEvent.click(canvas.getByRole("button", { name: "Orders" }));
+      await userEvent.click(
+        canvas.getByRole("button", { name: "Download CSV" }),
+      );
+    });
     await expect(lines).toHaveLength(40);
     await expect(lines[1]).toBe("w39,South,62");
   },
