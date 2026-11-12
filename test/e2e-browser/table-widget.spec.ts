@@ -61,6 +61,22 @@ function firstRowCells(table: Locator) {
   return table.locator("tbody tr").first().locator("td").allTextContents();
 }
 
+/**
+ * Clicks a table's Download button and returns the saved file's name and
+ * lines. The BOM stays on the first line; CSV rows end in `\r\n`.
+ */
+async function downloadCsv(
+  page: Page,
+  table: Locator,
+): Promise<{ filename: string; lines: string[] }> {
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    table.getByRole("button", { name: "Download CSV" }).click(),
+  ]);
+  const text = readFileSync(await download.path(), "utf8");
+  return { filename: download.suggestedFilename(), lines: text.split("\r\n") };
+}
+
 test.beforeEach(async ({ page }) => {
   // Sort and pagination are client-side transforms — every worker post
   // after first render would mean a re-query leaked in.
@@ -319,5 +335,65 @@ test("a data name no sql fence declares renders an inline error", async ({
     page.getByRole("heading", { name: "Orders overview" }),
   ).toBeVisible();
   await expect(resultTables(page).first().getByRole("row")).toHaveCount(4);
+  expect(errors).toEqual([]);
+});
+
+test("weekly-review's weekly_trend table downloads all 39 rows, in the order shown", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review`);
+  const widget = weeklyTrendRegion(page);
+  await expect(widget.locator("table").getByRole("row")).toHaveCount(11);
+  await expectMinTargetSize(
+    widget.getByRole("button", { name: "Download CSV" }),
+    24,
+  );
+  const postsBefore = await workerPosts(page);
+
+  const authored = await downloadCsv(page, widget);
+  expect(authored.filename).toBe("weekly_trend.csv");
+  // Every row, not the 10 on the page: the header plus 39 data rows.
+  expect(authored.lines).toHaveLength(40);
+  expect(authored.lines[0]).toBe("\ufeffRegion,Week,Orders,Share of week");
+  // Raw values: the share is the 0–1 ratio, not the table's "53.8%".
+  expect(authored.lines[1]).toMatch(/^North,1,14,0\.538\d*$/);
+
+  await widget.getByRole("button", { name: "Orders" }).click();
+  const sorted = await downloadCsv(page, widget);
+  expect(sorted.lines).toHaveLength(40);
+  // Descending by orders puts week 13 West (22) first, as on screen.
+  expect(sorted.lines[1]).toMatch(/^West,13,22,/);
+
+  expect(await workerPosts(page)).toBe(postsBefore);
+  expect(errors).toEqual([]);
+});
+
+test("a region filter narrows the order_detail download, not weekly_trend's", async ({
+  page,
+  biacDev,
+}) => {
+  const errors = collectConsoleErrors(page);
+  await page.goto(`${biacDev.url}weekly-review?region=West`);
+  const orderDetail = page
+    .locator("div.overflow-x-auto", {
+      has: page.getByRole("columnheader", { name: "Order ID" }),
+    })
+    .locator("..");
+  await expect(orderDetail).toContainText("140 rows");
+
+  const { filename, lines } = await downloadCsv(page, orderDetail);
+  expect(filename).toBe("order_detail.csv");
+  expect(lines).toHaveLength(141);
+  const header = lines[0]?.replace("\ufeff", "").split(",") ?? [];
+  const region = header.indexOf("Region");
+  expect(region).toBeGreaterThanOrEqual(0);
+  const regions = lines.slice(1).map((line) => line.split(",")[region]);
+  expect(new Set(regions)).toEqual(new Set(["West"]));
+
+  // weekly_trend has no region clause, so the same URL leaves it whole.
+  const trend = await downloadCsv(page, weeklyTrendRegion(page));
+  expect(trend.lines).toHaveLength(40);
   expect(errors).toEqual([]);
 });
