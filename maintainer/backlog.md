@@ -206,9 +206,9 @@ The repository goes public and `biac` is published to npm by GitHub Actions: sta
 
 A table does more than show rows: the reader takes them away. Opened while SL-066 T3 waits on the owner's re-run of the npm updater (2026-11-12 08:56 UTC), at the owner's request.
 
-| Id     | Slice                                                                                                                                                                                                                                                                                                           | State           |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| SL-070 | A button on every table saves all its rows, in the order and with the headers shown, as a CSV file — closes GAP-100 — demo entry: `bin/biac dev` → `/weekly-review` (sort a header, click `Download CSV`, open `weekly_trend.csv`; `?region=West`; a table with no rows), `bin/biac build` + `bin/biac preview` | **open ← next** |
+| Id     | Slice                                                                                                                                                                                                                                                                                                           | State   |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| SL-070 | A button on every table saves all its rows, in the order and with the headers shown, as a CSV file — closes GAP-100 — demo entry: `bin/biac dev` → `/weekly-review` (sort a header, click `Download CSV`, open `weekly_trend.csv`; `?region=West`; a table with no rows), `bin/biac build` + `bin/biac preview` | shipped |
 
 ## Later phases
 
