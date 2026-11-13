@@ -100,25 +100,6 @@ describe("the docs project", () => {
     expect(base).toBe("/bi-as-code/");
   });
 
-  it("keeps every /data/ image a docs page shows in docs/data", () => {
-    // Arrange — the pages are read from the repo; nothing is built.
-    const docsRoot = new URL("../../docs/", import.meta.url);
-    const pages = readdirSync(new URL("pages/", docsRoot), {
-      recursive: true,
-      encoding: "utf8",
-    }).filter((file) => file.endsWith(".md"));
-
-    // Act
-    const missing = pages.flatMap((file) =>
-      dataImagesOf(readFileSync(new URL(`pages/${file}`, docsRoot), "utf-8"))
-        .filter((image) => !existsSync(new URL(image.slice(1), docsRoot)))
-        .map((image) => `${file} → ${image}`),
-    );
-
-    // Assert — biac build does not check an image, so a typo ships a broken one.
-    expect(missing).toEqual([]);
-  });
-
   it("lists every icon name the front-matter accepts on the Markdown pages reference", () => {
     // Arrange — the page is read from the repo; nothing is built.
     const page = readFileSync(
@@ -352,13 +333,6 @@ async function loaderFailure(
 }
 
 /** The files under `dir` whose text holds `text`. */
-/** The `/data/…` paths a page's Markdown image syntax shows. */
-function dataImagesOf(markdown: string): string[] {
-  return [...markdown.matchAll(/!\[[^\]]*\]\((\/data\/[^)\s]+)\)/g)].map(
-    (match) => match[1]!,
-  );
-}
-
 function filesCarrying(dir: string, text: string): string[] {
   return readdirSync(dir, { recursive: true, encoding: "utf8" }).filter(
     (name) =>

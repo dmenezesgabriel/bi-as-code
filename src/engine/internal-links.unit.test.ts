@@ -7,7 +7,6 @@ import {
 import {
   assertInternalLinksResolve,
   brokenLinkReason,
-  pageLinks,
 } from "./internal-links.js";
 
 afterEach(() => cleanupProjects());
@@ -60,46 +59,6 @@ describe("brokenLinkReason", () => {
       expect(reason).toMatch(/write it \/-rooted/);
     },
   );
-});
-
-describe("pageLinks", () => {
-  it("names each link's line in the page file, front-matter included", async () => {
-    const markdown = "---\ntitle: T\n---\n# T\n\n[gone](/no-such-page)\n";
-
-    const links = await pageLinks(markdown, "pages/a.md");
-
-    expect(links).toEqual([{ href: "/no-such-page", line: 6 }]);
-  });
-
-  it("collects reference definitions and literal <a href> attributes", async () => {
-    const markdown = '[x][ref]\n\n[ref]: /a\n\n<a href="/b">b</a>\n';
-
-    const links = await pageLinks(markdown, "pages/a.md");
-
-    expect(links.map((link) => link.href)).toEqual(["/a", "/b"]);
-  });
-
-  it.each([
-    ["an <a> whose href is an expression", "<a href={target}>b</a>\n"],
-    [
-      "a link shown in a plain code fence",
-      "```md\n[gone](/no-such-page)\n```\n",
-    ],
-    // The page transform reports the compile error at the page file.
-    ["a page that does not compile", "[gone](/no-such-page)\n\n<Callout\n"],
-  ])("collects no link from %s", async (_case, markdown) => {
-    const links = await pageLinks(markdown, "pages/a.md");
-
-    expect(links).toEqual([]);
-  });
-
-  it("collects a link rendered by an mdx echo fence at its page line", async () => {
-    const markdown = "# T\n\n```mdx echo\n[gone](/no-such-page)\n```\n";
-
-    const links = await pageLinks(markdown, "pages/a.md");
-
-    expect(links).toEqual([{ href: "/no-such-page", line: 4 }]);
-  });
 });
 
 describe("assertInternalLinksResolve", () => {

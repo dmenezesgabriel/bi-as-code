@@ -1,20 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { compile, type CompileOptions } from "@mdx-js/mdx";
-import type { Nodes, Root } from "mdast";
-import type { MdxJsxFlowElement, MdxJsxTextElement } from "mdast-util-mdx-jsx";
-import remarkGfm from "remark-gfm";
-import type { Plugin } from "unified";
-import { visit } from "unist-util-visit";
 import { discoverPages } from "./discover-pages.js";
-import { remarkSpliceMdxEcho } from "./mdx-echo-fence.js";
-import { positionedPageFile } from "./page-frontmatter.js";
-
-/** A link's `href` as written, and the page-file line it is written on. */
-export interface PageLink {
-  href: string;
-  line: number;
-}
+import { pageReferences } from "./page-references.js";
 
 // A scheme (`https:`, `mailto:`), a protocol-relative `//host`, or a
 // same-page `#anchor` / `?query` names no page route.
@@ -55,75 +42,6 @@ function routePath(href: string): string {
 }
 
 /**
- * Every link a page renders: markdown links, reference definitions and
- * `<a>` elements with a literal `href` — including those an ` ```mdx echo `
- * fence renders — each at its line in the page file. An expression-valued
- * `href` is only known at run time and is left out, and so is every link
- * of a page that does not compile.
- *
- * @example
- * await pageLinks("# T\n\n[a](/b)\n", "pages/t.md");
- * // → [{ href: "/b", line: 3 }]
- */
-export async function pageLinks(
-  markdown: string,
-  filePath: string,
-): Promise<PageLink[]> {
-  const links: PageLink[] = [];
-  try {
-    await compile(
-      positionedPageFile(markdown, filePath),
-      linkCollectingOptions(links),
-    );
-  } catch (error) {
-    // The MDX compiler throws a page's own errors as `VFileMessage`s, which
-    // carry a `ruleId`; the page transform reports those at the page file,
-    // so the build still fails, naming the page. Anything else is a bug.
-    if (!(error instanceof Error && "ruleId" in error)) throw error;
-    return [];
-  }
-  return links;
-}
-
-// The splice runs first, as in the page compiler, so links an echo fence
-// renders are collected at their page lines.
-function linkCollectingOptions(links: PageLink[]): CompileOptions {
-  return {
-    format: "mdx",
-    remarkPlugins: [
-      remarkGfm,
-      remarkSpliceMdxEcho,
-      [remarkCollectLinks, links],
-    ],
-  };
-}
-
-const remarkCollectLinks: Plugin<[PageLink[]], Root> = (links) => (tree) => {
-  visit(tree, (node: Nodes) => {
-    const href = linkHref(node);
-    const line = node.position?.start.line;
-    if (href !== undefined && line !== undefined) links.push({ href, line });
-  });
-};
-
-function linkHref(node: Nodes): string | undefined {
-  if (node.type === "link" || node.type === "definition") return node.url;
-  if (node.type !== "mdxJsxFlowElement" && node.type !== "mdxJsxTextElement")
-    return;
-  return node.name === "a" ? literalHref(node) : undefined;
-}
-
-function literalHref(
-  node: MdxJsxFlowElement | MdxJsxTextElement,
-): string | undefined {
-  for (const attribute of node.attributes) {
-    if (attribute.type !== "mdxJsxAttribute" || attribute.name !== "href")
-      continue;
-    return typeof attribute.value === "string" ? attribute.value : undefined;
-  }
-}
-
-/**
  * Fails the build when any page links to a route no page serves, listing
  * every broken link as `pages/<file>:<line> → <href>` with the reason. Runs
  * in `buildStart`, before anything is written, so the failure leaves no
@@ -154,7 +72,7 @@ async function brokenLinksOfPage(
   routes: ReadonlySet<string>,
 ): Promise<string[]> {
   const markdown = await readFile(join(projectRoot, file), "utf8");
-  const links = await pageLinks(markdown, file);
+  const { links } = await pageReferences(markdown, file);
   return links.flatMap(({ href, line }) => {
     const reason = brokenLinkReason(href, routes);
     return reason === undefined

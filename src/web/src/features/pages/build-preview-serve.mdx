@@ -37,10 +37,11 @@ It prints `biac build — wrote` and the path of `my-site/build`. The command em
 
 Every query still runs in the reader's browser, so the site needs no database. You can copy `build/` to any static host.
 
-The build exits `1` in two cases:
+The build exits `1` in three cases:
 
 - A page does not compile. The error names the page file, the line and column, and what the compiler found, such as `4:1: Unexpected end of file after name`.
 - A link between pages points at a route that does not exist. The error counts the broken links and lists each as the file and line of the link and the route it names, such as `pages/index.md:3 → /missing (no page serves this route)`.
+- An image shows a file the build does not serve. The error counts the broken images and lists each as the file and line of the image and the path it names, such as `pages/index.md:5 → /data/gone.png (no file at data/gone.png)`.
 
 Run `biac build` before you deploy, and treat a non-zero exit as a stop.
 
