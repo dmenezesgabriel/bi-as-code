@@ -62,6 +62,7 @@ for (const route of ["weekly-review", "", "crossfilter-scale"]) {
 
 // `--container-measure` in `src/web/src/styles.css`: 70ch at the 16 px body.
 const MEASURE_PX = 640;
+const WCAG_LINE_CH = 80;
 
 /** The first `main > p`'s width in `ch` of its own font. */
 function paragraphWidthInCh(page: Page): Promise<number> {
@@ -109,8 +110,12 @@ for (const [route, width] of [
     await page.goto(`${biacDev.url}${route}`);
     await expect(page.locator("[data-echarts-ready]").first()).toBeVisible();
 
-    // Assert — half a `ch` of slack: 40rem is 70ch only to the sub-pixel.
-    expect(await paragraphWidthInCh(page)).toBeLessThanOrEqual(70.5);
+    // Assert — the measure is 640 px; its width in `ch` follows the font
+    // (70 in Noto Sans, 72 in Arial), so `ch` is held to WCAG 2.1 SC 1.4.8's
+    // 80-character line, https://www.w3.org/TR/WCAG21/#visual-presentation.
+    const paragraph = await page.locator("main > p").first().boundingBox();
+    expect(paragraph?.width).toBeLessThanOrEqual(MEASURE_PX);
+    expect(await paragraphWidthInCh(page)).toBeLessThanOrEqual(WCAG_LINE_CH);
     const [chartWidth, columnWidth] = await chartAndColumnWidths(page);
     expect(columnWidth).toBeGreaterThan(MEASURE_PX);
     expect(chartWidth).toBeCloseTo(columnWidth, 0);

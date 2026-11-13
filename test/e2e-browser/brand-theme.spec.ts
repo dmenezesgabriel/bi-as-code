@@ -72,10 +72,12 @@ const BRAND_BLOCK = `  brand: {
   },
 `;
 
-// Tailwind's stacks by their first family, and the generic family that ends
-// each: the brand names a stack, never a list.
+// Tailwind's stacks by their first family and the generic family that ends
+// each: the brand names a stack, never a list. The sans stack is told by its
+// generic family alone, because Tailwind 4.3 moved its first family from
+// `ui-sans-serif` to `-apple-system`.
 const SERIF_STACK = /^ui-serif,.*\bserif$/;
-const SANS_STACK = /^ui-sans-serif,.*\bsans-serif,/;
+const SANS_STACK = /\bsans-serif,/;
 const MONO_STACK = /^ui-monospace,.*\bmonospace$/;
 
 // The shipped config with a brand block added ahead of its closing brace.

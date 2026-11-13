@@ -22,11 +22,13 @@ const POLL_MS = 50;
 /**
  * A content edit swaps the page in place, and vite logs that as an update
  * of the module accepting it — the page manifest — not of the page file.
+ * vite 8.3 logs that module by its raw id, NUL prefix included, where 8.2
+ * logged its served `/@id/__x00__…` url.
  */
-export const PAGE_SWAP_LOGGED_PATH = "/@id/__x00__virtual:biac-pages";
+export const PAGE_SWAP_LOGGED_PATH = "\0virtual:biac-pages";
 
 /**
- * vite 8.2.2 logs a watched file's change as `page reload <file>[ (reason)]`,
+ * vite 8.3.6 logs a watched file's change as `page reload <file>[ (reason)]`,
  * the path relative to its root, or absolute when outside it — `biac dev`'s
  * root is not the project dir, so only the tail is matched — or, when the
  * change swaps in place, as `hmr update <url>[, <url>…]` naming the modules

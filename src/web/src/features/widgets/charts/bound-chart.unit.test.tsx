@@ -74,8 +74,7 @@ function deferredRows(): {
 
 function consumerCategories(host: EChartHostElement): unknown[] | undefined {
   const option = host.echartsInstance?.getOption() as
-    | { xAxis?: { data?: unknown[] }[] }
-    | undefined;
+    { xAxis?: { data?: unknown[] }[] } | undefined;
   return option?.xAxis?.[0]?.data;
 }
 

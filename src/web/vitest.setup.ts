@@ -2,8 +2,8 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join } from "node:path";
+import { tailwindFontStacksRule } from "./tailwind-font-stacks";
 
 // Vitest runs with globals disabled, so Testing Library's auto-cleanup
 // (which hooks a global afterEach) never registers — renders would
@@ -64,22 +64,6 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * The font stacks Tailwind's `@import` defines as `--font-sans`, `--font-serif`
- * and `--font-mono`, read from its published `theme.css`. `styles.css` points
- * the brand font tokens at them (`--body-font: var(--font-stack-sans-serif)`
- * and so on); jsdom 31 substitutes `var()` and a reference to an undefined
- * property leaves the token empty, where jsdom 30 returned the literal text.
- */
-function tailwindFontStacks(): string {
-  const theme = readFileSync(
-    createRequire(import.meta.url).resolve("tailwindcss/theme.css"),
-    "utf8",
-  );
-  const stacks = theme.match(/--font-(?:sans|serif|mono):[^;]+;/g) ?? [];
-  return `:root { ${stacks.join(" ").replace(/\s+/g, " ")} }`;
-}
-
-/**
  * Loads the app stylesheet into the test document, as `main.tsx` does in the
  * browser, so charts read their colours from the real theme tokens. The
  * Tailwind `@import` is dropped: jsdom cannot resolve a package specifier
@@ -90,6 +74,6 @@ function installThemeTokens(doc: Document): void {
   // Vitest stubs every `.css` import, `?raw` included, to an empty string.
   const css = readFileSync(join(import.meta.dirname, "src/styles.css"), "utf8");
   const style = doc.createElement("style");
-  style.textContent = `${tailwindFontStacks()}\n${css.replace(/^@import .*;$/m, "")}`;
+  style.textContent = `${tailwindFontStacksRule()}\n${css.replace(/^@import .*;$/m, "")}`;
   doc.head.append(style);
 }
