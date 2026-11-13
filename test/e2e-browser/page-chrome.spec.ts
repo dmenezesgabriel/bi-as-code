@@ -181,6 +181,9 @@ test("a biac.config.ts typo shows the located error and fixing it brings the pag
   await openSiteNav(page, biacDev.url);
   const configFile = join(biacDev.projectDir, "biac.config.ts");
   const validConfig = readFileSync(configFile, "utf8");
+  // A config edit reloads the open tab by itself; a reload issued before that
+  // one lands is aborted by it, so reload again only after it has.
+  const reloaded = page.waitForEvent("load", { timeout: 20_000 });
   await rewriteUntilServerLogs({
     rewrite: () =>
       writeFileSync(
@@ -194,6 +197,7 @@ test("a biac.config.ts typo shows the located error and fixing it brings the pag
   });
   // A tab loaded while the config is broken gets vite's error page, whose
   // only link back is the HMR socket its overlay script opens.
+  await reloaded;
   await page.reload();
   const overlay = page.locator("vite-error-overlay");
   await expect(overlay.locator(".message")).toContainText(
