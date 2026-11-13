@@ -77,6 +77,24 @@ function duckdbArrowMajor(): number {
 }
 
 /**
+ * The first Node major that `engines.node` excludes, read from its `<N` upper
+ * bound. `@types/node` of that major or later types APIs the pinned runtime
+ * does not have.
+ */
+function firstExcludedNodeMajor(): number {
+  const manifest: { engines: { node: string } } = JSON.parse(
+    readFileSync(join(REPO_ROOT, "package.json"), "utf8"),
+  );
+  const major = /<\s*(\d+)/.exec(manifest.engines.node)?.[1];
+  if (!major) {
+    throw new Error(
+      `engines.node is "${manifest.engines.node}"; expected an upper bound such as ">=24.12.0 <25"`,
+    );
+  }
+  return Number(major);
+}
+
+/**
  * Each title test runs the commitlint CLI three times in a child process,
  * about 0.7 s apiece on an idle host and more while vitest's workers share the
  * CPU, so vitest's 5 s default expires under the full gate.
@@ -154,6 +172,14 @@ describe("dependabot.yml", () => {
     );
 
     expect(rule?.versions).toEqual([`>=${duckdbArrowMajor() + 1}.0.0`]);
+  });
+
+  it("ignores the @types/node majors beyond the Node range engines.node allows", () => {
+    const rule = updateFor("npm").ignore?.find(
+      (candidate) => candidate["dependency-name"] === "@types/node",
+    );
+
+    expect(rule?.versions).toEqual([`>=${firstExcludedNodeMajor()}.0.0`]);
   });
 
   it.each(ecosystems)(
