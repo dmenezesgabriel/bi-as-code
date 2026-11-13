@@ -66,6 +66,11 @@ export const EchoAndDisplay: Story = {
     await userEvent.click(sortButton);
     await expect(header).toHaveAttribute("aria-sort", "ascending");
     await expect(canvas.getAllByRole("row")[1]).toHaveTextContent("North");
+
+    // ...and a download button under it saves the same rows.
+    await expect(
+      canvas.getByRole("button", { name: "Download CSV" }),
+    ).toBeVisible();
   },
 };
 

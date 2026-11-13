@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent } from "storybook/test";
 import type { Row } from "../../data/types";
 import { DataTable } from "./data-table";
+import { downloadedCsvLines } from "./csv-download-lines";
 import { resolveTableColumns } from "./table-columns";
 
 const ROWS: Row[] = Array.from({ length: 39 }, (_, i) => ({
@@ -13,7 +14,7 @@ const ROWS: Row[] = Array.from({ length: 39 }, (_, i) => ({
 const meta: Meta<typeof DataTable> = {
   title: "Widgets/DataTable",
   component: DataTable,
-  args: { rows: ROWS, pageSize: 10 },
+  args: { rows: ROWS, pageSize: 10, downloadName: "weekly_trend" },
 };
 
 export default meta;
@@ -32,6 +33,11 @@ export const Paginated: Story = {
       const { width, height } = button.getBoundingClientRect();
       await expect({ width, height }).toEqual({ width: 24, height: 24 });
     }
+    // The download button sits beside the pager at the same target size.
+    const { width, height } = canvas
+      .getByRole("button", { name: "Download CSV" })
+      .getBoundingClientRect();
+    await expect({ width, height }).toEqual({ width: 24, height: 24 });
   },
 };
 
@@ -70,6 +76,27 @@ export const SinglePage: Story = {
   args: { rows: ROWS.slice(0, 3) },
   play: async ({ canvas }) => {
     await expect(canvas.queryByText(/Page \d+ of \d+/)).toBeNull();
+    // With no pager the download button still shows.
+    await expect(
+      canvas.getByRole("button", { name: "Download CSV" }),
+    ).toBeVisible();
+  },
+};
+
+/** The download holds every row, in the sort order the reader chose, not
+ * just the page on screen. */
+export const Download: Story = {
+  play: async ({ canvas }) => {
+    // desc then asc: the lowest `orders` row comes first.
+    const lines = await downloadedCsvLines(async () => {
+      await userEvent.click(canvas.getByRole("button", { name: "Orders" }));
+      await userEvent.click(canvas.getByRole("button", { name: "Orders" }));
+      await userEvent.click(
+        canvas.getByRole("button", { name: "Download CSV" }),
+      );
+    });
+    await expect(lines).toHaveLength(40);
+    await expect(lines[1]).toBe("w39,South,62");
   },
 };
 
@@ -79,6 +106,9 @@ export const Empty: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText("0 rows")).toBeVisible();
     await expect(canvas.queryByRole("table")).toBeNull();
+    await expect(
+      canvas.queryByRole("button", { name: "Download CSV" }),
+    ).toBeNull();
   },
 };
 

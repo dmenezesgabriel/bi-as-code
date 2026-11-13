@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Row } from "../../data/types";
 import { DataTable } from "./data-table";
+import { saveCsv } from "./save-csv";
 import { resolveTableColumns } from "./table-columns";
+import { toCsv } from "./table-csv";
+
+vi.mock("./save-csv", () => ({ saveCsv: vi.fn() }));
 
 const ROWS: Row[] = Array.from({ length: 39 }, (_, i) => ({
   week: `w${i + 1}`,
@@ -19,7 +23,12 @@ const header = (name: string) => screen.getByRole("columnheader", { name });
 
 describe("DataTable", () => {
   it("renders one columnheader per key of the first row", () => {
-    render(<DataTable rows={[{ region: "West", orders: 140 }]} />);
+    render(
+      <DataTable
+        downloadName="orders"
+        rows={[{ region: "West", orders: 140 }]}
+      />,
+    );
 
     expect(
       screen.getAllByRole("columnheader").map((th) => th.textContent),
@@ -27,27 +36,29 @@ describe("DataTable", () => {
   });
 
   it("renders the empty state when there are no rows", () => {
-    render(<DataTable rows={[]} />);
+    render(<DataTable downloadName="orders" rows={[]} />);
 
     expect(screen.getByText("0 rows")).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("shows pageSize rows and a pager when the result overflows", () => {
-    render(<DataTable rows={ROWS} pageSize={10} />);
+    render(<DataTable downloadName="orders" rows={ROWS} pageSize={10} />);
 
     expect(screen.getAllByRole("row")).toHaveLength(11);
     expect(screen.getByText("Page 1 of 4 · 39 rows")).toBeInTheDocument();
   });
 
   it("hides the pager when the result fits one page", () => {
-    render(<DataTable rows={ROWS.slice(0, 3)} pageSize={10} />);
+    render(
+      <DataTable downloadName="orders" rows={ROWS.slice(0, 3)} pageSize={10} />,
+    );
 
     expect(screen.queryByText(/Page \d+ of \d+/)).toBeNull();
   });
 
   it("navigates first/previous/next/last and disables at the bounds", () => {
-    render(<DataTable rows={ROWS} pageSize={10} />);
+    render(<DataTable downloadName="orders" rows={ROWS} pageSize={10} />);
     const first = screen.getByRole("button", { name: "First page" });
     const prev = screen.getByRole("button", { name: "Previous page" });
     const next = screen.getByRole("button", { name: "Next page" });
@@ -80,7 +91,7 @@ describe("DataTable", () => {
       { week: "w2", orders: 9 },
       { week: "w3", orders: 1 },
     ];
-    render(<DataTable rows={unsorted} pageSize={10} />);
+    render(<DataTable downloadName="orders" rows={unsorted} pageSize={10} />);
     const orders = header("Orders");
     const button = screen.getByRole("button", { name: "Orders" });
 
@@ -100,7 +111,9 @@ describe("DataTable", () => {
   });
 
   it("moves the sort to a newly clicked column, restarting at desc", () => {
-    render(<DataTable rows={ROWS.slice(0, 3)} pageSize={10} />);
+    render(
+      <DataTable downloadName="orders" rows={ROWS.slice(0, 3)} pageSize={10} />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Orders" }));
     fireEvent.click(screen.getByRole("button", { name: "Week" }));
@@ -111,7 +124,7 @@ describe("DataTable", () => {
   });
 
   it("returns to page 1 when the sort changes", () => {
-    render(<DataTable rows={ROWS} pageSize={10} />);
+    render(<DataTable downloadName="orders" rows={ROWS} pageSize={10} />);
     fireEvent.click(screen.getByRole("button", { name: "Last page" }));
     expect(screen.getByText("Page 4 of 4 · 39 rows")).toBeInTheDocument();
 
@@ -121,10 +134,18 @@ describe("DataTable", () => {
   });
 
   it("clamps the page when rows shrink under the current page", () => {
-    const { rerender } = render(<DataTable rows={ROWS} pageSize={10} />);
+    const { rerender } = render(
+      <DataTable downloadName="orders" rows={ROWS} pageSize={10} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Last page" }));
 
-    rerender(<DataTable rows={ROWS.slice(0, 11)} pageSize={10} />);
+    rerender(
+      <DataTable
+        downloadName="orders"
+        rows={ROWS.slice(0, 11)}
+        pageSize={10}
+      />,
+    );
 
     expect(screen.getByText("Page 2 of 2 · 11 rows")).toBeInTheDocument();
     expect(visibleWeeks()[0]).toBe("w11");
@@ -133,6 +154,7 @@ describe("DataTable", () => {
   it("aligns a numeric column's header and every cell right, null cells included", () => {
     render(
       <DataTable
+        downloadName="orders"
         rows={[
           { label: "x", n: null, big: 5n },
           { label: "y", n: 5, big: 6n },
@@ -152,7 +174,12 @@ describe("DataTable", () => {
   });
 
   it("leads a right-aligned header with its sort glyph and trails a left one", () => {
-    render(<DataTable rows={[{ region: "West", orders: 140 }]} />);
+    render(
+      <DataTable
+        downloadName="orders"
+        rows={[{ region: "West", orders: 140 }]}
+      />,
+    );
 
     const region = screen.getByRole("button", { name: "Region" });
     const orders = screen.getByRole("button", { name: "Orders" });
@@ -163,7 +190,12 @@ describe("DataTable", () => {
   });
 
   it("sets its figures in tabular numerals so digits line up by column", () => {
-    render(<DataTable rows={[{ region: "West", orders: 140 }]} />);
+    render(
+      <DataTable
+        downloadName="orders"
+        rows={[{ region: "West", orders: 140 }]}
+      />,
+    );
 
     expect(screen.getByRole("table").className.split(" ")).toContain(
       "tabular-nums",
@@ -171,7 +203,12 @@ describe("DataTable", () => {
   });
 
   it("renders numbers num0 and nulls empty by default", () => {
-    render(<DataTable rows={[{ region: "West", revenue: 6100, gap: null }]} />);
+    render(
+      <DataTable
+        downloadName="orders"
+        rows={[{ region: "West", revenue: 6100, gap: null }]}
+      />,
+    );
 
     const cells = screen.getAllByRole("cell").map((td) => td.textContent);
     expect(cells).toEqual(["West", "6,100", ""]);
@@ -183,7 +220,7 @@ describe("DataTable", () => {
       { id: "share", fmt: "pct1", title: "Share" },
       { id: "region" },
     ]);
-    render(<DataTable rows={rows} columns={columns} />);
+    render(<DataTable downloadName="orders" rows={rows} columns={columns} />);
 
     const headers = screen.getAllByRole("columnheader");
     expect(headers.map((th) => th.textContent)).toEqual(["Share", "Region"]);
@@ -201,11 +238,86 @@ describe("DataTable", () => {
       { id: "week" },
       { id: "revenue", fmt: "usd", title: "Revenue" },
     ]);
-    render(<DataTable rows={rows} columns={columns} />);
+    render(<DataTable downloadName="orders" rows={rows} columns={columns} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Revenue" }));
 
     expect(header("Revenue")).toHaveAttribute("aria-sort", "descending");
     expect(visibleWeeks()).toEqual(["w2", "w3", "w1"]);
+  });
+});
+
+describe("DataTable download", () => {
+  const download = () => screen.getByRole("button", { name: "Download CSV" });
+
+  beforeEach(() => {
+    vi.mocked(saveCsv).mockClear();
+  });
+
+  it("offers one button, named for assistive tech, on a paged table", () => {
+    render(<DataTable downloadName="orders" rows={ROWS} pageSize={10} />);
+
+    expect(
+      screen.getAllByRole("button", { name: "Download CSV" }),
+    ).toHaveLength(1);
+    expect(download()).toHaveAttribute("title", "Download CSV");
+  });
+
+  it("offers the button on a single page, where there is no pager", () => {
+    render(<DataTable downloadName="orders" rows={ROWS.slice(0, 3)} />);
+
+    expect(screen.queryByText(/Page \d+ of \d+/)).toBeNull();
+    expect(download()).toBeInTheDocument();
+  });
+
+  it("offers no button on an empty table", () => {
+    render(<DataTable downloadName="orders" rows={[]} />);
+
+    expect(screen.queryByRole("button", { name: "Download CSV" })).toBeNull();
+  });
+
+  it("saves every row, not just the page, under the table's name", () => {
+    render(<DataTable downloadName="weekly_trend" rows={ROWS} pageSize={10} />);
+
+    fireEvent.click(download());
+
+    expect(saveCsv).toHaveBeenCalledTimes(1);
+    const [filename, text] = vi.mocked(saveCsv).mock.calls[0] ?? [];
+    expect(filename).toBe("weekly_trend.csv");
+    expect(text).toBe(
+      toCsv(ROWS, [
+        { id: "week", title: "Week", format: String, align: "left" },
+        { id: "orders", title: "Orders", format: String, align: "right" },
+      ]),
+    );
+  });
+
+  it("saves the rows in the sort order the reader chose", () => {
+    const rows = [
+      { week: "w1", orders: 5 },
+      { week: "w2", orders: 9 },
+      { week: "w3", orders: 1 },
+    ];
+    render(<DataTable downloadName="orders" rows={rows} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Orders" }));
+    fireEvent.click(download());
+
+    const text = String(vi.mocked(saveCsv).mock.calls[0]?.[1]);
+    expect(text.split("\r\n").slice(1)).toEqual(["w2,9", "w1,5", "w3,1"]);
+  });
+
+  it("saves the shown columns, titled, with raw values", () => {
+    const rows = [{ region: "West", revenue: 6100, hidden: "x" }];
+    const columns = resolveTableColumns(rows, [
+      { id: "revenue", fmt: "usd", title: "Revenue" },
+      { id: "region" },
+    ]);
+    render(<DataTable downloadName="orders" rows={rows} columns={columns} />);
+
+    fireEvent.click(download());
+
+    const text = String(vi.mocked(saveCsv).mock.calls[0]?.[1]);
+    expect(text).toBe("\ufeffRevenue,Region\r\n6100,West");
   });
 });

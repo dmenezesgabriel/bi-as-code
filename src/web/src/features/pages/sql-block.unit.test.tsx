@@ -1,13 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Effect, Layer } from "effect";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DuckDb } from "../data/data-service";
 import { FakeDuckDb } from "../data/fake-duckdb";
 import { DataRuntimeProvider } from "../data/runtime";
 import type { Row } from "../data/types";
 import { QueryRegistryProvider } from "./query-registry";
 import { SqlBlockPre } from "./sql-block";
+import { saveCsv } from "../widgets/table/save-csv";
 import type { SqlBlock } from "./types";
+
+vi.mock("../widgets/table/save-csv", () => ({ saveCsv: vi.fn() }));
 
 const ORDERS: SqlBlock = { name: "orders", sql: "select * from orders" };
 
@@ -64,6 +67,10 @@ function renderFence({
 }
 
 describe("SqlBlockPre", () => {
+  beforeEach(() => {
+    vi.mocked(saveCsv).mockClear();
+  });
+
   it("renders a named block's rows as a table under the highlighted code", async () => {
     const db = new FakeDuckDb();
     db.rows = [
@@ -214,6 +221,30 @@ describe("SqlBlockPre", () => {
 
       expect(await screen.findByRole("table")).toHaveTextContent("West");
       expect(document.querySelector("pre")).toBeNull();
+    });
+
+    it("downloads a displayed fence's rows as <name>.csv", async () => {
+      const db = new FakeDuckDb();
+      db.rows = [{ region: "West" }];
+      renderFence({ db, echo: false });
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Download CSV" }),
+      );
+
+      expect(saveCsv).toHaveBeenCalledWith(
+        "orders.csv",
+        "\ufeffRegion\r\nWest",
+      );
+    });
+
+    it("offers no download for a fence that does not display", async () => {
+      const db = new FakeDuckDb();
+      db.rows = [{ region: "West" }];
+      renderFence({ db, display: false });
+
+      await waitFor(() => expect(db.queries).toHaveLength(1));
+      expect(screen.queryByRole("button", { name: "Download CSV" })).toBeNull();
     });
 
     it("renders no skeleton for a hidden fence while its query is in flight", async () => {

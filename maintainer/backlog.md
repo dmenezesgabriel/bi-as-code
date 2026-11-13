@@ -202,6 +202,14 @@ The repository goes public and `biac` is published to npm by GitHub Actions: sta
 | SL-067 | `npm pack` installs into an empty directory and `biac build` and `biac dev` work, with the echarts and zrender fixes intact and a tarball size budget — closes GAP-092, GAP-093, GAP-094, GAP-095, GAP-098                                                                                                                                                                                                                | shipped |
 | SL-068 | A merged `feat:` or `fix:` PR yields a release PR; merging it tags, creates the GitHub Release and, after one approval, publishes `@biac/cli` with provenance; getting-started switches to `npm i -D @biac/cli` — closes GAP-096, GAP-097 — demo: the `fix:` PR #11 produced release PR #12, merging it tagged `v0.1.1`, one approval published `@biac/cli@0.1.1` with provenance, and `npm audit signatures` verified it | shipped |
 
+## Phase 10 — Table extras
+
+A table does more than show rows: the reader takes them away. Opened while SL-066 T3 waits on the owner's re-run of the npm updater (2026-11-12 08:56 UTC), at the owner's request.
+
+| Id     | Slice                                                                                                                                                                                                                                                                                                           | State   |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| SL-070 | A button on every table saves all its rows, in the order and with the headers shown, as a CSV file — closes GAP-100 — demo entry: `bin/biac dev` → `/weekly-review` (sort a header, click `Download CSV`, open `weekly_trend.csv`; `?region=West`; a table with no rows), `bin/biac build` + `bin/biac preview` | shipped |
+
 ## Later phases
 
 Not started. Phase 4 is open.
@@ -210,7 +218,7 @@ Not started. Phase 4 is open.
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | **Connectors**             | remote DuckDB/MotherDuck/PostgreSQL sources (evidence `core/src/connectors/`, `mosaic-duckdb` data-server)                     |
 | **Chart parity remainder** | pie, funnel, sankey, treemap, candlestick, radar, polar, map, calendar heatmap, combo, waterfall, reference lines/areas/points |
-| **Table extras**           | download, column filters, column config, pivot                                                                                 |
+| **Table extras**           | Phase 10 above (download: SL-070); column filters, column config, pivot                                                        |
 | **Templating**             | `<If>`/`<Repeat>` blocks, `<Partial>` includes                                                                                 |
 | **Platform**               | print/PDF, dimension grid, query console, custom components                                                                    |
 | **Release to npm**         | Phase 9 above (owner, 2026-10-27)                                                                                              |

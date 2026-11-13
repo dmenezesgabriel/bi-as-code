@@ -59,6 +59,14 @@ A `DATE` or `TIMESTAMP` column takes a date code: `longdate` spells the month ou
 
 <Canvas of={TableStories.FilteredByTwo} />
 
+### Download
+
+The `Download CSV` button under a table saves all its rows, not only the page on screen, as a CSV file named after the query (`species_by_island.csv`). The rows come in the order the reader sorted them, under the headers the table shows. Cells hold the full raw values, not the grouped and rounded text on screen, and dates are ISO text. The file opens in Excel with accents intact.
+
+A table narrowed by a filter downloads only the rows it shows, and a table with no rows shows its empty state and no button. A ` ```sql name display ` fence has the same button.
+
+<Canvas of={TableStories.Download} />
+
 ## Props
 
 ### Table

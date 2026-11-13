@@ -10,6 +10,7 @@ import {
   withQueryData,
 } from "../../../../.storybook/decorators";
 import { Column } from "./column";
+import { downloadedCsvLines } from "./csv-download-lines";
 import { Table } from "./table";
 import type { TableProps } from "./types";
 import type { SqlBlock } from "../../pages/types";
@@ -90,6 +91,24 @@ export const EveryColumn: Story = {
       "Avg Body Mass G",
     ]);
     await expect(canvas.getByRole("cell", { name: "1,044" })).toBeVisible();
+  },
+};
+
+/** The one Download button under a table saves every row as a CSV: the
+ * column titles on screen, then the raw values, not the grouped display text. */
+export const Download: Story = {
+  decorators: [withQueryData([ORDERS], fakeDb(SPECIES_BY_ISLAND))],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole("table")).toBeVisible();
+    await expect(
+      canvas.getAllByRole("button", { name: "Download CSV" }),
+    ).toHaveLength(1);
+    const lines = await downloadedCsvLines(() =>
+      userEvent.click(canvas.getByRole("button", { name: "Download CSV" })),
+    );
+    await expect(lines[0]).toBe("Species,Island,Penguins,Avg Body Mass G");
+    await expect(lines[1]).toBe("Adelie,Biscoe,1044,3709.7");
+    await expect(lines).toHaveLength(3);
   },
 };
 

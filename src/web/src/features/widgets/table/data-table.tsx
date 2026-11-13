@@ -7,12 +7,15 @@ import {
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
+  DownloadIcon,
 } from "../../../components/icons";
 import { cn } from "../../../lib/cn";
 import type { Row } from "../../data/types";
+import { saveCsv } from "./save-csv";
 import { nextSort, sortRows } from "./sort-rows";
 import { TableEmpty } from "./states";
 import { defaultTableColumns } from "./table-columns";
+import { toCsv } from "./table-csv";
 import type { ColumnAlign, Sort, TableColumn } from "./types";
 
 const ALIGN_CLASS: Record<ColumnAlign, string> = {
@@ -30,18 +33,22 @@ const ALIGN_CLASS: Record<ColumnAlign, string> = {
  * shared empty state here. `columns` picks, orders, titles and formats
  * what shows; without it every column shows under its humanized name with
  * numbers as `num0`. Sort always compares the raw values, never the
- * formatted text.
+ * formatted text. A download button under the table saves every row, in
+ * the current sort order and under the shown column titles, as
+ * `<downloadName>.csv`.
  *
  * @example
- * <DataTable rows={result.rows} pageSize={25} />
- * <DataTable rows={result.rows} columns={resolveTableColumns(result.rows, specs)} />
+ * <DataTable rows={result.rows} downloadName="orders" pageSize={25} />
+ * <DataTable rows={result.rows} downloadName="orders" columns={resolveTableColumns(result.rows, specs)} />
  */
 export function DataTable({
   rows,
+  downloadName,
   pageSize = 10,
   columns,
 }: {
   rows: readonly Row[];
+  downloadName: string;
   pageSize?: number;
   columns?: readonly TableColumn[];
 }) {
@@ -105,14 +112,13 @@ export function DataTable({
           </tbody>
         </table>
       </div>
-      {pageCount > 1 && (
-        <TablePager
-          current={current}
-          pageCount={pageCount}
-          totalRows={rows.length}
-          onPage={setPage}
-        />
-      )}
+      <TableFooter
+        current={current}
+        pageCount={pageCount}
+        totalRows={rows.length}
+        onPage={setPage}
+        onDownload={() => saveCsv(`${downloadName}.csv`, toCsv(sorted, shown))}
+      />
     </div>
   );
 }
@@ -169,53 +175,87 @@ function SortGlyph({ direction }: { direction: Sort["direction"] | null }) {
   return <ArrowUpDownIcon className="opacity-40" />;
 }
 
-function TablePager({
+/**
+ * The row under the table: the pager (only past one page) and the download
+ * button, which stays at the right edge whatever the page count.
+ */
+function TableFooter({
   current,
   pageCount,
   totalRows,
   onPage,
+  onDownload,
 }: {
   current: number;
   pageCount: number;
   totalRows: number;
   onPage: (page: number) => void;
+  onDownload: () => void;
 }) {
+  const paged = pageCount > 1;
   return (
     <div className="flex items-center justify-between py-1 text-xs text-muted-foreground-faded">
-      <span>
-        Page {current + 1} of {pageCount} · {totalRows} rows
-      </span>
-      <div className="flex items-center">
-        <PagerButton
-          label="First page"
-          disabled={current === 0}
-          onClick={() => onPage(0)}
-        >
-          <ChevronsLeftIcon />
-        </PagerButton>
-        <PagerButton
-          label="Previous page"
-          disabled={current === 0}
-          onClick={() => onPage(current - 1)}
-        >
-          <ChevronLeftIcon />
-        </PagerButton>
-        <PagerButton
-          label="Next page"
-          disabled={current === pageCount - 1}
-          onClick={() => onPage(current + 1)}
-        >
-          <ChevronRightIcon />
-        </PagerButton>
-        <PagerButton
-          label="Last page"
-          disabled={current === pageCount - 1}
-          onClick={() => onPage(pageCount - 1)}
-        >
-          <ChevronsRightIcon />
+      {paged && (
+        <span>
+          Page {current + 1} of {pageCount} · {totalRows} rows
+        </span>
+      )}
+      <div className="ml-auto flex items-center">
+        {paged && (
+          <PagerButtons
+            current={current}
+            pageCount={pageCount}
+            onPage={onPage}
+          />
+        )}
+        <PagerButton label="Download CSV" disabled={false} onClick={onDownload}>
+          <DownloadIcon />
         </PagerButton>
       </div>
     </div>
+  );
+}
+
+function PagerButtons({
+  current,
+  pageCount,
+  onPage,
+}: {
+  current: number;
+  pageCount: number;
+  onPage: (page: number) => void;
+}) {
+  return (
+    <>
+      <PagerButton
+        label="First page"
+        disabled={current === 0}
+        onClick={() => onPage(0)}
+      >
+        <ChevronsLeftIcon />
+      </PagerButton>
+      <PagerButton
+        label="Previous page"
+        disabled={current === 0}
+        onClick={() => onPage(current - 1)}
+      >
+        <ChevronLeftIcon />
+      </PagerButton>
+      <PagerButton
+        label="Next page"
+        disabled={current === pageCount - 1}
+        onClick={() => onPage(current + 1)}
+      >
+        <ChevronRightIcon />
+      </PagerButton>
+      <PagerButton
+        label="Last page"
+        disabled={current === pageCount - 1}
+        onClick={() => onPage(pageCount - 1)}
+      >
+        <ChevronsRightIcon />
+      </PagerButton>
+    </>
   );
 }
 

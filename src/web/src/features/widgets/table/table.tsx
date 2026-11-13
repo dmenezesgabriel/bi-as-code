@@ -77,7 +77,9 @@ function ColumnsTable({
   specs: readonly ColumnProps[];
   pageSize: number;
 }): ReactElement {
-  if (specs.length === 0) return <DataTable rows={rows} pageSize={pageSize} />;
+  if (specs.length === 0) {
+    return <DataTable rows={rows} downloadName={name} pageSize={pageSize} />;
+  }
   let columns: TableColumn[];
   try {
     columns = resolveTableColumns(rows, specs);
@@ -87,5 +89,12 @@ function ColumnsTable({
     }
     throw error;
   }
-  return <DataTable rows={rows} pageSize={pageSize} columns={columns} />;
+  return (
+    <DataTable
+      rows={rows}
+      downloadName={name}
+      pageSize={pageSize}
+      columns={columns}
+    />
+  );
 }
