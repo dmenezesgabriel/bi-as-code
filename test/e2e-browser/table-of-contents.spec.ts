@@ -20,6 +20,9 @@ test("crossfilter-scale names its own rail in front-matter and keeps it when bia
 
   const configFile = join(biacDev.projectDir, "biac.config.ts");
   const shipped = readFileSync(configFile, "utf8");
+  // A config edit reloads the open tab by itself; a goto issued before that
+  // reload lands is aborted by it, so navigate only after it has.
+  const reloaded = page.waitForEvent("load", { timeout: 20_000 });
   await rewriteUntilServerLogs({
     rewrite: () =>
       writeFileSync(
@@ -31,6 +34,7 @@ test("crossfilter-scale names its own rail in front-matter and keeps it when bia
     attemptMs: 3_000,
     timeoutMs: 20_000,
   });
+  await reloaded;
   await page.goto(`${biacDev.url}weekly-review`);
   await expect(
     page.getByRole("heading", { level: 1, name: "Weekly review" }),
