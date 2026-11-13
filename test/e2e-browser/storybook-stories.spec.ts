@@ -153,8 +153,7 @@ async function visitStory(
  * on: addon-docs mounts `.sbdocs-content` once the MDX module and every
  * story it imports resolved, so a broken import never draws it. A canvas
  * with `inline: false` is a nested story iframe, and its console reaches
- * this page too, so its play runs here a second time — in a frame that is
- * never the focused document, which a focus-asserting play cannot pass.
+ * this page too.
  */
 async function visitDocsPage(
   page: Page,
@@ -177,6 +176,32 @@ async function visitDocsPage(
   if (rawTableRows > 0) {
     messages.push(`raw GFM table pipes in ${rawTableRows} paragraph(s)`);
   }
+}
+
+/**
+ * Redirect the story iframes a docs page embeds to the same URL with
+ * `embed=true`, which is how Storybook is told not to autoplay them (the
+ * frame must see the flag in its own `location`, so the request is redirected
+ * rather than rewritten). The plays of up to sixteen sibling frames otherwise
+ * run at once, and under that contention a typed value, a focus or a popup
+ * count misses its assertion at random — a failure of the crowd, not of a
+ * story, which the per-story sweep already runs one at a time.
+ */
+async function skipPlaysInEmbeddedStoryFrames(page: Page): Promise<void> {
+  await page.route(
+    (url) =>
+      url.pathname.endsWith("/iframe.html") &&
+      url.searchParams.get("viewMode") === "story",
+    (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get("embed") === "true") return route.fallback();
+      url.searchParams.set("embed", "true");
+      return route.fulfill({
+        status: 302,
+        headers: { location: url.toString() },
+      });
+    },
+  );
 }
 
 /**
@@ -253,6 +278,7 @@ test.describe("storybook stories", () => {
     expect(docsIds.length).toBeGreaterThan(0);
     test.setTimeout(30_000 + docsIds.length * PER_STORY_BUDGET_MS);
 
+    await skipPlaysInEmbeddedStoryFrames(page);
     const failuresByPage: string[] = [];
     for (const id of docsIds) {
       const messages = await collectConsoleErrorsDuring(page, (sink) =>
