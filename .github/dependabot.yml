@@ -30,7 +30,9 @@ updates:
         update-types: [minor, patch]
 
   # `pnpm-lock.yaml` is read through this ecosystem. The root directory covers
-  # the root manifest; `pnpm-workspace.yaml` lists `src/web` as a workspace.
+  # the root manifest; `pnpm-workspace.yaml` lists `src/web` as a workspace, and
+  # the updater edits `src/web/package.json` from this one entry (measured on
+  # the grouped PR of 2026-11-12), so no `directories` list is needed.
   - package-ecosystem: npm
     directory: /
     schedule:
