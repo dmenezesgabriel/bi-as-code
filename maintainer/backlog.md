@@ -204,7 +204,7 @@ The repository goes public and `biac` is published to npm by GitHub Actions: sta
 
 ## Phase 10 — Table extras
 
-A table does more than show rows: the reader takes them away. Opened while SL-066 T3 waits on the owner's re-run of the npm updater (2026-11-12 08:56 UTC), at the owner's request.
+A table does more than show rows: the reader takes them away. Opened at the owner's request (2026-11-12) while SL-066 waited on the npm updater.
 
 | Id     | Slice                                                                                                                                                                                                                                                                                                           | State   |
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
