@@ -52,6 +52,12 @@ updates:
     ignore:
       - dependency-name: apache-arrow
         versions: [">=18.0.0"]
+      # `engines.node` is `>=24.12.0 <25`, the Dockerfile's `node:24` and CI's
+      # Node 24. `@types/node` 25 and later types APIs that runtime lacks, so
+      # code that typechecks there can fail on the Node the package runs on.
+      # Updates within 24 still arrive. Raise the floor with `engines.node`.
+      - dependency-name: "@types/node"
+        versions: [">=25.0.0"]
     groups:
       npm-minor-patch:
         patterns: ["*"]
