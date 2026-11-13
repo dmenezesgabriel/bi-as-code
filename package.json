@@ -118,7 +118,7 @@
     "msw": "2.15.0",
     "prettier": "3.9.10",
     "storybook": "10.6.6",
-    "stylelint": "16.18.0",
+    "stylelint": "16.26.1",
     "stylelint-config-standard": "38.0.0",
     "testcontainers": "12.2.1",
     "typescript": "6.0.3",
