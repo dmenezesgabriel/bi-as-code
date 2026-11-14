@@ -81,6 +81,21 @@ class CursorFlushingChart {
   }
 }
 
+/** The action that re-arms the lineX brush cursor after a chart repaint. */
+const ARM_CURSOR = {
+  type: "takeGlobalCursor",
+  key: "brush",
+  brushOption: { brushType: "lineX", brushMode: "single" },
+};
+
+/** The action that repaints a held lineX brush over `coordRange`. */
+function restoreArea(coordRange: [number, number]) {
+  return {
+    type: "brush",
+    areas: [{ brushType: "lineX", coordRange, panelId: "grid--0" }],
+  };
+}
+
 function renderBrushSelect() {
   return renderInteractor("brush", () => useBrushSelect(CLIENT));
 }
@@ -208,25 +223,10 @@ describe("useBrushSelect", () => {
     const { brush } = result.current;
     act(() => brush.ended(brushEnd([10, 20]), VALUE_AXIS));
 
-    const dispatched: unknown[] = [];
-    const instance = {
-      dispatchAction: (action: unknown) => dispatched.push(action),
-    } as unknown as EChartsType;
-    act(() => brush.optionApplied(instance));
+    const instance = new CursorFlushingChart(() => {});
+    act(() => brush.optionApplied(instance.asEChart()));
 
-    expect(dispatched).toEqual([
-      {
-        type: "takeGlobalCursor",
-        key: "brush",
-        brushOption: { brushType: "lineX", brushMode: "single" },
-      },
-      {
-        type: "brush",
-        areas: [
-          { brushType: "lineX", coordRange: [10, 20], panelId: "grid--0" },
-        ],
-      },
-    ]);
+    expect(instance.dispatched).toEqual([ARM_CURSOR, restoreArea([10, 20])]);
   });
 
   it("keeps the held area and clause when re-arming flushes the repaint's empty brushSelected", () => {
@@ -240,10 +240,7 @@ describe("useBrushSelect", () => {
 
     act(() => brush.optionApplied(instance.asEChart()));
 
-    expect(instance.dispatched.at(-1)).toEqual({
-      type: "brush",
-      areas: [{ brushType: "lineX", coordRange: [10, 20], panelId: "grid--0" }],
-    });
+    expect(instance.dispatched.at(-1)).toEqual(restoreArea([10, 20]));
     expect(filters.selection("amount").clauses[0]).toBe(held);
   });
 
@@ -251,19 +248,10 @@ describe("useBrushSelect", () => {
     const { result } = renderBrushSelect();
     const { brush } = result.current;
 
-    const dispatched: unknown[] = [];
-    const instance = {
-      dispatchAction: (action: unknown) => dispatched.push(action),
-    } as unknown as EChartsType;
-    act(() => brush.optionApplied(instance));
+    const instance = new CursorFlushingChart(() => {});
+    act(() => brush.optionApplied(instance.asEChart()));
 
-    expect(dispatched).toEqual([
-      {
-        type: "takeGlobalCursor",
-        key: "brush",
-        brushOption: { brushType: "lineX", brushMode: "single" },
-      },
-    ]);
+    expect(instance.dispatched).toEqual([ARM_CURSOR]);
   });
 });
 

@@ -9,6 +9,11 @@ import {
 import type { SqlBlock } from "../../pages/types";
 import type { ValueProps } from "./types";
 import { Value } from "./value";
+import {
+  expectBogusFmtAlert,
+  expectColumnAlert,
+  expectEmptyDash,
+} from "./value-plays.fixture";
 
 const KPI: SqlBlock = {
   name: "kpi",
@@ -90,10 +95,7 @@ export const CustomColor: Story = {
  * an error. */
 export const Empty: Story = {
   decorators: [withQueryData([KPI], FakeDuckDb.withRows([]))],
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByText("–")).toBeInTheDocument();
-    await expect(canvas.queryByRole("alert")).toBeNull();
-  },
+  play: expectEmptyDash,
 };
 
 /** A `data` value no ```sql fence declares renders the named alert. */
@@ -110,22 +112,14 @@ export const UnknownName: Story = {
 export const UnknownColumn: Story = {
   args: { column: "sales" },
   decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
-  play: async ({ canvas }) => {
-    const alert = await canvas.findByRole("alert");
-    await expect(alert).toHaveTextContent('"sales"');
-    await expect(alert).toHaveTextContent("revenue, wow_pct, orders");
-  },
+  play: expectColumnAlert("sales", "revenue, wow_pct, orders"),
 };
 
 /** An unsupported `fmt` code names itself in the alert. */
 export const UnknownFmt: Story = {
   args: { fmt: "bogus" },
   decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      'fmt="bogus"',
-    );
-  },
+  play: expectBogusFmtAlert,
 };
 
 /** While the query is in flight the pulse stands in for the scalar. */

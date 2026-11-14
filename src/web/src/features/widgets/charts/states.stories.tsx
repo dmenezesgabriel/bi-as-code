@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
 import { ChartEmpty, ChartError, ChartLoading } from "./states";
+import {
+  expectLoadingStatus,
+  expectErrorAlert,
+  expectZeroRows,
+} from "../state-plays.fixture";
 
 const meta: Meta = {
   title: "Widgets/ChartStates",
@@ -14,11 +18,7 @@ type Story = StoryObj<typeof meta>;
  * pixels the canvas will claim, so the page doesn't jump when data lands. */
 export const Loading: Story = {
   render: () => <ChartLoading height={300} />,
-  play: async ({ canvas }) => {
-    await expect(
-      canvas.getByRole("status", { name: "Loading query result" }),
-    ).toBeVisible();
-  },
+  play: expectLoadingStatus,
 };
 
 /** A block failure naming the query — a bad `data`/`x`/`y`/`fmt` ref or a
@@ -31,18 +31,12 @@ export const QueryError: Story = {
       height={300}
     />
   ),
-  play: async ({ canvas }) => {
-    const alert = canvas.getByRole("alert");
-    await expect(alert).toHaveTextContent("weekly_trend");
-    await expect(alert).toHaveTextContent("orders");
-  },
+  play: expectErrorAlert("weekly_trend", "orders"),
 };
 
 /** A filtered-empty fence — the success path that found zero rows keeps the
  * chart's height so the page layout holds. */
 export const Empty: Story = {
   render: () => <ChartEmpty height={300} />,
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText("0 rows")).toBeVisible();
-  },
+  play: expectZeroRows,
 };

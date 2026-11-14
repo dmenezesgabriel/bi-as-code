@@ -1,24 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor } from "storybook/test";
 import type { BiacConfig } from "virtual:biac-config";
-import type { NavTree } from "virtual:biac-pages";
 import { withMemoryRouter } from "../.storybook/decorators";
 import { AppShell } from "./App";
 import { FakeFrameWindow } from "./features/chrome/frame-window.stub";
-
-const TREE: NavTree = {
-  rootPages: [
-    { name: "Home", href: "/" },
-    { name: "Weekly review", href: "/weekly-review" },
-  ],
-  directories: [
-    {
-      id: "guides",
-      name: "Guides",
-      pages: [{ name: "Getting started", href: "/guides/getting-started" }],
-    },
-  ],
-};
+import { GUIDES_NAV_TREE } from "./features/chrome/nav-tree.fixture";
 
 const SITE: BiacConfig = {
   title: "biac",
@@ -37,7 +23,7 @@ const SITE: BiacConfig = {
 const meta: Meta<typeof AppShell> = {
   title: "App",
   component: AppShell,
-  args: { tree: TREE, site: SITE },
+  args: { tree: GUIDES_NAV_TREE, site: SITE },
   decorators: [
     withMemoryRouter(["/", "/weekly-review", "/guides/getting-started"], "/"),
   ],

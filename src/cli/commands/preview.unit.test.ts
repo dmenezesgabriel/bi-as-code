@@ -1,7 +1,9 @@
-import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PreviewServer } from "vite";
+import {
+  builtProject,
+  fakePreviewServer,
+} from "../../../test/lib/fake-preview.js";
 import {
   cleanupProjects,
   makeTempProject,
@@ -10,21 +12,6 @@ import { parsePreviewArgs, preview } from "./preview.js";
 
 const { vitePreview } = vi.hoisted(() => ({ vitePreview: vi.fn() }));
 vi.mock("vite", () => ({ preview: vitePreview }));
-
-type FakePreviewServer = Pick<PreviewServer, "close" | "printUrls">;
-
-function fakeServer(): FakePreviewServer {
-  return {
-    close: vi.fn().mockResolvedValue(undefined),
-    printUrls: vi.fn(),
-  };
-}
-
-function builtProject(): string {
-  const root = makeTempProject("biac-preview-");
-  mkdirSync(join(root, "build"));
-  return root;
-}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -58,8 +45,8 @@ describe("parsePreviewArgs", () => {
 
 describe("preview", () => {
   it("serves <project>/build with the web config on the given port", async () => {
-    const root = builtProject();
-    const server = fakeServer();
+    const root = builtProject("biac-preview-");
+    const server = fakePreviewServer();
     vitePreview.mockResolvedValue(server);
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(process, "once").mockImplementation(() => process);
@@ -74,22 +61,22 @@ describe("preview", () => {
   });
 
   it("leaves the port to vite when --port is absent", async () => {
-    vitePreview.mockResolvedValue(fakeServer());
+    vitePreview.mockResolvedValue(fakePreviewServer());
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(process, "once").mockImplementation(() => process);
 
-    await preview([builtProject()]);
+    await preview([builtProject("biac-preview-")]);
 
     expect(vitePreview.mock.calls[0]![0].preview).toEqual({ cors: false });
   });
 
   it("serves the framing policy from a middleware ahead of vite's, so a 304 carries it too", async () => {
-    vitePreview.mockResolvedValue(fakeServer());
+    vitePreview.mockResolvedValue(fakePreviewServer());
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(process, "once").mockImplementation(() => process);
     const use = vi.fn();
 
-    await preview([builtProject()]);
+    await preview([builtProject("biac-preview-")]);
     const [plugin] = vitePreview.mock.calls[0]![0].plugins;
     plugin.configurePreviewServer({ middlewares: { use } });
 
@@ -98,12 +85,12 @@ describe("preview", () => {
   });
 
   it("answers the listed data origins on /data from a middleware ahead of vite's", async () => {
-    vitePreview.mockResolvedValue(fakeServer());
+    vitePreview.mockResolvedValue(fakePreviewServer());
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(process, "once").mockImplementation(() => process);
     const use = vi.fn();
 
-    await preview([builtProject()]);
+    await preview([builtProject("biac-preview-")]);
     const plugin = vitePreview.mock.calls[0]![0].plugins[1];
     plugin.configurePreviewServer({ middlewares: { use } });
 
@@ -112,12 +99,12 @@ describe("preview", () => {
   });
 
   it("answers the listed data origins on /widgets from a middleware ahead of vite's", async () => {
-    vitePreview.mockResolvedValue(fakeServer());
+    vitePreview.mockResolvedValue(fakePreviewServer());
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(process, "once").mockImplementation(() => process);
     const use = vi.fn();
 
-    await preview([builtProject()]);
+    await preview([builtProject("biac-preview-")]);
     const plugin = vitePreview.mock.calls[0]![0].plugins[2];
     plugin.configurePreviewServer({ middlewares: { use } });
 
@@ -138,11 +125,11 @@ describe("preview", () => {
   });
 
   it("hands the server to the SIGINT/SIGTERM shutdown", async () => {
-    vitePreview.mockResolvedValue(fakeServer());
+    vitePreview.mockResolvedValue(fakePreviewServer());
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     const once = vi.spyOn(process, "once").mockImplementation(() => process);
 
-    await preview([builtProject()]);
+    await preview([builtProject("biac-preview-")]);
 
     const signals = once.mock.calls.map(([signal]) => signal);
     expect(signals).toEqual(["SIGINT", "SIGTERM"]);

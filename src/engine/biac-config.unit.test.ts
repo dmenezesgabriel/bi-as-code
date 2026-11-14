@@ -5,6 +5,7 @@ import {
   cleanupProjects,
   makeTempProject,
   writeProjectFile,
+  writeProjectFiles,
 } from "../../test/lib/temp-project.js";
 import { loadBiacConfig } from "./biac-config.js";
 import { DEFAULT_INTERPRETERS } from "./data-loader-interpreters.js";
@@ -685,9 +686,7 @@ describe("read-only project", () => {
   function makeReadOnlyProject(files: Record<string, string>): string {
     const root = makeProject();
     writeProjectFile(root, "package.json", '{ "type": "module" }\n');
-    for (const [path, source] of Object.entries(files)) {
-      writeProjectFile(root, path, source);
-    }
+    writeProjectFiles(root, files);
     mkdirSync(join(root, "node_modules"));
     chmodSync(join(root, "node_modules"), 0o555);
     chmodSync(root, 0o555);

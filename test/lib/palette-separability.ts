@@ -120,12 +120,10 @@ export function minimumSeparation(
   }));
   return perceived
     .flatMap((first, index) =>
-      perceived.slice(index + 1).map(
-        (second): PaletteSeparation => ({
-          deltaE: deltaE76(first.lab, second.lab),
-          pair: [first.hex, second.hex],
-        }),
-      ),
+      perceived.slice(index + 1).map((second): PaletteSeparation => ({
+        deltaE: deltaE76(first.lab, second.lab),
+        pair: [first.hex, second.hex],
+      })),
     )
     .reduce((closest, pair) => (pair.deltaE < closest.deltaE ? pair : closest));
 }

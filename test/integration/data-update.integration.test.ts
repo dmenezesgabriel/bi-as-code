@@ -1,37 +1,23 @@
 import { utimesSync } from "node:fs";
 import { join } from "node:path";
-import type { ViteDevServer } from "vite";
-import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { makePagesServer, waitForWatch } from "../lib/pages-vite-server.js";
+import { describe, expect, it, vi, type MockInstance } from "vitest";
 import {
-  cleanupProjects,
-  makeTempProject,
-  writeProjectFile,
-} from "../lib/temp-project.js";
+  registerDevServerLifecycle,
+  WATCH_WAIT_MS,
+} from "../lib/dev-server-suite.js";
+import { makePagesServer, waitForWatch } from "../lib/pages-vite-server.js";
+import { makeTempProject, writeProjectFile } from "../lib/temp-project.js";
 
-/** How long a filesystem mutation may take to reach vite's watcher. */
-const WATCH_WAIT_MS = 10_000;
-
-// Every test boots a vite dev server and then waits up to WATCH_WAIT_MS for
-// a watcher event: vitest's 5s default would cut that wait short.
-vi.setConfig({ testTimeout: 2 * WATCH_WAIT_MS });
-
-let server: ViteDevServer | undefined;
-
-afterEach(async () => {
-  await server?.close();
-  server = undefined;
-  cleanupProjects();
-});
+registerDevServerLifecycle();
 
 /** Boots a dev server over `root` once chokidar lists `data/<fileName>`. */
 async function watchedServer(
   root: string,
   fileName: string,
 ): Promise<MockInstance> {
-  server = await makePagesServer(root);
-  await waitForWatch(server, join(root, "data"), fileName);
-  return vi.spyOn(server.environments.client.hot, "send");
+  const dev = await makePagesServer(root);
+  await waitForWatch(dev, join(root, "data"), fileName);
+  return vi.spyOn(dev.environments.client.hot, "send");
 }
 
 /** Moves a file's mtime forward so the watcher reports a real change. */

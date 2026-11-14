@@ -9,6 +9,11 @@ import {
 import type { SqlBlock } from "../../pages/types";
 import { Delta } from "./delta";
 import type { DeltaProps } from "./types";
+import {
+  expectBogusFmtAlert,
+  expectColumnAlert,
+  expectEmptyDash,
+} from "./value-plays.fixture";
 
 const KPI: SqlBlock = {
   name: "kpi",
@@ -144,10 +149,7 @@ export const NeutralRange: Story = {
  * an error. */
 export const Empty: Story = {
   decorators: [withQueryData([KPI], FakeDuckDb.withRows([]))],
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByText("–")).toBeInTheDocument();
-    await expect(canvas.queryByRole("alert")).toBeNull();
-  },
+  play: expectEmptyDash,
 };
 
 /** A `column` absent from the row lists the ones the query returned. The
@@ -156,11 +158,7 @@ export const Empty: Story = {
 export const UnknownColumn: Story = {
   args: { column: "delta" },
   decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
-  play: async ({ canvas }) => {
-    const alert = await canvas.findByRole("alert");
-    await expect(alert).toHaveTextContent('"delta"');
-    await expect(alert).toHaveTextContent("revenue, wow_pct");
-  },
+  play: expectColumnAlert("delta", "revenue, wow_pct"),
 };
 
 /** An unsupported `fmt` code names itself in the alert — validated before
@@ -168,11 +166,7 @@ export const UnknownColumn: Story = {
 export const UnknownFmt: Story = {
   args: { fmt: "bogus" },
   decorators: [withQueryData([KPI], FakeDuckDb.withRows(ROWS))],
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      'fmt="bogus"',
-    );
-  },
+  play: expectBogusFmtAlert,
 };
 
 /** `filters="region"` wraps the fence's sql with the page filter's bound

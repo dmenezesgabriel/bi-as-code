@@ -34,7 +34,7 @@ import { copyDocsProject } from "../lib/shipped-project.js";
 import {
   cleanupProjects,
   makeTempProject,
-  writeProjectFile,
+  writeProjectFiles,
 } from "../lib/temp-project.js";
 
 afterEach(() => {
@@ -318,9 +318,7 @@ async function loaderFailure(
   interpreters: DataLoaderInterpreters = DEFAULT_INTERPRETERS,
 ): Promise<string> {
   const root = makeTempProject("biac-loader-");
-  for (const [name, content] of Object.entries(files)) {
-    writeProjectFile(root, name, content);
-  }
+  writeProjectFiles(root, files);
   const cache = createDataLoaderCache(root, new FinishedRunLog());
   try {
     await cache.load("quakes.csv", interpreters);

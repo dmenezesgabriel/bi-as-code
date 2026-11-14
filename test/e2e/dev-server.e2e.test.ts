@@ -34,6 +34,27 @@ afterAll(async () => {
   if (projectRoot) rmSync(projectRoot, { recursive: true, force: true });
 });
 
+/**
+ * Runs `rewrite` until the server logs the page swap, then asserts the swap
+ * was an HMR update with no page reload, and that the server stops cleanly.
+ */
+async function expectHotUpdate(
+  dev: DevServer,
+  rewrite: () => void,
+): Promise<void> {
+  const line = await rewriteUntilServerLogs({
+    rewrite,
+    log: dev.log,
+    loggedPath: PAGE_SWAP_LOGGED_PATH,
+    attemptMs: 3_000,
+    timeoutMs: 20_000,
+  });
+
+  expect(line).toMatch(/ hmr update /);
+  expect(dev.log()).not.toContainEqual(expect.stringMatching(/ page reload /));
+  expect(await dev.stop()).toBe(0);
+}
+
 describe("biac dev", () => {
   it("serves the SPA and compiled page modules, then shuts down on SIGINT", async () => {
     server = await startDevServer(projectRoot!);
@@ -140,19 +161,9 @@ describe("biac dev", () => {
     await fetch(`${server.url}@id/__x00__virtual:biac-pages`);
     await fetch(`${server.url}@fs${page}?import`);
 
-    const line = await rewriteUntilServerLogs({
-      rewrite: () => writeFileSync(queryFile, "select 2 as n\n"),
-      log: server.log,
-      loggedPath: PAGE_SWAP_LOGGED_PATH,
-      attemptMs: 3_000,
-      timeoutMs: 20_000,
-    });
-
-    expect(line).toMatch(/ hmr update /);
-    expect(server.log()).not.toContainEqual(
-      expect.stringMatching(/ page reload /),
+    await expectHotUpdate(server, () =>
+      writeFileSync(queryFile, "select 2 as n\n"),
     );
-    expect(await server.stop()).toBe(0);
   }, 60_000);
 
   it("hot-updates a page, without a reload, when translations.yaml is saved", async () => {
@@ -167,19 +178,9 @@ describe("biac dev", () => {
     await fetch(`${server.url}@fs${page}?import`);
     await fetch(`${server.url}@id/__x00__virtual:biac-translations`);
 
-    const line = await rewriteUntilServerLogs({
-      rewrite: () => writeFileSync(translations, "en:\n  title: After\n"),
-      log: server.log,
-      loggedPath: PAGE_SWAP_LOGGED_PATH,
-      attemptMs: 3_000,
-      timeoutMs: 20_000,
-    });
-
-    expect(line).toMatch(/ hmr update /);
-    expect(server.log()).not.toContainEqual(
-      expect.stringMatching(/ page reload /),
+    await expectHotUpdate(server, () =>
+      writeFileSync(translations, "en:\n  title: After\n"),
     );
-    expect(await server.stop()).toBe(0);
   }, 60_000);
 
   it("logs each data loader run, and a failing loader's error and stderr", async () => {

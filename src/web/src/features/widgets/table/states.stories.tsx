@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
 import { TableEmpty, TableError, TableLoading } from "./states";
+import {
+  expectLoadingStatus,
+  expectErrorAlert,
+  expectZeroRows,
+} from "../state-plays.fixture";
 
 const meta: Meta = {
   title: "Widgets/TableStates",
@@ -13,11 +17,7 @@ type Story = StoryObj<typeof meta>;
 /** Skeleton pulse while a query is in flight. */
 export const Loading: Story = {
   render: () => <TableLoading />,
-  play: async ({ canvas }) => {
-    await expect(
-      canvas.getByRole("status", { name: "Loading query result" }),
-    ).toBeVisible();
-  },
+  play: expectLoadingStatus,
 };
 
 /** An inline failure naming the query — a bad `data` ref or a query error
@@ -29,17 +29,11 @@ export const QueryError: Story = {
       message="Catalog Error: Table orders does not exist"
     />
   ),
-  play: async ({ canvas }) => {
-    const alert = canvas.getByRole("alert");
-    await expect(alert).toHaveTextContent("weekly_trend");
-    await expect(alert).toHaveTextContent("does not exist");
-  },
+  play: expectErrorAlert("weekly_trend", "does not exist"),
 };
 
 /** A successful query that returned no rows. */
 export const Empty: Story = {
   render: () => <TableEmpty />,
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText("0 rows")).toBeVisible();
-  },
+  play: expectZeroRows,
 };

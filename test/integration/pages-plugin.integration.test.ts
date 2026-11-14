@@ -1,17 +1,19 @@
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import {
+  registerDevServerLifecycle,
+  WATCH_WAIT_MS,
+} from "../lib/dev-server-suite.js";
 import {
   expectInvalidated,
   makePagesServer,
   waitForWatch,
 } from "../lib/pages-vite-server.js";
-import {
-  cleanupProjects,
-  makeTempProject,
-  writeProjectFile,
-} from "../lib/temp-project.js";
+import { makeTempProject, writeProjectFile } from "../lib/temp-project.js";
+
+registerDevServerLifecycle();
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = "\0virtual:biac-pages";
@@ -19,14 +21,6 @@ const VIRTUAL_CONFIG_ID = "virtual:biac-config";
 const RESOLVED_CONFIG_ID = "\0virtual:biac-config";
 
 let projectRoot: string | undefined;
-let server: ViteDevServer | undefined;
-
-afterEach(async () => {
-  await server?.close();
-  server = undefined;
-  cleanupProjects();
-});
-
 function makeProject(): string {
   projectRoot = makeTempProject();
   return projectRoot;
@@ -37,8 +31,8 @@ function writeFile(relativePath: string, content: string): void {
 }
 
 async function makeServer(root: string): Promise<ViteDevServer> {
-  server = await makePagesServer(root);
-  return server;
+  const dev = await makePagesServer(root);
+  return dev;
 }
 
 async function loadManifest(dev: ViteDevServer): Promise<string> {
@@ -64,14 +58,6 @@ function manifestModule(dev: ViteDevServer) {
 function pageModule(dev: ViteDevServer, file: string) {
   return dev.environments.client.moduleGraph.getModuleById(file);
 }
-
-/** How long a filesystem mutation may take to reach vite's watcher. */
-const WATCH_WAIT_MS = 10_000;
-
-// Every test here boots a vite dev server, and a watch test then waits up
-// to WATCH_WAIT_MS for its event: vitest's 5s default would kill a test
-// before its own wait could run out on a loaded host.
-vi.setConfig({ testTimeout: 2 * WATCH_WAIT_MS });
 
 describe("page transform", () => {
   it("compiles a page under pages/ into a module on request", async () => {

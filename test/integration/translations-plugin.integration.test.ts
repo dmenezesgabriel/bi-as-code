@@ -1,17 +1,16 @@
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-  expectInvalidated,
-  makePagesServer,
-  waitForWatch,
-} from "../lib/pages-vite-server.js";
-import {
-  cleanupProjects,
-  makeTempProject,
-  writeProjectFile,
-} from "../lib/temp-project.js";
+  registerDevServerLifecycle,
+  serveProjectFiles,
+  WATCH_WAIT_MS,
+} from "../lib/dev-server-suite.js";
+import { expectInvalidated, waitForWatch } from "../lib/pages-vite-server.js";
+import { writeProjectFile } from "../lib/temp-project.js";
+
+registerDevServerLifecycle();
 
 const VIRTUAL_TRANSLATIONS_ID = "virtual:biac-translations";
 const RESOLVED_TRANSLATIONS_ID = "\0virtual:biac-translations";
@@ -20,39 +19,13 @@ const RESOLVED_LANGUAGES_ID = "\0virtual:biac-languages";
 const TRANSLATIONS = "en:\n  revenue: Revenue\nfr:\n  revenue: Revenu\n";
 const PAGE = "# {$translations.revenue}\n";
 
-let server: ViteDevServer | undefined;
-
-afterEach(async () => {
-  await server?.close();
-  server = undefined;
-  cleanupProjects();
-});
-
-/** How long a filesystem mutation may take to reach vite's watcher. */
-const WATCH_WAIT_MS = 10_000;
-
-// Every test boots a vite dev server, and a watch test then waits up to
-// WATCH_WAIT_MS for its event.
-vi.setConfig({ testTimeout: 2 * WATCH_WAIT_MS });
-
-async function serveProject(
-  files: Record<string, string>,
-): Promise<{ root: string; dev: ViteDevServer }> {
-  const root = makeTempProject();
-  for (const [path, content] of Object.entries(files)) {
-    writeProjectFile(root, path, content);
-  }
-  server = await makePagesServer(root);
-  return { root, dev: server };
-}
-
 async function transformed(dev: ViteDevServer, id: string): Promise<string> {
   return (await dev.transformRequest(id))?.code ?? "";
 }
 
 describe("virtual:biac-translations", () => {
   it("serves every declared language resolved, the en fallback applied", async () => {
-    const { dev } = await serveProject({
+    const { dev } = await serveProjectFiles({
       "translations.yaml": "en:\n  a: A\n  b: B\nfr:\n  a: A fr\n",
     });
 
@@ -65,7 +38,7 @@ describe("virtual:biac-translations", () => {
   });
 
   it("serves no languages for a project without translations.yaml", async () => {
-    const { dev } = await serveProject({});
+    const { dev } = await serveProjectFiles({});
 
     const code = await transformed(dev, VIRTUAL_TRANSLATIONS_ID);
 
@@ -73,7 +46,7 @@ describe("virtual:biac-translations", () => {
   });
 
   it("rejects a malformed file with vite's id and the line's loc", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": "en:\n  a: 1\n b: 2\n",
     });
 
@@ -88,7 +61,7 @@ describe("virtual:biac-translations", () => {
 
 describe("virtual:biac-languages", () => {
   it("serves the declared languages in file order", async () => {
-    const { dev } = await serveProject({
+    const { dev } = await serveProjectFiles({
       "translations.yaml": "fr:\n  a: A fr\nen:\n  a: A\n",
     });
 
@@ -98,7 +71,7 @@ describe("virtual:biac-languages", () => {
   });
 
   it("serves no languages for a malformed file, leaving the error to its pages", async () => {
-    const { dev } = await serveProject({
+    const { dev } = await serveProjectFiles({
       "translations.yaml": "en:\n  a: 1\n b: 2\n",
     });
 
@@ -110,7 +83,7 @@ describe("virtual:biac-languages", () => {
 
 describe("a page reading $translations", () => {
   it("imports the translations module", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": TRANSLATIONS,
       "pages/index.md": PAGE,
     });
@@ -121,7 +94,7 @@ describe("a page reading $translations", () => {
   });
 
   it("serves an unknown key as a compile error at its position", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": TRANSLATIONS,
       "pages/index.md": "\n# {$translations.revenu}\n",
     });
@@ -134,7 +107,7 @@ describe("a page reading $translations", () => {
   });
 
   it("serves a malformed translations.yaml as the page's compile error", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": "en:\n  a: 1\n b: 2\n",
       "pages/index.md": PAGE,
     });
@@ -145,7 +118,7 @@ describe("a page reading $translations", () => {
   });
 
   it("compiles a page without $translations despite a malformed file", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": "en:\n  a: 1\n b: 2\n",
       "pages/index.md": "# Plain\n",
     });
@@ -158,7 +131,7 @@ describe("a page reading $translations", () => {
 
 describe("a page whose sql reads $translations", () => {
   it("re-exports translationsFor and re-serves on an edit to the file", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": TRANSLATIONS,
       "queries/labels.sql": "select {{$translations.revenue}} as label\n",
       "pages/index.md": '# Labels\n\n<Table data="/queries/labels" />\n',
@@ -186,7 +159,7 @@ describe("a page whose sql reads $translations", () => {
 
 describe("a project without translations.yaml", () => {
   it("serves a page that fails to compile as its own compile error", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "pages/index.md": "---\npage_width: wide\n---\n# Hi\n",
     });
 
@@ -196,7 +169,7 @@ describe("a project without translations.yaml", () => {
   });
 
   it("recompiles a page naming a key once the file is created", async () => {
-    const { root, dev } = await serveProject({ "pages/index.md": PAGE });
+    const { root, dev } = await serveProjectFiles({ "pages/index.md": PAGE });
     const pagePath = join(root, "pages/index.md");
     expect(await transformed(dev, `/@fs${pagePath}`)).toContain(
       "Undefined translation key: $translations.revenue",
@@ -223,7 +196,7 @@ describe("a project without translations.yaml", () => {
 
 describe("editing translations.yaml", () => {
   it("re-serves the translations module and the page that reads it", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": TRANSLATIONS,
       "pages/index.md": PAGE,
     });
@@ -246,7 +219,7 @@ describe("editing translations.yaml", () => {
   });
 
   it("hot-updates the languages module with the new list", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": TRANSLATIONS,
       "pages/index.md": PAGE,
     });
@@ -273,7 +246,7 @@ describe("editing translations.yaml", () => {
   });
 
   it("re-checks a page's keys against the edited file", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": TRANSLATIONS,
       "pages/index.md": PAGE,
     });

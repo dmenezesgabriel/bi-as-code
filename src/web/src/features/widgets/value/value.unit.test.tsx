@@ -1,36 +1,15 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
-import type { SqlBlock } from "../../pages/types";
-import { renderWithRegistry } from "./registry-harness";
+import { renderKpi, type KpiRenderOptions } from "./kpi-harness";
 import type { ValueProps } from "./types";
 import { Value } from "./value";
 
-const KPI: SqlBlock = {
-  name: "kpi",
-  sql: "select revenue, wow_pct from orders",
-};
-
 function renderValue(
   props: Partial<ValueProps> = {},
-  {
-    db = new FakeDuckDb(),
-    blocks = [KPI],
-    provider = true,
-    url,
-  }: {
-    db?: FakeDuckDb;
-    blocks?: SqlBlock[];
-    provider?: boolean;
-    url?: string;
-  } = {},
+  options: KpiRenderOptions = {},
 ) {
-  return renderWithRegistry(<Value data="kpi" {...props} />, {
-    db,
-    blocks,
-    provider,
-    url,
-  });
+  return renderKpi(<Value data="kpi" {...props} />, options);
 }
 
 describe("Value", () => {

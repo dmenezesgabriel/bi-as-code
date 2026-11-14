@@ -1,7 +1,9 @@
-import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PreviewServer } from "vite";
+import {
+  builtProject,
+  fakePreviewServer,
+} from "../../../test/lib/fake-preview.js";
 import {
   cleanupProjects,
   makeTempProject,
@@ -18,25 +20,10 @@ import {
 const { vitePreview } = vi.hoisted(() => ({ vitePreview: vi.fn() }));
 vi.mock("vite", () => ({ preview: vitePreview }));
 
-type FakePreviewServer = Pick<PreviewServer, "close" | "printUrls">;
-
-function fakeServer(): FakePreviewServer {
-  return {
-    close: vi.fn().mockResolvedValue(undefined),
-    printUrls: vi.fn(),
-  };
-}
-
-function builtProject(): string {
-  const root = makeTempProject("biac-serve-");
-  mkdirSync(join(root, "build"));
-  return root;
-}
-
 const FULL_PAIR = { BIAC_BASIC_USER: "viewer", BIAC_BASIC_PASSWORD: "s3cret" };
 
 function quietServe(): void {
-  vitePreview.mockResolvedValue(fakeServer());
+  vitePreview.mockResolvedValue(fakePreviewServer());
   vi.spyOn(console, "log").mockImplementation(() => undefined);
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
   vi.spyOn(process, "once").mockImplementation(() => process);
@@ -167,7 +154,7 @@ describe("authModeLine", () => {
 describe("serve", () => {
   it("serves <project>/build under mpa routing with the production preview options", async () => {
     quietServe();
-    const root = builtProject();
+    const root = builtProject("biac-serve-");
 
     await serve([root, "--port", "0"], {});
 
@@ -187,7 +174,7 @@ describe("serve", () => {
   it("mounts the headers, then auth, then the four static plugins and the route post-hook", async () => {
     quietServe();
 
-    await serve([builtProject()], FULL_PAIR);
+    await serve([builtProject("biac-serve-")], FULL_PAIR);
 
     const names = vitePreview.mock.calls[0]![0].plugins.map(
       (plugin: { name: string }) => plugin.name,
@@ -205,10 +192,10 @@ describe("serve", () => {
 
   it("prints the URLs and then the auth mode", async () => {
     quietServe();
-    const server = fakeServer();
+    const server = fakePreviewServer();
     vitePreview.mockResolvedValue(server);
 
-    await serve([builtProject()], FULL_PAIR);
+    await serve([builtProject("biac-serve-")], FULL_PAIR);
 
     expect(server.printUrls).toHaveBeenCalledOnce();
     expect(console.log).toHaveBeenLastCalledWith("auth: basic (user viewer)");
@@ -217,7 +204,7 @@ describe("serve", () => {
   it("warns about a half-set pair and still starts on loopback", async () => {
     quietServe();
 
-    await serve([builtProject()], { BIAC_BASIC_USER: "viewer" });
+    await serve([builtProject("biac-serve-")], { BIAC_BASIC_USER: "viewer" });
 
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining("BIAC_BASIC_PASSWORD"),
@@ -229,7 +216,7 @@ describe("serve", () => {
     quietServe();
 
     await expect(
-      serve([builtProject(), "--host", "0.0.0.0"], {}),
+      serve([builtProject("biac-serve-"), "--host", "0.0.0.0"], {}),
     ).rejects.toThrow("BIAC_AUTH_DISABLED");
     expect(vitePreview).not.toHaveBeenCalled();
   });
@@ -237,7 +224,7 @@ describe("serve", () => {
   it("starts beyond loopback with auth disabled, warning loudly", async () => {
     quietServe();
 
-    await serve([builtProject(), "--host", "0.0.0.0"], {
+    await serve([builtProject("biac-serve-"), "--host", "0.0.0.0"], {
       BIAC_AUTH_DISABLED: "true",
     });
 
@@ -260,7 +247,7 @@ describe("serve", () => {
     quietServe();
     const once = vi.spyOn(process, "once").mockImplementation(() => process);
 
-    await serve([builtProject()], {});
+    await serve([builtProject("biac-serve-")], {});
 
     expect(once.mock.calls.map(([signal]) => signal)).toEqual([
       "SIGINT",

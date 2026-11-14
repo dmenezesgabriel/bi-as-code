@@ -1,36 +1,15 @@
 import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FakeDuckDb } from "../../data/fake-duckdb";
-import type { SqlBlock } from "../../pages/types";
 import { Delta } from "./delta";
-import { renderWithRegistry } from "./registry-harness";
+import { renderKpi, type KpiRenderOptions } from "./kpi-harness";
 import type { DeltaProps } from "./types";
-
-const KPI: SqlBlock = {
-  name: "kpi",
-  sql: "select revenue, wow_pct from orders",
-};
 
 function renderDelta(
   props: Partial<DeltaProps> = {},
-  {
-    db = new FakeDuckDb(),
-    blocks = [KPI],
-    provider = true,
-    url,
-  }: {
-    db?: FakeDuckDb;
-    blocks?: SqlBlock[];
-    provider?: boolean;
-    url?: string;
-  } = {},
+  options: KpiRenderOptions = {},
 ) {
-  return renderWithRegistry(<Delta data="kpi" {...props} />, {
-    db,
-    blocks,
-    provider,
-    url,
-  });
+  return renderKpi(<Delta data="kpi" {...props} />, options);
 }
 
 /** The DeltaDisplay root — the only element carrying `data-status`. */

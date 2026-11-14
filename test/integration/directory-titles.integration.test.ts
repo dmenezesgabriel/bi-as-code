@@ -1,35 +1,22 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { registerDevServerLifecycle } from "../lib/dev-server-suite.js";
 import {
   expectInvalidated,
   makePagesServer,
   waitForWatch,
 } from "../lib/pages-vite-server.js";
-import {
-  cleanupProjects,
-  makeTempProject,
-  writeProjectFile,
-} from "../lib/temp-project.js";
+import { makeTempProject, writeProjectFile } from "../lib/temp-project.js";
+
+registerDevServerLifecycle();
 
 const VIRTUAL_MANIFEST_ID = "virtual:biac-pages";
 const RESOLVED_MANIFEST_ID = "\0virtual:biac-pages";
 const VIRTUAL_CONFIG_ID = "virtual:biac-config";
 const TITLED_NESTED =
   'export default {\n  directories: {\n    "pages/nested": { title: "Planning" },\n  },\n};\n';
-
-let server: ViteDevServer | undefined;
-
-afterEach(async () => {
-  await server?.close();
-  server = undefined;
-  cleanupProjects();
-});
-
-// A watch test waits up to 10s for chokidar; vitest's 5s default would
-// kill it first on a loaded host.
-vi.setConfig({ testTimeout: 20_000 });
 
 async function serveProject(config: string): Promise<{
   root: string;
@@ -39,8 +26,8 @@ async function serveProject(config: string): Promise<{
   writeProjectFile(root, "pages/index.md", "# Home\n");
   writeProjectFile(root, "pages/nested/page.md", "# Nested\n");
   writeProjectFile(root, "biac.config.ts", config);
-  server = await makePagesServer(root);
-  return { root, dev: server };
+  const dev = await makePagesServer(root);
+  return { root, dev };
 }
 
 async function transformed(dev: ViteDevServer, id: string): Promise<string> {
