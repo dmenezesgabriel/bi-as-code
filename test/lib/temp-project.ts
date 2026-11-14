@@ -35,6 +35,16 @@ export function writeProjectFile(
   writeFileSync(file, content);
 }
 
+/** Writes each `relativePath: content` entry of `files` under `root`. */
+export function writeProjectFiles(
+  root: string,
+  files: Record<string, string | Buffer>,
+): void {
+  for (const [relativePath, content] of Object.entries(files)) {
+    writeProjectFile(root, relativePath, content);
+  }
+}
+
 /** Removes every root made by {@link makeTempProject} since the last cleanup. */
 export function cleanupProjects(): void {
   while (created.length > 0) {

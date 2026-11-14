@@ -7,19 +7,8 @@ import {
   type DevServer,
 } from "../lib/dev-server.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
-import {
-  collectConsoleErrors,
-  expect,
-  instrumentWorkerPosts,
-  test,
-  workerPosts,
-} from "./dev-server.fixture.js";
-import {
-  chartHosts,
-  chartPoint,
-  expectScatterRegions,
-  openWeeklyReviewCharts,
-} from "./echart-hosts.js";
+import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
+import { expectCrossfilterRequery } from "./echart-hosts.js";
 
 // `biac serve` over a real build/ behind HTTP basic auth. The browser sends
 // credentials through the context's httpCredentials: a user:pass@ URL makes
@@ -79,20 +68,7 @@ test.describe("biac serve behind basic auth", () => {
     test("a Regional split bar click re-queries under auth", async ({
       page,
     }) => {
-      const errors = collectConsoleErrors(page);
-      await instrumentWorkerPosts(page);
-      await openWeeklyReviewCharts(page, server.url);
-
-      // Every query is a worker post — the delta after the click is the
-      // re-query; the scatter's West-only repaint is the round trip landing.
-      await chartHosts(page).nth(0).scrollIntoViewIfNeeded();
-      const postsBefore = await workerPosts(page);
-      const west = await chartPoint(page, 0, [0, 3000]);
-      await page.mouse.click(west.x, west.y);
-
-      await expectScatterRegions(page, ["West"]);
-      expect(await workerPosts(page)).toBeGreaterThan(postsBefore);
-      expect(errors).toEqual([]);
+      await expectCrossfilterRequery(page, server.url);
     });
   });
 });

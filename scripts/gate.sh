@@ -18,6 +18,12 @@ step() {
   echo "gate: ${name} passed ($((SECONDS - start))s)"
 }
 
+# `jscpd` runs .jscpd.json with --silent (see its script in package.json), which
+# hides the clone listing. Silencing does not disable the step: the threshold
+# reporter is registered whenever `threshold` is set, independently of
+# `reporters` and of --silent, and fails the run with the measured percentage.
+# `pnpm jscpd:report` runs the same config without --silent to print where the
+# clones are. jscpd rejects unknown keys in its config, so this note lives here.
 for script in typecheck lint lint:style format:check knip dep:cruise jscpd; do
   step "$script" pnpm -s "$script"
 done

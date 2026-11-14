@@ -5,17 +5,9 @@ import { buildProject } from "../lib/dev-server.js";
 import { servePrefixed } from "../lib/prefixed-host.js";
 import { copyShippedProject } from "../lib/shipped-project.js";
 import { serveStaticDir, type StaticDir } from "../lib/static-server.js";
+import { collectConsoleErrors, expect, test } from "./dev-server.fixture.js";
 import {
-  collectConsoleErrors,
-  expect,
-  instrumentWorkerPosts,
-  test,
-  workerPosts,
-} from "./dev-server.fixture.js";
-import {
-  chartHosts,
-  chartPoint,
-  expectScatterRegions,
+  expectCrossfilterRequery,
   openWeeklyReviewCharts,
 } from "./echart-hosts.js";
 import { WIDGET_HOST_PAGE } from "./host-page.js";
@@ -93,20 +85,7 @@ test.describe("the build on a host with no rewrite rules", () => {
   test("a Regional split bar click cross-filters weekly-review off a rewrite-less host", async ({
     page,
   }) => {
-    const errors = collectConsoleErrors(page);
-    await instrumentWorkerPosts(page);
-    await openWeeklyReviewCharts(page, `${staticHost.url}/`);
-
-    // Every query is a worker post — the delta after the click is the
-    // re-query; the scatter's West-only repaint is the round trip landing.
-    await chartHosts(page).nth(0).scrollIntoViewIfNeeded();
-    const postsBefore = await workerPosts(page);
-    const west = await chartPoint(page, 0, [0, 3000]);
-    await page.mouse.click(west.x, west.y);
-
-    await expectScatterRegions(page, ["West"]);
-    expect(await workerPosts(page)).toBeGreaterThan(postsBefore);
-    expect(errors).toEqual([]);
+    await expectCrossfilterRequery(page, `${staticHost.url}/`);
   });
 });
 

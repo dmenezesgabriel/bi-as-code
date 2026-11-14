@@ -1,49 +1,21 @@
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
   SearchDocument,
   SearchDocumentSets,
 } from "../../src/engine/types.js";
 import {
-  expectInvalidated,
-  makePagesServer,
-  waitForWatch,
-} from "../lib/pages-vite-server.js";
-import {
-  cleanupProjects,
-  makeTempProject,
-  writeProjectFile,
-} from "../lib/temp-project.js";
+  registerDevServerLifecycle,
+  serveProjectFiles,
+} from "../lib/dev-server-suite.js";
+import { expectInvalidated, waitForWatch } from "../lib/pages-vite-server.js";
+import { writeProjectFile } from "../lib/temp-project.js";
+
+registerDevServerLifecycle();
 
 const VIRTUAL_SEARCH_ID = "virtual:biac-search";
 const RESOLVED_SEARCH_ID = "\0virtual:biac-search";
-
-/** How long a filesystem mutation may take to reach vite's watcher. */
-const WATCH_WAIT_MS = 10_000;
-
-// Every test boots a vite dev server, and a watch test then waits up to
-// WATCH_WAIT_MS for its event.
-vi.setConfig({ testTimeout: 2 * WATCH_WAIT_MS });
-
-let server: ViteDevServer | undefined;
-
-afterEach(async () => {
-  await server?.close();
-  server = undefined;
-  cleanupProjects();
-});
-
-async function serveProject(
-  files: Record<string, string>,
-): Promise<{ root: string; dev: ViteDevServer }> {
-  const root = makeTempProject();
-  for (const [path, content] of Object.entries(files)) {
-    writeProjectFile(root, path, content);
-  }
-  server = await makePagesServer(root);
-  return { root, dev: server };
-}
 
 async function servedSets(dev: ViteDevServer): Promise<SearchDocumentSets> {
   const code = (await dev.transformRequest(VIRTUAL_SEARCH_ID))?.code ?? "";
@@ -58,7 +30,7 @@ async function servedSets(dev: ViteDevServer): Promise<SearchDocumentSets> {
 async function servedDocuments(
   files: Record<string, string>,
 ): Promise<SearchDocument[]> {
-  const { dev } = await serveProject(files);
+  const { dev } = await serveProjectFiles(files);
   return (await servedSets(dev)).byLanguage[""] ?? [];
 }
 
@@ -101,7 +73,7 @@ describe("virtual:biac-search", () => {
   });
 
   it("serves each declared language's translated text", async () => {
-    const { dev } = await serveProject({
+    const { dev } = await serveProjectFiles({
       "translations.yaml": "en:\n  title: Weekly\nfr:\n  title: Hebdomadaire\n",
       "pages/a.md": "# {$translations.title}\n",
     });
@@ -125,7 +97,7 @@ describe("virtual:biac-search", () => {
 
 describe("editing a page", () => {
   it("hot-updates the search module with a page's new keywords", async () => {
-    const { root, dev } = await serveProject({ "pages/a.md": "# A\n" });
+    const { root, dev } = await serveProjectFiles({ "pages/a.md": "# A\n" });
     await servedSets(dev);
     await waitForWatch(dev, join(root, "pages"), "a.md");
 
@@ -140,7 +112,7 @@ describe("editing a page", () => {
   });
 
   it("re-serves the search module with a page added", async () => {
-    const { root, dev } = await serveProject({ "pages/a.md": "# A\n" });
+    const { root, dev } = await serveProjectFiles({ "pages/a.md": "# A\n" });
     await servedSets(dev);
     await waitForWatch(dev, join(root, "pages"), "a.md");
 
@@ -155,7 +127,7 @@ describe("editing a page", () => {
 
 describe("editing translations.yaml", () => {
   it("hot-updates the search module with the new text", async () => {
-    const { root, dev } = await serveProject({
+    const { root, dev } = await serveProjectFiles({
       "translations.yaml": "en:\n  title: Weekly\n",
       "pages/a.md": "# {$translations.title}\n",
     });

@@ -1,5 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
-import { expect } from "./dev-server.fixture.js";
+import {
+  collectConsoleErrors,
+  expect,
+  instrumentWorkerPosts,
+  workerPosts,
+} from "./dev-server.fixture.js";
 
 /**
  * The option shape a test reads back off the live echarts instance — the
@@ -319,6 +324,31 @@ export async function expectScatterRegions(
   await expect
     .poll(async () => (await optionAt(page, 1)).series.map((s) => s.name))
     .toEqual(regions);
+}
+
+/**
+ * The cross-filter round trip on weekly-review at `url`: clicking the first
+ * chart's West point re-queries through the worker and repaints the scatter
+ * West-only, with a clean console. Every query is a worker post, so the
+ * count rising after the click is the re-query and the repaint is the round
+ * trip landing.
+ */
+export async function expectCrossfilterRequery(
+  page: Page,
+  url: string,
+): Promise<void> {
+  const errors = collectConsoleErrors(page);
+  await instrumentWorkerPosts(page);
+  await openWeeklyReviewCharts(page, url);
+
+  await chartHosts(page).nth(0).scrollIntoViewIfNeeded();
+  const postsBefore = await workerPosts(page);
+  const west = await chartPoint(page, 0, [0, 3000]);
+  await page.mouse.click(west.x, west.y);
+
+  await expectScatterRegions(page, ["West"]);
+  expect(await workerPosts(page)).toBeGreaterThan(postsBefore);
+  expect(errors).toEqual([]);
 }
 
 /** The colours a chart's live model resolved from its theme and option. */

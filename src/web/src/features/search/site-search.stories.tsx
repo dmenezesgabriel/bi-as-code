@@ -71,13 +71,14 @@ export const Results: Story = {
   },
 };
 
-/** One word off still finds the page: "fulfilmant" for "fulfilment". */
-export const TypoStillMatches: Story = {
-  play: async ({ canvas }) => {
-    await user.type(canvas.getByRole("combobox"), "fulfilmant");
-
-    // The count is read once typing has settled: a slow frame renders the
-    // results of a shorter prefix first.
+/**
+ * The play of a story where `typed` finds the one page, Allocation. The count
+ * is read once typing has settled: a slow frame renders the results of a
+ * shorter prefix first.
+ */
+function typingFindsAllocation(typed: string): NonNullable<Story["play"]> {
+  return async ({ canvas }) => {
+    await user.type(canvas.getByRole("combobox"), typed);
     await waitFor(
       () => expect(canvas.getByRole("status")).toHaveTextContent("1 result"),
       { timeout: SETTLE_MS },
@@ -85,24 +86,17 @@ export const TypoStillMatches: Story = {
     await expect(
       canvas.getByRole("option", { name: "Allocation" }),
     ).toBeVisible();
-  },
+  };
+}
+
+/** One word off still finds the page: "fulfilmant" for "fulfilment". */
+export const TypoStillMatches: Story = {
+  play: typingFindsAllocation("fulfilmant"),
 };
 
 /** A typed word matches the longer words it begins: "fulfil" for "fulfilment". */
 export const PrefixMatchesLongerWords: Story = {
-  play: async ({ canvas }) => {
-    await user.type(canvas.getByRole("combobox"), "fulfil");
-
-    // The count is read once typing has settled: a slow frame renders the
-    // results of a shorter prefix first.
-    await waitFor(
-      () => expect(canvas.getByRole("status")).toHaveTextContent("1 result"),
-      { timeout: SETTLE_MS },
-    );
-    await expect(
-      canvas.getByRole("option", { name: "Allocation" }),
-    ).toBeVisible();
-  },
+  play: typingFindsAllocation("fulfil"),
 };
 
 /** Accents do not matter: "resume" finds the page that spells "résumé". */

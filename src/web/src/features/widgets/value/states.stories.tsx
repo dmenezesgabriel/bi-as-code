@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect } from "storybook/test";
 import { ValueError, ValueLoading } from "./states";
+import { expectLoadingStatus, expectErrorAlert } from "../state-plays.fixture";
 
 const meta: Meta = {
   title: "Widgets/ValueStates",
@@ -14,11 +14,7 @@ type Story = StoryObj<typeof meta>;
  * one line tall, so the table's three-bar skeleton would be the wrong shape. */
 export const Loading: Story = {
   render: () => <ValueLoading />,
-  play: async ({ canvas }) => {
-    await expect(
-      canvas.getByRole("status", { name: "Loading query result" }),
-    ).toBeVisible();
-  },
+  play: expectLoadingStatus,
 };
 
 /** An inline failure naming the query — a bad `data`/`column`/`fmt` ref or a
@@ -30,9 +26,5 @@ export const QueryError: Story = {
       message="Catalog Error: Table orders does not exist"
     />
   ),
-  play: async ({ canvas }) => {
-    const alert = canvas.getByRole("alert");
-    await expect(alert).toHaveTextContent("weekly_revenue");
-    await expect(alert).toHaveTextContent("does not exist");
-  },
+  play: expectErrorAlert("weekly_revenue", "does not exist"),
 };

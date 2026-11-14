@@ -7,13 +7,27 @@ import { pagesPlugin } from "@/engine/pages-plugin.js";
 
 const webRoot = fileURLToPath(new URL("../../src/web", import.meta.url));
 
+/** Everything this module started, closed newest first by {@link closeDevServers}. */
+const opened: { close: () => Promise<unknown> }[] = [];
+
+/**
+ * Closes every server and socket made by {@link makePagesServer} and
+ * {@link listenPagesServer} since the last call, newest first so a socket
+ * goes before the vite server behind it.
+ */
+export async function closeDevServers(): Promise<void> {
+  while (opened.length > 0) {
+    await opened.pop()!.close();
+  }
+}
+
 /**
  * Real vite dev server with `src/web` as root, matching `biac dev`: pages
  * live outside the vite root, so every request goes through `/@fs/` and the
  * plugin's `server.fs.allow` grant. The dep optimizer is off.
  */
-export function makePagesServer(root: string): Promise<ViteDevServer> {
-  return createServer({
+export async function makePagesServer(root: string): Promise<ViteDevServer> {
+  const dev = await createServer({
     root: webRoot,
     configFile: false,
     logLevel: "error",
@@ -25,6 +39,8 @@ export function makePagesServer(root: string): Promise<ViteDevServer> {
     // `noDiscovery` with no `include` as turning the optimizer off.
     optimizeDeps: { noDiscovery: true },
   });
+  opened.push(dev);
+  return dev;
 }
 
 /**
@@ -39,10 +55,10 @@ export async function listenPagesServer(
   const http: Server = createHttpServer(dev.middlewares);
   await new Promise<void>((resolve) => http.listen(0, resolve));
   const { port } = http.address() as AddressInfo;
-  return {
-    url: `http://localhost:${port}`,
-    close: () => new Promise<void>((done) => http.close(() => done())),
-  };
+  const close = (): Promise<void> =>
+    new Promise<void>((done) => http.close(() => done()));
+  opened.push({ close });
+  return { url: `http://localhost:${port}`, close };
 }
 
 /**

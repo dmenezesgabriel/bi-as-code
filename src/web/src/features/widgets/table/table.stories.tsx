@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent } from "storybook/test";
-import { Effect } from "effect";
 import { FakeDuckDb } from "../../data/fake-duckdb";
 import type { Row } from "../../data/types";
 import { FakeFilterUrlPort } from "../../filters/fake-url-port";
@@ -212,16 +211,7 @@ export const UnknownName: Story = {
 
 /** While the query is in flight the skeleton stands in for the table. */
 export const Loading: Story = {
-  decorators: [
-    withQueryData(
-      [ORDERS],
-      (() => {
-        const db = new FakeDuckDb();
-        db.queryRows = () => Effect.promise(() => new Promise<Row[]>(() => {}));
-        return db;
-      })(),
-    ),
-  ],
+  decorators: [withQueryData([ORDERS], FakeDuckDb.pending())],
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole("status")).toBeVisible();
     await expect(canvas.queryByRole("table")).toBeNull();
@@ -233,11 +223,7 @@ export const QueryError: Story = {
   decorators: [
     withQueryData(
       [ORDERS],
-      (() => {
-        const db = new FakeDuckDb();
-        db.failWhen = () => "Catalog Error: Table orders does not exist";
-        return db;
-      })(),
+      FakeDuckDb.failing("Catalog Error: Table orders does not exist"),
     ),
   ],
   play: async ({ canvas }) => {

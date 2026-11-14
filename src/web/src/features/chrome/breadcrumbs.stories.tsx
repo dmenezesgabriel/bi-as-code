@@ -1,29 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
-import type { NavTree } from "virtual:biac-pages";
 import { withMemoryRouter } from "../../../.storybook/decorators";
 import { Breadcrumbs } from "./breadcrumbs";
-
-const TREE: NavTree = {
-  rootPages: [
-    { name: "Home", href: "/" },
-    { name: "Weekly review", href: "/weekly-review" },
-  ],
-  directories: [
-    {
-      id: "guides",
-      name: "Guides",
-      pages: [{ name: "Getting started", href: "/guides/getting-started" }],
-    },
-  ],
-};
+import { GUIDES_NAV_TREE } from "./nav-tree.fixture";
 
 const PATHS = ["/", "/weekly-review", "/guides/getting-started", "/missing"];
 
 const meta: Meta<typeof Breadcrumbs> = {
   title: "Chrome/Breadcrumbs",
   component: Breadcrumbs,
-  args: { tree: TREE },
+  args: { tree: GUIDES_NAV_TREE },
 };
 
 export default meta;

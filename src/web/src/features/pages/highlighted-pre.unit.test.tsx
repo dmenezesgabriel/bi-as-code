@@ -12,17 +12,33 @@ async function flushHighlight() {
   });
 }
 
+/** Renders `sql` as a fence and waits for shiki to replace the plain `pre`. */
+async function renderHighlightedSql(sql: string): Promise<HTMLElement> {
+  const { container } = render(
+    <HighlightedPre>
+      <code className="language-sql">{sql}</code>
+    </HighlightedPre>,
+  );
+  await waitFor(() => {
+    expect(container.querySelector("pre.shiki")).not.toBeNull();
+  });
+  return container;
+}
+
+/** Renders `code` in a language shiki lacks and waits for the highlight effect to settle. */
+async function renderUnhighlighted(code: string): Promise<HTMLElement> {
+  const { container } = render(
+    <HighlightedPre>
+      <code className="language-not-a-real-lang">{code}</code>
+    </HighlightedPre>,
+  );
+  await flushHighlight();
+  return container;
+}
+
 describe("HighlightedPre", () => {
   it("highlights a fenced code block into shiki token markup", async () => {
-    const { container } = render(
-      <HighlightedPre>
-        <code className="language-sql">select 1</code>
-      </HighlightedPre>,
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("pre.shiki")).not.toBeNull();
-    });
+    const container = await renderHighlightedSql("select 1");
     // Every token colour is a --shiki-token-* custom property that
     // styles.css defines per mode, so the fence follows the theme class.
     const token = container.querySelector('pre.shiki span[style*="--shiki-"]');
@@ -32,15 +48,7 @@ describe("HighlightedPre", () => {
   });
 
   it("paints a SQL comment and its fence from the theme tokens", async () => {
-    const { container } = render(
-      <HighlightedPre>
-        <code className="language-sql">-- note</code>
-      </HighlightedPre>,
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("pre.shiki")).not.toBeNull();
-    });
+    const container = await renderHighlightedSql("-- note");
     const pre = container.querySelector("pre.shiki");
     const comment = container.querySelector("pre.shiki span[style]");
 
@@ -51,27 +59,13 @@ describe("HighlightedPre", () => {
   });
 
   it("sets a highlighted fence on the muted, rounded, small-type surface", async () => {
-    const { container } = render(
-      <HighlightedPre>
-        <code className="language-sql">select 1</code>
-      </HighlightedPre>,
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("pre.shiki")).not.toBeNull();
-    });
+    const container = await renderHighlightedSql("select 1");
     const scroller = container.querySelector("pre.shiki")?.parentElement;
     expect(scroller).toHaveClass("bg-muted", "rounded-md", "text-sm");
   });
 
   it("sets an unhighlighted fence on the same surface", async () => {
-    const { container } = render(
-      <HighlightedPre>
-        <code className="language-not-a-real-lang">x = 1</code>
-      </HighlightedPre>,
-    );
-
-    await flushHighlight();
+    const container = await renderUnhighlighted("x = 1");
     expect(container.querySelector("pre")).toHaveClass(
       "bg-muted",
       "rounded-md",
@@ -96,40 +90,20 @@ describe("HighlightedPre", () => {
   });
 
   it("leaves a fence with an unknown language unhighlighted", async () => {
-    const { container } = render(
-      <HighlightedPre>
-        <code className="language-not-a-real-lang">x = 1</code>
-      </HighlightedPre>,
-    );
-
-    await flushHighlight();
+    const container = await renderUnhighlighted("x = 1");
     expect(container.querySelector(".shiki")).toBeNull();
     expect(container.querySelector("pre")).toHaveTextContent("x = 1");
   });
 
   it("wraps a highlighted fence in a keyboard-focusable horizontal scroller", async () => {
-    const { container } = render(
-      <HighlightedPre>
-        <code className="language-sql">select 1</code>
-      </HighlightedPre>,
-    );
-
-    await waitFor(() => {
-      expect(container.querySelector("pre.shiki")).not.toBeNull();
-    });
+    const container = await renderHighlightedSql("select 1");
     const scroller = container.querySelector("pre.shiki")?.parentElement;
     expect(scroller).toHaveAttribute("tabindex", "0");
     expect(scroller).toHaveClass("overflow-x-auto");
   });
 
   it("makes an unhighlighted pre its own keyboard-focusable horizontal scroller", async () => {
-    const { container } = render(
-      <HighlightedPre>
-        <code className="language-not-a-real-lang">x = 1</code>
-      </HighlightedPre>,
-    );
-
-    await flushHighlight();
+    const container = await renderUnhighlighted("x = 1");
     const pre = container.querySelector("pre");
     expect(pre).toHaveAttribute("tabindex", "0");
     expect(pre).toHaveClass("overflow-x-auto");

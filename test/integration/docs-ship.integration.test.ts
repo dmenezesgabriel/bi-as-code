@@ -40,6 +40,16 @@ function optionRows(): { command: string; flag: string; fallback: string }[] {
   });
 }
 
+/** The `BIAC_*` variables the refusal to start beyond localhost tells an operator to set. */
+function refusalVariables(): string[] {
+  try {
+    assertBootAllowed("0.0.0.0", {});
+  } catch (error) {
+    return (error as Error).message.match(/BIAC_[A-Z_]+/g) ?? [];
+  }
+  return [];
+}
+
 describe("the Build, preview and serve guide", () => {
   it("states the defaults `biac serve` really starts with", () => {
     // Arrange
@@ -57,18 +67,10 @@ describe("the Build, preview and serve guide", () => {
   });
 
   it("names every variable the refusal to start beyond localhost names", () => {
-    // Arrange
-    let refusal = "";
-
     // Act
-    try {
-      assertBootAllowed("0.0.0.0", {});
-    } catch (error) {
-      refusal = (error as Error).message;
-    }
+    const variables = refusalVariables();
 
     // Assert — the page must be the place a reader looks up what the message says.
-    const variables = refusal.match(/BIAC_[A-Z_]+/g) ?? [];
     expect(variables).toHaveLength(3);
     for (const variable of variables) expect(PAGE).toContain(variable);
   });
@@ -155,18 +157,10 @@ describe("the Deploy on AWS guide", () => {
   });
 
   it("names every variable the refusal to start beyond localhost names", () => {
-    // Arrange
-    let refusal = "";
-
     // Act
-    try {
-      assertBootAllowed("0.0.0.0", {});
-    } catch (error) {
-      refusal = (error as Error).message;
-    }
+    const variables = refusalVariables();
 
     // Assert — the guide is where a reader looks up what the message says.
-    const variables = refusal.match(/BIAC_[A-Z_]+/g) ?? [];
     expect(variables).toHaveLength(3);
     for (const variable of variables)
       expect(readShipPage("deploy-on-aws.md")).toContain(variable);

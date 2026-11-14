@@ -1,52 +1,38 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ViteDevServer } from "vite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { corsPolicy } from "../lib/cors-policy.js";
+import {
+  registerDevServerLifecycle,
+  WATCH_WAIT_MS,
+} from "../lib/dev-server-suite.js";
 import {
   listenPagesServer,
   makePagesServer,
   waitForWatch,
 } from "../lib/pages-vite-server.js";
-import {
-  cleanupProjects,
-  makeTempProject,
-  writeProjectFile,
-} from "../lib/temp-project.js";
+import { makeTempProject, writeProjectFile } from "../lib/temp-project.js";
 
-/** How long a filesystem mutation may take to reach vite's watcher. */
-const WATCH_WAIT_MS = 10_000;
+registerDevServerLifecycle();
+
 const LISTED = "http://127.0.0.1:8901";
 const UNLISTED = "http://127.0.0.1:8902";
 const EXPOSED = "Content-Range, Accept-Ranges";
 const LOADER = 'process.stdout.write("id\\n1\\n");\n';
 
-vi.setConfig({ testTimeout: 2 * WATCH_WAIT_MS });
-
-let server: ViteDevServer | undefined;
-let closeHttp: (() => Promise<void>) | undefined;
-
-afterEach(async () => {
-  await closeHttp?.();
-  await server?.close();
-  closeHttp = undefined;
-  server = undefined;
-  cleanupProjects();
-});
-
 /** A dev server on a project with a page, a csv, a loader and `config` as its biac.config.ts. */
 async function serve(
   config: string,
-): Promise<{ root: string; baseUrl: string }> {
+): Promise<{ root: string; baseUrl: string; dev: ViteDevServer }> {
   const root = makeTempProject();
   writeProjectFile(root, "pages/weekly.md", "# Weekly\n");
   writeProjectFile(root, "data/orders.csv", "id\n1\n");
   writeProjectFile(root, "data/gen.csv.js", LOADER);
   writeProjectFile(root, "biac.config.ts", config);
-  server = await makePagesServer(root);
-  const http = await listenPagesServer(server);
-  closeHttp = http.close;
-  return { root, baseUrl: http.url };
+  const dev = await makePagesServer(root);
+  const http = await listenPagesServer(dev);
+  return { root, baseUrl: http.url, dev };
 }
 
 const LISTING_CONFIG = `export default { embed: { dataOrigins: ["${LISTED}"] } };\n`;
@@ -137,8 +123,8 @@ describe("biac dev /data/ CORS", () => {
   });
 
   it("applies an edited origin list on the next request, without a restart", async () => {
-    const { root, baseUrl } = await serve("export default {};\n");
-    await waitForWatch(server!, root, "biac.config.ts");
+    const { root, baseUrl, dev } = await serve("export default {};\n");
+    await waitForWatch(dev, root, "biac.config.ts");
     await corsPolicy(`${baseUrl}/data/orders.csv`, LISTED);
 
     writeFileSync(join(root, "biac.config.ts"), LISTING_CONFIG);
